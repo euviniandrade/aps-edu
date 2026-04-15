@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum UserRoleSlug {
+  admin
+  director
+  vice_director
+  coordinator
+  chaplain
+  treasurer
+  disciplinary
+  counselor
+  secretary
+}
+
+enum UnitType {
+  school
+  department
+  headquarters
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  overdue
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum EventStatus {
+  planned
+  ongoing
+  completed
+  cancelled
+}
+
+enum AnnouncementType {
+  info
+  warning
+  urgent
+  celebration
+}
+
+enum BadgeCategory {
+  commitment
+  punctuality
+  productivity
+  excellence
+  teamwork
+  leadership
+}
+
+enum BadgeLevel {
+  bronze
+  silver
+  gold
+}
+
+enum FeedbackCategory {
+  suggestion
+  problem
+  idea
+  praise
+}
+
+enum FeedbackStatus {
+  pending
+  read
+  resolved
+}
+
+enum NotificationType {
+  task
+  event
+  announcement
+  badge
+  reminder
+}
+
+enum FileType {
+  image
+  document
+  video
+}
+
+// ─── MODELS ──────────────────────────────────────────────────────────────────
+
+model Unit {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(100)
+  city      String   @db.VarChar(80)
+  type      UnitType @default(school)
+  region    String?  @db.VarChar(50)
+  createdAt DateTime @default(now())
+
+  users         User[]
+  tasks         Task[]
+  events        Event[]
+  announcements AnnouncementUnit[]
+
+  @@map("units")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(50)
+  slug        UserRoleSlug @unique
+  permissions Json
+
+  users                User[]
+  announcementTargets  AnnouncementRole[]
+
+  @@map("roles")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(150)
+  passwordHash String   @map("password_hash")
+  phone        String?  @db.VarChar(20)
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  roleId       String   @map("role_id")
+  unitId       String   @map("unit_id")
+  fcmToken     String?  @map("fcm_token")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  role               Role               @relation(fields: [roleId], references: [id])
+  unit               Unit               @relation(fields: [unitId], references: [id])
+  createdTasks       Task[]             @relation("TaskCreator")
+  assignedTasks      Task[]             @relation("TaskAssignee")
+  taskComments       TaskComment[]
+  taskEvidences      TaskEvidence[]
+  createdEvents      Event[]            @relation("EventCreator")
+  eventResponsibles  EventResponsible[]
+  eventPhotos        EventPhoto[]
+  eventTimeline      EventTimeline[]
+  announcements      Announcement[]
+  announcementReads  AnnouncementRead[]
+  userPoints         UserPoints?
+  userBadges         UserBadge[]
+  feedbacks          Feedback[]
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  title           String       @db.VarChar(200)
+  description     String?      @db.Text
+  status          TaskStatus   @default(pending)
+  priority        TaskPriority @default(medium)
+  progressPercent Int          @default(0) @map("progress_percent")
+  dueDate         DateTime?    @map("due_date")
+  createdById     String       @map("created_by")
+  assignedToId    String?      @map("assigned_to")
+  unitId          String       @map("unit_id")
+  eventId         String?      @map("event_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  createdBy   User           @relation("TaskCreator", fields: [createdById], references: [id])
+  assignedTo  User?          @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  unit        Unit           @relation(fields: [unitId], references: [id])
+  event       Event?         @relation(fields: [eventId], references: [id])
+  checklists  TaskChecklist[]
+  comments    TaskComment[]
+  evidences   TaskEvidence[]
+
+  @@map("tasks")
+}
+
+model TaskChecklist {
+  id          String  @id @default(uuid())
+  taskId      String  @map("task_id")
+  title       String  @db.VarChar(200)
+  isCompleted Boolean @default(false) @map("is_completed")
+  order       Int     @default(0)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_checklists")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+model TaskEvidence {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  userId     String   @map("user_id")
+  fileUrl    String   @map("file_url")
+  fileName   String   @map("file_name") @db.VarChar(200)
+  fileType   FileType @map("file_type")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_evidences")
+}
+
+model Event {
+  id              String      @id @default(uuid())
+  name            String      @db.VarChar(200)
+  description     String?     @db.Text
+  startDate       DateTime    @map("start_date")
+  endDate         DateTime    @map("end_date")
+  location        String      @db.VarChar(200)
+  status          EventStatus @default(planned)
+  progressPercent Int         @default(0) @map("progress_percent")
+  coverImageUrl   String?     @map("cover_image_url")
+  createdById     String      @map("created_by")
+  unitId          String      @map("unit_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  createdBy    User               @relation("EventCreator", fields: [createdById], references: [id])
+  unit         Unit               @relation(fields: [unitId], references: [id])
+  responsibles EventResponsible[]
+  timeline     EventTimeline[]
+  photos       EventPhoto[]
+  tasks        Task[]
+
+  @@map("events")
+}
+
+model EventResponsible {
+  eventId String @map("event_id")
+  userId  String @map("user_id")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@id([eventId, userId])
+  @@map("event_responsibles")
+}
+
+model EventTimeline {
+  id          String    @id @default(uuid())
+  eventId     String    @map("event_id")
+  title       String    @db.VarChar(200)
+  description String?   @db.Text
+  scheduledAt DateTime  @map("scheduled_at")
+  completedAt DateTime? @map("completed_at")
+  createdById String    @map("created_by")
+  order       Int       @default(0)
+
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@map("event_timeline")
+}
+
+model EventPhoto {
+  id         String   @id @default(uuid())
+  eventId    String   @map("event_id")
+  url        String
+  caption    String?  @db.VarChar(300)
+  uploadedBy String   @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [uploadedBy], references: [id])
+
+  @@map("event_photos")
+}
+
+model Announcement {
+  id          String           @id @default(uuid())
+  title       String           @db.VarChar(200)
+  content     String           @db.Text
+  type        AnnouncementType @default(info)
+  authorId    String           @map("author_id")
+  publishAt   DateTime         @default(now()) @map("publish_at")
+  expiresAt   DateTime?        @map("expires_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  author        User               @relation(fields: [authorId], references: [id])
+  targetRoles   AnnouncementRole[]
+  targetUnits   AnnouncementUnit[]
+  reads         AnnouncementRead[]
+
+  @@map("announcements")
+}
+
+model AnnouncementRole {
+  announcementId String @map("announcement_id")
+  roleId         String @map("role_id")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  @@id([announcementId, roleId])
+  @@map("announcement_roles")
+}
+
+model AnnouncementUnit {
+  announcementId String @map("announcement_id")
+  unitId         String @map("unit_id")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id])
+
+  @@id([announcementId, unitId])
+  @@map("announcement_units")
+}
+
+model AnnouncementRead {
+  announcementId String   @map("announcement_id")
+  userId         String   @map("user_id")
+  readAt         DateTime @default(now()) @map("read_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@id([announcementId, userId])
+  @@map("announcement_reads")
+}
+
+model Badge {
+  id           String        @id @default(uuid())
+  name         String        @db.VarChar(100)
+  description  String        @db.Text
+  criteria     String        @db.Text
+  category     BadgeCategory
+  level        BadgeLevel
+  iconUrl      String?       @map("icon_url")
+  pointsReward Int           @default(0) @map("points_reward")
+  unlockRule   Json          @map("unlock_rule")
+  order        Int           @default(0)
+
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  userId   String   @map("user_id")
+  badgeId  String   @map("badge_id")
+  earnedAt DateTime @default(now()) @map("earned_at")
+  notified Boolean  @default(false)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@id([userId, badgeId])
+  @@map("user_badges")
+}
+
+model UserPoints {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  points               Int      @default(0)
+  tasksCompleted       Int      @default(0) @map("tasks_completed")
+  tasksOnTime          Int      @default(0) @map("tasks_on_time")
+  tasksCreated         Int      @default(0) @map("tasks_created")
+  eventsParticipated   Int      @default(0) @map("events_participated")
+  eventsCreated        Int      @default(0) @map("events_created")
+  announcementsRead    Int      @default(0) @map("announcements_read")
+  announcementsPublished Int    @default(0) @map("announcements_published")
+  commentsPosted       Int      @default(0) @map("comments_posted")
+  evidencesUploaded    Int      @default(0) @map("evidences_uploaded")
+  loginStreak          Int      @default(0) @map("login_streak")
+  lastLoginDate        DateTime? @map("last_login_date")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_points")
+}
+
+model Feedback {
+  id         String           @id @default(uuid())
+  category   FeedbackCategory
+  content    String           @db.Text
+  isAnonymous Boolean         @default(false) @map("is_anonymous")
+  userId     String?          @map("user_id")
+  status     FeedbackStatus   @default(pending)
+  response   String?          @db.Text
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("feedbacks")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String           @db.VarChar(200)
+  body      String           @db.Text
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}

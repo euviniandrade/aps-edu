@@ -1,0 +1,35 @@
+{
+  "name": "aps-edu-backend",
+  "version": "1.0.0",
+  "description": "APS EDU - API Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "npx prisma migrate dev",
+    "db:migrate:prod": "npx prisma migrate deploy",
+    "db:seed": "node src/prisma/seed.js",
+    "db:studio": "npx prisma studio",
+    "db:reset": "npx prisma migrate reset --force && node src/prisma/seed.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/jwt": "^8.0.1",
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/swagger": "^8.15.0",
+    "@fastify/swagger-ui": "^4.0.1",
+    "@prisma/client": "^5.14.0",
+    "bcryptjs": "^2.4.3",
+    "bull": "^4.12.2",
+    "fastify": "^4.28.0",
+    "firebase-admin": "^12.1.0",
+    "ioredis": "^5.3.2",
+    "nodemailer": "^6.9.13",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.3",
+    "prisma": "^5.14.0"
+  }
+}
