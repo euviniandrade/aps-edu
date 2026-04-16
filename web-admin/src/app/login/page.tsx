@@ -3,6 +3,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import api from '@/lib/api'
+import {
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ArrowRightIcon,
+} from '@heroicons/react/24/outline'
+import { ShieldCheckIcon } from '@heroicons/react/24/solid'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,13 +22,15 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true); setError('')
+    setLoading(true)
+    setError('')
     try {
       const { data } = await api.post('/auth/login', { email, password })
       const role = data.user.role.slug
       if (!['admin', 'director'].includes(role)) {
         setError('Acesso restrito ao painel administrativo.')
-        setLoading(false); return
+        setLoading(false)
+        return
       }
       Cookies.set('accessToken', data.accessToken, { expires: 1 })
       Cookies.set('refreshToken', data.refreshToken, { expires: 30 })
@@ -28,182 +38,317 @@ export default function LoginPage() {
       router.replace('/dashboard')
     } catch {
       setError('E-mail ou senha incorretos.')
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel — Brand */}
+    <div className="min-h-screen flex bg-white">
+      {/* ── LEFT PANEL ─────────────────────────────────────────── */}
       <div
-        className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #003B55 0%, #132C45 55%, #0D2035 100%)' }}
+        className="hidden lg:flex lg:w-[58%] relative flex-col overflow-hidden"
+        style={{ background: 'linear-gradient(150deg, #1B3A6B 0%, #112850 55%, #0A1E40 100%)' }}
       >
-        {/* Decorative rings */}
-        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.06 }}>
-          {[200, 340, 480, 620].map((size, i) => (
-            <div key={i} className="absolute rounded-full border"
-              style={{
-                borderColor: '#F8A303',
-                width: size, height: size,
-                top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          ))}
-        </div>
+        {/* Dot-grid texture */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1.5px, transparent 1.5px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
 
-        <div className="relative z-10 text-center max-w-sm">
-          {/* Cross Emblem */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="w-28 h-28 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(248,163,3,0.08)', border: '2.5px solid #F8A303' }}>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute rounded-full" style={{ width: 6, height: 52, backgroundColor: '#F8A303', borderRadius: 3 }} />
-                <div className="absolute rounded-full" style={{ width: 36, height: 6, backgroundColor: '#F8A303', borderRadius: 3, top: 8 }} />
-              </div>
-            </div>
-          </div>
+        {/* Decorative large circle */}
+        <div
+          className="absolute -bottom-32 -left-32 w-[480px] h-[480px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(41,171,226,0.12) 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute -top-20 -right-20 w-[360px] h-[360px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(248,163,3,0.08) 0%, transparent 70%)' }}
+        />
 
-          <h1 className="text-white font-extrabold text-5xl tracking-wide mb-2">APS Sul</h1>
-          <p className="font-semibold text-sm tracking-widest mb-6"
-            style={{ color: '#F8A303', letterSpacing: '4px' }}>
-            EDUCAÇÃO ADVENTISTA
-          </p>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 justify-center mb-7">
-            <div className="h-px flex-1" style={{ backgroundColor: 'rgba(248,163,3,0.25)' }} />
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#F8A303' }} />
-            <div className="h-px flex-1" style={{ backgroundColor: 'rgba(248,163,3,0.25)' }} />
-          </div>
-
-          <p className="text-2xl font-light text-white leading-relaxed mb-1">Formando Caráter,</p>
-          <p className="text-2xl font-bold mb-10" style={{ color: '#F8A303' }}>Transformando Vidas</p>
-
-          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Associação Paulista Sul — cuidando das escolas adventistas<br />
-            da Zona Sul de São Paulo.
-          </p>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 mt-12 pt-10"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            {[
-              { value: 'APS', label: 'Associação' },
-              { value: 'Sul', label: 'Zona Sul SP' },
-              { value: '🎓', label: 'Educação' },
-            ].map(s => (
-              <div key={s.label} className="text-center">
-                <p className="text-2xl font-bold text-white">{s.value}</p>
-                <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel — Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12"
-        style={{ backgroundColor: '#F5F7FA' }}>
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-10">
-            <div className="inline-flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-3"
-                style={{ backgroundColor: '#132C45', border: '2.5px solid #F8A303' }}>
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute rounded-full" style={{ width: 4, height: 36, backgroundColor: '#F8A303', borderRadius: 2 }} />
-                  <div className="absolute rounded-full" style={{ width: 24, height: 4, backgroundColor: '#F8A303', borderRadius: 2, top: 6 }} />
-                </div>
-              </div>
-              <h1 className="font-extrabold text-3xl" style={{ color: '#132C45' }}>APS Sul</h1>
-              <p className="text-xs font-semibold tracking-widest mt-1" style={{ color: '#F8A303' }}>
-                EDUCAÇÃO ADVENTISTA
+        {/* Top logo */}
+        <div className="relative z-10 p-10">
+          <div className="flex items-center gap-4">
+            <img src="/icon-ea-white.svg" alt="Educação Adventista" className="w-14 h-14 flex-shrink-0" />
+            <div>
+              <p className="text-white font-extrabold text-xl leading-tight tracking-tight">
+                Educação Adventista
+              </p>
+              <p
+                className="text-xs font-medium tracking-[0.18em] mt-0.5 uppercase"
+                style={{ color: 'rgba(255,255,255,0.45)' }}
+              >
+                Associação Paulista Sul
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-1.5" style={{ color: '#132C45' }}>Bem-vindo</h2>
-              <p className="text-sm text-gray-500">Acesse o painel com suas credenciais institucionais</p>
+        {/* Center hero content */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center px-10 pb-6">
+          {/* Badge */}
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-8 w-fit"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              Painel Administrativo
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-white text-[3.2rem] font-extrabold leading-[1.08] mb-3 tracking-tight">
+            Formando
+            <br />
+            <span style={{ color: '#F8A303' }}>Caráter,</span>
+            <br />
+            Transformando
+            <br />
+            Vidas
+          </h1>
+
+          <p className="text-sm leading-relaxed max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            Plataforma de gestão educacional da Associação Paulista Sul —
+            cuidando das escolas adventistas com dedicação e excelência.
+          </p>
+
+          {/* Photo strip — student collage */}
+          <div className="mt-10 flex gap-3">
+            {/* Cards representing students / school life */}
+            {[
+              { emoji: '👧', label: 'Ensino Infantil', color: '#29ABE2' },
+              { emoji: '📚', label: 'Fundamental', color: '#F8A303' },
+              { emoji: '🎓', label: 'Médio', color: '#1B3A6B' },
+            ].map((card) => (
+              <div
+                key={card.label}
+                className="flex-1 rounded-2xl px-4 py-5 flex flex-col gap-2"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <span className="text-2xl">{card.emoji}</span>
+                <span className="text-xs font-semibold text-white">{card.label}</span>
+                <div className="h-1 rounded-full w-8 mt-1" style={{ backgroundColor: card.color }} />
+              </div>
+            ))}
+          </div>
+
+          {/* APS30 badge */}
+          <div
+            className="mt-8 inline-flex items-center gap-3 rounded-2xl px-5 py-3 w-fit"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}
+          >
+            {/* APS30 mini circle colors */}
+            <div className="flex gap-0.5">
+              {['#F9C234', '#29ABE2', '#E07B39', '#1B5FAD'].map((c) => (
+                <div key={c} className="w-3 h-3 rounded-full" style={{ backgroundColor: c }} />
+              ))}
+            </div>
+            <div>
+              <p className="text-white text-xs font-bold leading-none">APS 30 anos</p>
+              <p className="text-white/40 text-[10px] mt-0.5">Propósito em Ação</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom color band — APS30 colors */}
+        <div className="relative z-10 flex h-1.5">
+          <div className="flex-1" style={{ backgroundColor: '#F9C234' }} />
+          <div className="flex-1" style={{ backgroundColor: '#29ABE2' }} />
+          <div className="flex-1" style={{ backgroundColor: '#E07B39' }} />
+          <div className="flex-1" style={{ backgroundColor: '#1B5FAD' }} />
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL ────────────────────────────────────────── */}
+      <div
+        className="w-full lg:w-[42%] flex flex-col items-center justify-center px-8 py-14"
+        style={{ backgroundColor: '#F7F9FC' }}
+      >
+        <div className="w-full max-w-[360px]">
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-lg"
+              style={{ backgroundColor: '#1B3A6B' }}
+            >
+              <img src="/icon-ea-white.svg" alt="EA" className="w-10 h-10" />
+            </div>
+            <p className="font-extrabold text-xl" style={{ color: '#1B3A6B' }}>
+              Educação Adventista
+            </p>
+            <p className="text-xs font-medium tracking-widest mt-0.5 text-gray-400 uppercase">
+              Associação Paulista Sul
+            </p>
+          </div>
+
+          {/* Form card */}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-7">
+              <div>
+                <h2 className="text-2xl font-extrabold leading-tight" style={{ color: '#1B3A6B' }}>
+                  Bem-vindo
+                  <br />
+                  de volta 👋
+                </h2>
+                <p className="text-sm text-gray-400 mt-1.5">
+                  Acesse com suas credenciais institucionais
+                </p>
+              </div>
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: '#EEF3FA' }}
+              >
+                <ShieldCheckIcon className="w-5 h-5" style={{ color: '#1B3A6B' }} />
+              </div>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="mb-6 p-4 rounded-xl flex items-center gap-3"
-                style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
-                <span className="text-red-400">⚠️</span>
-                <p className="text-sm text-red-600">{error}</p>
+              <div
+                className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 text-sm"
+                style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FCA5A5',
+                  color: '#DC2626',
+                }}
+              >
+                <span className="font-bold text-base">!</span>
+                {error}
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email */}
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: '#132C45' }}>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: '#374151' }}
+                >
                   E-mail institucional
                 </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="email@aps.edu.br"
-                  autoComplete="email"
-                  className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors"
-                  style={{ borderColor: '#E5E7EB', backgroundColor: '#FAFAFA' }}
-                  onFocus={e => { e.target.style.borderColor = '#132C45'; e.target.style.boxShadow = '0 0 0 3px rgba(19,44,69,0.08)' }}
-                  onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none' }}
-                />
+                <div className="relative">
+                  <EnvelopeIcon
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400"
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@aps.edu.br"
+                    autoComplete="email"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all bg-gray-50 focus:bg-white"
+                    style={{ borderColor: '#E5E7EB' }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#1B3A6B'
+                      e.target.style.boxShadow = '0 0 0 3px rgba(27,58,107,0.1)'
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#E5E7EB'
+                      e.target.style.boxShadow = 'none'
+                    }}
+                  />
+                </div>
               </div>
 
+              {/* Password */}
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: '#132C45' }}>
+                <label
+                  className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                  style={{ color: '#374151' }}
+                >
                   Senha
                 </label>
                 <div className="relative">
+                  <LockClosedIcon
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                    style={{ width: 18, height: 18 }}
+                  />
                   <input
                     type={showPass ? 'text' : 'password'}
                     required
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="current-password"
-                    className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors pr-12"
-                    style={{ borderColor: '#E5E7EB', backgroundColor: '#FAFAFA' }}
-                    onFocus={e => { e.target.style.borderColor = '#132C45'; e.target.style.boxShadow = '0 0 0 3px rgba(19,44,69,0.08)' }}
-                    onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.boxShadow = 'none' }}
+                    className="w-full pl-10 pr-11 py-3 rounded-xl border text-sm outline-none transition-all bg-gray-50 focus:bg-white"
+                    style={{ borderColor: '#E5E7EB' }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#1B3A6B'
+                      e.target.style.boxShadow = '0 0 0 3px rgba(27,58,107,0.1)'
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#E5E7EB'
+                      e.target.style.boxShadow = 'none'
+                    }}
                   />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm px-1">
-                    {showPass ? '🙈' : '👁️'}
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPass ? (
+                      <EyeSlashIcon style={{ width: 18, height: 18 }} />
+                    ) : (
+                      <EyeIcon style={{ width: 18, height: 18 }} />
+                    )}
                   </button>
                 </div>
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl text-sm font-bold transition-all mt-2 flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all mt-1 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
                 style={{
-                  backgroundColor: loading ? '#9CA3AF' : '#132C45',
-                  color: '#FFFFFF',
-                  letterSpacing: '0.5px',
+                  backgroundColor: loading ? '#9CA3AF' : '#1B3A6B',
+                  transform: loading ? 'none' : undefined,
                 }}
               >
                 {loading ? (
                   <>
-                    <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
-                      style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+                    <span
+                      className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
+                      style={{
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        borderTopColor: 'white',
+                      }}
+                    />
                     Entrando...
                   </>
-                ) : 'Entrar no Sistema →'}
+                ) : (
+                  <>
+                    Entrar no sistema
+                    <ArrowRightIcon style={{ width: 16, height: 16 }} />
+                  </>
+                )}
               </button>
             </form>
           </div>
 
-          <p className="text-center text-xs mt-6" style={{ color: '#9CA3AF' }}>
-            APS Sul — Associação Paulista Sul · Departamento de Educação<br />
-            © {new Date().getFullYear()} APS EDU
+          {/* Footer */}
+          <p className="text-center text-xs mt-6 text-gray-400 leading-relaxed">
+            © {new Date().getFullYear()} Educação Adventista · Associação Paulista Sul
+            <br />
+            Todos os direitos reservados
           </p>
         </div>
       </div>

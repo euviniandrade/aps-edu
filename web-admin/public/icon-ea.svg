@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <clipPath id="a-clip">
+      <polygon points="12,96 45,4 55,4 22,96"/>
+      <polygon points="88,96 55,4 45,4 78,96"/>
+      <rect x="22" y="57" width="56" height="13"/>
+    </clipPath>
+  </defs>
+  <!-- Left leg -->
+  <polygon points="12,96 45,4 55,4 22,96" fill="#1B3A6B"/>
+  <!-- Right leg -->
+  <polygon points="88,96 55,4 45,4 78,96" fill="#1B3A6B"/>
+  <!-- Crossbar -->
+  <rect x="22" y="57" width="56" height="13" fill="#1B3A6B"/>
+  <!-- White swoosh stripes clipped to A shape -->
+  <g clip-path="url(#a-clip)">
+    <path d="M2,66 Q50,47 98,45" stroke="white" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+    <path d="M2,77 Q50,58 98,56" stroke="white" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
