@@ -17,8 +17,12 @@ RUN npx prisma generate
 # Copia o código-fonte
 COPY src ./src/
 
+# Cria pasta de uploads e configura permissões
+RUN mkdir -p /app/uploads
+
 # Usuário não-root por segurança
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 EXPOSE 3000
