@@ -23,4 +23,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node src/prisma/seed.js && node src/server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node src/prisma/seed.js && node src/server.js"]
