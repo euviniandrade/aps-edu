@@ -9,7 +9,7 @@ fs.mkdirSync(uploadsDir, { recursive: true })
 
 // Plugins
 fastify.register(require('@fastify/cors'), {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, cb) => cb(null, true),
   credentials: true
 })
 
