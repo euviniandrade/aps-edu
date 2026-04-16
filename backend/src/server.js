@@ -1,5 +1,11 @@
 require('dotenv').config()
+const path = require('path')
+const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
+
+// Garante que a pasta de uploads existe ao iniciar
+const uploadsDir = path.join(process.cwd(), 'uploads')
+fs.mkdirSync(uploadsDir, { recursive: true })
 
 // Plugins
 fastify.register(require('@fastify/cors'), {
@@ -13,6 +19,13 @@ fastify.register(require('@fastify/jwt'), {
 
 fastify.register(require('@fastify/multipart'), {
   limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+})
+
+// Servir arquivos enviados pelos usuários (fotos, documentos)
+fastify.register(require('@fastify/static'), {
+  root: uploadsDir,
+  prefix: '/uploads/',
+  decorateReply: false,
 })
 
 // Swagger docs

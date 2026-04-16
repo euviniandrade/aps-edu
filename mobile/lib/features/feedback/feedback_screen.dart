@@ -18,7 +18,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   final _categories = {
     'suggestion': ('Sugestão', Icons.lightbulb_rounded, AppColors.warning),
     'problem': ('Problema', Icons.bug_report_rounded, AppColors.danger),
-    'idea': ('Ideia', Icons.psychology_rounded, AppColors.primary),
+    'idea': ('Ideia', Icons.psychology_rounded, AppColors.navy),
     'praise': ('Elogio', Icons.favorite_rounded, AppColors.success),
   };
 
@@ -88,7 +88,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             subtitle: const Text('Seu nome não será identificado', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             value: _anonymous,
             onChanged: (v) => setState(() => _anonymous = v),
-            activeColor: AppColors.primary,
+            activeColor: AppColors.navy,
             contentPadding: EdgeInsets.zero,
           ),
           const SizedBox(height: 28),

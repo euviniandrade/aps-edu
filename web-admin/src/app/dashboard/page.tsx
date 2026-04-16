@@ -4,7 +4,7 @@ import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
-const COLORS = ['#1B5E8C', '#27AE60', '#F39C12', '#E74C3C']
+const COLORS = ['#132C45', '#61CE70', '#F8A303', '#E74C3C']
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
@@ -77,7 +77,7 @@ export default function DashboardPage() {
               <XAxis dataKey="name" fontSize={11} />
               <YAxis fontSize={11} />
               <Tooltip />
-              <Bar dataKey="pontos" fill="#1B5E8C" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pontos" fill="#132C45" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -40,7 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _typeColor(String? t) {
     switch (t) {
       case 'badge': return AppColors.gold;
-      case 'event': return AppColors.primary;
+      case 'event': return AppColors.navy;
       case 'announcement': return AppColors.warning;
       case 'reminder': return AppColors.danger;
       default: return AppColors.success;
@@ -57,7 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
           : _notifications.isEmpty
               ? const Center(child: Text('Nenhuma notificação', style: TextStyle(color: AppColors.textSecondary)))
               : RefreshIndicator(
@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: isRead ? Colors.transparent : AppColors.primary.withOpacity(0.04),
+                            color: isRead ? Colors.transparent : AppColors.navy.withOpacity(0.04),
                             border: Border(bottom: BorderSide(color: AppColors.border)),
                           ),
                           child: Row(children: [
@@ -88,7 +88,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               Text(n['title'] ?? '', style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold, fontSize: 14)),
                               Text(n['body'] ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
                             ])),
-                            if (!isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                            if (!isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.navy, shape: BoxShape.circle)),
                           ]),
                         ),
                       );

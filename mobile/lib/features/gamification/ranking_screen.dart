@@ -55,13 +55,13 @@ class _RankingScreenState extends State<RankingScreen> with SingleTickerProvider
           final ranking = _rankings[scope] ?? [];
           final myPos = _myPositions[scope];
           return _loading && ranking.isEmpty
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
               : Column(children: [
                   if (myPos != null) Container(
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryDark]),
+                      gradient: const LinearGradient(colors: [AppColors.navy, AppColors.navyDark]),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(children: [
@@ -96,15 +96,15 @@ class _RankingScreenState extends State<RankingScreen> with SingleTickerProvider
                           const SizedBox(width: 12),
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: AppColors.primary.withOpacity(0.15),
-                            child: Text((item['user']?['name'] ?? 'U')[0], style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                            backgroundColor: AppColors.navy.withOpacity(0.15),
+                            child: Text((item['user']?['name'] ?? 'U')[0], style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold)),
                           ),
                           const SizedBox(width: 10),
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(item['user']?['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                             Text(item['user']?['unit']?['name'] ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                           ])),
-                          Text('$pts pts', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text('$pts pts', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold, fontSize: 14)),
                         ]),
                       );
                     },

@@ -109,7 +109,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       Text('${day.day}/${day.month}/${day.year}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 12),
                       ...items.map((item) => ListTile(
-                        leading: Icon(item['_type'] == 'event' ? Icons.event_rounded : Icons.check_circle_outline, color: item['_type'] == 'event' ? AppColors.primary : AppColors.warning),
+                        leading: Icon(item['_type'] == 'event' ? Icons.event_rounded : Icons.check_circle_outline, color: item['_type'] == 'event' ? AppColors.navy : AppColors.warning),
                         title: Text(item['name'] ?? item['title'] ?? '', style: const TextStyle(fontSize: 14)),
                         onTap: () { Navigator.pop(context); context.push('/${item['_type']}s/${item['id']}'); },
                       )),
@@ -120,7 +120,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Container(
                     width: 30, height: 30,
                     decoration: BoxDecoration(
-                      color: isToday ? AppColors.primary : Colors.transparent,
+                      color: isToday ? AppColors.navy : Colors.transparent,
                       shape: BoxShape.circle,
                     ),
                     child: Center(child: Text('${day.day}', style: TextStyle(fontSize: 13, fontWeight: isToday ? FontWeight.bold : FontWeight.normal, color: isToday ? Colors.white : AppColors.textPrimary))),
@@ -128,7 +128,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   if (items.isNotEmpty)
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       if (items.any((i) => i['_type'] == 'event'))
-                        Container(width: 5, height: 5, margin: const EdgeInsets.only(right: 2), decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                        Container(width: 5, height: 5, margin: const EdgeInsets.only(right: 2), decoration: const BoxDecoration(color: AppColors.navy, shape: BoxShape.circle)),
                       if (items.any((i) => i['_type'] == 'task'))
                         Container(width: 5, height: 5, decoration: const BoxDecoration(color: AppColors.warning, shape: BoxShape.circle)),
                     ]),
@@ -143,7 +143,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(children: [
-            Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+            Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.navy, shape: BoxShape.circle)),
             const SizedBox(width: 6),
             const Text('Eventos', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(width: 16),

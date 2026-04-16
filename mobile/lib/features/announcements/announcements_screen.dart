@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -27,7 +28,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       case 'urgent': return AppColors.danger;
       case 'warning': return AppColors.warning;
       case 'celebration': return AppColors.gold;
-      default: return AppColors.primary;
+      default: return AppColors.navy;
     }
   }
 
@@ -53,8 +54,14 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Mural de Avisos')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/announcements/new').then((_) => _load()),
+        backgroundColor: AppColors.navy,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Novo Aviso', style: TextStyle(color: Colors.white)),
+      ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
           : _announcements.isEmpty
               ? const Center(child: Text('Nenhum aviso no momento', style: TextStyle(color: AppColors.textSecondary)))
               : RefreshIndicator(
@@ -102,7 +109,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   if (!isRead)
                                     Container(
                                       width: 8, height: 8,
-                                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                                      decoration: const BoxDecoration(color: AppColors.navy, shape: BoxShape.circle),
                                     ),
                                 ]),
                                 const SizedBox(height: 8),
@@ -123,7 +130,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                       Text('Lido', style: TextStyle(color: AppColors.success, fontSize: 11)),
                                     ])
                                   else
-                                    const Text('Toque para confirmar leitura', style: TextStyle(color: AppColors.primary, fontSize: 11)),
+                                    const Text('Toque para confirmar leitura', style: TextStyle(color: AppColors.navy, fontSize: 11)),
                                 ]),
                               ],
                             ),

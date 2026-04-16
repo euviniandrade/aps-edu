@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -12,6 +14,8 @@ class EventDetailScreen extends StatefulWidget {
 class _EventDetailScreenState extends State<EventDetailScreen> {
   Map<String, dynamic>? _event;
   bool _loading = true;
+  bool _uploadingPhoto = false;
+  bool _loadingReport = false;
 
   @override
   void initState() { super.initState(); _load(); }
@@ -28,15 +32,130 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _load();
   }
 
+  Future<void> _addPhoto() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            const Text('Adicionar foto', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: AppColors.navy, child: Icon(Icons.camera_alt, color: Colors.white)),
+              title: const Text('Tirar foto'),
+              onTap: () { Navigator.pop(context); _pickPhoto(ImageSource.camera); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: AppColors.info, child: Icon(Icons.photo_library, color: Colors.white)),
+              title: const Text('Escolher da galeria'),
+              onTap: () { Navigator.pop(context); _pickPhoto(ImageSource.gallery); },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source, imageQuality: 85, maxWidth: 1920);
+      if (image == null) return;
+
+      setState(() => _uploadingPhoto = true);
+      final formData = FormData.fromMap({
+        'photo': await MultipartFile.fromFile(image.path, filename: image.name),
+      });
+      await api.uploadEventPhoto(widget.eventId, formData);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto adicionada!'), backgroundColor: AppColors.success),
+        );
+        _load();
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao enviar foto'), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
+  Future<void> _generateReport() async {
+    setState(() => _loadingReport = true);
+    try {
+      final res = await api.getEventReport(widget.eventId);
+      if (!mounted) return;
+      final report = res.data as Map<String, dynamic>;
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Relatório: ${report['event']?['name'] ?? ''}'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _reportLine('Progresso', '${report['event']?['progressPercent'] ?? 0}%'),
+                _reportLine('Status', report['event']?['status'] ?? ''),
+                _reportLine('Local', report['event']?['location'] ?? ''),
+                const Divider(),
+                _reportLine('Tarefas no prazo', '${report['stats']?['tasksOnTime'] ?? 0}'),
+                _reportLine('Tarefas atrasadas', '${report['stats']?['tasksLate'] ?? 0}'),
+                _reportLine('Total responsáveis', '${report['stats']?['totalResponsibles'] ?? 0}'),
+                _reportLine('Fotos', '${report['stats']?['totalPhotos'] ?? 0}'),
+                const Divider(),
+                const Text('Linha do tempo:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                ...(report['timeline'] as List? ?? []).map((t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(children: [
+                    Icon(t['completedAt'] != null ? Icons.check_circle : Icons.radio_button_unchecked,
+                        size: 14, color: t['completedAt'] != null ? AppColors.success : AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(t['title'] ?? '', style: const TextStyle(fontSize: 12))),
+                  ]),
+                )),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fechar')),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao gerar relatório'), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingReport = false);
+    }
+  }
+
+  Widget _reportLine(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(children: [
+      Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+      Text(value, style: const TextStyle(fontSize: 13)),
+    ]),
+  );
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.navy)));
     if (_event == null) return const Scaffold(body: Center(child: Text('Evento não encontrado')));
 
     final timeline = List<Map<String, dynamic>>.from(_event!['timeline'] ?? []);
     final responsibles = List<Map<String, dynamic>>.from(_event!['responsibles'] ?? []);
     final photos = List<Map<String, dynamic>>.from(_event!['photos'] ?? []);
     final progress = _event!['progressPercent'] ?? 0;
+    final doneCount = timeline.where((t) => t['completedAt'] != null).length;
 
     return Scaffold(
       appBar: AppBar(title: Text(_event!['name'] ?? 'Evento')),
@@ -45,8 +164,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           // Capa
           Container(
             height: 160,
-            color: AppColors.primary.withOpacity(0.15),
-            child: const Center(child: Icon(Icons.event_rounded, size: 72, color: AppColors.primary)),
+            color: AppColors.navy.withOpacity(0.15),
+            child: const Center(child: Icon(Icons.event_rounded, size: 72, color: AppColors.navy)),
           ),
 
           Padding(
@@ -59,13 +178,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 Row(children: [
                   const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
                   const SizedBox(width: 4),
-                  Text(_event!['location'] ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  Expanded(child: Text(_event!['location'] ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
                 ]),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: LinearProgressIndicator(value: progress / 100, minHeight: 8, backgroundColor: AppColors.border, valueColor: const AlwaysStoppedAnimation(AppColors.primary))),
+                  Expanded(child: LinearProgressIndicator(value: progress / 100, minHeight: 8, backgroundColor: AppColors.border, valueColor: const AlwaysStoppedAnimation(AppColors.navy))),
                   const SizedBox(width: 10),
-                  Text('$progress%', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('$progress%', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold, fontSize: 14)),
                 ]),
                 const SizedBox(height: 4),
                 const Text('executado', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
@@ -75,14 +194,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 4,
                   children: responsibles.map((r) => Chip(
-                    avatar: CircleAvatar(child: Text((r['user']?['name'] ?? 'U')[0], style: const TextStyle(fontSize: 12))),
+                    avatar: CircleAvatar(
+                      backgroundColor: AppColors.navy.withOpacity(0.2),
+                      child: Text((r['user']?['name'] ?? 'U')[0], style: const TextStyle(fontSize: 12, color: AppColors.navy)),
+                    ),
                     label: Text(r['user']?['name'] ?? '', style: const TextStyle(fontSize: 12)),
                   )).toList(),
                 ),
 
                 const SizedBox(height: 20),
-                Text('Linha do Tempo (${timeline.where((t) => t['completedAt'] != null).length}/${timeline.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                Text('Linha do Tempo ($doneCount/${timeline.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ...timeline.asMap().entries.map((entry) {
                   final i = entry.key;
@@ -92,7 +215,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Column(children: [
-                        Container(width: 28, height: 28,
+                        Container(
+                          width: 28, height: 28,
                           decoration: BoxDecoration(
                             color: done ? AppColors.success : AppColors.border,
                             shape: BoxShape.circle,
@@ -100,7 +224,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                           child: Icon(done ? Icons.check : Icons.radio_button_unchecked, color: done ? Colors.white : AppColors.textSecondary, size: 16),
                         ),
                         if (i < timeline.length - 1)
-                          Container(width: 2, height: 40, color: done ? AppColors.success.withOpacity(0.4) : AppColors.border),
+                          Container(width: 2, height: 44, color: done ? AppColors.success.withOpacity(0.4) : AppColors.border),
                       ]),
                       const SizedBox(width: 12),
                       Expanded(
@@ -116,7 +240,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             ),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(item['title'] ?? '', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, decoration: done ? TextDecoration.lineThrough : null)),
-                              if (item['description'] != null)
+                              if (item['description'] != null && (item['description'] as String).isNotEmpty)
                                 Text(item['description'], style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ]),
                           ),
@@ -126,10 +250,24 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   );
                 }),
 
-                if (photos.isNotEmpty) ...[
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
+                Row(children: [
                   Text('Fotos (${photos.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
+                  const Spacer(),
+                  if (_uploadingPhoto)
+                    const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy))
+                  else
+                    TextButton.icon(
+                      icon: const Icon(Icons.add_a_photo, size: 16),
+                      label: const Text('Adicionar'),
+                      onPressed: _addPhoto,
+                      style: TextButton.styleFrom(foregroundColor: AppColors.navy, padding: EdgeInsets.zero),
+                    ),
+                ]),
+                const SizedBox(height: 8),
+                if (photos.isEmpty)
+                  const Center(child: Text('Nenhuma foto ainda', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)))
+                else
                   SizedBox(
                     height: 90,
                     child: ListView.builder(
@@ -138,19 +276,23 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       itemBuilder: (_, i) => Container(
                         width: 90, height: 90,
                         margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.photo, color: AppColors.textSecondary),
+                        decoration: BoxDecoration(color: AppColors.navy.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                        child: const Icon(Icons.photo, color: AppColors.navy),
                       ),
                     ),
                   ),
-                ],
 
                 const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.assessment_outlined),
-                  label: const Text('Gerar Relatório Final'),
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: _loadingReport
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.assessment_outlined),
+                    label: Text(_loadingReport ? 'Gerando...' : 'Gerar Relatório Final'),
+                    onPressed: _loadingReport ? null : _generateReport,
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.navy, padding: const EdgeInsets.symmetric(vertical: 14)),
+                  ),
                 ),
                 const SizedBox(height: 40),
               ],

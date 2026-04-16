@@ -74,7 +74,20 @@ Login:
 
 ---
 
-## PASSO 5 — Rodar o App Mobile
+## PASSO 5 — Configurar o Android SDK (necessário na 1ª vez)
+
+O Flutter precisa do Android SDK. A forma mais fácil é instalar o **Android Studio**:
+1. Acesse: https://developer.android.com/studio
+2. Instale o Android Studio
+3. Abra-o → SDK Manager → instale o **Android SDK Platform 34**
+4. No Terminal: `flutter doctor` — siga as instruções para aceitar licenças:
+   ```bash
+   flutter doctor --android-licenses
+   ```
+
+---
+
+## PASSO 6 — Rodar o App Mobile
 
 ```bash
 cd mobile
@@ -82,8 +95,20 @@ flutter pub get
 flutter run
 ```
 
-> Para rodar no emulador Android: abra o Android Studio, crie um AVD (emulador) e inicie-o antes de rodar `flutter run`.
-> Para iOS (somente Mac): configure o Xcode.
+> **Emulador Android**: Abra o Android Studio → Device Manager → crie e inicie um emulador AVD, depois rode `flutter run`.
+> **Dispositivo físico**: Ative "Opções do desenvolvedor" e "Depuração USB" no Android, conecte o cabo.
+> **iOS** (somente Mac): Configure o Xcode e rode `cd ios && pod install` antes de `flutter run`.
+
+### Push Notifications (Firebase) — opcional
+
+Para ativar notificações push:
+1. Crie um projeto no [Firebase Console](https://console.firebase.google.com)
+2. Registre o app Android com o pacote `com.aps.edu.aps_edu`
+3. Baixe o `google-services.json` e coloque em `mobile/android/app/`
+4. Para iOS: baixe `GoogleService-Info.plist` e coloque em `mobile/ios/Runner/`
+5. No backend, defina as variáveis `FIREBASE_*` no arquivo `.env`
+
+> Sem o Firebase configurado, o app funciona normalmente — só as notificações push serão desabilitadas.
 
 ---
 

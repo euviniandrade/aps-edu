@@ -34,6 +34,12 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tarefas')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/tasks/new').then((_) => _load()),
+        backgroundColor: AppColors.navy,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Nova Tarefa', style: TextStyle(color: Colors.white)),
+      ),
       body: Column(
         children: [
           SingleChildScrollView(
@@ -48,8 +54,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     label: Text(labels[s]!),
                     selected: _statusFilter == s,
                     onSelected: (_) { setState(() => _statusFilter = s); _load(); },
-                    selectedColor: AppColors.primary.withOpacity(0.15),
-                    checkmarkColor: AppColors.primary,
+                    selectedColor: AppColors.navy.withOpacity(0.15),
+                    checkmarkColor: AppColors.navy,
                   ),
                 );
               }).toList(),
@@ -57,7 +63,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
                 : _tasks.isEmpty
                     ? const Center(child: Text('Nenhuma tarefa encontrada', style: TextStyle(color: AppColors.textSecondary)))
                     : RefreshIndicator(

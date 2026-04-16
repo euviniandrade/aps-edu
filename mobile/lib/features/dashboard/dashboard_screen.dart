@@ -25,7 +25,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    api.init();
     _loadData();
   }
 
@@ -75,7 +74,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
           : RefreshIndicator(
               onRefresh: _loadData,
               child: CustomScrollView(
@@ -84,12 +83,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   SliverAppBar(
                     expandedHeight: 140,
                     pinned: true,
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.navy,
                     flexibleSpace: FlexibleSpaceBar(
                       background: Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.primaryDark],
+                            colors: [AppColors.navy, AppColors.navyDark],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -119,7 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.search_rounded, color: Colors.white),
-                        onPressed: () {},
+                        onPressed: () => context.go('/tasks'),
                       ),
                     ],
                   ),
@@ -131,7 +130,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         // Stats
                         Row(
                           children: [
-                            Expanded(child: StatCard(label: 'Tarefas Ativas', value: _myTasks.length.toString(), icon: Icons.check_circle_outline, color: AppColors.primary)),
+                            Expanded(child: StatCard(label: 'Tarefas Ativas', value: _myTasks.length.toString(), icon: Icons.check_circle_outline, color: AppColors.navy)),
                             const SizedBox(width: 12),
                             Expanded(child: StatCard(label: 'Próx. Eventos', value: _events.length.toString(), icon: Icons.event_rounded, color: AppColors.accent)),
                           ],
@@ -182,7 +181,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 leading: Text(medals[pos], style: const TextStyle(fontSize: 24)),
                                 title: Text(item['user']?['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                                 subtitle: Text(item['user']?['unit']?['name'] ?? '', style: const TextStyle(fontSize: 12)),
-                                trailing: Text('${item['points']} pts', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                trailing: Text('${item['points']} pts', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold)),
                               );
                             }).toList(),
                           ),
@@ -229,8 +228,8 @@ class _EventTile extends StatelessWidget {
       child: ListTile(
         leading: Container(
           width: 44, height: 44,
-          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-          child: const Icon(Icons.event_rounded, color: AppColors.primary),
+          decoration: BoxDecoration(color: AppColors.navy.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.event_rounded, color: AppColors.navy),
         ),
         title: Text(event['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text('📍 ${event['location'] ?? ''}', style: const TextStyle(fontSize: 12)),
@@ -239,7 +238,7 @@ class _EventTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text('${event['progressPercent'] ?? 0}%',
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.bold, fontSize: 14)),
             const Text('executado', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
           ],
         ),

@@ -2,15 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 const String kBaseUrl = 'http://10.0.2.2:3000/api'; // Android emulator → localhost
+// Para dispositivo físico, use o IP da sua máquina: 'http://192.168.X.X:3000/api'
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
-  ApiClient._internal();
 
   late final Dio _dio;
 
-  void init() {
+  ApiClient._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: kBaseUrl,
       connectTimeout: const Duration(seconds: 15),
@@ -62,8 +62,9 @@ class ApiClient {
   // Auth
   Future<Response> login(String email, String password) =>
       _dio.post('/auth/login', data: {'email': email, 'password': password});
-
   Future<Response> getMe() => _dio.get('/auth/me');
+  Future<Response> updateFcmToken(String token) =>
+      _dio.put('/auth/update-fcm-token', data: {'fcmToken': token});
 
   // Tasks
   Future<Response> getTasks({Map<String, dynamic>? params}) =>
@@ -77,20 +78,28 @@ class ApiClient {
       _dio.put('/tasks/$taskId/checklists/$checkId', data: data);
   Future<Response> addComment(String taskId, String content) =>
       _dio.post('/tasks/$taskId/comments', data: {'content': content});
+  Future<Response> uploadEvidence(String taskId, FormData formData) =>
+      _dio.post('/tasks/$taskId/evidences', data: formData,
+          options: Options(headers: {'Content-Type': 'multipart/form-data'}));
 
   // Events
   Future<Response> getEvents({Map<String, dynamic>? params}) =>
       _dio.get('/events', queryParameters: params);
   Future<Response> getEvent(String id) => _dio.get('/events/$id');
-  Future<Response> getEventReport(String id) => _dio.get('/events/$id/report');
   Future<Response> createEvent(Map<String, dynamic> data) =>
       _dio.post('/events', data: data);
+  Future<Response> getEventReport(String id) => _dio.get('/events/$id/report');
   Future<Response> updateTimeline(String eventId, String itemId, Map<String, dynamic> data) =>
       _dio.put('/events/$eventId/timeline/$itemId', data: data);
+  Future<Response> uploadEventPhoto(String eventId, FormData formData) =>
+      _dio.post('/events/$eventId/photos', data: formData,
+          options: Options(headers: {'Content-Type': 'multipart/form-data'}));
 
   // Announcements
   Future<Response> getAnnouncements({Map<String, dynamic>? params}) =>
       _dio.get('/announcements', queryParameters: params);
+  Future<Response> createAnnouncement(Map<String, dynamic> data) =>
+      _dio.post('/announcements', data: data);
   Future<Response> readAnnouncement(String id) =>
       _dio.post('/announcements/$id/read');
 
@@ -116,6 +125,8 @@ class ApiClient {
   // Users
   Future<Response> getUsers({Map<String, dynamic>? params}) =>
       _dio.get('/users', queryParameters: params);
+  Future<Response> getRoles() => _dio.get('/roles');
+  Future<Response> getUnits() => _dio.get('/units');
 
   // Reports
   Future<Response> getUserReport(String userId, {Map<String, dynamic>? params}) =>

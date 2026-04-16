@@ -16,7 +16,7 @@ class SectionHeader extends StatelessWidget {
         if (onSeeAll != null)
           TextButton(
             onPressed: onSeeAll,
-            child: const Text('Ver todos', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+            child: const Text('Ver todos', style: TextStyle(color: AppColors.navy, fontSize: 13)),
           ),
       ],
     );

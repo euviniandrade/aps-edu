@@ -1,0 +1,29 @@
+name: Deploy Web Admin → Fly.io
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web-admin/**'
+      - '.github/workflows/deploy-web-admin.yml'
+
+jobs:
+  deploy:
+    name: Deploy Web Admin
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-admin
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy para Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_WEB }}

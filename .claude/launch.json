@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Docker (PostgreSQL + Redis + Adminer)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "docker-compose.yml", "up"],
+      "port": 8080
+    },
+    {
+      "name": "Backend API (Fastify + Nodemon)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "backend"],
+      "port": 3000
+    },
+    {
+      "name": "Web Admin (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web-admin"],
+      "port": 3001
+    }
+  ]
+}

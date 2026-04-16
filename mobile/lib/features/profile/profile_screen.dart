@@ -31,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.navy)));
 
     final user = _user ?? {};
     final points = user['points'] ?? 0;
@@ -47,10 +47,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.navy,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.navy, AppColors.navyDark], begin: Alignment.topLeft, end: Alignment.bottomRight)),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -84,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(width: 6),
                         Text('$points pontos', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                         const Spacer(),
-                        Text(level['name'] ?? '', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        Text(level['name'] ?? '', style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600)),
                       ]),
                       const SizedBox(height: 10),
                       LinearProgressIndicator(value: levelProgress / 100, minHeight: 8, backgroundColor: AppColors.border, valueColor: const AlwaysStoppedAnimation(AppColors.gold)),
@@ -100,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(children: [
                 Expanded(child: _statBox('Tarefas\nConcluídas', tasksCompleted.toString(), Icons.check_circle_rounded, AppColors.success)),
                 const SizedBox(width: 8),
-                Expanded(child: _statBox('No\nPrazo', '$tasksOnTime', Icons.timer_rounded, AppColors.primary)),
+                Expanded(child: _statBox('No\nPrazo', '$tasksOnTime', Icons.timer_rounded, AppColors.navy)),
                 const SizedBox(width: 8),
                 Expanded(child: _statBox('Selos\nConquistados', badgesCount.toString(), Icons.military_tech_rounded, AppColors.gold)),
               ]),
@@ -108,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // Menu
               _menuItem(Icons.military_tech_rounded, 'Meus Selos', () => context.push('/badges'), AppColors.gold),
-              _menuItem(Icons.leaderboard_rounded, 'Ranking', () => context.push('/ranking'), AppColors.primary),
+              _menuItem(Icons.leaderboard_rounded, 'Ranking', () => context.push('/ranking'), AppColors.navy),
               _menuItem(Icons.notifications_rounded, 'Notificações', () => context.push('/notifications'), AppColors.warning),
               _menuItem(Icons.feedback_rounded, 'Enviar Feedback', () => context.push('/feedback'), AppColors.success),
               _menuItem(Icons.settings_rounded, 'Configurações', () {}, AppColors.textSecondary),

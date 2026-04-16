@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -12,6 +15,7 @@ class TaskDetailScreen extends StatefulWidget {
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Map<String, dynamic>? _task;
   bool _loading = true;
+  bool _uploading = false;
   final _commentCtrl = TextEditingController();
 
   @override
@@ -42,6 +46,95 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _load();
   }
 
+  Future<void> _showEvidencePicker() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Adicionar evidência', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: AppColors.navy, child: Icon(Icons.camera_alt, color: Colors.white)),
+              title: const Text('Tirar foto'),
+              onTap: () { Navigator.pop(context); _pickAndUpload(ImageSource.camera); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: AppColors.info, child: Icon(Icons.photo_library, color: Colors.white)),
+              title: const Text('Escolher da galeria'),
+              onTap: () { Navigator.pop(context); _pickAndUpload(ImageSource.gallery); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: AppColors.warning, child: Icon(Icons.insert_drive_file, color: Colors.white)),
+              title: const Text('Escolher arquivo (PDF, Word...)'),
+              onTap: () { Navigator.pop(context); _pickFile(); },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUpload(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source, imageQuality: 80, maxWidth: 1920);
+      if (image == null) return;
+      await _uploadFile(image.path, image.name, 'image');
+    } catch (e) {
+      _showError('Erro ao selecionar imagem');
+    }
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.path == null) return;
+      await _uploadFile(file.path!, file.name, 'document');
+    } catch (e) {
+      _showError('Erro ao selecionar arquivo');
+    }
+  }
+
+  Future<void> _uploadFile(String filePath, String fileName, String fileType) async {
+    setState(() => _uploading = true);
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'fileType': fileType,
+      });
+      await api.uploadEvidence(widget.taskId, formData);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Evidência enviada com sucesso!'), backgroundColor: AppColors.success),
+        );
+        _load();
+      }
+    } catch (_) {
+      _showError('Erro ao enviar evidência');
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.danger),
+    );
+  }
+
   Color get _statusColor {
     switch (_task?['status']) {
       case 'completed': return AppColors.success;
@@ -53,7 +146,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.navy)));
     if (_task == null) return const Scaffold(body: Center(child: Text('Tarefa não encontrada')));
 
     final checklists = List<Map<String, dynamic>>.from(_task!['checklists'] ?? []);
@@ -111,7 +204,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 children: checklists.map((item) => CheckboxListTile(
                   dense: true,
                   value: item['isCompleted'] ?? false,
-                  activeColor: AppColors.primary,
+                  activeColor: AppColors.navy,
                   title: Text(item['title'] ?? '', style: TextStyle(decoration: item['isCompleted'] == true ? TextDecoration.lineThrough : null, fontSize: 14)),
                   onChanged: (_) => _toggleChecklist(item['id'], item['isCompleted'] ?? false),
                 )).toList(),
@@ -129,15 +222,28 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 children: [
                   ...evidences.map((e) => ListTile(
                     dense: true,
-                    leading: Icon(e['fileType'] == 'image' ? Icons.image : Icons.description, color: AppColors.primary),
+                    leading: Icon(e['fileType'] == 'image' ? Icons.image_rounded : Icons.description_rounded, color: AppColors.navy),
                     title: Text(e['fileName'] ?? '', style: const TextStyle(fontSize: 13)),
-                    subtitle: Text(e['user']?['name'] ?? '', style: const TextStyle(fontSize: 11)),
+                    subtitle: Text(e['user']?['name'] ?? '', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    trailing: e['fileUrl'] != null
+                        ? const Icon(Icons.open_in_new, size: 16, color: AppColors.textSecondary)
+                        : null,
                   )),
-                  TextButton.icon(
-                    icon: const Icon(Icons.attach_file),
-                    label: const Text('Adicionar evidência'),
-                    onPressed: () {},
-                  ),
+                  if (_uploading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy)),
+                        SizedBox(width: 8),
+                        Text('Enviando evidência...', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                      ]),
+                    )
+                  else
+                    TextButton.icon(
+                      icon: const Icon(Icons.attach_file),
+                      label: const Text('Adicionar evidência'),
+                      onPressed: _showEvidencePicker,
+                    ),
                 ],
               ),
             ),
@@ -151,15 +257,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               children: [
                 ...comments.map((c) => ListTile(
                   dense: true,
-                  leading: CircleAvatar(radius: 16, backgroundColor: AppColors.primary.withOpacity(0.15), child: Text((c['user']?['name'] ?? 'U')[0], style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold))),
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AppColors.navy.withOpacity(0.15),
+                    child: Text(
+                      (c['user']?['name'] ?? 'U')[0].toUpperCase(),
+                      style: const TextStyle(color: AppColors.navy, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                   title: Text(c['user']?['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   subtitle: Text(c['content'] ?? '', style: const TextStyle(fontSize: 13)),
                 )),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(children: [
-                    Expanded(child: TextField(controller: _commentCtrl, decoration: const InputDecoration(hintText: 'Escrever comentário...', isDense: true))),
-                    IconButton(icon: const Icon(Icons.send, color: AppColors.primary), onPressed: _sendComment),
+                    Expanded(child: TextField(
+                      controller: _commentCtrl,
+                      decoration: const InputDecoration(hintText: 'Escrever comentário...', isDense: true),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendComment(),
+                    )),
+                    IconButton(icon: const Icon(Icons.send, color: AppColors.navy), onPressed: _sendComment),
                   ]),
                 ),
               ],
@@ -196,6 +314,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   String _formatDate(String? date) {
     if (date == null) return '';
-    try { final d = DateTime.parse(date); return '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}'; } catch (_) { return ''; }
+    try {
+      final d = DateTime.parse(date);
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    } catch (_) { return ''; }
   }
 }

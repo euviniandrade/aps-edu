@@ -31,7 +31,7 @@ class _EventsScreenState extends State<EventsScreen> {
       case 'ongoing': return AppColors.success;
       case 'completed': return AppColors.textSecondary;
       case 'cancelled': return AppColors.danger;
-      default: return AppColors.primary;
+      default: return AppColors.navy;
     }
   }
 
@@ -49,6 +49,12 @@ class _EventsScreenState extends State<EventsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Eventos')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/events/new').then((_) => _load()),
+        backgroundColor: AppColors.navy,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Novo Evento', style: TextStyle(color: Colors.white)),
+      ),
       body: Column(
         children: [
           SingleChildScrollView(
@@ -63,7 +69,7 @@ class _EventsScreenState extends State<EventsScreen> {
                     label: Text(labels[s]!),
                     selected: _filter == s,
                     onSelected: (_) { setState(() => _filter = s); _load(); },
-                    selectedColor: AppColors.primary.withOpacity(0.15),
+                    selectedColor: AppColors.navy.withOpacity(0.15),
                   ),
                 );
               }).toList(),
@@ -71,7 +77,7 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
                 : _events.isEmpty
                     ? const Center(child: Text('Nenhum evento encontrado', style: TextStyle(color: AppColors.textSecondary)))
                     : RefreshIndicator(

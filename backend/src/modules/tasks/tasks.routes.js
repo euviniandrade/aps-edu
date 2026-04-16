@@ -200,23 +200,32 @@ module.exports = async function (fastify) {
 
   // POST /api/tasks/:id/evidences
   fastify.post('/:id/evidences', { preHandler: [authenticate] }, async (request, reply) => {
+    const fs = require('fs')
+    const path = require('path')
+
     const data = await request.file()
     if (!data) return reply.code(400).send({ error: 'Arquivo obrigatório' })
 
-    // Salvar arquivo (aqui simplificado — em produção usa Firebase Storage)
     const fileBuffer = await data.toBuffer()
-    const fileName = `${Date.now()}_${data.filename}`
-    const fileType = data.mimetype.startsWith('image/') ? 'image' :
-      data.mimetype === 'application/pdf' ? 'document' : 'document'
+    if (!fileBuffer || fileBuffer.length === 0) return reply.code(400).send({ error: 'Arquivo vazio' })
 
-    // Em produção: upload para Firebase Storage
-    const fileUrl = `/uploads/${fileName}`
+    // Salvar em disco: uploads/tasks/:taskId/
+    const safeFilename = data.filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const fileName = `${Date.now()}_${safeFilename}`
+    const uploadDir = path.join(process.cwd(), 'uploads', 'tasks', request.params.id)
+    fs.mkdirSync(uploadDir, { recursive: true })
+    fs.writeFileSync(path.join(uploadDir, fileName), fileBuffer)
+
+    const fileType = data.mimetype.startsWith('image/') ? 'image' : 'document'
+    const fileUrl = `/uploads/tasks/${request.params.id}/${fileName}`
 
     const evidence = await prisma.taskEvidence.create({
       data: {
         taskId: request.params.id,
         userId: request.currentUser.id,
-        fileUrl, fileName: data.filename, fileType
+        fileUrl,
+        fileName: data.filename,
+        fileType,
       },
       include: { user: { select: { id: true, name: true, avatarUrl: true } } }
     })

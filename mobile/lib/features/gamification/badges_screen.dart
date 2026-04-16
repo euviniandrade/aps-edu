@@ -59,7 +59,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
                   label: Text(e.value, style: const TextStyle(fontSize: 12)),
                   selected: _categoryFilter == e.key,
                   onSelected: (_) { setState(() => _categoryFilter = e.key); _load(); },
-                  selectedColor: AppColors.primary.withOpacity(0.15),
+                  selectedColor: AppColors.navy.withOpacity(0.15),
                 ),
               )).toList(),
             ),
@@ -84,7 +84,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
 
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: CircularProgressIndicator(color: AppColors.navy))
                 : GridView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.8),
