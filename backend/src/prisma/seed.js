@@ -391,14 +391,345 @@ Juntos, seguimos com Propósito em Ação! 💛🩵🧡💙
   }
   console.log(`✅ ${badgesCreated} selos criados`)
 
+  // ─── EVENTOS ─────────────────────────────────────────────────────────────
+  // Atalhos para criadores (índices em createdUsers)
+  const u = (i) => createdUsers[i]  // helper
+
+  const eventosData = [
+    {
+      id: 'event-000000-0000-0000-0001',
+      name: 'Encontro de Diretores APS Sul 2025',
+      description: 'Reunião anual de liderança com foco em metas pedagógicas, resultados do 1º trimestre e planejamento estratégico do 2º semestre. Presença obrigatória de todos os diretores e vice-diretores da rede.',
+      startDate: new Date('2025-05-10T08:00:00Z'),
+      endDate:   new Date('2025-05-10T17:00:00Z'),
+      location:  'Sede APS — Auditório Principal, São Paulo',
+      status:    'planned',
+      progressPercent: 35,
+      createdById: u(0).id,
+      unitId:    unit.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0002',
+      name: 'Semana da Família — Colégio Ipiranga',
+      description: 'Programação especial de integração com as famílias dos alunos, incluindo apresentações culturais, reuniões pedagógicas abertas e atividades recreativas. Evento estratégico para engajamento da comunidade escolar.',
+      startDate: new Date('2025-05-19T08:00:00Z'),
+      endDate:   new Date('2025-05-23T17:00:00Z'),
+      location:  'Colégio Adventista do Ipiranga — Quadra e Auditório',
+      status:    'planned',
+      progressPercent: 20,
+      createdById: u(3).id,
+      unitId:    unitIpiranga.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0003',
+      name: 'Olimpíada Interna de Matemática — Santo André',
+      description: 'Competição entre turmas do Ensino Fundamental II e Médio. Premiação com troféus e medalhas para os 3 primeiros colocados de cada categoria. Inscrições encerradas.',
+      startDate: new Date('2025-04-25T08:00:00Z'),
+      endDate:   new Date('2025-04-25T16:00:00Z'),
+      location:  'Colégio Adventista de Santo André — Salas de Aula',
+      status:    'planned',
+      progressPercent: 70,
+      createdById: u(8).id,
+      unitId:    unitAndre.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0004',
+      name: 'Culto de Abertura do 1º Semestre — Rede APS Sul',
+      description: 'Culto comemorativo de abertura do ano letivo 2025 com participação de todas as unidades. Transmissão ao vivo pelo canal oficial. Mensagem do presidente da APS Sul e homenagem aos colaboradores com mais de 10 anos na rede.',
+      startDate: new Date('2025-02-05T07:30:00Z'),
+      endDate:   new Date('2025-02-05T10:00:00Z'),
+      location:  'Igreja Central Adventista — São Paulo (SP)',
+      status:    'completed',
+      progressPercent: 100,
+      createdById: u(0).id,
+      unitId:    unit.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0005',
+      name: 'Treinamento em Gestão Escolar — Coordenadores',
+      description: 'Capacitação de dois dias voltada para coordenadores pedagógicos, com foco em liderança de equipes, gestão de conflitos, avaliação por competências e uso da plataforma APS EDU. Certificado de 16h.',
+      startDate: new Date('2025-04-08T08:00:00Z'),
+      endDate:   new Date('2025-04-09T17:00:00Z'),
+      location:  'Sede APS Sul — Sala de Capacitação, São Paulo',
+      status:    'completed',
+      progressPercent: 100,
+      createdById: u(1).id,
+      unitId:    unit.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0006',
+      name: 'Feira de Ciências — Colégio de Mauá',
+      description: 'Mostra científica anual com projetos dos alunos do Fundamental I ao Médio. Avaliação por bancas compostas por professores e pais. Os 5 melhores projetos participarão da feira regional.',
+      startDate: new Date('2025-06-12T08:00:00Z'),
+      endDate:   new Date('2025-06-13T16:00:00Z'),
+      location:  'Colégio Adventista de Mauá — Ginásio Poliesportivo',
+      status:    'planned',
+      progressPercent: 10,
+      createdById: u(13).id,
+      unitId:    unitMaua.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0007',
+      name: 'Concurso Cultural APS30 — Propósito em Ação',
+      description: 'Concurso entre todas as unidades da APS Sul celebrando os 30 anos da associação. Categorias: redação, música, artes visuais e vídeo. Premiação especial para os destaques. Inscrições abertas até 31/05.',
+      startDate: new Date('2025-06-20T08:00:00Z'),
+      endDate:   new Date('2025-06-20T18:00:00Z'),
+      location:  'Centro de Convenções — São Bernardo do Campo',
+      status:    'planned',
+      progressPercent: 15,
+      createdById: u(0).id,
+      unitId:    unit.id,
+    },
+    {
+      id: 'event-000000-0000-0000-0008',
+      name: 'Confraternização de Encerramento do 1º Semestre',
+      description: 'Celebração dos resultados do 1º semestre com reconhecimento dos colaboradores destaques, entrega de certificados de conquistas na gamificação e confraternização com toda a equipe. Traje: social.',
+      startDate: new Date('2025-07-05T17:00:00Z'),
+      endDate:   new Date('2025-07-05T22:00:00Z'),
+      location:  'Sede APS Sul — Salão de Eventos',
+      status:    'planned',
+      progressPercent: 5,
+      createdById: u(1).id,
+      unitId:    unit.id,
+    },
+  ]
+
+  const createdEvents = []
+  for (const ev of eventosData) {
+    const evt = await prisma.event.upsert({
+      where: { id: ev.id },
+      create: ev,
+      update: {}
+    })
+    createdEvents.push(evt)
+  }
+  // Responsáveis pelos eventos
+  const eventResp = [
+    { ei: 0, uis: [0, 1, 3, 8, 13, 18, 23, 27] },
+    { ei: 1, uis: [3, 4, 5, 6] },
+    { ei: 2, uis: [8, 9, 10] },
+    { ei: 3, uis: [0, 1, 3, 8, 13, 18, 23, 27] },
+    { ei: 4, uis: [1, 2, 5, 10, 14] },
+    { ei: 5, uis: [13, 14, 15] },
+    { ei: 6, uis: [0, 1, 3, 8, 13, 18, 23, 27] },
+    { ei: 7, uis: [0, 1, 2, 3, 8, 13, 18, 23, 27] },
+  ]
+  for (const { ei, uis } of eventResp) {
+    for (const ui of uis) {
+      if (!createdEvents[ei] || !u(ui)) continue
+      await prisma.eventResponsible.upsert({
+        where: { eventId_userId: { eventId: createdEvents[ei].id, userId: u(ui).id } },
+        create: { eventId: createdEvents[ei].id, userId: u(ui).id },
+        update: {}
+      })
+    }
+  }
+  console.log(`✅ ${createdEvents.length} eventos criados`)
+
+  // ─── TAREFAS ─────────────────────────────────────────────────────────────
+  const now = new Date()
+  const d = (daysOffset) => new Date(now.getTime() + daysOffset * 86400000)
+
+  const tasksData = [
+    // ── Sede / Administrativo
+    { id: 'task-00001', title: 'Revisar e aprovar Planos Pedagógicos 1º Semestre', description: 'Verificar todos os planos enviados pelas 6 unidades escolares, validar alinhamento com a grade curricular APS e retornar feedback até 30/04.', status: 'in_progress', priority: 'critical', progressPercent: 60, dueDate: d(8),  createdById: u(0).id, assignedToId: u(1).id, unitId: unit.id },
+    { id: 'task-00002', title: 'Preparar relatório trimestral de desempenho da rede',  description: 'Compilar dados de frequência, notas médias e indicadores de engajamento de todas as unidades para apresentação ao Conselho Diretivo.', status: 'in_progress', priority: 'high',   progressPercent: 45, dueDate: d(12), createdById: u(0).id, assignedToId: u(1).id, unitId: unit.id },
+    { id: 'task-00003', title: 'Atualizar cadastros de colaboradores no sistema',       description: 'Revisar dados cadastrais de todos os 32 colaboradores: cargo, unidade, contato e status ativo/inativo.',                                  status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(15), createdById: u(1).id, assignedToId: u(2).id, unitId: unit.id },
+    { id: 'task-00004', title: 'Elaborar pauta do Encontro de Diretores — Maio/2025',  description: 'Definir tópicos, ordem do dia, duração de cada bloco e material de apresentação para o encontro de 10/05.',                                status: 'in_progress', priority: 'high',   progressPercent: 55, dueDate: d(5),  createdById: u(0).id, assignedToId: u(1).id, unitId: unit.id },
+    { id: 'task-00005', title: 'Concluir orçamento de materiais didáticos 2025',        description: 'Levantar necessidades de cada unidade e consolidar proposta de compra para aprovação financeira.',                                           status: 'completed',   priority: 'high',   progressPercent: 100,dueDate: d(-5), createdById: u(1).id, assignedToId: u(0).id, unitId: unit.id },
+    { id: 'task-00006', title: 'Publicar manual de uso da plataforma APS EDU',          description: 'Criar e disponibilizar guia prático com passo a passo para todas as funcionalidades do painel administrativo.',                               status: 'pending',     priority: 'medium', progressPercent: 20, dueDate: d(20), createdById: u(0).id, assignedToId: u(2).id, unitId: unit.id },
+
+    // ── Ipiranga
+    { id: 'task-00007', title: 'Entregar plano pedagógico — Ipiranga 1º Sem',           description: 'Finalizar e submeter o plano pedagógico completo de todas as disciplinas ao departamento de educação da APS.',                               status: 'overdue',     priority: 'critical',progressPercent: 80, dueDate: d(-3), createdById: u(3).id, assignedToId: u(4).id, unitId: unitIpiranga.id },
+    { id: 'task-00008', title: 'Organizar Semana da Família — logística e programação', description: 'Definir programação detalhada, contratar fornecedores (som, buffet), comunicar famílias e treinar equipe de recepção.',                     status: 'in_progress', priority: 'high',   progressPercent: 40, dueDate: d(10), createdById: u(3).id, assignedToId: u(5).id, unitId: unitIpiranga.id },
+    { id: 'task-00009', title: 'Aplicar avaliação diagnóstica — turmas 6º ao 9º',       description: 'Conduzir avaliação de nivelamento nas disciplinas de Português e Matemática e consolidar resultados por turma.',                            status: 'completed',   priority: 'high',   progressPercent: 100,dueDate: d(-10),createdById: u(4).id, assignedToId: u(5).id, unitId: unitIpiranga.id },
+    { id: 'task-00010', title: 'Renovar contrato de prestadores de serviço',            description: 'Verificar vencimento dos contratos com fornecedores de limpeza, segurança e manutenção. Renovar ou publicar novo processo.',                  status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(25), createdById: u(3).id, assignedToId: u(7).id, unitId: unitIpiranga.id },
+    { id: 'task-00011', title: 'Capacitação em primeiros socorros para docentes',       description: 'Agendar e organizar treinamento de primeiros socorros para 100% dos professores conforme exigência da ANVISA.',                              status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(30), createdById: u(4).id, assignedToId: u(6).id, unitId: unitIpiranga.id },
+    { id: 'task-00012', title: 'Revisão do projeto político-pedagógico (PPP)',          description: 'Atualizar o PPP com as novas diretrizes curriculares e incluir as metas de sustentabilidade exigidas pelo MEC.',                               status: 'in_progress', priority: 'high',   progressPercent: 35, dueDate: d(18), createdById: u(3).id, assignedToId: u(5).id, unitId: unitIpiranga.id },
+
+    // ── Santo André
+    { id: 'task-00013', title: 'Organizar Olimpíada Interna de Matemática',            description: 'Preparar questões, organizar bancas avaliadoras, reservar salas e comunicar alunos participantes sobre regras e datas.',                     status: 'in_progress', priority: 'high',   progressPercent: 70, dueDate: d(3),  createdById: u(8).id,  assignedToId: u(10).id,unitId: unitAndre.id },
+    { id: 'task-00014', title: 'Entregar relatório financeiro — 1º trimestre',         description: 'Consolidar balancete financeiro da unidade e enviar à tesouraria da APS Sul com todos os comprovantes.',                                       status: 'overdue',     priority: 'critical',progressPercent: 90, dueDate: d(-2), createdById: u(8).id,  assignedToId: u(12).id,unitId: unitAndre.id },
+    { id: 'task-00015', title: 'Implantação do programa de tutoria entre pares',       description: 'Selecionar alunos tutores do 9º ano e 3º médio para apoio individualizado a estudantes com dificuldades de aprendizagem.',                   status: 'pending',     priority: 'medium', progressPercent: 10, dueDate: d(22), createdById: u(9).id,  assignedToId: u(10).id,unitId: unitAndre.id },
+    { id: 'task-00016', title: 'Atualização do regimento escolar 2025',                description: 'Revisar normas disciplinares, atualizar capítulos sobre uso de celulares e tecnologia, submeter ao Conselho Escolar.',                        status: 'pending',     priority: 'low',    progressPercent: 0,  dueDate: d(40), createdById: u(8).id,  assignedToId: u(11).id,unitId: unitAndre.id },
+    { id: 'task-00017', title: 'Compra de equipamentos audiovisuais — salas de aula',  description: 'Levantar demanda, obter 3 orçamentos e encaminhar para aprovação. Prioridade para salas sem projetor.',                                       status: 'completed',   priority: 'high',   progressPercent: 100,dueDate: d(-8), createdById: u(9).id,  assignedToId: u(12).id,unitId: unitAndre.id },
+
+    // ── Mauá
+    { id: 'task-00018', title: 'Montar comissão organizadora da Feira de Ciências',    description: 'Selecionar professores coordenadores por área (Biologia, Química, Física, Matemática) e definir cronograma de preparação dos projetos.',      status: 'in_progress', priority: 'medium', progressPercent: 50, dueDate: d(7),  createdById: u(13).id, assignedToId: u(14).id,unitId: unitMaua.id },
+    { id: 'task-00019', title: 'Diagnóstico de infraestrutura — laboratórios',         description: 'Vistoriar laboratórios de Ciências e Informática, registrar necessidades de manutenção e enviar solicitação à manutenção da APS.',             status: 'completed',   priority: 'medium', progressPercent: 100,dueDate: d(-12),createdById: u(13).id, assignedToId: u(15).id,unitId: unitMaua.id },
+    { id: 'task-00020', title: 'Formação continuada — professores do Fundamental I',   description: 'Organizar workshop de 8h sobre metodologias ativas e gamificação em sala de aula para professores do EF1.',                                    status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(28), createdById: u(14).id, assignedToId: u(16).id,unitId: unitMaua.id },
+    { id: 'task-00021', title: 'Implementar projeto de leitura — Mauá Lê',             description: 'Criar biblioteca de sala em todas as turmas do EF1, selecionar acervo inicial de 30 títulos por classe e treinar professores.',               status: 'in_progress', priority: 'low',    progressPercent: 25, dueDate: d(35), createdById: u(13).id, assignedToId: u(14).id,unitId: unitMaua.id },
+    { id: 'task-00022', title: 'Controle de frequência — inserir dados fevereiro',     description: 'Lançar frequência do mês de fevereiro para todas as turmas no sistema até o prazo estabelecido pela coordenação.',                            status: 'overdue',     priority: 'high',   progressPercent: 60, dueDate: d(-15),createdById: u(14).id, assignedToId: u(17).id,unitId: unitMaua.id },
+
+    // ── São Bernardo
+    { id: 'task-00023', title: 'Preparar inscrições para o Concurso APS30',            description: 'Divulgar regulamento, orientar alunos nas categorias (redação, artes, vídeo, música) e coletar inscrições até 31/05.',                       status: 'in_progress', priority: 'medium', progressPercent: 30, dueDate: d(14), createdById: u(18).id, assignedToId: u(19).id,unitId: unitBernardo.id },
+    { id: 'task-00024', title: 'Readequação do calendário letivo — reposição',         description: 'Replanejar as aulas não ministradas em fevereiro devido ao feriado municipal. Enviar novo calendário à APS e comunicar famílias.',             status: 'completed',   priority: 'high',   progressPercent: 100,dueDate: d(-6), createdById: u(18).id, assignedToId: u(20).id,unitId: unitBernardo.id },
+    { id: 'task-00025', title: 'Reunião de pais e mestres — 2ª bimestre',              description: 'Organizar local, definir horários por turma, preparar boletins e orientar professores para atendimento individualizado.',                       status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(18), createdById: u(19).id, assignedToId: u(21).id,unitId: unitBernardo.id },
+    { id: 'task-00026', title: 'Protocolo de prevenção — dengue e H1N1',               description: 'Elaborar e divulgar protocolo de higienização para prevenção de doenças sazonais. Providenciar material de apoio para sala de aula.',          status: 'completed',   priority: 'critical',progressPercent: 100,dueDate: d(-4), createdById: u(18).id, assignedToId: u(22).id,unitId: unitBernardo.id },
+
+    // ── Diadema
+    { id: 'task-00027', title: 'Cadastro de novos alunos — matrículas 2025',           description: 'Processar e validar documentação dos novos alunos matriculados para o 2º semestre. Inserir dados no sistema e emitir declarações.',            status: 'in_progress', priority: 'high',   progressPercent: 65, dueDate: d(9),  createdById: u(23).id, assignedToId: u(26).id,unitId: unitDiadema.id },
+    { id: 'task-00028', title: 'Revisão do cardápio da cantina — nutricionista',       description: 'Solicitar revisão e assinatura do nutricionista responsável no cardápio mensal. Verificar conformidade com as normas da ANVISA.',              status: 'pending',     priority: 'medium', progressPercent: 0,  dueDate: d(20), createdById: u(23).id, assignedToId: u(25).id,unitId: unitDiadema.id },
+    { id: 'task-00029', title: 'Semana da Bíblia — programação e material',            description: 'Elaborar programação completa da Semana da Bíblia (estudos, palestras, quiz interativo) e produzir material didático para todas as turmas.', status: 'in_progress', priority: 'medium', progressPercent: 45, dueDate: d(11), createdById: u(24).id, assignedToId: u(25).id,unitId: unitDiadema.id },
+    { id: 'task-00030', title: 'Entrega do relatório de inadimplência — março',        description: 'Consolidar lista de alunos com mensalidades em atraso e encaminhar ao financeiro da APS Sul com proposta de negociação.',                      status: 'overdue',     priority: 'critical',progressPercent: 70, dueDate: d(-7), createdById: u(23).id, assignedToId: u(26).id,unitId: unitDiadema.id },
+
+    // ── Guarulhos
+    { id: 'task-00031', title: 'Lançar notas do 1º bimestre — sistema acadêmico',      description: 'Coletar boletins de todos os professores e lançar no sistema acadêmico até o prazo definido pela secretaria.',                               status: 'completed',   priority: 'high',   progressPercent: 100,dueDate: d(-1), createdById: u(27).id, assignedToId: u(31).id,unitId: unitGua.id },
+    { id: 'task-00032', title: 'Elaborar projeto de reforço escolar — Guarulhos',      description: 'Identificar alunos com rendimento abaixo de 50% e montar grade de reforço para as disciplinas críticas (Matemática, Português, Ciências).',   status: 'in_progress', priority: 'high',   progressPercent: 40, dueDate: d(13), createdById: u(27).id, assignedToId: u(29).id,unitId: unitGua.id },
+    { id: 'task-00033', title: 'Visita técnica — Museu do Ipiranga',                   description: 'Organizar visita educativa ao Museu do Ipiranga para turmas do 7º e 8º ano. Solicitar ônibus, seguro e autorização dos pais.',                  status: 'pending',     priority: 'low',    progressPercent: 0,  dueDate: d(35), createdById: u(28).id, assignedToId: u(29).id,unitId: unitGua.id },
+    { id: 'task-00034', title: 'Ata da reunião pedagógica — abril',                    description: 'Redigir e circular a ata da reunião pedagógica de abril para assinatura de todos os presentes e arquivamento.',                                 status: 'in_progress', priority: 'medium', progressPercent: 80, dueDate: d(2),  createdById: u(28).id, assignedToId: u(31).id,unitId: unitGua.id },
+    { id: 'task-00035', title: 'Inspeção de segurança patrimonial',                    description: 'Realizar vistoria de extintores, saídas de emergência e instalações elétricas. Contratar empresa credenciada para laudo técnico.',              status: 'pending',     priority: 'high',   progressPercent: 0,  dueDate: d(20), createdById: u(27).id, assignedToId: u(30).id,unitId: unitGua.id },
+  ]
+
+  let tasksCreated = 0
+  const createdTasks = []
+  for (const t of tasksData) {
+    const task = await prisma.task.upsert({
+      where: { id: t.id },
+      create: t,
+      update: {}
+    })
+    createdTasks.push(task)
+    tasksCreated++
+  }
+  console.log(`✅ ${tasksCreated} tarefas criadas`)
+
+  // ── Checklists das tarefas principais
+  const checklistsData = [
+    { taskId: 'task-00001', items: ['Receber planos de todas as unidades','Verificar alinhamento curricular','Dar feedback ao Ipiranga','Dar feedback ao Santo André','Dar feedback ao Mauá','Aprovar planos conformes'] },
+    { taskId: 'task-00004', items: ['Definir tópicos prioritários','Preparar apresentação de resultados','Convidar palestrantes externos','Confirmar local e coffee-break'] },
+    { taskId: 'task-00008', items: ['Reservar ginásio e auditório','Contratar serviço de som','Enviar convites às famílias','Treinar equipe de recepção','Preparar programação cultural'] },
+    { taskId: 'task-00013', items: ['Elaborar 40 questões por categoria','Selecionar professores avaliadores','Preparar lista de participantes','Comprar medalhas e troféus','Comunicar turmas participantes'] },
+    { taskId: 'task-00032', items: ['Levantar alunos com notas < 50%','Definir grade horária de reforço','Selecionar professores tutores','Comunicar famílias','Iniciar aulas de reforço'] },
+  ]
+  for (const cl of checklistsData) {
+    for (let i = 0; i < cl.items.length; i++) {
+      await prisma.taskChecklist.upsert({
+        where: { id: `cl-${cl.taskId}-${i}` },
+        create: { id: `cl-${cl.taskId}-${i}`, taskId: cl.taskId, title: cl.items[i], isCompleted: i < 2, order: i },
+        update: {}
+      })
+    }
+  }
+
+  // ── Comentários nas tarefas
+  const commentsData = [
+    { id: 'cmt-001', taskId: 'task-00001', userId: u(1).id,  content: 'Recebi os planos do Ipiranga e de Santo André. Ainda aguardo Mauá, São Bernardo, Diadema e Guarulhos.' },
+    { id: 'cmt-002', taskId: 'task-00001', userId: u(3).id,  content: 'Ipiranga enviou. Confirmo o recebimento. Plano está completo conforme as diretrizes.' },
+    { id: 'cmt-003', taskId: 'task-00001', userId: u(8).id,  content: 'Santo André já enviou também. Segue em anexo na tarefa.' },
+    { id: 'cmt-004', taskId: 'task-00007', userId: u(3).id,  content: 'Estamos finalizando os últimos dois componentes curriculares. Envio até quinta-feira.' },
+    { id: 'cmt-005', taskId: 'task-00007', userId: u(1).id,  content: 'Atenção: o prazo já passou. Por favor, priorizar a entrega hoje.' },
+    { id: 'cmt-006', taskId: 'task-00008', userId: u(5).id,  content: 'Já confirmei o espaço do auditório. Falta fechar o buffet — tenho 2 propostas para analisar.' },
+    { id: 'cmt-007', taskId: 'task-00013', userId: u(10).id, content: 'Questões das categorias bronze e prata já estão prontas. Trabalhando nas de ouro.' },
+    { id: 'cmt-008', taskId: 'task-00013', userId: u(8).id,  content: 'Ótimo progresso! Confirmar se precisamos de sala extra para a categoria de 9º ano.' },
+    { id: 'cmt-009', taskId: 'task-00014', userId: u(12).id, content: 'Balancete quase pronto. Falta apenas o conciliação de uma conta do fornecedor de limpeza.' },
+    { id: 'cmt-010', taskId: 'task-00030', userId: u(23).id, content: 'Lista com 18 alunos inadimplentes. Preciso de orientação do financeiro da APS antes de enviar.' },
+    { id: 'cmt-011', taskId: 'task-00002', userId: u(0).id,  content: 'Dados de frequência já consolidados. Aguardando métricas de engajamento da plataforma.' },
+    { id: 'cmt-012', taskId: 'task-00029', userId: u(25).id, content: 'Quiz interativo já está preparado para 6 turmas. Material da Semana da Bíblia em impressão.' },
+    { id: 'cmt-013', taskId: 'task-00027', userId: u(26).id, content: '47 novos alunos cadastrados. Restam 12 com documentação incompleta. Mandei e-mail às famílias.' },
+    { id: 'cmt-014', taskId: 'task-00034', userId: u(31).id, content: 'Ata redigida e enviada para revisão. Aguardando assinaturas de 3 professores.' },
+  ]
+  for (const c of commentsData) {
+    await prisma.taskComment.upsert({
+      where: { id: c.id },
+      create: { id: c.id, taskId: c.taskId, userId: c.userId, content: c.content },
+      update: {}
+    })
+  }
+  console.log('✅ Checklists e comentários de tarefas criados')
+
+  // ─── FEEDBACK ─────────────────────────────────────────────────────────────
+  const feedbacksData = [
+    { id: 'fb-001', category: 'suggestion', content: 'Seria ótimo ter um módulo de comunicação direta entre coordenadores e professores dentro da plataforma, com histórico de mensagens por turma.', isAnonymous: false, userId: u(5).id, status: 'read' },
+    { id: 'fb-002', category: 'problem',    content: 'Estou tendo dificuldade para anexar arquivos grandes (acima de 5MB) nas evidências das tarefas. O sistema apresenta erro 413 e não informa claramente o limite.', isAnonymous: false, userId: u(10).id, status: 'resolved' },
+    { id: 'fb-003', category: 'idea',       content: 'Proposta: criar um "Mural de Conquistas" visível para todos na tela inicial, onde apareçam os badges recém-conquistados pelos colaboradores. Isso aumentaria a motivação!', isAnonymous: false, userId: u(14).id, status: 'pending' },
+    { id: 'fb-004', category: 'praise',     content: 'Parabéns pela plataforma APS EDU! Está muito intuitiva e organizada. Facilitou muito o nosso dia a dia na coordenação. Esperamos novidades em breve!', isAnonymous: false, userId: u(4).id,  status: 'read' },
+    { id: 'fb-005', category: 'suggestion', content: 'Sugiro adicionar filtro por unidade na tela de tarefas, para que diretores possam ver rapidamente apenas as tarefas da própria escola sem precisar rolar a lista toda.', isAnonymous: true,  userId: null,   status: 'pending' },
+    { id: 'fb-006', category: 'problem',    content: 'O relatório de desempenho por unidade está demorando muito para carregar (mais de 30 segundos). Isso dificulta o trabalho de análise nos dias de reunião.', isAnonymous: false, userId: u(9).id,  status: 'pending' },
+    { id: 'fb-007', category: 'idea',       content: 'Que tal integrar um calendário compartilhado na plataforma, onde todos os eventos da rede apareçam de forma visual? Hoje precisamos consultar e-mails separados.', isAnonymous: false, userId: u(19).id, status: 'read' },
+    { id: 'fb-008', category: 'praise',     content: 'O sistema de gamificação está sendo um diferencial enorme! Nossa equipe está mais engajada em concluir as tarefas no prazo para ganhar pontos. Excelente iniciativa!', isAnonymous: false, userId: u(24).id, status: 'read' },
+    { id: 'fb-009', category: 'suggestion', content: 'Seria muito útil poder exportar os relatórios em PDF com logo da APS e formatação oficial, para apresentar nas reuniões com pais e conselho escolar.', isAnonymous: false, userId: u(28).id, status: 'pending' },
+    { id: 'fb-010', category: 'problem',    content: 'Na tela de usuários, ao tentar editar o cargo de um colaborador, o sistema fecha o modal sem salvar. Aconteceu comigo 3 vezes hoje.', isAnonymous: true,  userId: null,   status: 'pending' },
+    { id: 'fb-011', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção B (tarde, 13h-17h)', isAnonymous: false, userId: u(3).id,  status: 'read' },
+    { id: 'fb-012', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção A (manhã, 8h-12h)', isAnonymous: false, userId: u(8).id,  status: 'read' },
+    { id: 'fb-013', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção B (tarde, 13h-17h)', isAnonymous: false, userId: u(13).id, status: 'read' },
+    { id: 'fb-014', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção A (manhã, 8h-12h)', isAnonymous: false, userId: u(18).id, status: 'read' },
+    { id: 'fb-015', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção C (período integral, 8h-17h)', isAnonymous: false, userId: u(23).id, status: 'read' },
+    { id: 'fb-016', category: 'idea',       content: 'VOTAÇÃO — Encontro de Diretores: Opção B (tarde, 13h-17h)', isAnonymous: false, userId: u(27).id, status: 'read' },
+    { id: 'fb-017', category: 'suggestion', content: 'Colégio de Diadema indica como representante do Comitê APS30: Renata Melo (Coordenadora Pedagógica).', isAnonymous: false, userId: u(23).id, status: 'read' },
+    { id: 'fb-018', category: 'suggestion', content: 'Guarulhos indica como representante do Comitê APS30: Tatiane Nunes (Vice-Diretora).', isAnonymous: false, userId: u(27).id, status: 'pending' },
+    { id: 'fb-019', category: 'praise',     content: 'Agradeço o treinamento de gestão escolar oferecido pela APS. Foi muito enriquecedor e prático. Os conteúdos sobre avaliação por competências foram especialmente úteis!', isAnonymous: false, userId: u(14).id, status: 'read' },
+    { id: 'fb-020', category: 'problem',    content: 'A notificação de badge conquistado apareceu mas o badge não aparece na minha tela de gamificação. Por favor, verificar.', isAnonymous: false, userId: u(20).id, status: 'pending' },
+  ]
+
+  let fbCreated = 0
+  for (const fb of feedbacksData) {
+    await prisma.feedback.upsert({
+      where: { id: fb.id },
+      create: fb,
+      update: {}
+    })
+    fbCreated++
+  }
+  console.log(`✅ ${fbCreated} feedbacks criados`)
+
+  // ─── USER BADGES ─────────────────────────────────────────────────────────
+  // Atribuir badges coerentes com os pontos/tarefas de cada usuário
+  const userBadgesData = [
+    // Admin (4200 pts, 87 tarefas) — badges de excelência e comprometimento
+    { userId: u(0).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-05','badge-09','badge-11','badge-12','badge-13','badge-14','badge-21','badge-22','badge-23','badge-31','badge-32','badge-33','badge-34','badge-36','badge-37','badge-46','badge-47'] },
+    // Diretor Sede (3850 pts, 72 tarefas)
+    { userId: u(1).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-05','badge-09','badge-11','badge-12','badge-13','badge-14','badge-21','badge-22','badge-31','badge-32','badge-33','badge-34','badge-36','badge-46','badge-47'] },
+    // Coord Ipiranga (2980 pts, 61 tarefas)
+    { userId: u(2).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-09','badge-11','badge-12','badge-21','badge-22','badge-31','badge-32','badge-33','badge-34','badge-46'] },
+    // Diretor Ipiranga (2650 pts, 54 tarefas)
+    { userId: u(3).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-09','badge-11','badge-12','badge-21','badge-22','badge-31','badge-32','badge-33','badge-46'] },
+    // Patricia Andre (3100 pts, 65 tarefas)
+    { userId: u(8).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-05','badge-09','badge-11','badge-12','badge-21','badge-22','badge-31','badge-32','badge-33','badge-34','badge-36','badge-46','badge-47'] },
+    // Eduardo Mauá (2750 pts, 56 tarefas)
+    { userId: u(13).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-09','badge-11','badge-12','badge-21','badge-31','badge-32','badge-33','badge-46'] },
+    // Vanessa Bernardo (2480 pts, 50 tarefas)
+    { userId: u(18).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-05','badge-09','badge-11','badge-12','badge-21','badge-31','badge-32','badge-33','badge-46'] },
+    // Anderson Diadema (2190 pts, 43 tarefas)
+    { userId: u(23).id, badgeIds: ['badge-01','badge-02','badge-03','badge-09','badge-11','badge-12','badge-21','badge-31','badge-32','badge-33','badge-46'] },
+    // Paulo Guarulhos (2340 pts, 47 tarefas)
+    { userId: u(27).id, badgeIds: ['badge-01','badge-02','badge-03','badge-04','badge-09','badge-11','badge-12','badge-21','badge-31','badge-32','badge-33','badge-46'] },
+    // Usuários menores — apenas badges iniciais
+    { userId: u(5).id,  badgeIds: ['badge-01','badge-02','badge-03','badge-11','badge-31','badge-32'] },
+    { userId: u(9).id,  badgeIds: ['badge-01','badge-02','badge-11','badge-31','badge-32'] },
+    { userId: u(14).id, badgeIds: ['badge-01','badge-02','badge-11','badge-31'] },
+    { userId: u(19).id, badgeIds: ['badge-01','badge-02','badge-11','badge-31'] },
+    { userId: u(24).id, badgeIds: ['badge-01','badge-02','badge-11'] },
+    { userId: u(28).id, badgeIds: ['badge-01','badge-02','badge-11','badge-31','badge-32'] },
+  ]
+
+  let badgesAwarded = 0
+  for (const ub of userBadgesData) {
+    for (const badgeId of ub.badgeIds) {
+      try {
+        await prisma.userBadge.upsert({
+          where: { userId_badgeId: { userId: ub.userId, badgeId } },
+          create: { userId: ub.userId, badgeId, notified: true },
+          update: {}
+        })
+        badgesAwarded++
+      } catch (_) { /* badge pode não existir */ }
+    }
+  }
+  console.log(`✅ ${badgesAwarded} badges atribuídos aos usuários`)
+
   console.log('\n🎉 Seed concluído com sucesso!')
   console.log('\n📋 Credenciais de acesso:')
   console.log('   Admin:    admin@aps.edu.br       | Admin@123')
   console.log('   Diretor:  diretor@aps.edu.br     | Diretor@123')
   console.log('   Outros:   <email>@aps.edu.br     | Teste@123\n')
-  console.log('👥 Usuários criados por unidade:')
-  console.log('   • Sede APS (2) • Ipiranga (6) • Santo André (5)')
-  console.log('   • Mauá (5) • São Bernardo (5) • Diadema (4) • Guarulhos (5)')
+  console.log('📊 Resumo dos dados:')
+  console.log('   • 32 usuários em 7 unidades')
+  console.log('   • 35 tarefas (pending/in_progress/completed/overdue)')
+  console.log('   • 8 eventos (planned/ongoing/completed)')
+  console.log('   • 4 avisos com leituras')
+  console.log('   • 20 feedbacks')
+  console.log('   • Badges atribuídos aos colaboradores destaques')
 }
 
 main()
