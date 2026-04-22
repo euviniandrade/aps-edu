@@ -1,24 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 415">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 430">
   <defs>
-    <!-- Mask: white = show, black = transparent cutout -->
-    <mask id="ea-navy-mask">
-      <rect width="500" height="415" fill="white"/>
-      <!-- Upper swoosh gap (narrower, higher) -->
-      <path d="M100,210 C210,178 335,145 372,142 L372,172 C337,177 215,208 100,240 Z" fill="black"/>
-      <!-- Lower swoosh gap (wider, lower) -->
-      <path d="M62,260 C195,222 368,188 405,186 L405,226 C370,230 200,262 62,300 Z" fill="black"/>
+    <mask id="ea-mask">
+      <rect width="500" height="430" fill="white"/>
+      <!-- Upper diagonal band -->
+      <polygon points="0,224 500,181 500,215 0,258" fill="black"/>
+      <!-- Lower diagonal band -->
+      <polygon points="0,281 500,235 500,280 0,326" fill="black"/>
     </mask>
   </defs>
-  <!-- Left leg of A (including foot) -->
+  <!-- Left leg + foot -->
   <path
-    d="M250,10 L20,322 L0,322 L0,398 L110,398 L110,322 L170,322 Z"
+    d="M250,14 L8,378 L0,378 L0,420 L130,420 L130,378 L188,378 Z"
     fill="#1B3A6B"
-    mask="url(#ea-navy-mask)"
+    mask="url(#ea-mask)"
   />
-  <!-- Right leg of A (including foot) -->
+  <!-- Right leg + foot -->
   <path
-    d="M250,10 L330,322 L390,322 L390,398 L500,398 L500,322 L480,322 Z"
+    d="M250,14 L492,378 L500,378 L500,420 L370,420 L370,378 L312,378 Z"
     fill="#1B3A6B"
-    mask="url(#ea-navy-mask)"
+    mask="url(#ea-mask)"
   />
 </svg>

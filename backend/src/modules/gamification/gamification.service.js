@@ -215,8 +215,32 @@ async function getRanking(scope = 'global', unitId = null, limit = 20) {
   if (scope === 'month') key = `ranking:month:${getMonthKey()}`
 
   const raw = await redis.zrevrange(key, 0, limit - 1, 'WITHSCORES')
-  const ranking = []
 
+  // Fallback to PostgreSQL when Redis is empty (stub or no data synced yet)
+  if (!raw || raw.length === 0) {
+    const where = unitId ? { user: { unitId } } : {}
+    const userPointsList = await prisma.userPoints.findMany({
+      where,
+      take: limit,
+      orderBy: { points: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true, name: true, avatarUrl: true,
+            unit: { select: { name: true } },
+            role: { select: { name: true } }
+          }
+        }
+      }
+    })
+    return userPointsList.map((up, i) => ({
+      position: i + 1,
+      user: up.user,
+      points: up.points
+    }))
+  }
+
+  const ranking = []
   for (let i = 0; i < raw.length; i += 2) {
     const userId = raw[i]
     const score = Number(raw[i + 1])
