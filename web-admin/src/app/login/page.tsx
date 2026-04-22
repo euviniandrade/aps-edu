@@ -72,7 +72,7 @@ export default function LoginPage() {
         {/* Top logo */}
         <div className="relative z-10 p-10">
           <div className="flex items-center gap-4">
-            <img src="/icon-ea-white.svg" alt="Educação Adventista" className="w-14 h-14 flex-shrink-0" />
+            <img src="/icon-ea-white.svg" alt="Educação Adventista" className="h-14 w-auto flex-shrink-0" />
             <div>
               <p className="text-white font-extrabold text-xl leading-tight tracking-tight">
                 Educação Adventista
@@ -186,7 +186,7 @@ export default function LoginPage() {
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-lg"
               style={{ backgroundColor: '#1B3A6B' }}
             >
-              <img src="/icon-ea-white.svg" alt="EA" className="w-10 h-10" />
+              <img src="/icon-ea-white.svg" alt="EA" className="h-10 w-auto" />
             </div>
             <p className="font-extrabold text-xl" style={{ color: '#1B3A6B' }}>
               Educação Adventista

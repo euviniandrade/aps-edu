@@ -1,20 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 415">
   <defs>
-    <clipPath id="a-clip-w">
-      <polygon points="12,96 45,4 55,4 22,96"/>
-      <polygon points="88,96 55,4 45,4 78,96"/>
-      <rect x="22" y="57" width="56" height="13"/>
-    </clipPath>
+    <!-- Mask: white = show, black = transparent cutout -->
+    <mask id="ea-white-mask">
+      <rect width="500" height="415" fill="white"/>
+      <!-- Upper swoosh gap (narrower, higher) -->
+      <path d="M100,210 C210,178 335,145 372,142 L372,172 C337,177 215,208 100,240 Z" fill="black"/>
+      <!-- Lower swoosh gap (wider, lower) -->
+      <path d="M62,260 C195,222 368,188 405,186 L405,226 C370,230 200,262 62,300 Z" fill="black"/>
+    </mask>
   </defs>
-  <!-- Left leg -->
-  <polygon points="12,96 45,4 55,4 22,96" fill="white"/>
-  <!-- Right leg -->
-  <polygon points="88,96 55,4 45,4 78,96" fill="white"/>
-  <!-- Crossbar -->
-  <rect x="22" y="57" width="56" height="13" fill="white"/>
-  <!-- Subtle swoosh stripes (semi-transparent on white) -->
-  <g clip-path="url(#a-clip-w)">
-    <path d="M2,66 Q50,47 98,45" stroke="rgba(0,30,70,0.2)" stroke-width="7.5" fill="none" stroke-linecap="round"/>
-    <path d="M2,77 Q50,58 98,56" stroke="rgba(0,30,70,0.2)" stroke-width="7.5" fill="none" stroke-linecap="round"/>
-  </g>
+  <!-- Left leg of A (including foot) -->
+  <path
+    d="M250,10 L20,322 L0,322 L0,398 L110,398 L110,322 L170,322 Z"
+    fill="white"
+    mask="url(#ea-white-mask)"
+  />
+  <!-- Right leg of A (including foot) -->
+  <path
+    d="M250,10 L330,322 L390,322 L390,398 L500,398 L500,322 L480,322 Z"
+    fill="white"
+    mask="url(#ea-white-mask)"
+  />
 </svg>

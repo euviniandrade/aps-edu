@@ -145,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
           >
-            <img src="/icon-ea-white.svg" alt="EA" className="w-7 h-7" />
+            <img src="/icon-ea-white.svg" alt="EA" className="h-6 w-auto" />
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">
