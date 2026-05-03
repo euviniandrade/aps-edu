@@ -141,12 +141,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           className="flex items-center gap-3 px-5 py-4 border-b"
           style={{ borderColor: 'rgba(255,255,255,0.08)' }}
         >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-          >
-            <img src="/icon-ea-white.svg" alt="EA" className="h-6 w-auto" />
-          </div>
+          <img src="/aps30-logo.png" alt="APS30" className="w-10 h-10 object-contain flex-shrink-0" />
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">
               Educação Adventista
