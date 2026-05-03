@@ -138,7 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         {/* Brand / Logo */}
         <div
-          className="flex items-center gap-3 px-5 py-5 border-b"
+          className="flex items-center gap-3 px-5 py-4 border-b"
           style={{ borderColor: 'rgba(255,255,255,0.08)' }}
         >
           <div
@@ -259,6 +259,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               Sair
             </span>
           </button>
+        </div>
+
+        {/* APS30 branding strip */}
+        <div
+          className="mx-3 mb-2 rounded-xl px-3 py-2 flex items-center gap-3"
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <img src="/aps30-logo.png" alt="APS30" className="w-8 h-8 object-contain opacity-90" />
+          <div>
+            <p className="text-white text-[11px] font-bold leading-tight">APS 30 anos</p>
+            <p className="text-[9px] font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>Propósito em Ação</p>
+          </div>
         </div>
 
         {/* Bottom APS30 color band */}

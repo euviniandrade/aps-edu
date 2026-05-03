@@ -64,6 +64,78 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Animations ──────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248,163,3,0.5); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(248,163,3,0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(248,163,3,0); }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-fade-in       { animation: fadeIn 0.4s ease both; }
+.animate-fade-in-up    { animation: fadeInUp 0.5s ease both; }
+.animate-fade-in-left  { animation: fadeInLeft 0.45s ease both; }
+.animate-slide-in-right{ animation: slideInRight 0.45s ease both; }
+.animate-scale-in      { animation: scaleIn 0.35s ease both; }
+.animate-count-up      { animation: countUp 0.4s ease both; }
+
+/* stagger delays */
+.delay-100 { animation-delay: 0.1s; }
+.delay-150 { animation-delay: 0.15s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg, #f0f4fa 25%, #e4eaf5 50%, #f0f4fa 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(27,58,107,0.12);
+}
+
 /* ── Utility classes ─────────────────────────────────── */
 @layer components {
   .card {
