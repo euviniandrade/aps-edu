@@ -23,6 +23,23 @@ function makeEmail(name, used) {
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...\n')
 
+  // ─── CLEANUP (remove old data to allow full re-seed) ─────────────────────
+  console.log('🧹 Limpando dados antigos...')
+  await prisma.taskComment.deleteMany({})
+  await prisma.taskChecklist.deleteMany({})
+  await prisma.eventResponsible.deleteMany({})
+  await prisma.task.deleteMany({})
+  await prisma.event.deleteMany({})
+  await prisma.announcementRead.deleteMany({})
+  await prisma.announcement.deleteMany({})
+  await prisma.feedback.deleteMany({})
+  await prisma.userBadge.deleteMany({})
+  await prisma.userPoints.deleteMany({})
+  await prisma.user.deleteMany({})
+  await prisma.unit.deleteMany({})
+  await prisma.badge.deleteMany({})
+  console.log('✅ Dados antigos removidos\n')
+
   // ─── ROLES ────────────────────────────────────────────────────────────────
   const roles = await Promise.all([
     prisma.role.upsert({ where: { slug: 'admin' }, create: { name: 'Administrador', slug: 'admin', permissions: { canCreateTasks: true, canCreateEvents: true, canPublishAnnouncements: true, canViewAllData: true, canManageUsers: true, canViewReports: true, canGrantBadges: true } }, update: {} }),
