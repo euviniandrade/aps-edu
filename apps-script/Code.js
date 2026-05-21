@@ -631,12 +631,12 @@ function setupSpreadsheet() {
   })
 
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', spreadsheet.getId())
-  Logger.log('✅ Planilha configurada! ID: ' + spreadsheet.getId())
+  Logger.log('Planilha configurada! ID: ' + spreadsheet.getId())
   setupRoles_()
   setupUnits_()
   setupAdminUser_()
   setupBadges_()
-  Logger.log('🎉 Setup completo! Login: admin@aps.edu.br / admin123')
+  Logger.log('Setup completo! Login: admin@aps.edu.br / admin123')
 }
 
 function setupRoles_() {
@@ -653,7 +653,7 @@ function setupRoles_() {
     ['secretary',     'Secretário',    JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
   ]
   roles.forEach(([slug, name, permissions]) => insert('roles', { id: uid(), name, slug, permissions }))
-  Logger.log('✅ ' + roles.length + ' cargos inseridos')
+  Logger.log(roles.length + ' cargos inseridos')
 }
 
 function setupUnits_() {
@@ -662,7 +662,7 @@ function setupUnits_() {
     { id: uid(), name: 'Sede APS Sul', city: 'Curitiba', type: 'headquarters', region: 'PR', createdAt: ts() },
   ]
   units.forEach(u => insert('units', u))
-  Logger.log('✅ Unidade sede inserida')
+  Logger.log('Unidade sede inserida')
 }
 
 function setupAdminUser_() {
@@ -676,7 +676,7 @@ function setupAdminUser_() {
   }
   insert('users', user)
   insert('user_points', { id: uid(), userId: user.id, points: 500, level: 3, updatedAt: ts() })
-  Logger.log('✅ Admin criado: admin@aps.edu.br / admin123')
+  Logger.log('Admin criado: admin@aps.edu.br / admin123')
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -693,7 +693,7 @@ function resetAdmin() {
   const admin = users.find(u => u.roleId && getAll('roles').find(r => r.id === u.roleId && r.slug === 'admin'))
 
   if (!admin) {
-    Logger.log('❌ Admin não encontrado')
+    Logger.log('ERRO: Admin nao encontrado')
     return
   }
 
@@ -709,9 +709,9 @@ function resetAdmin() {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent()
   }
 
-  Logger.log('✅ Admin atualizado!')
-  Logger.log('📧 Email: ' + NOVO_EMAIL)
-  Logger.log('🔑 Senha: ' + NOVA_SENHA)
+  Logger.log('Admin atualizado com sucesso!')
+  Logger.log('Email: ' + NOVO_EMAIL)
+  Logger.log('Senha: ' + NOVA_SENHA)
 }
 
 function setupBadges_() {
@@ -727,5 +727,5 @@ function setupBadges_() {
     id: uid(), ...b,
     description: 'Conquista da rede APS EDU Sul', createdAt: ts(),
   }))
-  Logger.log('✅ ' + badges.length + ' selos inseridos')
+  Logger.log(badges.length + ' selos inseridos')
 }
