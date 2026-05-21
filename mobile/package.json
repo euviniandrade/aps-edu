@@ -1,0 +1,24 @@
+{
+  "name": "aps-edu-mobile",
+  "version": "1.0.0",
+  "description": "APS EDU Mobile App — Educação Adventista",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Web build done'",
+    "cap:init": "cap init",
+    "cap:android": "cap add android && cap sync android",
+    "cap:ios": "cap add ios && cap sync ios",
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  }
+}
