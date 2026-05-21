@@ -684,9 +684,9 @@ function setupAdminUser_() {
 // ══════════════════════════════════════════════════════════════
 function resetAdmin() {
   // ↓↓↓ EDITE AQUI ↓↓↓
-  const NOVO_EMAIL = 'SEU_EMAIL@AQUI.COM'
-  const NOVA_SENHA = 'SUA_SENHA_AQUI'
-  const NOVO_NOME  = 'Seu Nome Aqui'
+  const NOVO_EMAIL = 'engenhariatotal.vinicius@gmail.com'
+  const NOVA_SENHA = '@PS2025*'
+  const NOVO_NOME  = 'Vinicius Felix'
   // ↑↑↑ EDITE AQUI ↑↑↑
 
   const users = getAll('users')
