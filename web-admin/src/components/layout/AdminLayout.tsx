@@ -51,8 +51,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   )
 
-  const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
-  const user = userCookie ? JSON.parse(userCookie) : null
+  let user: any = null
+  try {
+    const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
+    if (userCookie) user = JSON.parse(userCookie)
+  } catch (_) { user = null }
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'A'
   const userName = user?.name ?? 'Administrador'
   const userRole = user?.role?.name ?? 'Admin'

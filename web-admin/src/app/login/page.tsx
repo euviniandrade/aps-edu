@@ -30,7 +30,12 @@ export default function LoginPage() {
     setError('')
     try {
       const { data } = await api.post('/auth/login', { email, password })
-      const role = data.user.role.slug
+      if (!data?.accessToken || !data?.user) {
+        setError('E-mail ou senha incorretos.')
+        setLoading(false)
+        return
+      }
+      const role = data.user?.role?.slug || ''
       if (!['admin', 'director'].includes(role)) {
         setError('Acesso restrito ao painel administrativo.')
         setLoading(false)
@@ -38,7 +43,15 @@ export default function LoginPage() {
       }
       Cookies.set('accessToken', data.accessToken, { expires: 1 })
       Cookies.set('refreshToken', data.refreshToken, { expires: 30 })
-      Cookies.set('user', JSON.stringify(data.user), { expires: 1 })
+      // Salva apenas os campos essenciais para evitar estourar o limite de 4KB do cookie
+      const userMinimal = {
+        id:    data.user.id,
+        name:  data.user.name,
+        email: data.user.email,
+        role:  { slug: data.user.role?.slug, name: data.user.role?.name },
+        unit:  data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
+      }
+      Cookies.set('user', JSON.stringify(userMinimal), { expires: 1 })
       router.replace('/dashboard')
     } catch {
       setError('E-mail ou senha incorretos.')
