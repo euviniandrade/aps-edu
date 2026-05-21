@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 // Animated counter hook
-function useCountUp(target: number, duration = 1200) {
+function useCountUp(target: number, duration = 1400) {
   const [count, setCount] = useState(0)
   const start = useRef<number | null>(null)
   useEffect(() => {
@@ -21,7 +21,8 @@ function useCountUp(target: number, duration = 1200) {
     const step = (ts: number) => {
       if (!start.current) start.current = ts
       const p = Math.min((ts - start.current) / duration, 1)
-      setCount(Math.floor(p * target))
+      const eased = 1 - Math.pow(1 - p, 3)
+      setCount(Math.floor(eased * target))
       if (p < 1) requestAnimationFrame(step)
       else setCount(target)
     }
@@ -30,41 +31,78 @@ function useCountUp(target: number, duration = 1200) {
   return count
 }
 
-const COLORS = ['#1B3A6B', '#10B981', '#F8A303', '#EF4444']
-const UNIT_COLORS = ['#1B3A6B', '#29ABE2', '#F9C234', '#E07B39', '#1B5FAD', '#10B981', '#8B5CF6']
+const CHART_COLORS = ['#4A9EFF', '#0ABD78', '#F8A303', '#FF4757']
+const UNIT_COLORS  = ['#F8A303', '#4A9EFF', '#0ABD78', '#8B5CF6', '#29ABE2', '#F9C234', '#E07B39']
 
 function KpiCard({
-  label, value, icon: Icon, color, sub, delay = '0s'
+  label, value, icon: Icon, accentColor, sub, delay = '0s'
 }: {
-  label: string; value: number; icon: any; color: string; sub?: string; delay?: string
+  label: string; value: number; icon: any
+  accentColor: string; sub?: string; delay?: string
 }) {
   const count = useCountUp(value)
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm card-hover animate-fade-in-up"
-      style={{ animationDelay: delay }}
+      className="rounded-2xl p-5 animate-fade-in-up relative overflow-hidden group transition-all duration-300 hover:scale-[1.02]"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        backdropFilter: 'blur(12px)',
+        animationDelay: delay,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+      }}
     >
-      <div className="flex items-start justify-between">
+      {/* Glow accent */}
+      <div
+        className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100"
+        style={{ background: `radial-gradient(circle, ${accentColor}22 0%, transparent 70%)` }}
+      />
+      <div className="flex items-start justify-between relative z-10">
         <div>
-          <p className="text-3xl font-extrabold text-gray-900 animate-count-up">{count.toLocaleString('pt-BR')}</p>
-          <p className="text-sm text-gray-500 mt-1 font-medium">{label}</p>
-          {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+          <p
+            className="text-3xl font-extrabold leading-none"
+            style={{ color: accentColor }}
+          >
+            {count.toLocaleString('pt-BR')}
+          </p>
+          <p className="text-sm mt-2 font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            {label}
+          </p>
+          {sub && (
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>
+              {sub}
+            </p>
+          )}
         </div>
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-          <Icon className="w-5 h-5" />
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: `${accentColor}18`,
+            border: `1px solid ${accentColor}30`,
+          }}
+        >
+          <Icon className="w-5 h-5" style={{ color: accentColor }} />
         </div>
       </div>
     </div>
   )
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const DarkTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white border border-gray-100 rounded-xl shadow-lg p-3 text-sm">
-        <p className="font-semibold text-gray-700 mb-1">{label}</p>
+      <div
+        className="rounded-xl p-3 text-sm"
+        style={{
+          background: 'rgba(10,12,28,0.95)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p className="font-semibold text-white mb-1.5">{label}</p>
         {payload.map((p: any) => (
-          <p key={p.name} style={{ color: p.fill || p.color }}>
+          <p key={p.name} className="text-xs" style={{ color: p.fill || p.color }}>
             {p.name}: <strong>{p.value}</strong>
           </p>
         ))}
@@ -99,10 +137,10 @@ export default function DashboardPage() {
 
   const taskData = data
     ? [
-        { name: 'Pendentes',     value: data.tasks?.pending     || 0 },
-        { name: 'Em andamento',  value: data.tasks?.in_progress || 0 },
-        { name: 'Concluídas',    value: data.tasks?.completed   || 0 },
-        { name: 'Atrasadas',     value: data.tasks?.overdue     || 0 },
+        { name: 'Pendentes',    value: data.tasks?.pending     || 0 },
+        { name: 'Em andamento', value: data.tasks?.in_progress || 0 },
+        { name: 'Concluídas',   value: data.tasks?.completed   || 0 },
+        { name: 'Atrasadas',    value: data.tasks?.overdue     || 0 },
       ].filter(d => d.value > 0)
     : []
 
@@ -121,12 +159,19 @@ export default function DashboardPage() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Dashboard Geral</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-extrabold text-white">Dashboard Geral</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
             Visão em tempo real da rede APS Sul
           </p>
         </div>
-        <div className="text-xs text-gray-400 bg-white rounded-xl px-3 py-2 border border-gray-100 shadow-sm">
+        <div
+          className="text-xs px-3 py-2 rounded-xl hidden sm:block"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.4)',
+          }}
+        >
           📅 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
       </div>
@@ -135,20 +180,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           label="Usuários Ativos" value={data?.totalActiveUsers || 0}
-          icon={UsersIcon} color="bg-blue-50 text-blue-600" delay="0s"
+          icon={UsersIcon} accentColor="#4A9EFF" delay="0s"
         />
         <KpiCard
           label="Tarefas Ativas" value={(data?.tasks?.pending || 0) + (data?.tasks?.in_progress || 0)}
-          icon={CheckCircleIcon} color="bg-emerald-50 text-emerald-600"
+          icon={CheckCircleIcon} accentColor="#0ABD78"
           sub={`${totalTasks} no total`} delay="0.1s"
         />
         <KpiCard
           label="Tarefas Atrasadas" value={data?.tasks?.overdue || 0}
-          icon={ExclamationTriangleIcon} color="bg-red-50 text-red-600" delay="0.2s"
+          icon={ExclamationTriangleIcon} accentColor="#FF4757" delay="0.2s"
         />
         <KpiCard
           label="Eventos Ativos" value={(data?.events?.planned || 0) + (data?.events?.ongoing || 0)}
-          icon={CalendarDaysIcon} color="bg-yellow-50 text-yellow-600"
+          icon={CalendarDaysIcon} accentColor="#F8A303"
           sub={`${data?.events?.completed || 0} concluídos`} delay="0.3s"
         />
       </div>
@@ -157,27 +202,48 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
 
         {/* Pie chart */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-fade-in-up delay-300">
-          <h2 className="text-base font-semibold text-gray-700 mb-1">Tarefas por Status</h2>
-          <p className="text-xs text-gray-400 mb-4">{totalTasks} tarefas no sistema</p>
+        <div
+          className="rounded-2xl p-5 animate-fade-in-up delay-300"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <h2 className="text-sm font-semibold text-white mb-0.5">Tarefas por Status</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            {totalTasks} tarefas no sistema
+          </p>
           {taskData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={taskData} cx="50%" cy="50%"
                   innerRadius={55} outerRadius={85}
-                  dataKey="value" paddingAngle={3}
+                  dataKey="value" paddingAngle={4}
                   label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
                   labelLine={false}
                 >
-                  {taskData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {taskData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={CHART_COLORS[i % CHART_COLORS.length]}
+                      stroke="rgba(0,0,0,0.3)"
+                      strokeWidth={1}
+                    />
+                  ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} />
+                <Tooltip content={<DarkTooltip />} />
+                <Legend
+                  iconType="circle" iconSize={7}
+                  formatter={(value) => (
+                    <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center h-44 text-gray-300">
+            <div className="flex flex-col items-center justify-center h-44" style={{ color: 'rgba(255,255,255,0.15)' }}>
               <CheckCircleIcon className="w-12 h-12 mb-2" />
               <p className="text-sm">Sem tarefas ainda</p>
             </div>
@@ -185,16 +251,33 @@ export default function DashboardPage() {
         </div>
 
         {/* Bar chart */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-fade-in-up delay-400">
-          <h2 className="text-base font-semibold text-gray-700 mb-1">Pontuação Média por Unidade</h2>
-          <p className="text-xs text-gray-400 mb-4">Engajamento médio da equipe (pts)</p>
+        <div
+          className="rounded-2xl p-5 animate-fade-in-up delay-400"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <h2 className="text-sm font-semibold text-white mb-0.5">Pontuação Média por Unidade</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Engajamento médio da equipe (pts)
+          </p>
           {unitData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={unitData} barSize={28}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                <XAxis dataKey="name" fontSize={10} tick={{ fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                <YAxis fontSize={10} tick={{ fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis
+                  dataKey="name" fontSize={10}
+                  tick={{ fill: 'rgba(255,255,255,0.3)' }}
+                  axisLine={false} tickLine={false}
+                />
+                <YAxis
+                  fontSize={10}
+                  tick={{ fill: 'rgba(255,255,255,0.3)' }}
+                  axisLine={false} tickLine={false}
+                />
+                <Tooltip content={<DarkTooltip />} />
                 <Bar dataKey="pontos" name="Média (pts)" radius={[6, 6, 0, 0]}>
                   {unitData.map((entry: any, i: number) => (
                     <Cell key={i} fill={entry.fill} />
@@ -203,7 +286,7 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center h-44 text-gray-300">
+            <div className="flex flex-col items-center justify-center h-44" style={{ color: 'rgba(255,255,255,0.15)' }}>
               <ArrowTrendingUpIcon className="w-12 h-12 mb-2" />
               <p className="text-sm">Sem dados de pontuação</p>
             </div>
@@ -215,85 +298,148 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Top 5 Ranking */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in-up delay-500">
-          <div className="px-5 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-700">🏆 Top 5 Ranking Geral</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Colaboradores com maior pontuação</p>
+        <div
+          className="rounded-2xl overflow-hidden animate-fade-in-up delay-500"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          <div
+            className="px-5 py-4"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <h2 className="font-semibold text-white text-sm">🏆 Top 5 Ranking Geral</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Colaboradores com maior pontuação
+            </p>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div>
             {ranking.length > 0 ? ranking.map((item: any, i: number) => (
-              <div key={i} className={`flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${i === 0 ? 'bg-yellow-50/50' : ''}`}>
+              <div
+                key={i}
+                className="flex items-center gap-3 px-5 py-3.5 transition-all duration-200"
+                style={{
+                  borderBottom: i < ranking.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  background: i === 0 ? 'rgba(248,163,3,0.05)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = i === 0 ? 'rgba(248,163,3,0.05)' : 'transparent' }}
+              >
                 <span className="text-xl w-8 text-center flex-shrink-0">
-                  {i < 3 ? rankMedals[i] : <span className="text-sm font-bold text-gray-400">#{i + 1}</span>}
+                  {i < 3
+                    ? rankMedals[i]
+                    : <span className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.2)' }}>#{i + 1}</span>
+                  }
                 </span>
                 <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                  style={{ backgroundColor: '#1B3A6B' }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, #F8A303, #FDC347)',
+                    color: '#000',
+                    boxShadow: '0 0 8px rgba(248,163,3,0.3)',
+                  }}
                 >
                   {(item.user?.name || 'U')[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{item.user?.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{item.user?.unit?.name}</p>
+                  <p className="text-sm font-semibold text-white truncate">{item.user?.name}</p>
+                  <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {item.user?.unit?.name}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold" style={{ color: '#1B3A6B' }}>
+                  <p className="text-sm font-bold" style={{ color: '#F8A303' }}>
                     {item.points?.toLocaleString('pt-BR')} pts
                   </p>
                 </div>
               </div>
             )) : (
-              <div className="text-center py-10 text-gray-400">
-                <p className="text-sm">Ranking carregando...</p>
+              <div className="text-center py-10" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                <p className="text-sm">Carregando ranking...</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Smart Alerts */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in-up delay-600">
-          <div className="px-5 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-700">⚡ Alertas Inteligentes</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Situações que precisam de atenção</p>
+        <div
+          className="rounded-2xl overflow-hidden animate-fade-in-up delay-600"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          <div
+            className="px-5 py-4"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <h2 className="font-semibold text-white text-sm">⚡ Alertas Inteligentes</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Situações que precisam de atenção
+            </p>
           </div>
           <div className="p-4 space-y-3">
             {data?.alerts?.overdueTasksCount > 0 && (
-              <div className="flex items-start gap-3 p-3.5 bg-red-50 rounded-xl border border-red-100">
+              <div
+                className="flex items-start gap-3 p-3.5 rounded-xl"
+                style={{
+                  background: 'rgba(255,71,87,0.08)',
+                  border: '1px solid rgba(255,71,87,0.18)',
+                }}
+              >
                 <span className="text-lg flex-shrink-0">🚨</span>
                 <div>
-                  <p className="text-sm font-semibold text-red-700">
+                  <p className="text-sm font-semibold" style={{ color: '#FF4757' }}>
                     {data.alerts.overdueTasksCount} tarefa{data.alerts.overdueTasksCount > 1 ? 's' : ''} em atraso
                   </p>
-                  <p className="text-xs text-red-500 mt-0.5">Requer atenção imediata da equipe</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,71,87,0.65)' }}>
+                    Requer atenção imediata da equipe
+                  </p>
                 </div>
               </div>
             )}
             {(data?.alerts?.lowEngagementUnits || []).map((u: any) => (
-              <div key={u.id} className="flex items-start gap-3 p-3.5 bg-yellow-50 rounded-xl border border-yellow-100">
+              <div
+                key={u.id}
+                className="flex items-start gap-3 p-3.5 rounded-xl"
+                style={{
+                  background: 'rgba(249,194,52,0.07)',
+                  border: '1px solid rgba(249,194,52,0.16)',
+                }}
+              >
                 <span className="text-lg flex-shrink-0">📉</span>
                 <div>
-                  <p className="text-sm font-semibold text-yellow-800">
+                  <p className="text-sm font-semibold" style={{ color: '#F9C234' }}>
                     {u.name.replace('Colégio Adventista de ', '').replace('Sede APS — ', '')}
                   </p>
-                  <p className="text-xs text-yellow-600 mt-0.5">
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(249,194,52,0.6)' }}>
                     Baixo engajamento — Média: {u.avgPoints} pts
                   </p>
                 </div>
               </div>
             ))}
             {data?.tasks?.completed > 0 && (
-              <div className="flex items-start gap-3 p-3.5 bg-emerald-50 rounded-xl border border-emerald-100">
+              <div
+                className="flex items-start gap-3 p-3.5 rounded-xl"
+                style={{
+                  background: 'rgba(10,189,120,0.08)',
+                  border: '1px solid rgba(10,189,120,0.18)',
+                }}
+              >
                 <span className="text-lg flex-shrink-0">✅</span>
                 <div>
-                  <p className="text-sm font-semibold text-emerald-700">
+                  <p className="text-sm font-semibold" style={{ color: '#0ABD78' }}>
                     {data.tasks.completed} tarefa{data.tasks.completed > 1 ? 's' : ''} concluída{data.tasks.completed > 1 ? 's' : ''}
                   </p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Ótimo progresso da equipe!</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(10,189,120,0.6)' }}>
+                    Ótimo progresso da equipe!
+                  </p>
                 </div>
               </div>
             )}
-            {!data?.alerts?.overdueTasksCount && !data?.alerts?.lowEngagementUnits?.length && !data?.tasks?.completed && (
-              <div className="text-center py-8 text-gray-400">
+            {!data && (
+              <div className="text-center py-8" style={{ color: 'rgba(255,255,255,0.2)' }}>
                 <BellAlertIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Carregando alertas...</p>
               </div>

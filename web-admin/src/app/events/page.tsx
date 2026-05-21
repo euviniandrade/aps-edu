@@ -8,28 +8,40 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 const STATUS_LABELS: Record<string, string> = {
   planned: 'Planejado', ongoing: 'Em andamento', completed: 'Concluído', cancelled: 'Cancelado',
 }
-const STATUS_COLORS: Record<string, string> = {
-  planned: 'bg-blue-100 text-blue-700',
-  ongoing: 'bg-green-100 text-green-700',
-  completed: 'bg-gray-100 text-gray-600',
-  cancelled: 'bg-red-100 text-red-700',
+const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  planned:   { bg: 'rgba(74,158,255,0.12)',  color: '#4A9EFF' },
+  ongoing:   { bg: 'rgba(10,189,120,0.12)',  color: '#0ABD78' },
+  completed: { bg: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)' },
+  cancelled: { bg: 'rgba(255,71,87,0.12)',   color: '#FF4757' },
 }
+const EVENT_GRADIENTS = [
+  'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(74,158,255,0.2))',
+  'linear-gradient(135deg, rgba(248,163,3,0.25), rgba(224,123,57,0.2))',
+  'linear-gradient(135deg, rgba(10,189,120,0.25), rgba(41,171,226,0.2))',
+  'linear-gradient(135deg, rgba(255,71,87,0.2), rgba(139,92,246,0.2))',
+]
+
+const darkField = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: 'white',
+} as React.CSSProperties
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState('')
-  const [showModal, setShowModal] = useState(false)
+  const [events, setEvents]           = useState<any[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [statusFilter, setStatusFilter]   = useState('')
+  const [showModal, setShowModal]     = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [eventDetail, setEventDetail] = useState<any>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'info' | 'photos'>('info')
-  const [uploading, setUploading] = useState(false)
+  const [activeTab, setActiveTab]     = useState<'info' | 'photos'>('info')
+  const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [users, setUsers] = useState<any[]>([])
-  const [units, setUnits] = useState<any[]>([])
+  const [users, setUsers]             = useState<any[]>([])
+  const [units, setUnits]             = useState<any[]>([])
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '', location: '', unitId: '', responsibleIds: [] as string[] })
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]           = useState(false)
   const photoInput = useRef<HTMLInputElement>(null)
 
   const load = async () => {
@@ -43,7 +55,6 @@ export default function EventsPage() {
   }
 
   useEffect(() => { load() }, [statusFilter])
-
   useEffect(() => {
     Promise.all([api.get('/users?limit=200'), api.get('/units')]).then(([u, un]) => {
       setUsers(u.data || []); setUnits(un.data || [])
@@ -64,8 +75,7 @@ export default function EventsPage() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !selectedEvent) return
-    setUploading(true)
-    setUploadError('')
+    setUploading(true); setUploadError('')
     try {
       const fd = new FormData()
       fd.append('file', file)
@@ -74,8 +84,7 @@ export default function EventsPage() {
       })
       setEventDetail((prev: any) => prev ? { ...prev, photos: [res.data, ...(prev.photos || [])] } : prev)
       load()
-    } catch (err: any) {
-      setUploadError('Erro ao enviar foto. Tente novamente.')
+    } catch { setUploadError('Erro ao enviar foto. Tente novamente.')
     } finally {
       setUploading(false)
       if (photoInput.current) photoInput.current.value = ''
@@ -97,153 +106,246 @@ export default function EventsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Eventos</h1>
-        <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-extrabold text-white">Eventos</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            {events.length} evento{events.length !== 1 ? 's' : ''} cadastrado{events.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', color: '#000', boxShadow: '0 4px 20px rgba(248,163,3,0.3)' }}
+        >
           + Novo Evento
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-3 mb-4">
-        {['', 'planned', 'ongoing', 'completed'].map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${statusFilter === s ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-            {s === '' ? 'Todos' : STATUS_LABELS[s]}
-          </button>
-        ))}
+      {/* Status filter pills */}
+      <div className="flex gap-2 mb-5 flex-wrap animate-fade-in-up">
+        {['', 'planned', 'ongoing', 'completed'].map(s => {
+          const ss = STATUS_STYLE[s]
+          const isActive = statusFilter === s
+          return (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className="px-4 py-1.5 rounded-xl text-sm font-medium transition-all"
+              style={isActive
+                ? { background: 'rgba(248,163,3,0.15)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.3)' }
+                : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }
+              }
+            >
+              {s === '' ? 'Todos' : STATUS_LABELS[s]}
+            </button>
+          )
+        })}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2" style={{ borderColor: 'rgba(248,163,3,0.3)', borderTopColor: '#F8A303' }} />
+        </div>
       ) : events.length === 0 ? (
-        <p className="text-center text-gray-400 py-12">Nenhum evento encontrado</p>
+        <p className="text-center py-12" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          Nenhum evento encontrado
+        </p>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {events.map((event: any) => (
-            <div key={event.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => openEvent(event)}>
-              <div className="h-28 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                <span className="text-4xl">📅</span>
-              </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-semibold text-gray-900 text-sm leading-tight">{event.name}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_COLORS[event.status] || ''}`}>
-                    {STATUS_LABELS[event.status] || event.status}
-                  </span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 animate-fade-in-up delay-100">
+          {events.map((event: any, idx: number) => {
+            const ss = STATUS_STYLE[event.status] || STATUS_STYLE.completed
+            return (
+              <div
+                key={event.id}
+                className="rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:-translate-y-0.5"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+                }}
+                onClick={() => openEvent(event)}
+              >
+                {/* Color header */}
+                <div
+                  className="h-24 flex items-center justify-center relative overflow-hidden"
+                  style={{ background: EVENT_GRADIENTS[idx % EVENT_GRADIENTS.length] }}
+                >
+                  <span className="text-4xl">📅</span>
+                  <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
                 </div>
-                <p className="text-xs text-gray-500 mb-1">📍 {event.location}</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  📅 {formatDate(event.startDate)} → {formatDate(event.endDate)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${event.progressPercent || 0}%` }} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-white text-sm leading-tight">{event.name}</h3>
+                    <span
+                      className="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0"
+                      style={{ background: ss.bg, color: ss.color, border: `1px solid ${ss.color}30` }}
+                    >
+                      {STATUS_LABELS[event.status] || event.status}
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600">{event.progressPercent || 0}%</span>
-                </div>
-                <div className="flex items-center gap-1 mt-3">
-                  {(event.responsibles || []).slice(0, 3).map((r: any, i: number) => (
-                    <div key={i} title={r.user?.name} className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-xs text-blue-700 font-bold -ml-1 first:ml-0">
-                      {(r.user?.name || 'U')[0]}
+                  <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>📍 {event.location}</p>
+                  <p className="text-xs mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    📅 {formatDate(event.startDate)} → {formatDate(event.endDate)}
+                  </p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${event.progressPercent || 0}%`, background: 'linear-gradient(90deg, #8B5CF6, #4A9EFF)' }}
+                      />
                     </div>
-                  ))}
-                  {(event.responsibles || []).length > 3 && (
-                    <span className="text-xs text-gray-400 ml-1">+{event.responsibles.length - 3}</span>
-                  )}
-                  <div className="ml-auto flex gap-2 text-xs text-gray-400">
-                    <span>📋 {event._count?.tasks || 0}</span>
-                    <span>🖼 {event._count?.photos || 0}</span>
+                    <span className="text-xs font-semibold" style={{ color: '#8B5CF6' }}>{event.progressPercent || 0}%</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(event.responsibles || []).slice(0, 3).map((r: any, i: number) => (
+                      <div
+                        key={i}
+                        title={r.user?.name}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold -ml-1 first:ml-0"
+                        style={{
+                          background: 'linear-gradient(135deg, #F8A303, #FDC347)',
+                          color: '#000',
+                          boxShadow: '0 0 0 2px rgba(6,7,15,0.9)',
+                        }}
+                      >
+                        {(r.user?.name || 'U')[0]}
+                      </div>
+                    ))}
+                    {(event.responsibles || []).length > 3 && (
+                      <span className="text-xs ml-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        +{event.responsibles.length - 3}
+                      </span>
+                    )}
+                    <div className="ml-auto flex gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      <span>📋 {event._count?.tasks || 0}</span>
+                      <span>🖼 {event._count?.photos || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
-      {/* Modal detalhe evento */}
+      {/* ══ EVENT DETAIL MODAL ══ */}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+        >
+          <div
+            className="rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-scale-in"
+            style={{
+              background: 'rgba(8,10,24,0.99)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+            }}
+          >
+            <div className="p-6 flex items-center justify-between flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{selectedEvent.name}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">📍 {selectedEvent.location}</p>
+                <h2 className="text-base font-bold text-white">{selectedEvent.name}</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>📍 {selectedEvent.location}</p>
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="text-xl leading-none transition-colors"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                ✕
+              </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-100 flex-shrink-0">
+            <div className="flex flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               {[
                 { key: 'info', label: 'ℹ️ Informações' },
                 { key: 'photos', label: `🖼️ Fotos ${eventDetail?.photos?.length ? `(${eventDetail.photos.length})` : ''}` },
               ].map(tab => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-                  className={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className="px-6 py-3 text-sm font-medium transition-colors"
+                  style={{
+                    color: activeTab === tab.key ? '#F8A303' : 'rgba(255,255,255,0.4)',
+                    borderBottom: activeTab === tab.key ? '2px solid #F8A303' : '2px solid transparent',
+                  }}
+                >
                   {tab.label}
                 </button>
               ))}
             </div>
 
-            {/* Body */}
             <div className="flex-1 overflow-y-auto p-6">
               {detailLoading ? (
-                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" /></div>
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2" style={{ borderColor: 'rgba(248,163,3,0.3)', borderTopColor: '#F8A303' }} />
+                </div>
               ) : activeTab === 'info' ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     {[
-                      { label: 'Status', value: STATUS_LABELS[selectedEvent.status] },
+                      { label: 'Status',    value: STATUS_LABELS[selectedEvent.status] },
                       { label: 'Progresso', value: `${selectedEvent.progressPercent || 0}%` },
-                      { label: 'Início', value: formatDate(selectedEvent.startDate) },
-                      { label: 'Fim', value: formatDate(selectedEvent.endDate) },
-                      { label: 'Local', value: selectedEvent.location },
-                      { label: 'Unidade', value: selectedEvent.unit?.name },
+                      { label: 'Início',    value: formatDate(selectedEvent.startDate) },
+                      { label: 'Fim',       value: formatDate(selectedEvent.endDate) },
+                      { label: 'Local',     value: selectedEvent.location },
+                      { label: 'Unidade',   value: selectedEvent.unit?.name },
                     ].map(item => (
-                      <div key={item.label} className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500">{item.label}</p>
-                        <p className="font-medium text-gray-900">{item.value || '—'}</p>
+                      <div key={item.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <p className="text-xs mb-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</p>
+                        <p className="font-medium text-white">{item.value || '—'}</p>
                       </div>
                     ))}
                   </div>
                   {selectedEvent.description && (
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Descrição</p>
-                      <p className="text-sm text-gray-700">{selectedEvent.description}</p>
+                    <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Descrição</p>
+                      <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{selectedEvent.description}</p>
                     </div>
                   )}
-                  {/* Responsáveis */}
                   {(eventDetail?.responsibles || []).length > 0 && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Responsáveis</p>
+                      <p className="text-xs mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>Responsáveis</p>
                       <div className="flex flex-wrap gap-2">
                         {eventDetail.responsibles.map((r: any) => (
-                          <div key={r.user.id} className="flex items-center gap-2 bg-blue-50 rounded-full px-3 py-1">
-                            <div className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">
+                          <div
+                            key={r.user.id}
+                            className="flex items-center gap-2 rounded-full px-3 py-1"
+                            style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}
+                          >
+                            <div
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                              style={{ background: 'rgba(139,92,246,0.3)', color: '#A78BFA' }}
+                            >
                               {r.user.name[0]}
                             </div>
-                            <span className="text-xs text-blue-700 font-medium">{r.user.name}</span>
+                            <span className="text-xs font-medium" style={{ color: '#A78BFA' }}>{r.user.name}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  {/* Timeline */}
                   {(eventDetail?.timeline || []).length > 0 && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Cronograma</p>
+                      <p className="text-xs mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>Cronograma</p>
                       <div className="space-y-2">
                         {eventDetail.timeline.map((t: any) => (
-                          <div key={t.id} className={`flex items-start gap-3 p-3 rounded-lg ${t.completedAt ? 'bg-green-50' : 'bg-gray-50'}`}>
+                          <div
+                            key={t.id}
+                            className="flex items-start gap-3 p-3 rounded-xl"
+                            style={{
+                              background: t.completedAt ? 'rgba(10,189,120,0.08)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${t.completedAt ? 'rgba(10,189,120,0.18)' : 'rgba(255,255,255,0.07)'}`,
+                            }}
+                          >
                             <span className="text-lg">{t.completedAt ? '✅' : '⏳'}</span>
                             <div>
-                              <p className="text-sm font-medium text-gray-800">{t.title}</p>
-                              {t.description && <p className="text-xs text-gray-500">{t.description}</p>}
-                              <p className="text-xs text-gray-400 mt-1">{formatDate(t.scheduledAt)}</p>
+                              <p className="text-sm font-medium text-white">{t.title}</p>
+                              {t.description && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.description}</p>}
+                              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.25)' }}>{formatDate(t.scheduledAt)}</p>
                             </div>
                           </div>
                         ))}
@@ -252,48 +354,51 @@ export default function EventsPage() {
                   )}
                 </div>
               ) : (
-                /* PHOTOS TAB */
                 <div>
-                  {/* Upload area */}
                   <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                   <div
                     onClick={() => !uploading && photoInput.current?.click()}
-                    className={`border-2 border-dashed rounded-xl p-6 text-center mb-5 transition-colors ${uploading ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'}`}>
+                    className="rounded-xl p-6 text-center mb-5 transition-all cursor-pointer"
+                    style={{ border: `2px dashed ${uploading ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.1)'}`, background: uploading ? 'rgba(139,92,246,0.06)' : 'transparent' }}
+                  >
                     {uploading ? (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                        <p className="text-sm text-blue-600 font-medium">Enviando foto...</p>
+                        <div className="animate-spin rounded-full h-8 w-8 border-2" style={{ borderColor: 'rgba(139,92,246,0.3)', borderTopColor: '#8B5CF6' }} />
+                        <p className="text-sm font-medium" style={{ color: '#8B5CF6' }}>Enviando foto...</p>
                       </div>
                     ) : (
                       <>
                         <span className="text-3xl">📷</span>
-                        <p className="text-sm font-medium text-gray-700 mt-2">Clique para adicionar foto</p>
-                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP até 20MB</p>
+                        <p className="text-sm font-medium text-white mt-2">Clique para adicionar foto</p>
+                        <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>PNG, JPG, WEBP até 20MB</p>
                       </>
                     )}
                   </div>
-                  {uploadError && <p className="text-xs text-red-500 mb-3 text-center">{uploadError}</p>}
-
-                  {/* Gallery */}
+                  {uploadError && (
+                    <p className="text-xs mb-3 text-center" style={{ color: '#FF4757' }}>{uploadError}</p>
+                  )}
                   {(eventDetail?.photos || []).length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="text-center py-8" style={{ color: 'rgba(255,255,255,0.2)' }}>
                       <span className="text-5xl">🖼️</span>
-                      <p className="text-gray-400 text-sm mt-3">Nenhuma foto enviada ainda</p>
-                      <p className="text-gray-300 text-xs mt-1">Adicione fotos do evento clicando acima</p>
+                      <p className="text-sm mt-3">Nenhuma foto enviada ainda</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-3">
                       {(eventDetail?.photos || []).map((photo: any) => (
-                        <a key={photo.id} href={API_BASE + photo.url} target="_blank" rel="noopener noreferrer"
-                          className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <a
+                          key={photo.id}
+                          href={API_BASE + photo.url}
+                          target="_blank" rel="noopener noreferrer"
+                          className="group relative aspect-square rounded-xl overflow-hidden"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}
+                        >
                           <img
                             src={API_BASE + photo.url}
                             alt={photo.caption || 'Foto do evento'}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e: any) => { e.target.style.display='none' }}
                           />
                           {photo.caption && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                               <p className="text-white text-xs truncate">{photo.caption}</p>
                             </div>
                           )}
@@ -308,14 +413,12 @@ export default function EventsPage() {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
-              <button onClick={() => { setSelectedEvent(null); window.location.href = `/events/${selectedEvent.id}/report` }}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-                📊 Ver Relatório
-              </button>
-              <button onClick={() => setSelectedEvent(null)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            <div className="p-4 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="px-4 py-2 rounded-xl text-sm transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+              >
                 Fechar
               </button>
             </div>
@@ -323,67 +426,123 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Modal Novo Evento */}
+      {/* ══ NEW EVENT MODAL ══ */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">Novo Evento</h2>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+        >
+          <div
+            className="rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in"
+            style={{
+              background: 'rgba(8,10,24,0.99)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+            }}
+          >
+            <div className="p-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 className="text-base font-bold text-white">Novo Evento</h2>
             </div>
             <div className="p-6 space-y-4">
+              {[
+                { label: 'Nome do evento *', field: 'name', type: 'text', placeholder: 'Ex: Semana da Família' },
+                { label: 'Local *', field: 'location', type: 'text', placeholder: 'Ex: Auditório Central' },
+              ].map(item => (
+                <div key={item.field}>
+                  <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    {item.label}
+                  </label>
+                  <input
+                    type={item.type}
+                    value={(form as any)[item.field]}
+                    onChange={e => setForm({ ...form, [item.field]: e.target.value })}
+                    placeholder={item.placeholder}
+                    className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                    style={darkField}
+                  />
+                </div>
+              ))}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do evento *</label>
-                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Descrição
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={e => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
+                  style={darkField}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data início *</label>
-                  <input type="datetime-local" value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data fim *</label>
-                  <input type="datetime-local" value={form.endDate} onChange={e => setForm({...form, endDate: e.target.value})}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
-                </div>
+                {[
+                  { label: 'Data início *', field: 'startDate' },
+                  { label: 'Data fim *',    field: 'endDate' },
+                ].map(item => (
+                  <div key={item.field}>
+                    <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {item.label}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={(form as any)[item.field]}
+                      onChange={e => setForm({ ...form, [item.field]: e.target.value })}
+                      className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                      style={darkField}
+                    />
+                  </div>
+                ))}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Local *</label>
-                <input type="text" value={form.location} onChange={e => setForm({...form, location: e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-                <select value={form.unitId} onChange={e => setForm({...form, unitId: e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Unidade
+                </label>
+                <select
+                  value={form.unitId}
+                  onChange={e => setForm({ ...form, unitId: e.target.value })}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={darkField}
+                >
                   <option value="">Selecionar unidade...</option>
                   {units.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>
-                <div className="border border-gray-200 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
+                <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Responsáveis
+                </label>
+                <div
+                  className="rounded-xl p-2 max-h-32 overflow-y-auto space-y-1"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
                   {users.map((u: any) => (
-                    <label key={u.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded p-1">
-                      <input type="checkbox" checked={form.responsibleIds.includes(u.id)}
-                        onChange={e => setForm({...form, responsibleIds: e.target.checked ? [...form.responsibleIds, u.id] : form.responsibleIds.filter(id => id !== u.id)})}
-                        className="rounded" />
-                      <span className="text-sm text-gray-700">{u.name} — {u.role?.name}</span>
+                    <label key={u.id} className="flex items-center gap-2 cursor-pointer rounded p-1 transition-colors" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.responsibleIds.includes(u.id)}
+                        onChange={e => setForm({ ...form, responsibleIds: e.target.checked ? [...form.responsibleIds, u.id] : form.responsibleIds.filter(id => id !== u.id) })}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{u.name} — {u.role?.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
-              <button onClick={createEvent} disabled={saving || !form.name.trim() || !form.startDate || !form.endDate || !form.location.trim()}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            <div className="p-6 flex justify-end gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 text-sm rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={createEvent}
+                disabled={saving || !form.name.trim() || !form.startDate || !form.endDate || !form.location.trim()}
+                className="px-4 py-2 text-sm rounded-xl font-bold transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', color: '#000', boxShadow: '0 4px 16px rgba(248,163,3,0.3)' }}
+              >
                 {saving ? 'Salvando...' : 'Criar Evento'}
               </button>
             </div>
