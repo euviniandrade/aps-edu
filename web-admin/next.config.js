@@ -2,16 +2,15 @@
 const nextConfig = {
   eslint:     { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+
+  // APPS_SCRIPT_URL é server-side (usada pelo proxy /api/[...slug])
+  // Não precisa de NEXT_PUBLIC_ pois não é acessada pelo cliente
   env: {
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL ||
-      'https://aps-edu-api.onrender.com/api',
+    APPS_SCRIPT_URL: process.env.APPS_SCRIPT_URL || '',
   },
-  // Allow images from any external source (avatars, logos)
+
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
   },
 }
 

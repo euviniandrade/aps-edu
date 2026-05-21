@@ -1,20 +1,15 @@
-name: Deploy Backend → Render
+# Backend agora é Google Apps Script — deploy manual via script.google.com
+# Este workflow está desativado
+name: Backend (Google Apps Script — deploy manual)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy Backend
+  info:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Trigger Render Deploy
+      - name: Info
         run: |
-          curl -fsSL -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}" \
-            -H "Accept: application/json" | jq .
+          echo "O backend agora roda como Google Apps Script."
+          echo "Para atualizar: abra script.google.com, cole o conteúdo de apps-script/Code.js e faça novo deploy."

@@ -3,6 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://aps-edu-api.onrender.com/api"
+    "APPS_SCRIPT_URL": "@apps-script-url"
   }
 }

@@ -1,10 +1,10 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
-
+// Todas as chamadas vão para o proxy Next.js em /api/*
+// que repassa para o Google Apps Script
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -21,13 +21,14 @@ api.interceptors.response.use(
       const refreshToken = Cookies.get('refreshToken')
       if (refreshToken) {
         try {
-          const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
-          Cookies.set('accessToken', data.accessToken, { expires: 1 })
+          const { data } = await axios.post('/api/auth/refresh', { refreshToken })
+          Cookies.set('accessToken', data.accessToken, { expires: 30 })
           error.config.headers.Authorization = `Bearer ${data.accessToken}`
           return axios(error.config)
         } catch {
           Cookies.remove('accessToken')
           Cookies.remove('refreshToken')
+          Cookies.remove('user')
           window.location.href = '/login'
         }
       }
