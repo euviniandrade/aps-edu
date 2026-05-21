@@ -1,4 +1,4 @@
-name: Deploy Backend → Fly.io
+name: Deploy Backend → Render
 
 on:
   push:
@@ -12,18 +12,9 @@ jobs:
   deploy:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy para Fly.io
-        run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BACKEND }}
+      - name: Trigger Render Deploy
+        run: |
+          curl -fsSL -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}" \
+            -H "Accept: application/json" | jq .

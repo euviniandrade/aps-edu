@@ -112,10 +112,30 @@ const DarkTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
+const PRIORITY_STYLE: Record<string, { color: string; bg: string; label: string }> = {
+  high:   { color: '#FF4757', bg: 'rgba(255,71,87,0.1)',   label: 'Alta' },
+  medium: { color: '#F8A303', bg: 'rgba(248,163,3,0.1)',   label: 'Média' },
+  low:    { color: '#0ABD78', bg: 'rgba(10,189,120,0.1)',  label: 'Baixa' },
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
   const [ranking, setRanking] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
+  const [aiInsights, setAiInsights] = useState<any>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const loadAiInsights = async () => {
+    setAiLoading(true)
+    try {
+      const res = await api.post('/ai/insights', {})
+      setAiInsights(res.data)
+    } catch {
+      setAiInsights(null)
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -128,6 +148,7 @@ export default function DashboardPage() {
         setRanking(r.data.ranking || [])
       })
       .catch(console.error)
+    loadAiInsights()
   }, [])
 
   const totalTasks = data
@@ -196,6 +217,96 @@ export default function DashboardPage() {
           icon={CalendarDaysIcon} accentColor="#F8A303"
           sub={`${data?.events?.completed || 0} concluídos`} delay="0.3s"
         />
+      </div>
+
+      {/* ── AI INSIGHTS ────────────────────────────────────────────── */}
+      <div className="mb-5 animate-fade-in-up delay-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, rgba(248,163,3,0.2), rgba(253,195,71,0.1))', border: '1px solid rgba(248,163,3,0.25)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L13.09 8.26L19 9L13.09 9.74L12 16L10.91 9.74L5 9L10.91 8.26L12 2Z" fill="#F8A303" />
+                <path d="M5 17L5.545 19.545L8 20L5.545 20.455L5 23L4.455 20.455L2 20L4.455 19.545L5 17Z" fill="rgba(248,163,3,0.6)" />
+                <path d="M19 2L19.545 4.545L22 5L19.545 5.455L19 8L18.455 5.455L16 5L18.455 4.545L19 2Z" fill="rgba(248,163,3,0.6)" />
+              </svg>
+            </div>
+            <span className="text-sm font-semibold text-white">Insights com IA</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+              style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+              Gemini
+            </span>
+          </div>
+          <button
+            onClick={loadAiInsights}
+            disabled={aiLoading}
+            className="text-xs px-3 py-1.5 rounded-xl transition-all disabled:opacity-40 hover:scale-[1.03]"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+          >
+            {aiLoading ? '⏳ Analisando...' : '↻ Atualizar'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {aiLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl p-4 animate-pulse"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', height: 110 }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg" style={{ background: 'rgba(255,255,255,0.07)' }} />
+                  <div className="h-3 rounded-full flex-1" style={{ background: 'rgba(255,255,255,0.07)' }} />
+                </div>
+                <div className="h-2.5 rounded-full mb-2" style={{ background: 'rgba(255,255,255,0.05)', width: '90%' }} />
+                <div className="h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', width: '70%' }} />
+              </div>
+            ))
+          ) : aiInsights?.insights?.length ? (
+            aiInsights.insights.map((insight: any, i: number) => {
+              const ps = PRIORITY_STYLE[insight.priority] || PRIORITY_STYLE.medium
+              return (
+                <div
+                  key={i}
+                  className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderLeft: `3px solid ${ps.color}`,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{insight.icon}</span>
+                      <p className="text-sm font-semibold text-white leading-snug">{insight.title}</p>
+                    </div>
+                    <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                      style={{ background: ps.bg, color: ps.color, border: `1px solid ${ps.color}30` }}
+                    >
+                      {ps.label}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {insight.description}
+                  </p>
+                </div>
+              )
+            })
+          ) : (
+            <div
+              className="col-span-3 rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Configure a chave GEMINI_API_KEY para ativar os insights com IA
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Charts row */}

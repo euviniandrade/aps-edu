@@ -30,6 +30,20 @@ export default function AnnouncementsPage() {
   const [units, setUnits]       = useState<any[]>([])
   const [form, setForm] = useState({ title: '', content: '', type: 'info', targetRoleIds: [] as string[], targetUnitIds: [] as string[], expiresAt: '' })
   const [saving, setSaving]     = useState(false)
+  const [aiTopic, setAiTopic]   = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+
+  const generateWithAI = async () => {
+    if (!aiTopic.trim()) return
+    setAiGenerating(true)
+    try {
+      const res = await api.post('/ai/generate-text', { type: 'announcement', context: aiTopic })
+      if (res.data.title)   setForm(f => ({ ...f, title: res.data.title }))
+      if (res.data.content) setForm(f => ({ ...f, content: res.data.content }))
+      setAiTopic('')
+    } catch { alert('Erro ao gerar com IA') }
+    finally { setAiGenerating(false) }
+  }
 
   const load = async () => {
     setLoading(true)
@@ -196,6 +210,35 @@ export default function AnnouncementsPage() {
               <h2 className="text-base font-bold text-white">Publicar Aviso</h2>
             </div>
             <div className="p-6 space-y-4">
+
+              {/* AI Generator */}
+              <div
+                className="rounded-xl p-3"
+                style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.15)' }}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] mb-2" style={{ color: 'rgba(248,163,3,0.7)' }}>
+                  ✨ Gerar com Gemini IA
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    value={aiTopic}
+                    onChange={e => setAiTopic(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && generateWithAI()}
+                    placeholder="Ex: Reunião pedagógica sexta-feira às 18h..."
+                    className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(248,163,3,0.2)', color: 'white' }}
+                  />
+                  <button
+                    onClick={generateWithAI}
+                    disabled={aiGenerating || !aiTopic.trim()}
+                    className="px-3 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 hover:scale-[1.03]"
+                    style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', color: '#000' }}
+                  >
+                    {aiGenerating ? '⏳' : '✨'}
+                  </button>
+                </div>
+              </div>
+
               {/* Type selector */}
               <div>
                 <label className="block text-[10px] font-semibold mb-2 uppercase tracking-[0.12em]" style={{ color: 'rgba(255,255,255,0.4)' }}>

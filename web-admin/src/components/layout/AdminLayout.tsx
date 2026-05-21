@@ -10,6 +10,7 @@ import {
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
 } from '@heroicons/react/24/outline'
+import AiAssistant from '@/components/ai/AiAssistant'
 import {
   HomeIcon as HomeIconSolid, UsersIcon as UsersIconSolid,
   CheckCircleIcon as CheckIconSolid, CalendarDaysIcon as CalendarIconSolid,
@@ -361,6 +362,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+
+      {/* ── AI ASSISTANT FLOAT ──────────────────────── */}
+      <AiAssistant />
     </div>
   )
 }

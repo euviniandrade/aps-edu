@@ -50,6 +50,7 @@ fastify.register(require('./modules/reports/reports.routes'), { prefix: '/api/re
 fastify.register(require('./modules/feedback/feedback.routes'), { prefix: '/api/feedback' })
 fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles' })
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
+fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
