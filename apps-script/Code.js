@@ -83,13 +83,14 @@ function getAll(name) {
   if (!sheet || sheet.getLastRow() < 2) return []
   const vals = sheet.getDataRange().getValues()
   const headers = vals[0]
+  const firstCol = headers[0] // pode ser 'id' ou 'token' (sessions)
   return vals.slice(1)
     .map(row => {
       const obj = {}
       headers.forEach((h, i) => { if (h) obj[h] = row[i] === '' ? null : row[i] })
       return obj
     })
-    .filter(r => r.id)
+    .filter(r => r[firstCol] !== null && r[firstCol] !== '' && r[firstCol] !== undefined)
 }
 
 function findById(name, id) {
@@ -676,6 +677,41 @@ function setupAdminUser_() {
   insert('users', user)
   insert('user_points', { id: uid(), userId: user.id, points: 500, level: 3, updatedAt: ts() })
   Logger.log('✅ Admin criado: admin@aps.edu.br / admin123')
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RESET ADMIN — Edite e execute para trocar email/senha do admin
+// ══════════════════════════════════════════════════════════════
+function resetAdmin() {
+  // ↓↓↓ EDITE AQUI ↓↓↓
+  const NOVO_EMAIL = 'SEU_EMAIL@AQUI.COM'
+  const NOVA_SENHA = 'SUA_SENHA_AQUI'
+  const NOVO_NOME  = 'Seu Nome Aqui'
+  // ↑↑↑ EDITE AQUI ↑↑↑
+
+  const users = getAll('users')
+  const admin = users.find(u => u.roleId && getAll('roles').find(r => r.id === u.roleId && r.slug === 'admin'))
+
+  if (!admin) {
+    Logger.log('❌ Admin não encontrado')
+    return
+  }
+
+  updateById('users', admin.id, {
+    email:    NOVO_EMAIL,
+    password: hashPwd(NOVA_SENHA),
+    name:     NOVO_NOME,
+  })
+
+  // Limpa sessões antigas
+  const sheet = getSpreadsheet().getSheetByName('sessions')
+  if (sheet && sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent()
+  }
+
+  Logger.log('✅ Admin atualizado!')
+  Logger.log('📧 Email: ' + NOVO_EMAIL)
+  Logger.log('🔑 Senha: ' + NOVA_SENHA)
 }
 
 function setupBadges_() {
