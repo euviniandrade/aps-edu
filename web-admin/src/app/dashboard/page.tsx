@@ -124,13 +124,21 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   const loadAiInsights = async () => {
     setAiLoading(true)
+    setAiError(null)
     try {
       const res = await api.post('/ai/insights', {})
-      setAiInsights(res.data)
-    } catch {
+      if (res.data?.error) {
+        setAiError(res.data.error)
+        setAiInsights(null)
+      } else {
+        setAiInsights(res.data)
+      }
+    } catch (err: any) {
+      setAiError(err?.response?.data?.error || err?.message || 'Erro desconhecido')
       setAiInsights(null)
     } finally {
       setAiLoading(false)
@@ -301,9 +309,25 @@ export default function DashboardPage() {
               className="col-span-3 rounded-2xl p-4 text-center"
               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
             >
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                Configure a chave GEMINI_API_KEY para ativar os insights com IA
-              </p>
+              {aiError ? (
+                <div>
+                  <p className="text-xs font-semibold mb-1" style={{ color: '#FF4757' }}>
+                    Erro ao carregar insights
+                  </p>
+                  <p className="text-xs font-mono px-4 py-2 rounded-lg mt-1 break-all"
+                    style={{ background: 'rgba(255,71,87,0.08)', color: 'rgba(255,100,110,0.8)', border: '1px solid rgba(255,71,87,0.15)' }}>
+                    {aiError}
+                  </p>
+                  <button onClick={loadAiInsights} className="mt-3 text-xs px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  Configure a chave GEMINI_API_KEY para ativar os insights com IA
+                </p>
+              )}
             </div>
           )}
         </div>
