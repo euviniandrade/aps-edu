@@ -625,7 +625,10 @@ function aiRoute(method, action, body) {
       + '1. Respostas CURTAS: max 3 linhas. Sem enrolacao.\n'
       + '2. NUNCA mostre JSON no texto. JSON e so para acoes internas.\n'
       + '3. Quando executar uma acao, confirme em UMA linha: "✅ Feito!" ou "📅 Agendado!" etc.\n'
-      + '4. Use dados REAIS do contexto (tarefas, emails, agenda). Nunca invente.\n\n'
+      + '4. Use SOMENTE dados que o usuario forneceu. NUNCA invente emails, nomes, datas ou assuntos.\n'
+      + '5. Se faltar informacao para executar uma acao (ex: email sem destinatario, evento sem data), PERGUNTE antes de agir.\n'
+      + '6. Para enviar email: so execute se o usuario informou o destinatario REAL na mensagem.\n'
+      + '7. Para criar evento: so execute se o usuario informou data e titulo REAIS na mensagem.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n'
       + 'Atualizar horario fim de trabalho: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'

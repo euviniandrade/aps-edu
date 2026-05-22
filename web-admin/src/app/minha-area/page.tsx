@@ -850,6 +850,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   onEventCreated?: () => void
   onWorkDayUpdated?: (w: WorkDay) => void
 }) {
+  const CHAT_KEY = 'aps_sofi_chat_v2'
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -860,13 +861,34 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     const p = period.charAt(0).toUpperCase() + period.slice(1)
     const pending = tasks.filter(t => t.status !== 'done')
     if (pending.length > 0)
-      return `${p}, ${userName}! 👋 Tudo bem?\nVocê tem **${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}** hoje. Até que horas vai trabalhar?`
-    return `${p}, ${userName}! 👋 Tudo bem? Sou a Sofi, sua assistente. Pode me pedir para criar tarefas, agendar compromissos ou tirar dúvidas. Até que horas vai trabalhar hoje?`
+      return `${p}, ${userName}! 👋 Tenho ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''} para você. Até que horas vai trabalhar hoje?`
+    return `${p}, ${userName}! 👋 Sou a Sofi. Sua lista está vazia — boa hora para planejar. Até que horas vai trabalhar hoje?`
   }
+
+  // Salva mensagens no localStorage sempre que mudam
+  useEffect(() => {
+    if (messages.length > 0) {
+      try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-60))) } catch {}
+    }
+  }, [messages])
 
   useEffect(() => {
     if (greetedRef.current) return
     greetedRef.current = true
+
+    // Tenta restaurar conversa salva
+    try {
+      const saved = localStorage.getItem(CHAT_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed)
+          return // não cumprimenta de novo
+        }
+      }
+    } catch {}
+
+    // Primeira vez — cumprimenta
     setLoading(true)
     const h = new Date().getHours()
     const period = h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite'
@@ -875,7 +897,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       ? `Tenho ${pending.length} tarefas pendentes.`
       : 'Minha lista está vazia.'
     api.post('/ai/chat', {
-      messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), se apresente como Sofi e pergunte ate que horas vou trabalhar hoje. Max 3 linhas.` }],
+      messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), se apresente como Sofi e pergunte ate que horas vou trabalhar hoje. Max 2 linhas.` }],
       context: { tasks, workDay, userName },
     }).then(r => {
       const content = r.data?.content || r.data?.message || ''
@@ -933,10 +955,40 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     setLoading(false)
   }
 
+  const clearChat = () => {
+    localStorage.removeItem(CHAT_KEY)
+    greetedRef.current = false
+    setMessages([])
+    setLoading(true)
+    const h = new Date().getHours()
+    const period = h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite'
+    api.post('/ai/chat', {
+      messages: [{ role: 'user', content: `${period}! Me cumprimente pelo nome (${userName}) e pergunte ate que horas vou trabalhar hoje. Max 2 linhas.` }],
+      context: { tasks, workDay, userName },
+    }).then(r => {
+      const content = r.data?.content || r.data?.message || ''
+      setMessages([{ role: 'assistant', content: content || fallback(period) }])
+    }).catch(() => {
+      setMessages([{ role: 'assistant', content: fallback(period) }])
+    }).finally(() => setLoading(false))
+  }
+
   const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Crie uma tarefa para amanhã', 'Como está a campanha?']
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: 440 }}>
+      {/* Header com botão limpar */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          {messages.length > 0 ? `${messages.length} mensagens salvas` : 'Nova conversa'}
+        </p>
+        {messages.length > 0 && (
+          <button onClick={clearChat} className="text-[10px] px-2 py-1 rounded-lg transition-all"
+            style={{ background: 'rgba(255,71,87,0.08)', color: 'rgba(255,71,87,0.6)', border: '1px solid rgba(255,71,87,0.15)' }}>
+            🗑 Nova conversa
+          </button>
+        )}
+      </div>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl mb-3"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
