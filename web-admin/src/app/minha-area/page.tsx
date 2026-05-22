@@ -132,15 +132,24 @@ const PRI_STYLE: Record<string, { label: string; color: string }> = {
 }
 
 // ─── WORKDAY TIMER COMPONENT ──────────────────────────────────
-function WorkDayTimer({ tasks }: { tasks: PersonalTask[] }) {
-  const [wd, setWd] = useState<WorkDay>({ startHour: 8, startMin: 0, endHour: 18, endMin: 0 })
+function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
+  tasks: PersonalTask[]
+  workDay?: WorkDay
+  onWorkDayUpdated?: (w: WorkDay) => void
+}) {
+  const [wd, setWd] = useState<WorkDay>(extWd || { startHour: 8, startMin: 0, endHour: 18, endMin: 0 })
   const [editing, setEditing] = useState(false)
   const [now, setNow] = useState(new Date())
+  const [flash, setFlash] = useState(false)
 
+  // Sync com Sofi em tempo real
   useEffect(() => {
-    const saved = localStorage.getItem('aps_workday')
-    if (saved) try { setWd(JSON.parse(saved)) } catch {}
-  }, [])
+    if (extWd) {
+      const changed = extWd.endHour !== wd.endHour || extWd.endMin !== wd.endMin
+        || extWd.startHour !== wd.startHour || extWd.startMin !== wd.startMin
+      if (changed) { setWd(extWd); setFlash(true); setTimeout(() => setFlash(false), 2000) }
+    }
+  }, [extWd])
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -155,23 +164,42 @@ function WorkDayTimer({ tasks }: { tasks: PersonalTask[] }) {
   const remaining   = Math.max(0, endTotal - nowTotal)
   const pct         = dayDuration > 0 ? Math.min(100, (elapsed / dayDuration) * 100) : 0
 
-  const pendingMin  = tasks.filter(t => t.status !== 'done').reduce((a, t) => a + (t.duration || 0), 0)
-  const fitsCount   = tasks.filter(t => t.status !== 'done').reduce((acc, t) => {
-    if (acc.time + t.duration <= remaining) { acc.count++; acc.time += t.duration }
+  const pendingTasks = tasks.filter(t => t.status !== 'done')
+  const pendingMin   = pendingTasks.reduce((a, t) => a + (t.duration || 0), 0)
+  const fitsCount    = pendingTasks.reduce((acc, t) => {
+    if (acc.time + (t.duration || 0) <= remaining) { acc.count++; acc.time += (t.duration || 0) }
     return acc
   }, { count: 0, time: 0 }).count
 
+  // Tempo estimado de conclusão se começar agora
+  const estFinishMin  = nowTotal + pendingMin
+  const estFinishHour = Math.floor(estFinishMin / 60) % 24
+  const estFinishMins = estFinishMin % 60
+
   const saveWd = (w: WorkDay) => {
-    setWd(w); localStorage.setItem('aps_workday', JSON.stringify(w)); setEditing(false)
+    setWd(w)
+    localStorage.setItem('aps_workday', JSON.stringify(w))
+    onWorkDayUpdated?.(w)
+    setEditing(false)
   }
 
   return (
-    <div className="rounded-2xl p-5 mb-5"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="rounded-2xl p-5 mb-5 transition-all duration-500"
+      style={{
+        background: flash ? 'rgba(248,163,3,0.06)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${flash ? 'rgba(248,163,3,0.35)' : 'rgba(255,255,255,0.07)'}`,
+        boxShadow: flash ? '0 0 20px rgba(248,163,3,0.15)' : 'none',
+      }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <ClockIcon className="w-5 h-5" style={{ color: '#F8A303' }} />
+          <ClockIcon className="w-5 h-5" style={{ color: flash ? '#F8A303' : '#F8A303' }} />
           <span className="text-sm font-bold text-white">Meu Dia de Trabalho</span>
+          {flash && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full animate-pulse"
+              style={{ background: 'rgba(248,163,3,0.2)', color: '#F8A303' }}>
+              ✨ Atualizado pela Sofi
+            </span>
+          )}
         </div>
         <button onClick={() => setEditing(!editing)}
           className="text-xs px-3 py-1 rounded-lg transition-all"
@@ -180,12 +208,10 @@ function WorkDayTimer({ tasks }: { tasks: PersonalTask[] }) {
         </button>
       </div>
 
-      {editing && (
-        <WorkDayEditor wd={wd} onSave={saveWd} />
-      )}
+      {editing && <WorkDayEditor wd={wd} onSave={saveWd} />}
 
       {/* Progress bar */}
-      <div className="relative h-3 rounded-full overflow-hidden mb-4"
+      <div className="relative h-3 rounded-full overflow-hidden mb-1"
         style={{ background: 'rgba(255,255,255,0.07)' }}>
         <div className="h-full rounded-full transition-all duration-1000"
           style={{
@@ -194,9 +220,13 @@ function WorkDayTimer({ tasks }: { tasks: PersonalTask[] }) {
               ? 'linear-gradient(90deg,#FF4757,#FF6B6B)'
               : 'linear-gradient(90deg,#F8A303,#FDC347)',
           }} />
-        {/* Current time marker */}
         <div className="absolute top-0 bottom-0 w-0.5 rounded-full"
           style={{ left: `${pct}%`, background: 'white', opacity: 0.8 }} />
+      </div>
+      <div className="flex justify-between text-[9px] mb-4" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <span>{String(wd.startHour).padStart(2,'0')}:{String(wd.startMin).padStart(2,'0')}</span>
+        <span>{now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} agora</span>
+        <span>{String(wd.endHour).padStart(2,'0')}:{String(wd.endMin).padStart(2,'0')}</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -215,16 +245,26 @@ function WorkDayTimer({ tasks }: { tasks: PersonalTask[] }) {
       </div>
 
       {pendingMin > 0 && (
-        <div className="mt-3 p-3 rounded-xl flex items-center gap-2 text-xs"
-          style={{ background: 'rgba(248,163,3,0.07)', border: '1px solid rgba(248,163,3,0.15)' }}>
-          <span>📋</span>
-          <span style={{ color: 'rgba(255,200,80,0.8)' }}>
-            Você tem <strong>{fmtTime(pendingMin)}</strong> de trabalho pendente em{' '}
-            <strong>{tasks.filter(t => t.status !== 'done').length} tarefas</strong>.
-            {remaining > 0 && remaining < pendingMin && (
-              <span style={{ color: '#FF4757' }}> Não dá pra tudo hoje — priorize!</span>
-            )}
-          </span>
+        <div className="mt-3 p-3 rounded-xl space-y-1 text-xs"
+          style={{ background: remaining < pendingMin ? 'rgba(255,71,87,0.06)' : 'rgba(248,163,3,0.07)', border: `1px solid ${remaining < pendingMin ? 'rgba(255,71,87,0.2)' : 'rgba(248,163,3,0.15)'}` }}>
+          <div className="flex items-center gap-2">
+            <span>📋</span>
+            <span style={{ color: remaining < pendingMin ? 'rgba(255,150,150,0.9)' : 'rgba(255,200,80,0.9)' }}>
+              <strong>{pendingTasks.length} tarefas</strong> · <strong>{fmtTime(pendingMin)}</strong> de trabalho pendente
+              {remaining > 0 && remaining < pendingMin && <span style={{ color: '#FF4757' }}> — não dá pra tudo hoje! Priorize.</span>}
+            </span>
+          </div>
+          {pendingMin > 0 && remaining > 0 && (
+            <div className="flex items-center gap-2">
+              <span>🏁</span>
+              <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                Se começar agora, termina por volta das{' '}
+                <strong style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  {String(estFinishHour).padStart(2,'0')}:{String(estFinishMins).padStart(2,'0')}
+                </strong>
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1507,17 +1547,38 @@ function GoogleWorkspacePanel() {
             Abrir →
           </a>
         </div>
-        <div className="p-3 space-y-2">
+        <div className="p-3 space-y-1.5">
           {loadingG ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Carregando...</p>
-          : emails.length === 0 ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Nenhum email não lido ✅</p>
-          : emails.map(e => (
-            <div key={e.id} className="flex items-start gap-2 p-2 rounded-xl" style={{ background: e.unread ? 'rgba(248,163,3,0.06)' : 'transparent' }}>
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: e.unread ? '#F8A303' : 'rgba(255,255,255,0.15)' }} />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{e.subject}</p>
-                <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{e.from?.replace(/<.*>/, '').trim()}</p>
-              </div>
+          : emails.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>✅ Nenhum email não lido</p>
             </div>
+          ) : emails.map(e => (
+            <a key={e.id}
+              href={`https://mail.google.com/mail/u/0/#inbox/${e.id}`}
+              target="_blank" rel="noreferrer"
+              className="flex items-start gap-2.5 p-2.5 rounded-xl transition-all hover:bg-white/5 cursor-pointer block"
+              style={{ background: e.unread ? 'rgba(248,163,3,0.05)' : 'rgba(255,255,255,0.02)', border: `1px solid ${e.unread ? 'rgba(248,163,3,0.15)' : 'rgba(255,255,255,0.04)'}` }}>
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: e.unread ? '#F8A303' : 'rgba(255,255,255,0.15)' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold truncate" style={{ color: e.unread ? 'white' : 'rgba(255,255,255,0.65)' }}>
+                  {e.subject}
+                </p>
+                <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  {e.from?.replace(/<.*>/, '').trim()}
+                </p>
+                {e.snippet && (
+                  <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                    {e.snippet}
+                  </p>
+                )}
+              </div>
+              <span className="text-[9px] flex-shrink-0 mt-0.5" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                {new Date(e.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+              </span>
+            </a>
           ))}
         </div>
       </div>
@@ -1845,7 +1906,7 @@ export default function MinhaAreaPage() {
            SEÇÃO 3 — JORNADA DE TRABALHO
       ══════════════════════════════════════════════════════ */}
       <div className="mb-6 animate-fade-in-up">
-        <WorkDayTimer tasks={tasks} />
+        <WorkDayTimer tasks={tasks} workDay={workDay} onWorkDayUpdated={w => setWorkDay(w)} />
       </div>
 
       {/* ══════════════════════════════════════════════════════

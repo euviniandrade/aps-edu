@@ -621,18 +621,44 @@ function aiRoute(method, action, body) {
       + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW\n'
       + '- Risco MEDIO: CACLI II, CAEGW, EAA | Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB\n\n'
 
+    // Gestao de tempo: total pendente vs jornada restante
+    var nowMins = now.getHours() * 60 + now.getMinutes()
+    if (context.workDay) {
+      var endMins = (context.workDay.endHour || 18) * 60 + (context.workDay.endMin || 0)
+      var remainingMins = Math.max(0, endMins - nowMins)
+      if (context.tasks && context.tasks.length) {
+        var pendingMinutes = context.tasks
+          .filter(function(t){ return t.status !== 'done' })
+          .reduce(function(a,t){ return a + (parseInt(t.duration)||0) }, 0)
+        if (pendingMinutes > 0) {
+          var fmtMin = function(m) {
+            var h = Math.floor(m/60), min = m%60
+            return h > 0 ? h + 'h' + (min > 0 ? min + 'min' : '') : min + 'min'
+          }
+          system += 'GESTAO DE TEMPO DO DIA:\n'
+            + '- Trabalho pendente: ' + fmtMin(pendingMinutes) + ' em ' + context.tasks.filter(function(t){ return t.status !== 'done' }).length + ' tarefas\n'
+            + '- Jornada restante hoje: ' + fmtMin(remainingMins) + '\n'
+            + (pendingMinutes > remainingMins
+              ? '- ALERTA: tempo insuficiente hoje (' + fmtMin(pendingMinutes - remainingMins) + ' a mais que o disponivel). Sugira priorizar!\n'
+              : '- Tempo suficiente: sobram ' + fmtMin(remainingMins - pendingMinutes) + ' apos concluir tudo.\n')
+            + '\n'
+        }
+      }
+    }
+
     system += 'REGRAS OBRIGATORIAS:\n'
       + '1. Respostas CURTAS: max 3 linhas. Sem enrolacao.\n'
       + '2. NUNCA mostre JSON no texto. JSON e so para acoes internas.\n'
       + '3. Quando executar uma acao, confirme em UMA linha: "✅ Feito!" ou "📅 Agendado!" etc.\n'
       + '4. Use SOMENTE dados que o usuario forneceu. NUNCA invente emails, nomes, datas ou assuntos.\n'
-      + '5. Se faltar informacao para executar uma acao (ex: email sem destinatario, evento sem data), PERGUNTE antes de agir.\n'
-      + '6. Para enviar email: so execute se o usuario informou o destinatario REAL na mensagem.\n'
-      + '7. Para criar evento: so execute se o usuario informou data e titulo REAIS na mensagem.\n\n'
+      + '5. Se faltar informacao para uma acao, PERGUNTE antes de agir.\n'
+      + '6. Para criar tarefa: SEMPRE pergunte a duracao estimada (em minutos) se o usuario nao informou. Ex: "Quanto tempo vai levar essa tarefa?".\n'
+      + '7. Para enviar email: so execute se o usuario informou o destinatario REAL.\n'
+      + '8. Para criar evento: so execute se o usuario informou data e titulo REAIS.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n'
-      + 'Atualizar horario fim de trabalho: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
-      + 'Criar tarefa: {"content":"✅ Tarefa criada!","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
+      + 'Atualizar horario fim de trabalho: {"content":"✅ Horário de término atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
+      + 'Criar tarefa (EXIGE duracao em minutos — pergunte se nao souber): {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
       + 'Criar evento: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n'
       + 'Enviar email: {"content":"📧 Email enviado para X!","action":{"type":"send_email","data":{"to":"...","subject":"...","body":"..."}}}\n'
       + 'Criar doc: {"content":"📄 Documento criado!","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
