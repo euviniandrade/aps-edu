@@ -33,6 +33,9 @@ const navItems = [
   { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,           iconSolid: BuildingIconSolid, color: '#34D399' },
 ]
 
+// Item exclusivo do admin — ícone reutilizado do KeyIcon com cor dourada especial
+const myAreaItem = { href: '/minha-area', label: '⚡ Minha Área', icon: KeyIcon, iconSolid: KeyIconSolid, color: '#FDC347' }
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -143,7 +146,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <p className="section-label px-3 mb-3">Menu</p>
 
           <ul className="space-y-0.5">
-            {navItems.map((item) => {
+            {[...navItems, ...(user?.role?.slug === 'admin' ? [myAreaItem] : [])].map((item) => {
               const isActive =
                 pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = isActive ? item.iconSolid : item.icon
@@ -156,7 +159,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl
                                transition-all duration-200 group relative"
                     style={{
-                      background: isActive ? `rgba(${item.color === '#F8A303' ? '248,163,3' : item.color.startsWith('#4A') ? '74,158,255' : item.color.startsWith('#0A') ? '10,189,120' : item.color.startsWith('#8B') ? '139,92,246' : item.color.startsWith('#29') ? '41,171,226' : item.color.startsWith('#F9') ? '249,194,52' : item.color.startsWith('#E0') ? '224,123,57' : item.color.startsWith('#FF') ? '255,71,87' : item.color.startsWith('#A7') ? '167,139,250' : '52,211,153'},0.12)` : 'transparent',
+                      background: isActive ? `${item.color}18` : 'transparent',
                       color: isActive ? item.color : 'rgba(255,255,255,0.55)',
                       boxShadow: isActive ? `inset 3px 0 0 ${item.color}` : 'none',
                     }}

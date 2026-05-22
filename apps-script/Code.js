@@ -66,6 +66,7 @@ function route(method, path, body, token) {
     case 'reports':       return reportsRoute(method, id, body)
     case 'ai':            return aiRoute(method, id, body)
     case 'notifications': return notificationsRoute(method, id, body, me)
+    case 'personal':      return personalRoute(method, id, body, me)
     default:              throw Object.assign(new Error('Rota não encontrada'), { code: 404 })
   }
 }
@@ -743,4 +744,75 @@ function setupBadges_() {
     description: 'Conquista da rede APS EDU Sul', createdAt: ts(),
   }))
   Logger.log(badges.length + ' selos inseridos')
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PERSONAL WORKSPACE — Tarefas pessoais do admin
+// ══════════════════════════════════════════════════════════════
+function personalRoute(method, id, body, me) {
+  // Garante que a sheet personal_tasks existe
+  var ss = getSpreadsheet()
+  if (!ss.getSheetByName('personal_tasks')) {
+    var s = ss.insertSheet('personal_tasks')
+    var h = ['id','userId','title','category','duration','status','priority','notes','dueDate','completedAt','xp','streak','createdAt']
+    s.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold').setBackground('#1B3A6B').setFontColor('#FFFFFF')
+    s.setFrozenRows(1)
+  }
+
+  if (method === 'GET') {
+    var tasks = getAll('personal_tasks').filter(function(t){ return String(t.userId) === String(me.id) })
+    var stats = { totalXp: 0, doneTodayCount: 0, streakDays: 0 }
+    var today = new Date().toDateString()
+    tasks.forEach(function(t) {
+      if (t.status === 'done') {
+        stats.totalXp += parseInt(t.xp) || 0
+        if (t.completedAt && new Date(t.completedAt).toDateString() === today) stats.doneTodayCount++
+      }
+    })
+    return { tasks: tasks, stats: stats }
+  }
+
+  if (method === 'POST') {
+    var dur = parseInt(body.duration) || 30
+    var task = {
+      id: uid(),
+      userId: me.id,
+      title: body.title || 'Nova tarefa',
+      category: body.category || 'trabalho',
+      duration: dur,
+      status: 'pending',
+      priority: body.priority || 'medium',
+      notes: body.notes || '',
+      dueDate: body.dueDate || '',
+      completedAt: '',
+      xp: Math.max(5, Math.ceil(dur / 15) * 5),
+      streak: 0,
+      createdAt: ts()
+    }
+    insert('personal_tasks', task)
+    return task
+  }
+
+  if (method === 'PUT') {
+    var existing = findById('personal_tasks', id)
+    if (!existing || String(existing.userId) !== String(me.id)) throw new Error('Tarefa nao encontrada')
+    var upd = {}
+    if (body.title    !== undefined) upd.title    = body.title
+    if (body.status   !== undefined) upd.status   = body.status
+    if (body.priority !== undefined) upd.priority = body.priority
+    if (body.notes    !== undefined) upd.notes    = body.notes
+    if (body.dueDate  !== undefined) upd.dueDate  = body.dueDate
+    if (body.duration !== undefined) { upd.duration = parseInt(body.duration); upd.xp = Math.max(5, Math.ceil(upd.duration / 15) * 5) }
+    if (body.status === 'done' && !existing.completedAt) upd.completedAt = ts()
+    if (body.status === 'pending') upd.completedAt = ''
+    return updateById('personal_tasks', id, upd)
+  }
+
+  if (method === 'DELETE') {
+    var toDelete = findById('personal_tasks', id)
+    if (!toDelete || String(toDelete.userId) !== String(me.id)) throw new Error('Tarefa nao encontrada')
+    return deleteById('personal_tasks', id)
+  }
+
+  throw new Error('Metodo nao suportado')
 }
