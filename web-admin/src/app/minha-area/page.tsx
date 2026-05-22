@@ -842,7 +842,13 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
 }
 
 // ─── AI ASSISTANT PANEL ───────────────────────────────────────
-function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[]; workDay: WorkDay; userName: string }) {
+function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated }: {
+  tasks: PersonalTask[]
+  workDay: WorkDay
+  userName: string
+  onTaskCreated?: () => void
+  onEventCreated?: () => void
+}) {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -854,7 +860,7 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
     const pending = tasks.filter(t => t.status !== 'done')
     if (pending.length > 0)
       return `${p}, ${userName}! 👋 Tudo bem?\nVocê tem **${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}** hoje. Até que horas vai trabalhar?`
-    return `${p}, ${userName}! 👋 Tudo bem? Parece que sua lista está vazia — ótima hora para planejar o dia. Até que horas vai trabalhar?`
+    return `${p}, ${userName}! 👋 Tudo bem? Sou a Sofi, sua assistente. Pode me pedir para criar tarefas, agendar compromissos ou tirar dúvidas. Até que horas vai trabalhar hoje?`
   }
 
   useEffect(() => {
@@ -868,7 +874,7 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
       ? `Tenho ${pending.length} tarefas pendentes.`
       : 'Minha lista está vazia.'
     api.post('/ai/chat', {
-      messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), pergunte como estou e ate que horas vou trabalhar hoje. Max 3 linhas.` }],
+      messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), se apresente como Sofi e pergunte ate que horas vou trabalhar hoje. Max 3 linhas.` }],
       context: { tasks, workDay, userName },
     }).then(r => {
       const content = r.data?.content || r.data?.message || ''
@@ -882,6 +888,20 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  const executeAction = async (action: { type: string; data: any }) => {
+    try {
+      if (action.type === 'create_task') {
+        await api.post('/personal', action.data)
+        onTaskCreated?.()
+      } else if (action.type === 'create_event') {
+        await api.post('/calendar', action.data)
+        onEventCreated?.()
+      }
+    } catch (e) {
+      // falha silenciosa — mensagem já foi exibida
+    }
+  }
+
   const send = async (override?: string) => {
     const text = (override ?? input).trim()
     if (!text || loading) return
@@ -893,14 +913,16 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
     try {
       const r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
       const content = r.data?.content || r.data?.message || ''
+      const action = r.data?.action
       setMessages(p => [...p, { role: 'assistant', content: content || 'Não obtive resposta. Pode reformular?' }])
+      if (action) await executeAction(action)
     } catch {
       setMessages(p => [...p, { role: 'assistant', content: 'Erro de conexão. Tente novamente.' }])
     }
     setLoading(false)
   }
 
-  const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Como está a campanha?', 'Quais unidades precisam de atenção?']
+  const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Crie uma tarefa para amanhã', 'Como está a campanha?']
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: 440 }}>
@@ -913,7 +935,7 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
               style={{ background: 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))', border: '1px solid rgba(248,163,3,0.25)' }}>
               🤖
             </div>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Iniciando Vini...</p>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Iniciando Sofi...</p>
           </div>
         )}
         {messages.map((m, i) => (
@@ -1287,14 +1309,16 @@ export default function MinhaAreaPage() {
                 🤖
               </div>
               <div>
-                <p className="text-sm font-extrabold text-white leading-none">Vini — Assistente IA</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>tarefas · agenda · campanha · promotores</p>
+                <p className="text-sm font-extrabold text-white leading-none">Sofi — Assistente IA</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>tarefas · agenda · Google Calendar · campanha</p>
               </div>
             </div>
             <AiAssistantPanel
               tasks={tasks}
               workDay={workDay}
               userName={user?.name?.split(' ')[0] || 'Vinicius'}
+              onTaskCreated={loadTasks}
+              onEventCreated={() => {}}
             />
           </div>
 
@@ -1337,9 +1361,9 @@ export default function MinhaAreaPage() {
               🤖
             </div>
             <div>
-              <p className="text-sm font-extrabold text-white">Vini — Assistente IA</p>
+              <p className="text-sm font-extrabold text-white">Sofi — Assistente IA</p>
               <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                Integrada com tarefas · campanha · promotores
+                Tarefas · Google Calendar · Campanha · Promotores
               </p>
             </div>
           </div>
@@ -1347,6 +1371,8 @@ export default function MinhaAreaPage() {
             tasks={tasks}
             workDay={workDay}
             userName={user?.name?.split(' ')[0] || 'Vinicius'}
+            onTaskCreated={loadTasks}
+            onEventCreated={() => {}}
           />
         </div>
       )}

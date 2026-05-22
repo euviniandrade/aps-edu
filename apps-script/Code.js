@@ -65,6 +65,7 @@ function route(method, path, body, token) {
     case 'gamification':  return gamificationRoute(method, id, sub, body, me)
     case 'reports':       return reportsRoute(method, id, body)
     case 'ai':            return aiRoute(method, id, body)
+    case 'calendar':      return calendarRoute(method, id, body, me)
     case 'notifications': return notificationsRoute(method, id, body, me)
     case 'personal':      return personalRoute(method, id, body, me)
     case 'promotores':    return promotoresRoute(method, id, body, me)
@@ -557,11 +558,10 @@ function aiRoute(method, action, body) {
 
     var now = new Date()
     var hour = now.getHours()
-    var greeting = hour < 12 ? 'bom dia' : hour < 18 ? 'boa tarde' : 'boa noite'
     var dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     var timeStr = String(hour).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
 
-    var system = 'Voce e Vini, assistente pessoal e de trabalho de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
+    var system = 'Voce e Sofi, assistente pessoal inteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
       + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
       + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
 
@@ -583,40 +583,70 @@ function aiRoute(method, action, body) {
       system += 'Tarefas concluidas: ' + doneTasks.length + ' | XP acumulado: ' + totalXp + '\n\n'
     }
 
+    // Agenda Google Calendar (proximos 7 dias)
+    try {
+      var cal = CalendarApp.getDefaultCalendar()
+      var calEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      var calEvents = cal.getEvents(now, calEnd)
+      if (calEvents.length > 0) {
+        system += 'AGENDA (proximos 7 dias):\n'
+        calEvents.forEach(function(ev) {
+          var evDate = ev.getStartTime().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+          var evTime = ev.getStartTime().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          system += '- ' + ev.getTitle() + ' | ' + evDate + ' as ' + evTime + '\n'
+        })
+        system += '\n'
+      }
+    } catch(e) {}
+
     system += 'CAMPANHA DE MATRICULAS APS SUL 2026/2027:\n'
       + '- Meta: 17.000 alunos ativos | 14 unidades escolares\n'
       + '- Estrategias: Captacao 50%, Fidelizacao 30%, Resgate 20%\n'
       + '- Programa: IndicaPlus (indicacao de alunos com recompensa)\n'
       + '- 29 promotores historicos, 12 ativos, 20 posicoes necessarias 2027\n'
-      + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW (necessitam contratacao urgente)\n'
+      + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW\n'
       + '- Risco MEDIO: CACLI II, CAEGW, EAA\n'
-      + '- Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB (manter com metas)\n'
-      + '- Gargalos: velocidade de atendimento/follow-up, materiais locais, politica de descontos, ACRM, IndicaPlus\n'
-      + '- Fases: Pre-campanha (ago-set), Abertura (out), Intensiva (nov-dez), Fidelizacao (jan-fev)\n\n'
+      + '- Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB\n\n'
 
-    system += 'INSTRUCOES:\n'
-      + '- Quando perguntarem sobre o dia, liste tarefas pendentes e sugira ordem de prioridade\n'
-      + '- Sugira atividades com tempo estimado realista\n'
+    system += 'CAPACIDADES ESPECIAIS — quando usuario pedir para criar tarefa ou evento, responda SOMENTE com JSON valido:\n'
+      + 'Criar tarefa: {"content":"mensagem confirmando","action":{"type":"create_task","data":{"title":"titulo","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
+      + 'Criar evento no Google Agenda: {"content":"mensagem confirmando","action":{"type":"create_event","data":{"title":"titulo","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"descricao"}}}\n'
+      + 'Para respostas normais sem acao, responda em texto puro.\n\n'
+      + 'INSTRUCOES GERAIS:\n'
+      + '- Quando perguntarem sobre o dia, liste tarefas pendentes e sugira prioridade\n'
       + '- Para perguntas sobre campanha, baseie-se nos dados acima\n'
-      + '- Pode fazer perguntas de volta para ajudar melhor\n'
       + '- Mantenha respostas concisas (max 3-4 paragrafos)\n'
+      + '- Pode fazer perguntas de volta para ajudar melhor\n'
 
     var historyLines = messages.slice(0, -1).map(function(m){
-      return (m.role === 'user' ? 'Vinicius' : 'Vini') + ': ' + m.content
+      return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
     }).join('\n')
 
     var lastMsg = messages[messages.length - 1].content
     var fullPrompt = system
       + (historyLines ? 'HISTORICO:\n' + historyLines + '\n\n' : '')
-      + 'Vinicius: ' + lastMsg + '\nVini:'
+      + 'Vinicius: ' + lastMsg + '\nSofi:'
 
     var response = callGemini(fullPrompt)
     if (!response || response.trim() === '') {
       var hour2 = new Date().getHours()
       var grt = hour2 < 12 ? 'Bom dia' : hour2 < 18 ? 'Boa tarde' : 'Boa noite'
-      response = grt + ', ' + (context.userName || 'Vinicius') + '! Estou aqui para ajudar. O que precisa?'
+      response = grt + ', ' + (context.userName || 'Vinicius') + '! Sou a Sofi, sua assistente. Como posso ajudar?'
     }
-    return { content: response }
+
+    // Tenta parsear JSON com action
+    var contentFinal = response
+    var actionFinal = null
+    try {
+      var cleaned = response.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim()
+      var parsed = JSON.parse(cleaned)
+      if (parsed.content && parsed.action) {
+        contentFinal = parsed.content
+        actionFinal = parsed.action
+      }
+    } catch(e) {}
+
+    return actionFinal ? { content: contentFinal, action: actionFinal } : { content: contentFinal }
   }
   if (action === 'analyze-users') {
     const users  = getAll('users')
@@ -646,6 +676,53 @@ function callGemini(prompt) {
   const data = JSON.parse(res.getContentText())
   if (data.error) throw new Error('Gemini: ' + data.error)
   return data.content || ''
+}
+
+// ─── GOOGLE CALENDAR ─────────────────────────────────────────
+function calendarRoute(method, id, body, me) {
+  var cal = CalendarApp.getDefaultCalendar()
+
+  if (method === 'GET') {
+    var now = new Date()
+    var daysAhead = parseInt(body.days || 30)
+    var end = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+    var events = cal.getEvents(now, end)
+    return events.map(function(e) {
+      return {
+        id: e.getId(),
+        title: e.getTitle(),
+        start: e.getStartTime().toISOString(),
+        end: e.getEndTime().toISOString(),
+        description: e.getDescription() || '',
+        location: e.getLocation() || '',
+        allDay: e.isAllDayEvent(),
+      }
+    })
+  }
+
+  if (method === 'POST') {
+    var title = body.title || 'Novo evento'
+    var startDate = new Date(body.start)
+    var endDate = body.end ? new Date(body.end) : new Date(startDate.getTime() + 60 * 60 * 1000)
+    var opts = {}
+    if (body.description) opts.description = body.description
+    if (body.location)    opts.location    = body.location
+    var ev = cal.createEvent(title, startDate, endDate, opts)
+    return {
+      id: ev.getId(),
+      title: ev.getTitle(),
+      start: ev.getStartTime().toISOString(),
+      end: ev.getEndTime().toISOString(),
+    }
+  }
+
+  if (method === 'DELETE') {
+    var ev2 = cal.getEventById(id)
+    if (ev2) ev2.deleteEvent()
+    return { success: true }
+  }
+
+  throw new Error('Metodo nao suportado')
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────
