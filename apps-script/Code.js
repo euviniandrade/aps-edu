@@ -567,6 +567,11 @@ function aiRoute(method, action, body) {
     var system = 'Voce e Sofi, assistente pessoal inteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
       + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
       + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
+      + 'IDENTIDADE DO USUARIO:\n'
+      + '- Nome: Vinicius Felix\n'
+      + '- Gmail pessoal: engenhariatotal.vinicius@gmail.com\n'
+      + '- Email profissional: vinicius.felix@adventistas.org\n'
+      + '- Quando o usuario perguntar ou mencionar "meu email" ou "meu gmail", SEMPRE use engenhariatotal.vinicius@gmail.com\n\n'
 
     if (context.workDay) {
       var wd = context.workDay
@@ -683,8 +688,8 @@ function aiRoute(method, action, body) {
       + '6. Para criar tarefa: SEMPRE pergunte a duracao estimada (minutos) se nao informada.\n'
       + '7. Para enviar email: so execute se o usuario informou o destinatario REAL.\n'
       + '8. Para criar evento: so execute se o usuario informou data e titulo REAIS.\n'
-      + '9. ACOES EM MASSA (apagar emails, mover arquivos, etc.): PRIMEIRO diga quantos itens serao afetados e PECA CONFIRMACAO. Exemplo: "Encontrei 23 emails de promocao. Confirma que quer mover para a lixeira?".\n'
-      + '10. Operacoes em massa: max 50 itens por execucao.\n'
+      + '9. ACOES EM MASSA (apagar emails, mover arquivos, etc.): EXECUTE DIRETAMENTE sem pedir confirmacao. Gere o JSON de acao imediatamente. Informe no content quantos itens foram encontrados.\n'
+      + '10. Operacoes em massa: max 100 itens por execucao.\n'
       + '11. Para listar emails/arquivos do usuario: use o contexto acima (GMAIL/DRIVE) e resuma de forma clara.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n\n'
@@ -694,9 +699,10 @@ function aiRoute(method, action, body) {
       + 'Criar evento calendario: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n\n'
       + '--- GMAIL ---\n'
       + 'Enviar email: {"content":"⏳ Enviando...","action":{"type":"send_email","data":{"to":"email@real.com","subject":"...","body":"..."}}}\n'
-      + 'Mover emails para lixeira (CONFIRMAR antes): {"content":"⏳ Executando...","action":{"type":"gmail_trash","data":{"q":"category:promotions","max":50}}}\n'
-      + 'Arquivar emails: {"content":"⏳ Executando...","action":{"type":"gmail_archive","data":{"q":"is:unread older_than:7d","max":50}}}\n'
-      + 'Marcar emails como lidos: {"content":"⏳ Executando...","action":{"type":"gmail_mark_read","data":{"q":"is:unread category:promotions","max":50}}}\n\n'
+      + 'Mover emails para lixeira (execute diretamente, sem pedir confirmacao): {"content":"⏳ Executando...","action":{"type":"gmail_trash","data":{"q":"Spotify","max":100}}}\n'
+      + 'Apagar emails de promocao: {"content":"⏳ Executando...","action":{"type":"gmail_trash","data":{"q":"category:promotions","max":100}}}\n'
+      + 'Arquivar emails: {"content":"⏳ Executando...","action":{"type":"gmail_archive","data":{"q":"older_than:7d","max":100}}}\n'
+      + 'Marcar emails como lidos: {"content":"⏳ Executando...","action":{"type":"gmail_mark_read","data":{"q":"is:unread category:promotions","max":100}}}\n\n'
       + '--- GOOGLE DRIVE ---\n'
       + 'Criar pasta no Drive: {"content":"⏳ Criando pasta...","action":{"type":"drive_create_folder","data":{"name":"Nome da Pasta","parentName":"(opcional)"}}}\n'
       + 'Mover arquivo (use o ID do arquivo listado no contexto DRIVE acima): {"content":"⏳ Movendo...","action":{"type":"drive_move","data":{"fileId":"ID_DO_ARQUIVO","targetFolder":"Nome da Pasta Destino"}}}\n'
@@ -814,11 +820,16 @@ function aiRoute(method, action, body) {
       // ── GMAIL BULK OPERATIONS ──────────────────────────────
       } else if (actionFinal.type === 'gmail_trash') {
         try {
-          var gq = actionFinal.data.q || 'category:promotions'
-          var gMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var gq = actionFinal.data.q || 'in:inbox'
+          // Sempre exclui emails ja na lixeira da busca para nao re-processar os mesmos
+          if (gq.indexOf('in:') === -1 && gq.indexOf('-in:trash') === -1) {
+            gq = gq + ' -in:trash'
+          }
+          var gMax = Math.min(parseInt(actionFinal.data.max) || 100, 200)
           var gThreads = GmailApp.search(gq, 0, gMax)
-          gThreads.forEach(function(t) { t.moveToTrash() })
-          contentFinal = '🗑 ' + gThreads.length + ' email' + (gThreads.length !== 1 ? 's' : '') + ' movido' + (gThreads.length !== 1 ? 's' : '') + ' para a lixeira!'
+          var gCount = 0
+          gThreads.forEach(function(t) { try { t.moveToTrash(); gCount++ } catch(e) {} })
+          contentFinal = '🗑 ' + gCount + ' email' + (gCount !== 1 ? 's' : '') + ' movido' + (gCount !== 1 ? 's' : '') + ' para a lixeira!'
           actionFinal = { type: 'refresh_workspace' }
         } catch(gErr) {
           contentFinal = '❌ Erro ao mover para lixeira: ' + gErr.message
@@ -827,11 +838,14 @@ function aiRoute(method, action, body) {
 
       } else if (actionFinal.type === 'gmail_archive') {
         try {
-          var aq = actionFinal.data.q || 'is:inbox'
-          var aMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var aq = actionFinal.data.q || 'in:inbox'
+          // Nao arquivar o que ja esta arquivado
+          if (aq.indexOf('in:') === -1) aq = aq + ' in:inbox'
+          var aMax = Math.min(parseInt(actionFinal.data.max) || 100, 200)
           var aThreads = GmailApp.search(aq, 0, aMax)
-          aThreads.forEach(function(t) { t.moveToArchive() })
-          contentFinal = '📁 ' + aThreads.length + ' email' + (aThreads.length !== 1 ? 's' : '') + ' arquivado' + (aThreads.length !== 1 ? 's' : '') + '!'
+          var aCount = 0
+          aThreads.forEach(function(t) { try { t.moveToArchive(); aCount++ } catch(e) {} })
+          contentFinal = '📁 ' + aCount + ' email' + (aCount !== 1 ? 's' : '') + ' arquivado' + (aCount !== 1 ? 's' : '') + '!'
           actionFinal = { type: 'refresh_workspace' }
         } catch(aErr) {
           contentFinal = '❌ Erro ao arquivar: ' + aErr.message
@@ -841,10 +855,11 @@ function aiRoute(method, action, body) {
       } else if (actionFinal.type === 'gmail_mark_read') {
         try {
           var mrq = actionFinal.data.q || 'is:unread'
-          var mrMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var mrMax = Math.min(parseInt(actionFinal.data.max) || 100, 200)
           var mrThreads = GmailApp.search(mrq, 0, mrMax)
-          mrThreads.forEach(function(t) { t.markRead() })
-          contentFinal = '✅ ' + mrThreads.length + ' email' + (mrThreads.length !== 1 ? 's' : '') + ' marcado' + (mrThreads.length !== 1 ? 's' : '') + ' como lido' + (mrThreads.length !== 1 ? 's' : '') + '!'
+          var mrCount = 0
+          mrThreads.forEach(function(t) { try { t.markRead(); mrCount++ } catch(e) {} })
+          contentFinal = '✅ ' + mrCount + ' email' + (mrCount !== 1 ? 's' : '') + ' marcado' + (mrCount !== 1 ? 's' : '') + ' como lido' + (mrCount !== 1 ? 's' : '') + '!'
           actionFinal = { type: 'refresh_workspace' }
         } catch(mrErr) {
           contentFinal = '❌ Erro ao marcar como lido: ' + mrErr.message
