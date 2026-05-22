@@ -143,7 +143,7 @@ function hashPwd(p) {
 
 function createSession(userId) {
   const token     = uid()
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
   insert('sessions', { token, userId, expiresAt, createdAt: ts() })
   return token
 }
@@ -921,4 +921,59 @@ function personalRoute(method, id, body, me) {
   }
 
   throw new Error('Metodo nao suportado')
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BACKUP AUTOMÁTICO — Cópia semanal do banco de dados
+//  Execute setupBackupTrigger() UMA VEZ pelo editor do Apps Script
+//  para agendar o backup toda segunda-feira às 03:00.
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Cria uma cópia da planilha principal com timestamp no nome.
+ * Mantém no máximo as últimas 8 cópias para não ocupar Drive.
+ * Chamada automaticamente pelo trigger semanal.
+ */
+function backupSpreadsheet() {
+  var ss   = getSpreadsheet()
+  var name = ss.getName()
+  var now  = new Date()
+  var stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  var copy  = ss.copy('[BACKUP ' + stamp + '] ' + name)
+
+  // Move para pasta "APS EDU Backups" (cria se não existir)
+  var folderName = 'APS EDU Backups'
+  var folders = DriveApp.getFoldersByName(folderName)
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName)
+  DriveApp.getFileById(copy.getId()).moveTo(folder)
+
+  // Remove backups mais antigos se passar de 8
+  var files = folder.getFiles()
+  var list = []
+  while (files.hasNext()) { list.push(files.next()) }
+  list.sort(function(a, b) { return a.getDateCreated() - b.getDateCreated() })
+  while (list.length > 8) {
+    list.shift().setTrashed(true)
+  }
+
+  Logger.log('Backup criado: ' + copy.getName())
+}
+
+/**
+ * Agenda backupSpreadsheet() toda segunda-feira às 03:00.
+ * Execute esta função UMA VEZ manualmente no editor do Apps Script.
+ */
+function setupBackupTrigger() {
+  // Remove triggers duplicados de backup se existirem
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'backupSpreadsheet') {
+      ScriptApp.deleteTrigger(t)
+    }
+  })
+  ScriptApp.newTrigger('backupSpreadsheet')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(3)
+    .create()
+  Logger.log('Trigger de backup semanal configurado com sucesso!')
 }
