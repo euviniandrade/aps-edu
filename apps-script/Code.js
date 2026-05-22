@@ -602,15 +602,43 @@ function aiRoute(method, action, body) {
       }
     } catch(e) {}
 
-    // Emails reais do Gmail como contexto
+    // Emails: injecta resumo completo do dia + nao lidos por categoria
     try {
-      var gmailThreads = GmailApp.search('is:unread', 0, 5)
-      if (gmailThreads.length > 0) {
-        system += 'EMAILS NAO LIDOS (' + gmailThreads.length + '):\n'
-        gmailThreads.forEach(function(t) {
+      var gmailToday = GmailApp.search('newer_than:1d', 0, 20)
+      var gmailUnread = GmailApp.search('is:unread', 0, 10)
+      var gmailPromo = GmailApp.search('category:promotions is:unread', 0, 3)
+      var gmailSocial = GmailApp.search('category:social is:unread', 0, 3)
+      system += 'GMAIL - RESUMO DO DIA:\n'
+        + '- Emails hoje: ' + gmailToday.length
+        + ' | Nao lidos: ' + gmailUnread.length
+        + ' | Promocoes: ' + gmailPromo.length
+        + ' | Redes sociais: ' + gmailSocial.length + '\n'
+      if (gmailToday.length > 0) {
+        system += 'EMAILS RECENTES:\n'
+        gmailToday.slice(0, 10).forEach(function(t) {
           var last = t.getMessages()[t.getMessageCount()-1]
-          system += '- De: ' + last.getFrom().replace(/<.*>/,'').trim()
-            + ' | Assunto: ' + t.getFirstMessageSubject() + '\n'
+          system += '- [' + (t.isUnread() ? 'NAO_LIDO' : 'lido') + '] '
+            + t.getFirstMessageSubject().substring(0, 55)
+            + ' | De: ' + last.getFrom().replace(/<.*>/,'').trim().substring(0, 30) + '\n'
+        })
+      }
+      system += '\n'
+    } catch(e) {}
+
+    // Drive: injecta arquivos recentes com IDs (para operacoes de mover)
+    try {
+      var driveRecent = DriveApp.searchFiles('trashed = false')
+      var driveList = []
+      var dCnt = 0
+      while (driveRecent.hasNext() && dCnt < 12) {
+        var df = driveRecent.next()
+        driveList.push({ id: df.getId(), name: df.getName(), type: df.getMimeType().indexOf('folder') >= 0 ? 'pasta' : 'arquivo' })
+        dCnt++
+      }
+      if (driveList.length > 0) {
+        system += 'DRIVE - ARQUIVOS RECENTES (IDs para operacoes):\n'
+        driveList.forEach(function(f) {
+          system += '- [' + f.type + '] ' + f.name + ' | ID:' + f.id + '\n'
         })
         system += '\n'
       }
@@ -649,19 +677,32 @@ function aiRoute(method, action, body) {
     system += 'REGRAS OBRIGATORIAS:\n'
       + '1. Respostas CURTAS: max 3 linhas. Sem enrolacao.\n'
       + '2. NUNCA mostre JSON no texto. JSON e so para acoes internas.\n'
-      + '3. Quando executar uma acao, confirme em UMA linha: "✅ Feito!" ou "📅 Agendado!" etc.\n'
-      + '4. Use SOMENTE dados que o usuario forneceu. NUNCA invente emails, nomes, datas ou assuntos.\n'
+      + '3. Quando executar uma acao, confirme em UMA linha curta.\n'
+      + '4. Use SOMENTE dados reais fornecidos pelo usuario ou pelo contexto acima.\n'
       + '5. Se faltar informacao para uma acao, PERGUNTE antes de agir.\n'
-      + '6. Para criar tarefa: SEMPRE pergunte a duracao estimada (em minutos) se o usuario nao informou. Ex: "Quanto tempo vai levar essa tarefa?".\n'
+      + '6. Para criar tarefa: SEMPRE pergunte a duracao estimada (minutos) se nao informada.\n'
       + '7. Para enviar email: so execute se o usuario informou o destinatario REAL.\n'
-      + '8. Para criar evento: so execute se o usuario informou data e titulo REAIS.\n\n'
+      + '8. Para criar evento: so execute se o usuario informou data e titulo REAIS.\n'
+      + '9. ACOES EM MASSA (apagar emails, mover arquivos, etc.): PRIMEIRO diga quantos itens serao afetados e PECA CONFIRMACAO. Exemplo: "Encontrei 23 emails de promocao. Confirma que quer mover para a lixeira?".\n'
+      + '10. Operacoes em massa: max 50 itens por execucao.\n'
+      + '11. Para listar emails/arquivos do usuario: use o contexto acima (GMAIL/DRIVE) e resuma de forma clara.\n\n'
 
-    system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n'
-      + 'Atualizar horario fim de trabalho: {"content":"✅ Horário de término atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
-      + 'Criar tarefa (EXIGE duracao em minutos — pergunte se nao souber): {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
-      + 'Criar evento: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n'
-      + 'Enviar email: {"content":"📧 Email enviado para X!","action":{"type":"send_email","data":{"to":"...","subject":"...","body":"..."}}}\n'
-      + 'Criar doc: {"content":"📄 Documento criado!","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
+    system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n\n'
+      + '--- PRODUTIVIDADE ---\n'
+      + 'Atualizar horario: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
+      + 'Criar tarefa: {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
+      + 'Criar evento calendario: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n\n'
+      + '--- GMAIL ---\n'
+      + 'Enviar email: {"content":"📧 Email enviado!","action":{"type":"send_email","data":{"to":"email@real.com","subject":"...","body":"..."}}}\n'
+      + 'Mover emails para lixeira (CONFIRMAR antes): {"content":"🗑 X emails movidos para lixeira!","action":{"type":"gmail_trash","data":{"q":"category:promotions","max":50}}}\n'
+      + 'Arquivar emails: {"content":"📁 X emails arquivados!","action":{"type":"gmail_archive","data":{"q":"is:unread older_than:7d","max":50}}}\n'
+      + 'Marcar emails como lidos: {"content":"✅ X emails marcados como lidos!","action":{"type":"gmail_mark_read","data":{"q":"is:unread category:promotions","max":50}}}\n\n'
+      + '--- GOOGLE DRIVE ---\n'
+      + 'Criar pasta no Drive: {"content":"📁 Pasta criada!","action":{"type":"drive_create_folder","data":{"name":"Nome da Pasta","parentName":"(opcional)"}}}\n'
+      + 'Mover arquivo (use o ID do arquivo listado no contexto DRIVE acima): {"content":"✅ Arquivo movido!","action":{"type":"drive_move","data":{"fileId":"ID_DO_ARQUIVO","targetFolder":"Nome da Pasta Destino"}}}\n'
+      + 'Mover arquivo para lixeira (CONFIRMAR antes): {"content":"🗑 Arquivo movido para lixeira!","action":{"type":"drive_trash","data":{"fileId":"ID_DO_ARQUIVO"}}}\n\n'
+      + '--- DOCUMENTOS ---\n'
+      + 'Criar Google Doc: {"content":"📄 Documento criado!","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
 
     var historyLines = messages.slice(0, -1).map(function(m){
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
@@ -726,6 +767,95 @@ function aiRoute(method, action, body) {
           actionFinal = { type: 'open_url', data: { url: newDoc.getUrl() } }
         } catch(dErr) {
           contentFinal = '❌ Não consegui criar o documento: ' + dErr.message
+          actionFinal = null
+        }
+
+      // ── GMAIL BULK OPERATIONS ──────────────────────────────
+      } else if (actionFinal.type === 'gmail_trash') {
+        try {
+          var gq = actionFinal.data.q || 'category:promotions'
+          var gMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var gThreads = GmailApp.search(gq, 0, gMax)
+          gThreads.forEach(function(t) { t.moveToTrash() })
+          contentFinal = '🗑 ' + gThreads.length + ' email' + (gThreads.length !== 1 ? 's' : '') + ' movido' + (gThreads.length !== 1 ? 's' : '') + ' para a lixeira!'
+          actionFinal = { type: 'refresh_workspace' }
+        } catch(gErr) {
+          contentFinal = '❌ Erro ao mover para lixeira: ' + gErr.message
+          actionFinal = null
+        }
+
+      } else if (actionFinal.type === 'gmail_archive') {
+        try {
+          var aq = actionFinal.data.q || 'is:inbox'
+          var aMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var aThreads = GmailApp.search(aq, 0, aMax)
+          aThreads.forEach(function(t) { t.moveToArchive() })
+          contentFinal = '📁 ' + aThreads.length + ' email' + (aThreads.length !== 1 ? 's' : '') + ' arquivado' + (aThreads.length !== 1 ? 's' : '') + '!'
+          actionFinal = { type: 'refresh_workspace' }
+        } catch(aErr) {
+          contentFinal = '❌ Erro ao arquivar: ' + aErr.message
+          actionFinal = null
+        }
+
+      } else if (actionFinal.type === 'gmail_mark_read') {
+        try {
+          var mrq = actionFinal.data.q || 'is:unread'
+          var mrMax = Math.min(parseInt(actionFinal.data.max) || 50, 100)
+          var mrThreads = GmailApp.search(mrq, 0, mrMax)
+          mrThreads.forEach(function(t) { t.markRead() })
+          contentFinal = '✅ ' + mrThreads.length + ' email' + (mrThreads.length !== 1 ? 's' : '') + ' marcado' + (mrThreads.length !== 1 ? 's' : '') + ' como lido' + (mrThreads.length !== 1 ? 's' : '') + '!'
+          actionFinal = { type: 'refresh_workspace' }
+        } catch(mrErr) {
+          contentFinal = '❌ Erro ao marcar como lido: ' + mrErr.message
+          actionFinal = null
+        }
+
+      // ── DRIVE OPERATIONS ───────────────────────────────────
+      } else if (actionFinal.type === 'drive_create_folder') {
+        try {
+          var fcName = actionFinal.data.name || 'Nova Pasta'
+          var fcParent = actionFinal.data.parentName
+          var newFolder
+          if (fcParent) {
+            var parentFolders = DriveApp.getFoldersByName(fcParent)
+            newFolder = parentFolders.hasNext()
+              ? parentFolders.next().createFolder(fcName)
+              : DriveApp.createFolder(fcName)
+          } else {
+            newFolder = DriveApp.createFolder(fcName)
+          }
+          contentFinal = '📁 Pasta "' + fcName + '" criada no Drive!'
+          actionFinal = { type: 'open_url', data: { url: 'https://drive.google.com/drive/folders/' + newFolder.getId() } }
+        } catch(fcErr) {
+          contentFinal = '❌ Erro ao criar pasta: ' + fcErr.message
+          actionFinal = null
+        }
+
+      } else if (actionFinal.type === 'drive_move') {
+        try {
+          var mvFileId = actionFinal.data.fileId
+          var mvTarget = actionFinal.data.targetFolder
+          var mvFile = DriveApp.getFileById(mvFileId)
+          var mvFolders = DriveApp.getFoldersByName(mvTarget)
+          if (!mvFolders.hasNext()) throw new Error('Pasta "' + mvTarget + '" nao encontrada no Drive')
+          var mvDestFolder = mvFolders.next()
+          mvFile.moveTo(mvDestFolder)
+          contentFinal = '✅ "' + mvFile.getName() + '" movido para "' + mvTarget + '"!'
+          actionFinal = { type: 'refresh_workspace' }
+        } catch(mvErr) {
+          contentFinal = '❌ Erro ao mover arquivo: ' + mvErr.message
+          actionFinal = null
+        }
+
+      } else if (actionFinal.type === 'drive_trash') {
+        try {
+          var dtFile = DriveApp.getFileById(actionFinal.data.fileId)
+          var dtName = dtFile.getName()
+          dtFile.setTrashed(true)
+          contentFinal = '🗑 "' + dtName + '" movido para a lixeira do Drive!'
+          actionFinal = { type: 'refresh_workspace' }
+        } catch(dtErr) {
+          contentFinal = '❌ Erro ao mover para lixeira: ' + dtErr.message
           actionFinal = null
         }
       }

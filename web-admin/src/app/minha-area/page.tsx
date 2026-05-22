@@ -882,13 +882,14 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
 }
 
 // ─── AI ASSISTANT PANEL ───────────────────────────────────────
-function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated, onWorkDayUpdated }: {
+function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated, onWorkDayUpdated, onWorkspaceRefresh }: {
   tasks: PersonalTask[]
   workDay: WorkDay
   userName: string
   onTaskCreated?: () => void
   onEventCreated?: () => void
   onWorkDayUpdated?: (w: WorkDay) => void
+  onWorkspaceRefresh?: () => void
 }) {
   const CHAT_KEY = 'aps_sofi_chat_v2'
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
@@ -966,6 +967,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         await api.post('/gmail', action.data)
       } else if (action.type === 'open_url') {
         if (action.data?.url) window.open(action.data.url, '_blank')
+      } else if (action.type === 'refresh_workspace') {
+        onWorkspaceRefresh?.()
       } else if (action.type === 'update_workday') {
         const d = action.data as Partial<WorkDay>
         const updated = { ...workDay, ...d }
@@ -1512,21 +1515,23 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
 }
 
 // ─── GOOGLE WORKSPACE PANEL ───────────────────────────────────
-function GoogleWorkspacePanel() {
+function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
   const [emails, setEmails]   = useState<any[]>([])
   const [files, setFiles]     = useState<any[]>([])
   const [loadingG, setLoadingG] = useState(true)
 
-  useEffect(() => {
+  const loadWorkspace = () => {
     setLoadingG(true)
     Promise.all([
-      api.get('/gmail', { params: { q: 'is:unread', limit: 5 } }).catch(() => ({ data: [] })),
-      api.get('/drive', { params: { limit: 6 } }).catch(() => ({ data: [] })),
+      api.get('/gmail', { params: { q: 'newer_than:1d', limit: 8 } }).catch(() => ({ data: [] })),
+      api.get('/drive', { params: { limit: 8 } }).catch(() => ({ data: [] })),
     ]).then(([gmailRes, driveRes]) => {
       setEmails(Array.isArray(gmailRes.data) ? gmailRes.data : [])
       setFiles(Array.isArray(driveRes.data) ? driveRes.data : [])
     }).finally(() => setLoadingG(false))
-  }, [])
+  }
+
+  useEffect(() => { loadWorkspace() }, [refreshKey])
 
   const unread = emails.filter(e => e.unread).length
 
@@ -1542,10 +1547,17 @@ function GoogleWorkspacePanel() {
               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: '#FF4757', color: '#fff' }}>{unread}</span>
             )}
           </div>
-          <a href="https://mail.google.com" target="_blank" rel="noreferrer"
-            className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
-            Abrir →
-          </a>
+          <div className="flex items-center gap-1.5">
+            <button onClick={loadWorkspace}
+              className="text-[10px] px-2 py-1 rounded-lg transition-all"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              🔄
+            </button>
+            <a href="https://mail.google.com" target="_blank" rel="noreferrer"
+              className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+              Abrir →
+            </a>
+          </div>
         </div>
         <div className="p-3 space-y-1.5">
           {loadingG ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Carregando...</p>
@@ -1624,6 +1636,7 @@ export default function MinhaAreaPage() {
   const [tasks, setTasks]     = useState<PersonalTask[]>([])
   const [loading, setLoading] = useState(true)
   const [workDay, setWorkDay] = useState<WorkDay>({ startHour: 8, startMin: 0, endHour: 18, endMin: 0 })
+  const [wsRefreshKey, setWsRefreshKey] = useState(0)
   const [showForm, setShowForm]   = useState(false)
   const [filterCat, setFilterCat] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -1813,6 +1826,7 @@ export default function MinhaAreaPage() {
             onTaskCreated={loadTasks}
             onEventCreated={() => {}}
             onWorkDayUpdated={w => setWorkDay(w)}
+            onWorkspaceRefresh={() => setWsRefreshKey(k => k + 1)}
           />
         </div>
 
@@ -1923,7 +1937,7 @@ export default function MinhaAreaPage() {
             <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Gmail · Drive integrados</p>
           </div>
         </div>
-        <GoogleWorkspacePanel />
+        <GoogleWorkspacePanel refreshKey={wsRefreshKey} />
       </section>
 
       {/* ══════════════════════════════════════════════════════
