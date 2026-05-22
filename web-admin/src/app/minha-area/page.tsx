@@ -841,6 +841,249 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
   )
 }
 
+// ─── AI ASSISTANT PANEL ───────────────────────────────────────
+function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[]; workDay: WorkDay; userName: string }) {
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [greeted, setGreeted] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (greeted) return
+    setGreeted(true)
+    setLoading(true)
+    const h = new Date().getHours()
+    const period = h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite'
+    api.post('/ai/chat', {
+      messages: [{ role: 'user', content: `Ola! Me cumprimente com ${period}, pergunte como estou e pergunte ate que horas vou trabalhar hoje. Seja animada e breve.` }],
+      context: { tasks, workDay, userName },
+    }).then(r => {
+      setMessages([{ role: 'assistant', content: r.data.content }])
+    }).catch(() => {
+      setMessages([{ role: 'assistant', content: `${period.charAt(0).toUpperCase() + period.slice(1)}, Vinicius! 👋 Tudo bem? Até que horas você vai trabalhar hoje?` }])
+    }).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  const send = async () => {
+    if (!input.trim() || loading) return
+    const userMsg = { role: 'user' as const, content: input.trim() }
+    const newMsgs = [...messages, userMsg]
+    setMessages(newMsgs)
+    setInput('')
+    setLoading(true)
+    try {
+      const r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
+      setMessages(p => [...p, { role: 'assistant', content: r.data.content }])
+    } catch {
+      setMessages(p => [...p, { role: 'assistant', content: 'Desculpe, ocorreu um erro. Tente novamente.' }])
+    }
+    setLoading(false)
+  }
+
+  const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Como está a campanha?', 'Quais unidades precisam de atenção?']
+
+  return (
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 340px)', minHeight: 420 }}>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl mb-3"
+        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {messages.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+              style={{ background: 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))', border: '1px solid rgba(248,163,3,0.25)' }}>
+              🤖
+            </div>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Iniciando Vini...</p>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+            {m.role === 'assistant' && (
+              <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-sm mb-0.5"
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>🤖</div>
+            )}
+            <div className="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap"
+              style={m.role === 'user' ? {
+                background: 'linear-gradient(135deg,rgba(248,163,3,0.18),rgba(253,195,71,0.08))',
+                border: '1px solid rgba(248,163,3,0.25)',
+                color: '#FDC347',
+                borderBottomRightRadius: 4,
+              } : {
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.85)',
+                borderBottomLeftRadius: 4,
+              }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex items-end gap-2">
+            <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-sm"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>🤖</div>
+            <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex gap-1">
+                {[0,1,2].map(i => (
+                  <div key={i} className="w-2 h-2 rounded-full animate-bounce"
+                    style={{ background: '#F8A303', animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Quick prompts */}
+      {messages.length <= 1 && !loading && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {QUICK.map(q => (
+            <button key={q} onClick={() => { setInput(q); setTimeout(send, 0) }}
+              className="text-xs px-3 py-1.5 rounded-xl transition-all"
+              style={{ background: 'rgba(248,163,3,0.08)', color: 'rgba(248,163,3,0.7)', border: '1px solid rgba(248,163,3,0.15)' }}>
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="flex gap-2">
+        <input type="text" value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Pergunte sobre tarefas, agenda, campanha, promotores..."
+          className="flex-1 px-4 py-3 rounded-xl text-sm text-white outline-none"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+        <button onClick={send} disabled={loading || !input.trim()}
+          className="px-5 py-3 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
+          style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+          ➤
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── CALENDAR VIEW ────────────────────────────────────────────
+function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
+  const [view, setView] = useState<'week' | 'day'>('week')
+  const [anchor, setAnchor] = useState(new Date())
+  const today = new Date()
+
+  const getWeekDates = (d: Date) => {
+    const start = new Date(d)
+    const day = start.getDay()
+    start.setDate(start.getDate() - (day === 0 ? 6 : day - 1))
+    return Array.from({ length: 7 }, (_, i) => { const x = new Date(start); x.setDate(start.getDate() + i); return x })
+  }
+
+  const weekDates = getWeekDates(anchor)
+
+  const tasksOnDate = (d: Date) =>
+    tasks.filter(t => t.dueDate && new Date(t.dueDate + 'T12:00').toDateString() === d.toDateString())
+
+  const viewDates = view === 'day' ? [today] : weekDates
+
+  const navigate = (dir: number) => {
+    const d = new Date(anchor)
+    d.setDate(d.getDate() + (view === 'day' ? dir : dir * 7))
+    setAnchor(d)
+  }
+
+  return (
+    <div>
+      {/* Controls */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-1.5">
+          {['day', 'week'].map(v => (
+            <button key={v} onClick={() => { setView(v as any); setAnchor(new Date()) }}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: view === v ? 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${view === v ? 'rgba(248,163,3,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                color: view === v ? '#F8A303' : 'rgba(255,255,255,0.4)',
+              }}>
+              {v === 'day' ? 'Hoje' : 'Semana'}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="px-2 py-1 rounded-lg text-sm transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>←</button>
+          <span className="text-xs font-semibold text-white">
+            {view === 'week'
+              ? `${weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – ${weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              : anchor.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+          <button onClick={() => navigate(1)} className="px-2 py-1 rounded-lg text-sm transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>→</button>
+        </div>
+        <button onClick={() => setAnchor(new Date())}
+          className="text-xs px-3 py-1.5 rounded-lg"
+          style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+          Hoje
+        </button>
+      </div>
+
+      {/* Grid */}
+      <div className={`grid gap-3 ${view === 'week' ? 'grid-cols-7' : 'grid-cols-1 max-w-sm mx-auto'}`}>
+        {viewDates.map((d, i) => {
+          const isToday = d.toDateString() === today.toDateString()
+          const dayTasks = tasksOnDate(d)
+          return (
+            <div key={i} className="rounded-xl p-3"
+              style={{
+                background: isToday ? 'rgba(248,163,3,0.07)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${isToday ? 'rgba(248,163,3,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                minHeight: view === 'week' ? 120 : 'auto',
+              }}>
+              <p className="text-xs font-bold mb-2 leading-none"
+                style={{ color: isToday ? '#F8A303' : 'rgba(255,255,255,0.35)' }}>
+                {view === 'week'
+                  ? d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')
+                  : d.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                <span className="block text-[10px] mt-0.5" style={{ color: isToday ? 'rgba(248,163,3,0.6)' : 'rgba(255,255,255,0.2)' }}>
+                  {d.getDate()}
+                </span>
+              </p>
+              <div className="space-y-1">
+                {dayTasks.length === 0 && (
+                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.15)' }}>—</p>
+                )}
+                {dayTasks.map(t => {
+                  const cat = CAT_STYLE[t.category] || CAT_STYLE.trabalho
+                  return (
+                    <div key={t.id}
+                      className={`text-[10px] px-2 py-1 rounded-lg truncate leading-snug ${t.status === 'done' ? 'opacity-40 line-through' : ''}`}
+                      style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.color}25` }}
+                      title={t.title}>
+                      {t.title}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* No tasks hint */}
+      {tasks.filter(t => t.dueDate).length === 0 && (
+        <div className="text-center py-8 mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          <CalendarDaysIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">Adicione prazos nas tarefas para vê-las no calendário</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────
 export default function MinhaAreaPage() {
   const router  = useRouter()
@@ -848,7 +1091,8 @@ export default function MinhaAreaPage() {
   const [user, setUser]       = useState<any>(null)
   const [tasks, setTasks]     = useState<PersonalTask[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]         = useState<'inicio'|'tarefas'|'campanha'|'credenciais'|'conquistas'>('inicio')
+  const [tab, setTab]         = useState<'inicio'|'ia'|'tarefas'|'calendario'|'campanha'|'credenciais'|'conquistas'>('inicio')
+  const [workDay, setWorkDay] = useState<WorkDay>({ startHour: 8, startMin: 0, endHour: 18, endMin: 0 })
   const [showForm, setShowForm]   = useState(false)
   const [filterCat, setFilterCat] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -862,6 +1106,8 @@ export default function MinhaAreaPage() {
       if (uc) setUser(JSON.parse(uc))
     } catch {}
     if ('Notification' in window) setNotifGranted(Notification.permission === 'granted')
+    const saved = localStorage.getItem('aps_workday')
+    if (saved) try { setWorkDay(JSON.parse(saved)) } catch {}
     loadTasks()
   }, [])
 
@@ -929,11 +1175,13 @@ export default function MinhaAreaPage() {
     })
 
   const tabs = [
-    { id: 'inicio',       label: '🏠 Início',       show: true },
-    { id: 'tarefas',      label: '📋 Tarefas',       show: true },
-    { id: 'campanha',     label: '🎯 Campanha',      show: true },
-    { id: 'credenciais',  label: '🔑 Credenciais',   show: true },
-    { id: 'conquistas',   label: '🏆 Conquistas',    show: true },
+    { id: 'inicio',       label: '🏠 Início',        show: true },
+    { id: 'ia',           label: '🤖 IA Assistente',  show: true },
+    { id: 'tarefas',      label: '📋 Tarefas',        show: true },
+    { id: 'calendario',   label: '📅 Calendário',     show: true },
+    { id: 'campanha',     label: '🎯 Campanha',       show: true },
+    { id: 'credenciais',  label: '🔑 Credenciais',    show: true },
+    { id: 'conquistas',   label: '🏆 Conquistas',     show: true },
   ]
 
   const pendingCount = tasks.filter(t => t.status !== 'done').length
@@ -1046,6 +1294,29 @@ export default function MinhaAreaPage() {
         </div>
       )}
 
+      {/* ── TAB: IA ASSISTENTE ────────────────────────────────── */}
+      {tab === 'ia' && (
+        <div className="animate-fade-in-up">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 14px rgba(248,163,3,0.3)' }}>
+              🤖
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white">Vini — Assistente IA</p>
+              <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Integrada com tarefas · campanha · promotores
+              </p>
+            </div>
+          </div>
+          <AiAssistantPanel
+            tasks={tasks}
+            workDay={workDay}
+            userName={user?.name?.split(' ')[0] || 'Vinicius'}
+          />
+        </div>
+      )}
+
       {/* ── TAB: TAREFAS / CAMPANHA ─────────────────────────── */}
       {(tab === 'tarefas' || tab === 'campanha') && (
         <div className="animate-fade-in-up">
@@ -1122,6 +1393,13 @@ export default function MinhaAreaPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── TAB: CALENDÁRIO ──────────────────────────────────────── */}
+      {tab === 'calendario' && (
+        <div className="animate-fade-in-up">
+          <CalendarView tasks={tasks} />
         </div>
       )}
 

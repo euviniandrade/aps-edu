@@ -9,6 +9,7 @@ import {
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
@@ -18,12 +19,14 @@ import {
   ChartBarIcon as ChartIconSolid,
   ChatBubbleLeftEllipsisIcon as ChatIconSolid,
   KeyIcon as KeyIconSolid, BuildingLibraryIcon as BuildingIconSolid,
+  UserGroupIcon as UserGroupIconSolid,
 } from '@heroicons/react/24/solid'
 
 const navItems = [
   { href: '/dashboard',     label: 'Dashboard',   icon: HomeIcon,                      iconSolid: HomeIconSolid,     color: '#F8A303' },
   { href: '/users',         label: 'Usuários',     icon: UsersIcon,                     iconSolid: UsersIconSolid,    color: '#4A9EFF' },
   { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,               iconSolid: CheckIconSolid,    color: '#0ABD78' },
+  { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,                 iconSolid: UserGroupIconSolid, color: '#29ABE2' },
   { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#8B5CF6' },
   { href: '/announcements', label: 'Avisos',       icon: MegaphoneIcon,                 iconSolid: MegaphoneIconSolid,color: '#29ABE2' },
   { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                    iconSolid: TrophyIconSolid,   color: '#F9C234' },

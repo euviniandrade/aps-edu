@@ -67,6 +67,7 @@ function route(method, path, body, token) {
     case 'ai':            return aiRoute(method, id, body)
     case 'notifications': return notificationsRoute(method, id, body, me)
     case 'personal':      return personalRoute(method, id, body, me)
+    case 'promotores':    return promotoresRoute(method, id, body, me)
     default:              throw Object.assign(new Error('Rota não encontrada'), { code: 404 })
   }
 }
@@ -550,22 +551,66 @@ function aiRoute(method, action, body) {
     return match ? JSON.parse(match[0]) : { text }
   }
   if (action === 'chat') {
-    const { messages } = body
-    if (!messages?.length) throw new Error('Mensagens obrigatórias')
-    const ctx = {
-      usuarios: getAll('users').filter(u => u.isActive !== false).length,
-      tarefas:  getAll('tasks').length,
-      unidades: getAll('units').length,
+    var messages = body.messages || []
+    var context = body.context || {}
+    if (!messages.length) throw new Error('Mensagens obrigatorias')
+
+    var now = new Date()
+    var hour = now.getHours()
+    var greeting = hour < 12 ? 'bom dia' : hour < 18 ? 'boa tarde' : 'boa noite'
+    var dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    var timeStr = String(hour).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+
+    var system = 'Voce e Vini, assistente pessoal e de trabalho de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
+      + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
+      + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
+
+    if (context.workDay) {
+      var wd = context.workDay
+      system += 'HORARIO DE TRABALHO: ' + String(wd.startHour||8).padStart(2,'0') + ':' + String(wd.startMin||0).padStart(2,'0')
+        + ' ate ' + String(wd.endHour||18).padStart(2,'0') + ':' + String(wd.endMin||0).padStart(2,'0') + '\n\n'
     }
-    const history = messages.slice(0, -1)
-      .map(m => `${m.role === 'user' ? 'Usuário' : 'Assistente'}: ${m.content}`)
-      .join('\n')
-    const last = messages[messages.length - 1].content
-    const prompt = `Assistente IA da plataforma APS EDU Sul (rede adventista). Português, conciso, profissional.
-Contexto: ${JSON.stringify(ctx)}
-${history ? 'Histórico:\n' + history + '\n' : ''}Usuário: ${last}
-Assistente:`
-    return { content: callGemini(prompt) }
+
+    if (context.tasks && context.tasks.length) {
+      var pending = context.tasks.filter(function(t){ return t.status !== 'done' })
+      var doneTasks = context.tasks.filter(function(t){ return t.status === 'done' })
+      var totalXp = doneTasks.reduce(function(a,t){ return a + (parseInt(t.xp)||0) }, 0)
+      system += 'TAREFAS PESSOAIS PENDENTES (' + pending.length + '):\n'
+      pending.forEach(function(t){
+        system += '- [' + t.priority.toUpperCase() + '] ' + t.title + ' — cat:' + t.category + ', ' + t.duration + 'min'
+          + (t.dueDate ? ', prazo:' + t.dueDate : '') + '\n'
+      })
+      system += 'Tarefas concluidas: ' + doneTasks.length + ' | XP acumulado: ' + totalXp + '\n\n'
+    }
+
+    system += 'CAMPANHA DE MATRICULAS APS SUL 2026/2027:\n'
+      + '- Meta: 17.000 alunos ativos | 14 unidades escolares\n'
+      + '- Estrategias: Captacao 50%, Fidelizacao 30%, Resgate 20%\n'
+      + '- Programa: IndicaPlus (indicacao de alunos com recompensa)\n'
+      + '- 29 promotores historicos, 12 ativos, 20 posicoes necessarias 2027\n'
+      + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW (necessitam contratacao urgente)\n'
+      + '- Risco MEDIO: CACLI II, CAEGW, EAA\n'
+      + '- Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB (manter com metas)\n'
+      + '- Gargalos: velocidade de atendimento/follow-up, materiais locais, politica de descontos, ACRM, IndicaPlus\n'
+      + '- Fases: Pre-campanha (ago-set), Abertura (out), Intensiva (nov-dez), Fidelizacao (jan-fev)\n\n'
+
+    system += 'INSTRUCOES:\n'
+      + '- Quando perguntarem sobre o dia, liste tarefas pendentes e sugira ordem de prioridade\n'
+      + '- Sugira atividades com tempo estimado realista\n'
+      + '- Para perguntas sobre campanha, baseie-se nos dados acima\n'
+      + '- Pode fazer perguntas de volta para ajudar melhor\n'
+      + '- Mantenha respostas concisas (max 3-4 paragrafos)\n'
+
+    var historyLines = messages.slice(0, -1).map(function(m){
+      return (m.role === 'user' ? 'Vinicius' : 'Vini') + ': ' + m.content
+    }).join('\n')
+
+    var lastMsg = messages[messages.length - 1].content
+    var fullPrompt = system
+      + (historyLines ? 'HISTORICO:\n' + historyLines + '\n\n' : '')
+      + 'Vinicius: ' + lastMsg + '\nVini:'
+
+    return { content: callGemini(fullPrompt) }
   }
   if (action === 'analyze-users') {
     const users  = getAll('users')
@@ -608,6 +653,61 @@ function notificationsRoute(method, id, body, me) {
   }
   if (method === 'PUT') return updateById('notifications', id, { read: true, readAt: ts() })
   return []
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PROMOTORES — Avaliação de promotores de matrículas
+// ══════════════════════════════════════════════════════════════
+function promotoresRoute(method, id, body, me) {
+  var ss = getSpreadsheet()
+  if (!ss.getSheetByName('promotor_avaliacoes')) {
+    var s = ss.insertSheet('promotor_avaliacoes')
+    var h = ['id','promotorNome','unidade','semana','nps','persuasao','comunicacao','acrm','indicacao','posVenda','postura','notas','pontosFort','pontosAjust','recomendacao','avaliadorId','criadoEm']
+    s.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1B3A6B').setFontColor('#FFFFFF')
+    s.setFrozenRows(1)
+  }
+
+  if (method === 'GET') {
+    var all = getAll('promotor_avaliacoes')
+    if (id) return all.filter(function(a){ return a.id === id })
+    if (body.promotor) return all.filter(function(a){ return a.promotorNome === body.promotor })
+    if (body.unidade) return all.filter(function(a){ return a.unidade === body.unidade })
+    return all
+  }
+
+  if (method === 'POST') {
+    var scores = body.scores || {}
+    var radar = Object.values(scores).reduce(function(a,v){ return a + (parseFloat(v)||0) }, 0)
+    var count = Object.keys(scores).length
+    var radarMedia = count > 0 ? Math.round((radar / count) * 10) / 10 : 0
+    var aval = {
+      id: uid(),
+      promotorNome: body.promotorNome || '',
+      unidade: body.unidade || '',
+      semana: body.semana || Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-ww'),
+      nps: scores.nps || 0,
+      persuasao: scores.persuasao || 0,
+      comunicacao: scores.comunicacao || 0,
+      acrm: scores.acrm || 0,
+      indicacao: scores.indicacao || 0,
+      posVenda: scores.posVenda || 0,
+      postura: scores.postura || 0,
+      notas: body.notas || '',
+      pontosFort: body.pontosFort || '',
+      pontosAjust: body.pontosAjust || '',
+      recomendacao: body.recomendacao || '',
+      avaliadorId: me.id,
+      criadoEm: ts()
+    }
+    insert('promotor_avaliacoes', aval)
+    return aval
+  }
+
+  if (method === 'DELETE') {
+    return deleteById('promotor_avaliacoes', id)
+  }
+
+  throw new Error('Metodo nao suportado')
 }
 
 // ══════════════════════════════════════════════════════════════
