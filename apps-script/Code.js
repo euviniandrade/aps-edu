@@ -693,16 +693,17 @@ function aiRoute(method, action, body) {
       + 'Criar tarefa: {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
       + 'Criar evento calendario: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n\n'
       + '--- GMAIL ---\n'
-      + 'Enviar email: {"content":"📧 Email enviado!","action":{"type":"send_email","data":{"to":"email@real.com","subject":"...","body":"..."}}}\n'
-      + 'Mover emails para lixeira (CONFIRMAR antes): {"content":"🗑 X emails movidos para lixeira!","action":{"type":"gmail_trash","data":{"q":"category:promotions","max":50}}}\n'
-      + 'Arquivar emails: {"content":"📁 X emails arquivados!","action":{"type":"gmail_archive","data":{"q":"is:unread older_than:7d","max":50}}}\n'
-      + 'Marcar emails como lidos: {"content":"✅ X emails marcados como lidos!","action":{"type":"gmail_mark_read","data":{"q":"is:unread category:promotions","max":50}}}\n\n'
+      + 'Enviar email: {"content":"⏳ Enviando...","action":{"type":"send_email","data":{"to":"email@real.com","subject":"...","body":"..."}}}\n'
+      + 'Mover emails para lixeira (CONFIRMAR antes): {"content":"⏳ Executando...","action":{"type":"gmail_trash","data":{"q":"category:promotions","max":50}}}\n'
+      + 'Arquivar emails: {"content":"⏳ Executando...","action":{"type":"gmail_archive","data":{"q":"is:unread older_than:7d","max":50}}}\n'
+      + 'Marcar emails como lidos: {"content":"⏳ Executando...","action":{"type":"gmail_mark_read","data":{"q":"is:unread category:promotions","max":50}}}\n\n'
       + '--- GOOGLE DRIVE ---\n'
-      + 'Criar pasta no Drive: {"content":"📁 Pasta criada!","action":{"type":"drive_create_folder","data":{"name":"Nome da Pasta","parentName":"(opcional)"}}}\n'
-      + 'Mover arquivo (use o ID do arquivo listado no contexto DRIVE acima): {"content":"✅ Arquivo movido!","action":{"type":"drive_move","data":{"fileId":"ID_DO_ARQUIVO","targetFolder":"Nome da Pasta Destino"}}}\n'
-      + 'Mover arquivo para lixeira (CONFIRMAR antes): {"content":"🗑 Arquivo movido para lixeira!","action":{"type":"drive_trash","data":{"fileId":"ID_DO_ARQUIVO"}}}\n\n'
+      + 'Criar pasta no Drive: {"content":"⏳ Criando pasta...","action":{"type":"drive_create_folder","data":{"name":"Nome da Pasta","parentName":"(opcional)"}}}\n'
+      + 'Mover arquivo (use o ID do arquivo listado no contexto DRIVE acima): {"content":"⏳ Movendo...","action":{"type":"drive_move","data":{"fileId":"ID_DO_ARQUIVO","targetFolder":"Nome da Pasta Destino"}}}\n'
+      + 'Mover arquivo para lixeira (CONFIRMAR antes): {"content":"⏳ Movendo para lixeira...","action":{"type":"drive_trash","data":{"fileId":"ID_DO_ARQUIVO"}}}\n\n'
       + '--- DOCUMENTOS ---\n'
-      + 'Criar Google Doc: {"content":"📄 Documento criado!","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
+      + 'Criar Google Doc: {"content":"⏳ Criando documento...","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
+      + '\nIMPORTANTE: o campo "content" para acoes server-side deve ser sempre "⏳ Executando..." — o servidor vai substituir pelo resultado real.\n'
 
     var historyLines = messages.slice(0, -1).map(function(m){
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
@@ -858,6 +859,11 @@ function aiRoute(method, action, body) {
           contentFinal = '❌ Erro ao mover para lixeira: ' + dtErr.message
           actionFinal = null
         }
+
+      } else if (actionFinal.type !== 'update_workday' && actionFinal.type !== 'create_task') {
+        // Acao nao reconhecida — nao executa e avisa o usuario
+        contentFinal = '⚠️ Não consegui executar essa ação (' + actionFinal.type + '). Verifique se o Apps Script está na versão mais recente e reimplante.'
+        actionFinal = null
       }
     }
 
