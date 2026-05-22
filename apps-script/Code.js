@@ -66,6 +66,9 @@ function route(method, path, body, token) {
     case 'reports':       return reportsRoute(method, id, body)
     case 'ai':            return aiRoute(method, id, body)
     case 'calendar':      return calendarRoute(method, id, body, me)
+    case 'gmail':         return gmailRoute(method, id, body, me)
+    case 'drive':         return driveRoute(method, id, body, me)
+    case 'docs':          return docsRoute(method, id, body, me)
     case 'notifications': return notificationsRoute(method, id, body, me)
     case 'personal':      return personalRoute(method, id, body, me)
     case 'promotores':    return promotoresRoute(method, id, body, me)
@@ -608,9 +611,11 @@ function aiRoute(method, action, body) {
       + '- Risco MEDIO: CACLI II, CAEGW, EAA\n'
       + '- Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB\n\n'
 
-    system += 'CAPACIDADES ESPECIAIS — quando usuario pedir para criar tarefa ou evento, responda SOMENTE com JSON valido:\n'
-      + 'Criar tarefa: {"content":"mensagem confirmando","action":{"type":"create_task","data":{"title":"titulo","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
-      + 'Criar evento no Google Agenda: {"content":"mensagem confirmando","action":{"type":"create_event","data":{"title":"titulo","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"descricao"}}}\n'
+    system += 'CAPACIDADES ESPECIAIS — quando usuario pedir acoes, responda SOMENTE com JSON valido:\n'
+      + 'Criar tarefa: {"content":"msg","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
+      + 'Criar evento Google Agenda: {"content":"msg","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n'
+      + 'Enviar email: {"content":"msg","action":{"type":"send_email","data":{"to":"email@dest.com","subject":"...","body":"..."}}}\n'
+      + 'Criar documento Google Docs: {"content":"msg","action":{"type":"create_doc","data":{"title":"...","content":"conteudo do documento"}}}\n'
       + 'Para respostas normais sem acao, responda em texto puro.\n\n'
       + 'INSTRUCOES GERAIS:\n'
       + '- Quando perguntarem sobre o dia, liste tarefas pendentes e sugira prioridade\n'
@@ -676,6 +681,99 @@ function callGemini(prompt) {
   const data = JSON.parse(res.getContentText())
   if (data.error) throw new Error('Gemini: ' + data.error)
   return data.content || ''
+}
+
+// ─── GMAIL ────────────────────────────────────────────────────
+function gmailRoute(method, id, body, me) {
+  if (method === 'GET') {
+    var q = body.q || 'is:unread'
+    var limit = parseInt(body.limit) || 10
+    var threads = GmailApp.search(q, 0, limit)
+    return threads.map(function(t) {
+      var msgs = t.getMessages()
+      var last = msgs[msgs.length - 1]
+      return {
+        id: t.getId(),
+        subject: t.getFirstMessageSubject() || '(sem assunto)',
+        from: last.getFrom(),
+        date: last.getDate().toISOString(),
+        unread: t.isUnread(),
+        messageCount: t.getMessageCount(),
+        snippet: last.getPlainBody().substring(0, 120).replace(/\s+/g,' '),
+      }
+    })
+  }
+  if (method === 'POST') {
+    var to = body.to
+    if (!to) throw new Error('Destinatario obrigatorio')
+    GmailApp.sendEmail(to, body.subject || '(sem assunto)', body.body || '', {
+      name: 'Vinicius Felix — APS Sul',
+    })
+    return { success: true }
+  }
+  throw new Error('Metodo nao suportado')
+}
+
+// ─── GOOGLE DRIVE ─────────────────────────────────────────────
+function driveRoute(method, id, body, me) {
+  if (method === 'GET') {
+    var q = body.q || ''
+    var limit = parseInt(body.limit) || 20
+    var files = q
+      ? DriveApp.searchFiles('title contains "' + q + '" and trashed=false')
+      : DriveApp.searchFiles('trashed=false')
+    var result = []
+    var count = 0
+    while (files.hasNext() && count < limit) {
+      var f = files.next()
+      var mime = f.getMimeType()
+      var icon = mime.indexOf('document') > -1 ? '📄'
+               : mime.indexOf('spreadsheet') > -1 ? '📊'
+               : mime.indexOf('presentation') > -1 ? '📋'
+               : mime.indexOf('pdf') > -1 ? '📕'
+               : mime.indexOf('image') > -1 ? '🖼️'
+               : mime.indexOf('folder') > -1 ? '📁' : '📎'
+      result.push({
+        id: f.getId(),
+        name: f.getName(),
+        mimeType: mime,
+        icon: icon,
+        url: f.getUrl(),
+        modifiedAt: f.getLastUpdated().toISOString(),
+        starred: f.isStarred(),
+      })
+      count++
+    }
+    return result
+  }
+  if (method === 'POST' && body.type === 'folder') {
+    var folder = DriveApp.createFolder(body.name || 'Nova Pasta')
+    return { id: folder.getId(), name: folder.getName(), url: folder.getUrl() }
+  }
+  throw new Error('Metodo nao suportado')
+}
+
+// ─── GOOGLE DOCS ──────────────────────────────────────────────
+function docsRoute(method, id, body, me) {
+  if (method === 'POST') {
+    var title = body.title || 'Novo Documento'
+    var content = body.content || ''
+    var doc = DocumentApp.create(title)
+    var docBody = doc.getBody()
+    if (content) {
+      // Formata com parágrafos
+      content.split('\n').forEach(function(line) {
+        if (line.trim()) docBody.appendParagraph(line)
+      })
+    }
+    doc.saveAndClose()
+    return {
+      id: doc.getId(),
+      title: doc.getName(),
+      url: 'https://docs.google.com/document/d/' + doc.getId() + '/edit',
+    }
+  }
+  throw new Error('Metodo nao suportado')
 }
 
 // ─── GOOGLE CALENDAR ─────────────────────────────────────────

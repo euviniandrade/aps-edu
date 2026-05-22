@@ -896,6 +896,11 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       } else if (action.type === 'create_event') {
         await api.post('/calendar', action.data)
         onEventCreated?.()
+      } else if (action.type === 'send_email') {
+        await api.post('/gmail', action.data)
+      } else if (action.type === 'create_doc') {
+        const res = await api.post('/docs', action.data)
+        if (res.data?.url) window.open(res.data.url, '_blank')
       }
     } catch (e) {
       // falha silenciosa — mensagem já foi exibida
@@ -1117,6 +1122,90 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
           <p className="text-sm">Adicione prazos nas tarefas para vê-las no calendário</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── GOOGLE WORKSPACE PANEL ───────────────────────────────────
+function GoogleWorkspacePanel() {
+  const [emails, setEmails]   = useState<any[]>([])
+  const [files, setFiles]     = useState<any[]>([])
+  const [loadingG, setLoadingG] = useState(true)
+
+  useEffect(() => {
+    setLoadingG(true)
+    Promise.all([
+      api.get('/gmail', { params: { q: 'is:unread', limit: 5 } }).catch(() => ({ data: [] })),
+      api.get('/drive', { params: { limit: 6 } }).catch(() => ({ data: [] })),
+    ]).then(([gmailRes, driveRes]) => {
+      setEmails(Array.isArray(gmailRes.data) ? gmailRes.data : [])
+      setFiles(Array.isArray(driveRes.data) ? driveRes.data : [])
+    }).finally(() => setLoadingG(false))
+  }, [])
+
+  const unread = emails.filter(e => e.unread).length
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      {/* Gmail */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📧</span>
+            <span className="text-sm font-bold text-white">Gmail</span>
+            {unread > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: '#FF4757', color: '#fff' }}>{unread}</span>
+            )}
+          </div>
+          <a href="https://mail.google.com" target="_blank" rel="noreferrer"
+            className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+            Abrir →
+          </a>
+        </div>
+        <div className="p-3 space-y-2">
+          {loadingG ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Carregando...</p>
+          : emails.length === 0 ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Nenhum email não lido ✅</p>
+          : emails.map(e => (
+            <div key={e.id} className="flex items-start gap-2 p-2 rounded-xl" style={{ background: e.unread ? 'rgba(248,163,3,0.06)' : 'transparent' }}>
+              <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: e.unread ? '#F8A303' : 'rgba(255,255,255,0.15)' }} />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{e.subject}</p>
+                <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{e.from?.replace(/<.*>/, '').trim()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Drive */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📁</span>
+            <span className="text-sm font-bold text-white">Google Drive</span>
+          </div>
+          <a href="https://drive.google.com" target="_blank" rel="noreferrer"
+            className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+            Abrir →
+          </a>
+        </div>
+        <div className="p-3 space-y-1.5">
+          {loadingG ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Carregando...</p>
+          : files.length === 0 ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Nenhum arquivo encontrado</p>
+          : files.map(f => (
+            <a key={f.id} href={f.url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-2 p-2 rounded-xl transition-all hover:bg-white/5">
+              <span className="text-base flex-shrink-0">{f.icon}</span>
+              <div className="min-w-0">
+                <p className="text-xs text-white truncate">{f.name}</p>
+                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {new Date(f.modifiedAt).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1349,6 +1438,17 @@ export default function MinhaAreaPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── GOOGLE WORKSPACE (visível na aba início) ─────────── */}
+      {tab === 'inicio' && (
+        <div className="mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-base">🔗</span>
+            <p className="text-xs font-bold text-white">Google Workspace</p>
+          </div>
+          <GoogleWorkspacePanel />
         </div>
       )}
 
