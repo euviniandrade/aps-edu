@@ -1119,8 +1119,6 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   const calColors: Record<string, string> = {}
   gcalEvents.forEach(e => { if (e.calendarName) calColors[e.calendarName] = e.calendarColor || '#4285F4' })
 
-  const viewDates = view === 'day' ? [today] : weekDates
-
   return (
     <div>
       {/* Header Controls */}
@@ -1331,7 +1329,6 @@ export default function MinhaAreaPage() {
   const [user, setUser]       = useState<any>(null)
   const [tasks, setTasks]     = useState<PersonalTask[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]         = useState<'inicio'|'ia'|'tarefas'|'calendario'|'campanha'|'credenciais'|'conquistas'>('inicio')
   const [workDay, setWorkDay] = useState<WorkDay>({ startHour: 8, startMin: 0, endHour: 18, endMin: 0 })
   const [showForm, setShowForm]   = useState(false)
   const [filterCat, setFilterCat] = useState<string>('all')
@@ -1414,16 +1411,6 @@ export default function MinhaAreaPage() {
       return (pri[a.priority] || 1) - (pri[b.priority] || 1)
     })
 
-  const tabs = [
-    { id: 'inicio',       label: '🏠 Início',        show: true },
-    { id: 'ia',           label: '🤖 IA Assistente',  show: true },
-    { id: 'tarefas',      label: '📋 Tarefas',        show: true },
-    { id: 'calendario',   label: '📅 Calendário',     show: true },
-    { id: 'campanha',     label: '🎯 Campanha',       show: true },
-    { id: 'credenciais',  label: '🔑 Credenciais',    show: true },
-    { id: 'conquistas',   label: '🏆 Conquistas',     show: true },
-  ]
-
   const pendingCount = tasks.filter(t => t.status !== 'done').length
   const doneToday    = tasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()).length
   const totalXp      = tasks.filter(t => t.status === 'done').reduce((a, t) => a + (parseInt(t.xp as any) || 0), 0)
@@ -1482,103 +1469,46 @@ export default function MinhaAreaPage() {
         ))}
       </div>
 
-      {/* ── TABS ───────────────────────────────────────────── */}
-      <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 animate-fade-in-up delay-100">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id as any)}
-            className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: tab === t.id ? 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${tab === t.id ? 'rgba(248,163,3,0.35)' : 'rgba(255,255,255,0.07)'}`,
-              color: tab === t.id ? '#F8A303' : 'rgba(255,255,255,0.5)',
-            }}>
-            {t.label}
-            {t.id === 'tarefas' && pendingCount > 0 && (
-              <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                style={{ background: '#FF4757', color: 'white' }}>{pendingCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── TAB: INÍCIO ────────────────────────────────────── */}
-      {tab === 'inicio' && (
-        <div className="animate-fade-in-up">
-          {/* AI CHAT — primeiro elemento visível */}
-          <div className="mb-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 12px rgba(248,163,3,0.35)' }}>
-                🤖
-              </div>
-              <div>
-                <p className="text-sm font-extrabold text-white leading-none">Sofi — Assistente IA</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>tarefas · agenda · Google Calendar · campanha</p>
-              </div>
+      {/* ══════════════════════════════════════════════════════
+           SEÇÃO 1 — CALENDÁRIO GOOGLE (destaque principal)
+      ══════════════════════════════════════════════════════ */}
+      <section className="mb-6 animate-fade-in-up">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+              style={{ background: 'rgba(66,133,244,0.15)', border: '1px solid rgba(66,133,244,0.25)' }}>
+              📅
             </div>
-            <AiAssistantPanel
-              tasks={tasks}
-              workDay={workDay}
-              userName={user?.name?.split(' ')[0] || 'Vinicius'}
-              onTaskCreated={loadTasks}
-              onEventCreated={() => {}}
-              onWorkDayUpdated={w => setWorkDay(w)}
-            />
-          </div>
-
-          <WorkDayTimer tasks={tasks} />
-
-          {/* Today's tasks */}
-          <div className="rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <div className="px-5 py-4 flex items-center justify-between"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <h2 className="text-sm font-bold text-white">Tarefas de Hoje</h2>
-              <button onClick={() => setTab('tarefas')}
-                className="text-xs px-3 py-1 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                Ver todas →
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              {tasks.filter(t => t.status !== 'done').slice(0, 5).length === 0 ? (
-                <div className="text-center py-8" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  <CheckSolid className="w-10 h-10 mx-auto mb-2 opacity-30" style={{ color: '#0ABD78' }} />
-                  <p className="text-sm">Nenhuma tarefa pendente! 🎉</p>
-                </div>
-              ) : (
-                tasks.filter(t => t.status !== 'done').slice(0, 5).map(t => (
-                  <TaskCard key={t.id} task={t} onUpdate={updateTask} onDelete={deleteTask} />
-                ))
-              )}
+            <div>
+              <h2 className="text-sm font-extrabold text-white leading-none">Calendário Google</h2>
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Todos os seus compromissos sincronizados
+              </p>
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── GOOGLE WORKSPACE (visível na aba início) ─────────── */}
-      {tab === 'inicio' && (
-        <div className="mt-2">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-base">🔗</span>
-            <p className="text-xs font-bold text-white">Google Workspace</p>
-          </div>
-          <GoogleWorkspacePanel />
+        <div className="rounded-2xl p-4"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <CalendarView tasks={tasks} />
         </div>
-      )}
+      </section>
 
-      {/* ── TAB: IA ASSISTENTE ────────────────────────────────── */}
-      {tab === 'ia' && (
-        <div className="animate-fade-in-up">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl"
-              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 14px rgba(248,163,3,0.3)' }}>
+      {/* ══════════════════════════════════════════════════════
+           SEÇÃO 2 — SOFI IA + TAREFAS (lado a lado)
+      ══════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 animate-fade-in-up">
+
+        {/* ── SOFI IA ─────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 10px rgba(248,163,3,0.3)' }}>
               🤖
             </div>
             <div>
-              <p className="text-sm font-extrabold text-white">Sofi — Assistente IA</p>
-              <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                Tarefas · Google Calendar · Campanha · Promotores
+              <p className="text-sm font-extrabold text-white leading-none">Sofi — IA Assistente</p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                tarefas · agenda · gmail · drive
               </p>
             </div>
           </div>
@@ -1588,109 +1518,147 @@ export default function MinhaAreaPage() {
             userName={user?.name?.split(' ')[0] || 'Vinicius'}
             onTaskCreated={loadTasks}
             onEventCreated={() => {}}
+            onWorkDayUpdated={w => setWorkDay(w)}
           />
         </div>
-      )}
 
-      {/* ── TAB: TAREFAS / CAMPANHA ─────────────────────────── */}
-      {(tab === 'tarefas' || tab === 'campanha') && (
-        <div className="animate-fade-in-up">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <div className="relative flex-1 min-w-[160px] max-w-xs">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'rgba(255,255,255,0.3)' }} />
-              <input type="text" placeholder="Buscar tarefa..." value={search}
+        {/* ── TAREFAS ──────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+                style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.2)' }}>
+                📋
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-white leading-none">
+                  Tarefas
+                  {pendingCount > 0 && (
+                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-bold align-middle"
+                      style={{ background: '#FF4757', color: 'white' }}>{pendingCount}</span>
+                  )}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  {tasks.filter(t => t.status === 'done').length} concluídas · {tasks.length} total
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setShowForm(f => !f)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-black"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+              <PlusIcon className="w-3.5 h-3.5" /> Nova
+            </button>
+          </div>
+
+          {/* Filtros */}
+          <div className="flex gap-2 mb-3 flex-wrap">
+            <div className="relative flex-1 min-w-[120px]">
+              <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.25)' }} />
+              <input type="text" placeholder="Buscar..." value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl text-sm text-white outline-none"
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs text-white outline-none"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
             </div>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs text-white outline-none"
+            <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+              className="px-2 py-1.5 rounded-xl text-xs text-white outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
-              <option value="all">Todos os status</option>
+              <option value="all">Todas</option>
+              <option value="trabalho">Trabalho</option>
+              <option value="campanha">Campanha</option>
+              <option value="pessoal">Pessoal</option>
+            </select>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="px-2 py-1.5 rounded-xl text-xs text-white outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
+              <option value="all">Status</option>
               <option value="pending">Pendentes</option>
               <option value="in-progress">Em andamento</option>
               <option value="done">Concluídas</option>
             </select>
-            {tab === 'tarefas' && (
-              <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-                className="px-3 py-2 rounded-xl text-xs text-white outline-none"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                <option value="all">Todas as categorias</option>
-                <option value="trabalho">Trabalho</option>
-                <option value="campanha">Campanha</option>
-                <option value="pessoal">Pessoal</option>
-              </select>
-            )}
-            <button onClick={() => setShowForm(f => !f)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black ml-auto"
-              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-              <PlusIcon className="w-4 h-4" /> Nova Tarefa
-            </button>
           </div>
 
           {showForm && (
-            <TaskForm
-              onAdd={(data) => addTask({ ...data, category: tab === 'campanha' ? 'campanha' : data.category as any })}
-              onClose={() => setShowForm(false)}
-            />
+            <div className="mb-3">
+              <TaskForm onAdd={addTask} onClose={() => setShowForm(false)} />
+            </div>
           )}
 
-          {loading ? (
-            <div className="space-y-3">
-              {[1,2,3].map(i => (
-                <div key={i} className="h-20 rounded-2xl animate-pulse"
+          <div className="space-y-2 overflow-y-auto pr-0.5" style={{ maxHeight: 'calc(100vh - 480px)', minHeight: 200 }}>
+            {loading ? (
+              [1,2,3].map(i => (
+                <div key={i} className="h-16 rounded-2xl animate-pulse"
                   style={{ background: 'rgba(255,255,255,0.04)' }} />
-              ))}
+              ))
+            ) : filteredTasks.length === 0 ? (
+              <div className="text-center py-10" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">Nenhuma tarefa</p>
+                <button onClick={() => setShowForm(true)}
+                  className="mt-2 text-xs px-4 py-1.5 rounded-xl"
+                  style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+                  Criar tarefa
+                </button>
+              </div>
+            ) : (
+              filteredTasks.map(task => (
+                <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={deleteTask} />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+           SEÇÃO 3 — JORNADA DE TRABALHO
+      ══════════════════════════════════════════════════════ */}
+      <div className="mb-6 animate-fade-in-up">
+        <WorkDayTimer tasks={tasks} />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+           SEÇÃO 4 — GOOGLE WORKSPACE (Gmail + Drive)
+      ══════════════════════════════════════════════════════ */}
+      <section className="mb-6 animate-fade-in-up">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+            style={{ background: 'rgba(10,189,120,0.12)', border: '1px solid rgba(10,189,120,0.2)' }}>
+            🔗
+          </div>
+          <div>
+            <h2 className="text-sm font-extrabold text-white leading-none">Google Workspace</h2>
+            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Gmail · Drive integrados</p>
+          </div>
+        </div>
+        <GoogleWorkspacePanel />
+      </section>
+
+      {/* ══════════════════════════════════════════════════════
+           SEÇÃO 5 — CONQUISTAS + CREDENCIAIS (lado a lado)
+      ══════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 animate-fade-in-up">
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+              style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}>
+              🏆
             </div>
-          ) : (
-            <div className="space-y-3">
-              {(tab === 'campanha'
-                ? filteredTasks.filter(t => t.category === 'campanha')
-                : filteredTasks
-              ).length === 0 ? (
-                <div className="text-center py-16" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  <CheckCircleIcon className="w-14 h-14 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Nenhuma tarefa ainda</p>
-                  <button onClick={() => setShowForm(true)}
-                    className="mt-3 text-xs px-4 py-2 rounded-xl"
-                    style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-                    Criar primeira tarefa
-                  </button>
-                </div>
-              ) : (
-                (tab === 'campanha'
-                  ? filteredTasks.filter(t => t.category === 'campanha')
-                  : filteredTasks
-                ).map(task => (
-                  <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={deleteTask} />
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB: CALENDÁRIO ──────────────────────────────────────── */}
-      {tab === 'calendario' && (
-        <div className="animate-fade-in-up">
-          <CalendarView tasks={tasks} />
-        </div>
-      )}
-
-      {/* ── TAB: CREDENCIAIS ─────────────────────────────────── */}
-      {tab === 'credenciais' && (
-        <div className="animate-fade-in-up">
-          <CredentialsVault />
-        </div>
-      )}
-
-      {/* ── TAB: CONQUISTAS ──────────────────────────────────── */}
-      {tab === 'conquistas' && (
-        <div className="animate-fade-in-up">
+            <h2 className="text-sm font-extrabold text-white">Conquistas & XP</h2>
+          </div>
           <GamificationPanel tasks={tasks} />
-        </div>
-      )}
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+              style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.18)' }}>
+              🔑
+            </div>
+            <h2 className="text-sm font-extrabold text-white">Cofre de Senhas</h2>
+          </div>
+          <CredentialsVault />
+        </section>
+      </div>
+
     </AdminLayout>
   )
 }
