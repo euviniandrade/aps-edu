@@ -705,14 +705,32 @@ function aiRoute(method, action, body) {
       + 'Criar Google Doc: {"content":"⏳ Criando documento...","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
       + '\nIMPORTANTE: o campo "content" para acoes server-side deve ser sempre "⏳ Executando..." — o servidor vai substituir pelo resultado real.\n'
 
-    var historyLines = messages.slice(0, -1).map(function(m){
+    // Limita historico a ultimas 6 trocas para nao explodir o contexto
+    var recentMessages = messages.slice(-7) // 6 anteriores + mensagem atual
+    var historyLines = recentMessages.slice(0, -1).map(function(m){
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
     }).join('\n')
 
     var lastMsg = messages[messages.length - 1].content
-    var fullPrompt = system
-      + (historyLines ? 'HISTORICO:\n' + historyLines + '\n\n' : '')
-      + 'Vinicius: ' + lastMsg + '\nSofi (resposta curta e direta):'
+
+    // Detecta se mensagem menciona gmail/drive para incluir contexto relevante
+    var msgLower = lastMsg.toLowerCase()
+    var needsGmail = msgLower.indexOf('email') >= 0 || msgLower.indexOf('gmail') >= 0
+      || msgLower.indexOf('mensagem') >= 0 || msgLower.indexOf('promo') >= 0
+      || msgLower.indexOf('inbox') >= 0 || msgLower.indexOf('lixeira') >= 0
+      || msgLower.indexOf('arquivar') >= 0 || msgLower.indexOf('lidos') >= 0
+      || msgLower.indexOf('sim') >= 0 || msgLower.indexOf('confirmo') >= 0
+      || msgLower.indexOf('pode') >= 0 || msgLower.indexOf('apaga') >= 0
+    var needsDrive = msgLower.indexOf('drive') >= 0 || msgLower.indexOf('arquivo') >= 0
+      || msgLower.indexOf('pasta') >= 0 || msgLower.indexOf('documento') >= 0
+      || msgLower.indexOf('mover') >= 0 || msgLower.indexOf('reorgan') >= 0
+
+    // Instrucao final reforçando JSON obrigatorio para acoes
+    var actionReminder = '\nLEMBRETE: Se a mensagem do usuario pede uma ACAO (apagar, criar, mover, enviar, agendar), responda SOMENTE com JSON no formato {"content":"⏳ Executando...","action":{"type":"...","data":{...}}}. Nao use texto antes ou depois do JSON.\n\n'
+
+    var fullPrompt = system + actionReminder
+      + (historyLines ? 'HISTORICO (recente):\n' + historyLines + '\n\n' : '')
+      + 'Vinicius: ' + lastMsg + '\nSofi:'
 
     var response = callGemini(fullPrompt)
     if (!response || response.trim() === '') {
@@ -721,16 +739,38 @@ function aiRoute(method, action, body) {
       response = grt + ', ' + (context.userName || 'Vinicius') + '! Sou a Sofi. Como posso ajudar?'
     }
 
-    // Extrai JSON com action de qualquer parte da resposta
+    // Extrai JSON robusto — tenta multiplos padroes
     var contentFinal = response.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').trim()
     var actionFinal = null
     try {
-      var jsonMatch = response.match(/\{[\s\S]*"action"[\s\S]*\}/)
-      if (!jsonMatch) jsonMatch = response.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        var parsed = JSON.parse(jsonMatch[0])
-        if (parsed.content && parsed.action) {
-          contentFinal = parsed.content
+      // Tenta encontrar JSON completo com "action" — nao-guloso entre { }
+      var jsonCandidates = []
+      var rStr = response
+      var startIdx = 0
+      // Extrai todos os objetos JSON de nivel superior
+      while (startIdx < rStr.length) {
+        var openAt = rStr.indexOf('{', startIdx)
+        if (openAt === -1) break
+        var depth = 0
+        var closeAt = -1
+        for (var ci = openAt; ci < rStr.length; ci++) {
+          if (rStr[ci] === '{') depth++
+          else if (rStr[ci] === '}') { depth--; if (depth === 0) { closeAt = ci; break } }
+        }
+        if (closeAt === -1) break
+        jsonCandidates.push(rStr.substring(openAt, closeAt + 1))
+        startIdx = closeAt + 1
+      }
+      // Escolhe o candidato que tem "action"
+      var bestCandidate = null
+      for (var ji = 0; ji < jsonCandidates.length; ji++) {
+        if (jsonCandidates[ji].indexOf('"action"') >= 0) { bestCandidate = jsonCandidates[ji]; break }
+      }
+      if (!bestCandidate && jsonCandidates.length > 0) bestCandidate = jsonCandidates[0]
+      if (bestCandidate) {
+        var parsed = JSON.parse(bestCandidate)
+        if (parsed.action && parsed.action.type) {
+          contentFinal = parsed.content || '⏳ Executando...'
           actionFinal = parsed.action
         }
       }

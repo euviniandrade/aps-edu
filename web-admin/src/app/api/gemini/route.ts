@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1024,
-        temperature: 0.7,
+        max_tokens: 2048,
+        temperature: 0.4,
       }),
     })
 
