@@ -141,12 +141,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
+        {/* ── MINHA ÁREA — destaque exclusivo ─────────── */}
+        <div className="px-3 pt-3 pb-2">
+          <Link
+            href="/minha-area"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 group relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(248,163,3,0.18) 0%, rgba(253,195,71,0.08) 100%)',
+              border: '1px solid rgba(248,163,3,0.35)',
+              boxShadow: '0 4px 20px rgba(248,163,3,0.12)',
+            }}
+          >
+            {/* Shimmer */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(248,163,3,0.08) 50%, transparent 70%)', backgroundSize: '200% 100%' }} />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg relative z-10"
+              style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', boxShadow: '0 0 14px rgba(248,163,3,0.4)' }}>
+              ⚡
+            </div>
+            <div className="min-w-0 relative z-10">
+              <p className="text-sm font-extrabold leading-none" style={{ color: '#FDC347' }}>Minha Área</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(248,163,3,0.55)' }}>
+                Tarefas · Senhas · Conquistas
+              </p>
+            </div>
+            <div className="ml-auto relative z-10 flex-shrink-0">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F8A303' }} />
+            </div>
+          </Link>
+        </div>
+
         {/* ── NAVIGATION ──────────────────────────────── */}
-        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+        <nav className="flex-1 py-2 px-3 overflow-y-auto">
           <p className="section-label px-3 mb-3">Menu</p>
 
           <ul className="space-y-0.5">
-            {[...navItems, ...(user?.role?.slug === 'admin' ? [myAreaItem] : [])].map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = isActive ? item.iconSolid : item.icon
