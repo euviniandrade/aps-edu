@@ -992,10 +992,16 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       const r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
       const content = r.data?.content || r.data?.message || ''
       const action = r.data?.action
-      setMessages(p => [...p, { role: 'assistant', content: content || 'Não obtive resposta. Pode reformular?' }])
+      const errMsg = r.data?.error
+      // Mostra o erro real do backend para facilitar diagnóstico
+      const fallbackMsg = errMsg
+        ? `❌ Erro no servidor: ${errMsg}`
+        : 'Não obtive resposta. Pode reformular?'
+      setMessages(p => [...p, { role: 'assistant', content: content || fallbackMsg }])
       if (action) await executeAction(action)
-    } catch {
-      setMessages(p => [...p, { role: 'assistant', content: 'Erro de conexão. Tente novamente.' }])
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erro de conexão'
+      setMessages(p => [...p, { role: 'assistant', content: `❌ ${msg}` }])
     }
     setLoading(false)
   }
