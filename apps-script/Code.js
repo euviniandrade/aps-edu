@@ -610,7 +610,13 @@ function aiRoute(method, action, body) {
       + (historyLines ? 'HISTORICO:\n' + historyLines + '\n\n' : '')
       + 'Vinicius: ' + lastMsg + '\nVini:'
 
-    return { content: callGemini(fullPrompt) }
+    var response = callGemini(fullPrompt)
+    if (!response || response.trim() === '') {
+      var hour2 = new Date().getHours()
+      var grt = hour2 < 12 ? 'Bom dia' : hour2 < 18 ? 'Boa tarde' : 'Boa noite'
+      response = grt + ', ' + (context.userName || 'Vinicius') + '! Estou aqui para ajudar. O que precisa?'
+    }
+    return { content: response }
   }
   if (action === 'analyze-users') {
     const users  = getAll('users')

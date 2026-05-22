@@ -846,22 +846,35 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [greeted, setGreeted] = useState(false)
+  const greetedRef = useRef(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  const fallback = (period: string) => {
+    const p = period.charAt(0).toUpperCase() + period.slice(1)
+    const pending = tasks.filter(t => t.status !== 'done')
+    if (pending.length > 0)
+      return `${p}, ${userName}! 👋 Tudo bem?\nVocê tem **${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}** hoje. Até que horas vai trabalhar?`
+    return `${p}, ${userName}! 👋 Tudo bem? Parece que sua lista está vazia — ótima hora para planejar o dia. Até que horas vai trabalhar?`
+  }
+
   useEffect(() => {
-    if (greeted) return
-    setGreeted(true)
+    if (greetedRef.current) return
+    greetedRef.current = true
     setLoading(true)
     const h = new Date().getHours()
     const period = h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite'
+    const pending = tasks.filter(t => t.status !== 'done')
+    const promptCtx = pending.length > 0
+      ? `Tenho ${pending.length} tarefas pendentes.`
+      : 'Minha lista está vazia.'
     api.post('/ai/chat', {
-      messages: [{ role: 'user', content: `Ola! Me cumprimente com ${period}, pergunte como estou e pergunte ate que horas vou trabalhar hoje. Seja animada e breve.` }],
+      messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), pergunte como estou e ate que horas vou trabalhar hoje. Max 3 linhas.` }],
       context: { tasks, workDay, userName },
     }).then(r => {
-      setMessages([{ role: 'assistant', content: r.data.content }])
+      const content = r.data?.content || r.data?.message || ''
+      setMessages([{ role: 'assistant', content: content || fallback(period) }])
     }).catch(() => {
-      setMessages([{ role: 'assistant', content: `${period.charAt(0).toUpperCase() + period.slice(1)}, Vinicius! 👋 Tudo bem? Até que horas você vai trabalhar hoje?` }])
+      setMessages([{ role: 'assistant', content: fallback(period) }])
     }).finally(() => setLoading(false))
   }, [])
 
@@ -869,18 +882,20 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  const send = async () => {
-    if (!input.trim() || loading) return
-    const userMsg = { role: 'user' as const, content: input.trim() }
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim()
+    if (!text || loading) return
+    const userMsg = { role: 'user' as const, content: text }
     const newMsgs = [...messages, userMsg]
     setMessages(newMsgs)
-    setInput('')
+    if (!override) setInput('')
     setLoading(true)
     try {
       const r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
-      setMessages(p => [...p, { role: 'assistant', content: r.data.content }])
+      const content = r.data?.content || r.data?.message || ''
+      setMessages(p => [...p, { role: 'assistant', content: content || 'Não obtive resposta. Pode reformular?' }])
     } catch {
-      setMessages(p => [...p, { role: 'assistant', content: 'Desculpe, ocorreu um erro. Tente novamente.' }])
+      setMessages(p => [...p, { role: 'assistant', content: 'Erro de conexão. Tente novamente.' }])
     }
     setLoading(false)
   }
@@ -888,7 +903,7 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
   const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Como está a campanha?', 'Quais unidades precisam de atenção?']
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 340px)', minHeight: 420 }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: 440 }}>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl mb-3"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -944,7 +959,7 @@ function AiAssistantPanel({ tasks, workDay, userName }: { tasks: PersonalTask[];
       {messages.length <= 1 && !loading && (
         <div className="flex flex-wrap gap-2 mb-3">
           {QUICK.map(q => (
-            <button key={q} onClick={() => { setInput(q); setTimeout(send, 0) }}
+            <button key={q} onClick={() => send(q)}
               className="text-xs px-3 py-1.5 rounded-xl transition-all"
               style={{ background: 'rgba(248,163,3,0.08)', color: 'rgba(248,163,3,0.7)', border: '1px solid rgba(248,163,3,0.15)' }}>
               {q}
@@ -1264,6 +1279,25 @@ export default function MinhaAreaPage() {
       {/* ── TAB: INÍCIO ────────────────────────────────────── */}
       {tab === 'inicio' && (
         <div className="animate-fade-in-up">
+          {/* AI CHAT — primeiro elemento visível */}
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 12px rgba(248,163,3,0.35)' }}>
+                🤖
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-white leading-none">Vini — Assistente IA</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>tarefas · agenda · campanha · promotores</p>
+              </div>
+            </div>
+            <AiAssistantPanel
+              tasks={tasks}
+              workDay={workDay}
+              userName={user?.name?.split(' ')[0] || 'Vinicius'}
+            />
+          </div>
+
           <WorkDayTimer tasks={tasks} />
 
           {/* Today's tasks */}
