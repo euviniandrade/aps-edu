@@ -526,11 +526,6 @@ function CredentialsVault() {
     if (isSetup) {
       if (pin.length < 4) { setPinError('PIN deve ter pelo menos 4 dígitos'); return }
       if (pin !== confirmPin) { setPinError('PINs não coincidem'); return }
-      setPin(pin); setPin(pin)
-      setPin(prev => { setPin(prev); return prev })
-      setPin(pin)
-      // save pin and create empty vault
-      setPin(pin)
       localStorage.setItem(VAULT_PIN_KEY, pin)
       saveVault([], pin)
       setCreds([])
