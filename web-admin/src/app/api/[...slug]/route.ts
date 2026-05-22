@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Extende timeout para 60s — chamadas ao Apps Script (IA + Gmail + Drive) podem demorar ~15-30s
+export const maxDuration = 60
+
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL || ''
 
 async function proxy(

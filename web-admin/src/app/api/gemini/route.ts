@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Extende timeout para 30s — modelo LLM pode demorar alguns segundos
+export const maxDuration = 30
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
 
 export async function POST(req: NextRequest) {

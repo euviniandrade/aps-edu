@@ -564,6 +564,20 @@ function aiRoute(method, action, body) {
     var dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     var timeStr = String(hour).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
 
+    // Detecta contexto da mensagem atual para decidir quais APIs chamar
+    var lastMsg = messages[messages.length - 1].content
+    var msgLower = lastMsg.toLowerCase()
+    var needsGmail = msgLower.indexOf('email') >= 0 || msgLower.indexOf('gmail') >= 0
+      || msgLower.indexOf('mensagem') >= 0 || msgLower.indexOf('promo') >= 0
+      || msgLower.indexOf('inbox') >= 0 || msgLower.indexOf('lixeira') >= 0
+      || msgLower.indexOf('arquivar') >= 0 || msgLower.indexOf('lidos') >= 0
+      || msgLower.indexOf('sim') >= 0 || msgLower.indexOf('confirmo') >= 0
+      || msgLower.indexOf('pode') >= 0 || msgLower.indexOf('apaga') >= 0
+      || msgLower.indexOf('leia') >= 0 || msgLower.indexOf('quanto') >= 0
+    var needsDrive = msgLower.indexOf('drive') >= 0 || msgLower.indexOf('arquivo') >= 0
+      || msgLower.indexOf('pasta') >= 0 || msgLower.indexOf('documento') >= 0
+      || msgLower.indexOf('mover') >= 0 || msgLower.indexOf('reorgan') >= 0
+
     var system = 'Voce e Sofi, assistente pessoal inteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
       + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
       + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
@@ -607,47 +621,51 @@ function aiRoute(method, action, body) {
       }
     } catch(e) {}
 
-    // Emails: injecta resumo completo do dia + nao lidos por categoria
-    try {
-      var gmailToday = GmailApp.search('newer_than:1d', 0, 20)
-      var gmailUnread = GmailApp.search('is:unread', 0, 10)
-      var gmailPromo = GmailApp.search('category:promotions is:unread', 0, 3)
-      var gmailSocial = GmailApp.search('category:social is:unread', 0, 3)
-      system += 'GMAIL - RESUMO DO DIA:\n'
-        + '- Emails hoje: ' + gmailToday.length
-        + ' | Nao lidos: ' + gmailUnread.length
-        + ' | Promocoes: ' + gmailPromo.length
-        + ' | Redes sociais: ' + gmailSocial.length + '\n'
-      if (gmailToday.length > 0) {
-        system += 'EMAILS RECENTES:\n'
-        gmailToday.slice(0, 10).forEach(function(t) {
-          var last = t.getMessages()[t.getMessageCount()-1]
-          system += '- [' + (t.isUnread() ? 'NAO_LIDO' : 'lido') + '] '
-            + t.getFirstMessageSubject().substring(0, 55)
-            + ' | De: ' + last.getFrom().replace(/<.*>/,'').trim().substring(0, 30) + '\n'
-        })
-      }
-      system += '\n'
-    } catch(e) {}
-
-    // Drive: injecta arquivos recentes com IDs (para operacoes de mover)
-    try {
-      var driveRecent = DriveApp.searchFiles('trashed = false')
-      var driveList = []
-      var dCnt = 0
-      while (driveRecent.hasNext() && dCnt < 12) {
-        var df = driveRecent.next()
-        driveList.push({ id: df.getId(), name: df.getName(), type: df.getMimeType().indexOf('folder') >= 0 ? 'pasta' : 'arquivo' })
-        dCnt++
-      }
-      if (driveList.length > 0) {
-        system += 'DRIVE - ARQUIVOS RECENTES (IDs para operacoes):\n'
-        driveList.forEach(function(f) {
-          system += '- [' + f.type + '] ' + f.name + ' | ID:' + f.id + '\n'
-        })
+    // Emails: injecta apenas quando a mensagem menciona email/gmail (evita 4 buscas desnecessarias)
+    if (needsGmail) {
+      try {
+        var gmailToday = GmailApp.search('newer_than:1d', 0, 20)
+        var gmailUnread = GmailApp.search('is:unread', 0, 10)
+        var gmailPromo = GmailApp.search('category:promotions is:unread', 0, 3)
+        var gmailSocial = GmailApp.search('category:social is:unread', 0, 3)
+        system += 'GMAIL - RESUMO DO DIA:\n'
+          + '- Emails hoje: ' + gmailToday.length
+          + ' | Nao lidos: ' + gmailUnread.length
+          + ' | Promocoes: ' + gmailPromo.length
+          + ' | Redes sociais: ' + gmailSocial.length + '\n'
+        if (gmailToday.length > 0) {
+          system += 'EMAILS RECENTES:\n'
+          gmailToday.slice(0, 10).forEach(function(t) {
+            var last = t.getMessages()[t.getMessageCount()-1]
+            system += '- [' + (t.isUnread() ? 'NAO_LIDO' : 'lido') + '] '
+              + t.getFirstMessageSubject().substring(0, 55)
+              + ' | De: ' + last.getFrom().replace(/<.*>/,'').trim().substring(0, 30) + '\n'
+          })
+        }
         system += '\n'
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
+
+    // Drive: apenas se a mensagem menciona drive/arquivo (evita busca lenta sem necessidade)
+    if (needsDrive) {
+      try {
+        var driveRecent = DriveApp.searchFiles('trashed = false and modifiedDate > "2025-01-01"')
+        var driveList = []
+        var dCnt = 0
+        while (driveRecent.hasNext() && dCnt < 10) {
+          var df = driveRecent.next()
+          driveList.push({ id: df.getId(), name: df.getName(), type: df.getMimeType().indexOf('folder') >= 0 ? 'pasta' : 'arquivo' })
+          dCnt++
+        }
+        if (driveList.length > 0) {
+          system += 'DRIVE - ARQUIVOS RECENTES (IDs para operacoes):\n'
+          driveList.forEach(function(f) {
+            system += '- [' + f.type + '] ' + f.name + ' | ID:' + f.id + '\n'
+          })
+          system += '\n'
+        }
+      } catch(e) {}
+    }
 
     system += 'CAMPANHA DE MATRICULAS APS SUL 2026/2027:\n'
       + '- Meta: 17.000 alunos | 14 unidades | Captacao 50%, Fidelizacao 30%, Resgate 20%\n'
@@ -716,20 +734,6 @@ function aiRoute(method, action, body) {
     var historyLines = recentMessages.slice(0, -1).map(function(m){
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
     }).join('\n')
-
-    var lastMsg = messages[messages.length - 1].content
-
-    // Detecta se mensagem menciona gmail/drive para incluir contexto relevante
-    var msgLower = lastMsg.toLowerCase()
-    var needsGmail = msgLower.indexOf('email') >= 0 || msgLower.indexOf('gmail') >= 0
-      || msgLower.indexOf('mensagem') >= 0 || msgLower.indexOf('promo') >= 0
-      || msgLower.indexOf('inbox') >= 0 || msgLower.indexOf('lixeira') >= 0
-      || msgLower.indexOf('arquivar') >= 0 || msgLower.indexOf('lidos') >= 0
-      || msgLower.indexOf('sim') >= 0 || msgLower.indexOf('confirmo') >= 0
-      || msgLower.indexOf('pode') >= 0 || msgLower.indexOf('apaga') >= 0
-    var needsDrive = msgLower.indexOf('drive') >= 0 || msgLower.indexOf('arquivo') >= 0
-      || msgLower.indexOf('pasta') >= 0 || msgLower.indexOf('documento') >= 0
-      || msgLower.indexOf('mover') >= 0 || msgLower.indexOf('reorgan') >= 0
 
     // Instrucao final reforçando JSON obrigatorio para acoes
     var actionReminder = '\nLEMBRETE: Se a mensagem do usuario pede uma ACAO (apagar, criar, mover, enviar, agendar), responda SOMENTE com JSON no formato {"content":"⏳ Executando...","action":{"type":"...","data":{...}}}. Nao use texto antes ou depois do JSON.\n\n'
