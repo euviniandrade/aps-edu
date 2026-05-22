@@ -856,6 +856,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   const [loading, setLoading] = useState(false)
   const greetedRef = useRef(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   const fallback = (period: string) => {
     const p = period.charAt(0).toUpperCase() + period.slice(1)
@@ -908,7 +909,9 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   }, [])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
   }, [messages, loading])
 
   const executeAction = async (action: { type: string; data: any }) => {
@@ -921,9 +924,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         onEventCreated?.()
       } else if (action.type === 'send_email') {
         await api.post('/gmail', action.data)
-      } else if (action.type === 'create_doc') {
-        const res = await api.post('/docs', action.data)
-        if (res.data?.url) window.open(res.data.url, '_blank')
+      } else if (action.type === 'open_url') {
+        if (action.data?.url) window.open(action.data.url, '_blank')
       } else if (action.type === 'update_workday') {
         const d = action.data as Partial<WorkDay>
         const updated = { ...workDay, ...d }
@@ -990,7 +992,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         )}
       </div>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl mb-3"
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl mb-3"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -1070,11 +1072,22 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   )
 }
 
-// ─── CALENDAR VIEW ────────────────────────────────────────────
+// ─── GOOGLE CALENDAR VIEW ─────────────────────────────────────
 function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
-  const [view, setView] = useState<'week' | 'day'>('week')
+  const [gcalEvents, setGcalEvents] = useState<any[]>([])
+  const [loadingCal, setLoadingCal] = useState(true)
   const [anchor, setAnchor] = useState(new Date())
   const today = new Date()
+
+  const fetchEvents = () => {
+    setLoadingCal(true)
+    api.get('/calendar', { params: { days: 90 } })
+      .then(r => setGcalEvents(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setGcalEvents([]))
+      .finally(() => setLoadingCal(false))
+  }
+
+  useEffect(() => { fetchEvents() }, [])
 
   const getWeekDates = (d: Date) => {
     const start = new Date(d)
@@ -1085,99 +1098,142 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
 
   const weekDates = getWeekDates(anchor)
 
-  const tasksOnDate = (d: Date) =>
-    tasks.filter(t => t.dueDate && new Date(t.dueDate + 'T12:00').toDateString() === d.toDateString())
-
-  const viewDates = view === 'day' ? [today] : weekDates
-
   const navigate = (dir: number) => {
     const d = new Date(anchor)
-    d.setDate(d.getDate() + (view === 'day' ? dir : dir * 7))
+    d.setDate(d.getDate() + dir * 7)
     setAnchor(d)
   }
 
+  const tasksOnDate = (d: Date) =>
+    tasks.filter(t => t.dueDate && new Date(t.dueDate + 'T12:00').toDateString() === d.toDateString())
+
+  const gcalOnDate = (d: Date) =>
+    gcalEvents.filter(e => {
+      const s = new Date(e.start), en = new Date(e.end)
+      const ds = new Date(d); ds.setHours(0,0,0,0)
+      const de = new Date(d); de.setHours(23,59,59,999)
+      return s <= de && en >= ds
+    })
+
+  // build a color map per calendar name
+  const calColors: Record<string, string> = {}
+  gcalEvents.forEach(e => { if (e.calendarName) calColors[e.calendarName] = e.calendarColor || '#4285F4' })
+
+  const viewDates = view === 'day' ? [today] : weekDates
+
   return (
     <div>
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1.5">
-          {['day', 'week'].map(v => (
-            <button key={v} onClick={() => { setView(v as any); setAnchor(new Date()) }}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                background: view === v ? 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${view === v ? 'rgba(248,163,3,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                color: view === v ? '#F8A303' : 'rgba(255,255,255,0.4)',
-              }}>
-              {v === 'day' ? 'Hoje' : 'Semana'}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="px-2 py-1 rounded-lg text-sm transition-all"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>←</button>
+      {/* Header Controls */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate(-1)} className="px-2.5 py-1.5 rounded-lg text-sm transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>←</button>
           <span className="text-xs font-semibold text-white">
-            {view === 'week'
-              ? `${weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – ${weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
-              : anchor.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} –{' '}
+            {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
-          <button onClick={() => navigate(1)} className="px-2 py-1 rounded-lg text-sm transition-all"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>→</button>
+          <button onClick={() => navigate(1)} className="px-2.5 py-1.5 rounded-lg text-sm transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>→</button>
+          <button onClick={() => setAnchor(new Date())}
+            className="text-xs px-3 py-1.5 rounded-lg"
+            style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+            Hoje
+          </button>
         </div>
-        <button onClick={() => setAnchor(new Date())}
-          className="text-xs px-3 py-1.5 rounded-lg"
-          style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-          Hoje
-        </button>
+        <div className="flex items-center gap-2">
+          {loadingCal && (
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>⟳ Sincronizando...</span>
+          )}
+          <button onClick={fetchEvents}
+            className="text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
+            style={{ background: 'rgba(66,133,244,0.08)', color: '#4285F4', border: '1px solid rgba(66,133,244,0.2)' }}>
+            🔄 Atualizar
+          </button>
+        </div>
       </div>
 
-      {/* Grid */}
-      <div className={`grid gap-3 ${view === 'week' ? 'grid-cols-7' : 'grid-cols-1 max-w-sm mx-auto'}`}>
-        {viewDates.map((d, i) => {
+      {/* Calendars legend */}
+      {Object.keys(calColors).length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-3">
+          {Object.entries(calColors).map(([name, color]) => (
+            <span key={name} className="text-[10px] flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: color }} />
+              {name}
+            </span>
+          ))}
+          {tasks.some(t => t.dueDate) && (
+            <span className="text-[10px] flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#F8A303' }} />
+              Tarefas (prazo)
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Week Grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {weekDates.map((d, i) => {
           const isToday = d.toDateString() === today.toDateString()
           const dayTasks = tasksOnDate(d)
+          const dayEvents = gcalOnDate(d)
           return (
-            <div key={i} className="rounded-xl p-3"
+            <div key={i} className="rounded-xl p-2.5"
               style={{
                 background: isToday ? 'rgba(248,163,3,0.07)' : 'rgba(255,255,255,0.02)',
                 border: `1px solid ${isToday ? 'rgba(248,163,3,0.25)' : 'rgba(255,255,255,0.06)'}`,
-                minHeight: view === 'week' ? 120 : 'auto',
+                minHeight: 120,
               }}>
-              <p className="text-xs font-bold mb-2 leading-none"
+              <p className="text-[11px] font-bold mb-2 leading-none"
                 style={{ color: isToday ? '#F8A303' : 'rgba(255,255,255,0.35)' }}>
-                {view === 'week'
-                  ? d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')
-                  : d.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                <span className="block text-[10px] mt-0.5" style={{ color: isToday ? 'rgba(248,163,3,0.6)' : 'rgba(255,255,255,0.2)' }}>
+                {d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}
+                <span className="block text-[13px] font-extrabold mt-0.5"
+                  style={{ color: isToday ? '#F8A303' : 'rgba(255,255,255,0.7)' }}>
                   {d.getDate()}
                 </span>
               </p>
               <div className="space-y-1">
-                {dayTasks.length === 0 && (
-                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.15)' }}>—</p>
-                )}
+                {/* Google Calendar events */}
+                {dayEvents.map((e, ei) => {
+                  const color = e.calendarColor || '#4285F4'
+                  const timeLabel = e.allDay
+                    ? ''
+                    : new Date(e.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' '
+                  return (
+                    <div key={e.id || ei}
+                      className="text-[9px] px-1.5 py-1 rounded-md truncate leading-snug cursor-default"
+                      style={{ background: color + '22', color: color, border: `1px solid ${color}44` }}
+                      title={`${e.title}${e.location ? ' • ' + e.location : ''}`}>
+                      {timeLabel}{e.title}
+                    </div>
+                  )
+                })}
+                {/* Tasks due on this date */}
                 {dayTasks.map(t => {
                   const cat = CAT_STYLE[t.category] || CAT_STYLE.trabalho
                   return (
                     <div key={t.id}
-                      className={`text-[10px] px-2 py-1 rounded-lg truncate leading-snug ${t.status === 'done' ? 'opacity-40 line-through' : ''}`}
-                      style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.color}25` }}
+                      className={`text-[9px] px-1.5 py-1 rounded-md truncate leading-snug ${t.status === 'done' ? 'opacity-40 line-through' : ''}`}
+                      style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.color}33` }}
                       title={t.title}>
-                      {t.title}
+                      📋 {t.title}
                     </div>
                   )
                 })}
+                {dayEvents.length === 0 && dayTasks.length === 0 && (
+                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.12)' }}>—</p>
+                )}
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* No tasks hint */}
-      {tasks.filter(t => t.dueDate).length === 0 && (
-        <div className="text-center py-8 mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
+      {/* Empty state */}
+      {!loadingCal && gcalEvents.length === 0 && tasks.filter(t => t.dueDate).length === 0 && (
+        <div className="text-center py-10 mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
           <CalendarDaysIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Adicione prazos nas tarefas para vê-las no calendário</p>
+          <p className="text-sm">Nenhum evento encontrado nos próximos 90 dias</p>
+          <p className="text-xs mt-1 opacity-60">Verifique se autorizou o acesso ao Google Calendar no Apps Script</p>
         </div>
       )}
     </div>

@@ -668,6 +668,43 @@ function aiRoute(method, action, body) {
       }
     } catch(e) {}
 
+    // Executa acoes servidor (calendar, email, docs) diretamente no Apps Script
+    if (actionFinal) {
+      if (actionFinal.type === 'create_event') {
+        try {
+          var evData = actionFinal.data
+          var evCal = CalendarApp.getDefaultCalendar()
+          var startDt = new Date(evData.start)
+          var endDt = evData.end ? new Date(evData.end) : new Date(startDt.getTime() + 60*60*1000)
+          evCal.createEvent(evData.title || 'Evento', startDt, endDt, { description: evData.description || '' })
+          actionFinal = null // ja executado no servidor
+        } catch(eErr) {
+          contentFinal = '❌ Não consegui agendar: ' + eErr.message
+          actionFinal = null
+        }
+      } else if (actionFinal.type === 'send_email') {
+        try {
+          var emData = actionFinal.data
+          GmailApp.sendEmail(emData.to, emData.subject || 'Sem assunto', emData.body || '')
+          actionFinal = null
+        } catch(emErr) {
+          contentFinal = '❌ Não consegui enviar o email: ' + emErr.message
+          actionFinal = null
+        }
+      } else if (actionFinal.type === 'create_doc') {
+        try {
+          var dData = actionFinal.data
+          var newDoc = DocumentApp.create(dData.title || 'Novo Documento')
+          if (dData.content) newDoc.getBody().setText(dData.content)
+          newDoc.saveAndClose()
+          actionFinal = { type: 'open_url', data: { url: newDoc.getUrl() } }
+        } catch(dErr) {
+          contentFinal = '❌ Não consegui criar o documento: ' + dErr.message
+          actionFinal = null
+        }
+      }
+    }
+
     return actionFinal ? { content: contentFinal, action: actionFinal } : { content: contentFinal }
   }
   if (action === 'analyze-users') {
@@ -795,34 +832,67 @@ function docsRoute(method, id, body, me) {
 
 // ─── GOOGLE CALENDAR ─────────────────────────────────────────
 function calendarRoute(method, id, body, me) {
-  var cal = CalendarApp.getDefaultCalendar()
 
   if (method === 'GET') {
     var now = new Date()
     var daysAhead = parseInt(body.days || 30)
     var end = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000)
-    var events = cal.getEvents(now, end)
-    return events.map(function(e) {
-      return {
-        id: e.getId(),
-        title: e.getTitle(),
-        start: e.getStartTime().toISOString(),
-        end: e.getEndTime().toISOString(),
-        description: e.getDescription() || '',
-        location: e.getLocation() || '',
-        allDay: e.isAllDayEvent(),
-      }
-    })
+    var allEvents = []
+    var CALENDAR_COLORS = {
+      '#ac725e':'#ac725e','#d06b64':'#d06b64','#f83a22':'#f83a22',
+      '#fa573c':'#fa573c','#ff7537':'#ff7537','#ffad46':'#ffad46',
+      '#42d692':'#42d692','#16a765':'#16a765','#7bd148':'#7bd148',
+      '#b3dc6c':'#b3dc6c','#fbe983':'#fbe983','#fad165':'#fad165',
+      '#92e1c0':'#92e1c0','#9fe1e7':'#9fe1e7','#9fc6e7':'#9fc6e7',
+      '#4986e7':'#4986e7','#9a9cff':'#9a9cff','#b99aff':'#b99aff',
+      '#c2c2c2':'#c2c2c2','#cabdbf':'#cabdbf','#cca6ac':'#cca6ac',
+      '#f691b2':'#f691b2','#cd74e6':'#cd74e6','#a47ae2':'#a47ae2',
+    }
+    try {
+      var allCals = CalendarApp.getAllCalendars()
+      allCals.forEach(function(cal) {
+        try {
+          var calColor = cal.getColor() || '#4285F4'
+          cal.getEvents(now, end).forEach(function(e) {
+            allEvents.push({
+              id: e.getId(),
+              title: e.getTitle(),
+              start: e.getStartTime().toISOString(),
+              end: e.getEndTime().toISOString(),
+              description: e.getDescription() || '',
+              location: e.getLocation() || '',
+              allDay: e.isAllDayEvent(),
+              calendarName: cal.getName(),
+              calendarColor: calColor,
+            })
+          })
+        } catch(calErr) {}
+      })
+    } catch(allErr) {
+      // Fallback: apenas calendario padrao
+      var defCal = CalendarApp.getDefaultCalendar()
+      defCal.getEvents(now, end).forEach(function(e) {
+        allEvents.push({
+          id: e.getId(), title: e.getTitle(),
+          start: e.getStartTime().toISOString(), end: e.getEndTime().toISOString(),
+          description: e.getDescription() || '', location: e.getLocation() || '',
+          allDay: e.isAllDayEvent(), calendarName: 'Principal', calendarColor: '#4285F4',
+        })
+      })
+    }
+    allEvents.sort(function(a, b) { return new Date(a.start) - new Date(b.start) })
+    return allEvents
   }
 
   if (method === 'POST') {
+    var cal2 = CalendarApp.getDefaultCalendar()
     var title = body.title || 'Novo evento'
     var startDate = new Date(body.start)
     var endDate = body.end ? new Date(body.end) : new Date(startDate.getTime() + 60 * 60 * 1000)
     var opts = {}
     if (body.description) opts.description = body.description
     if (body.location)    opts.location    = body.location
-    var ev = cal.createEvent(title, startDate, endDate, opts)
+    var ev = cal2.createEvent(title, startDate, endDate, opts)
     return {
       id: ev.getId(),
       title: ev.getTitle(),
@@ -832,7 +902,8 @@ function calendarRoute(method, id, body, me) {
   }
 
   if (method === 'DELETE') {
-    var ev2 = cal.getEventById(id)
+    var cal3 = CalendarApp.getDefaultCalendar()
+    var ev2 = cal3.getEventById(id)
     if (ev2) ev2.deleteEvent()
     return { success: true }
   }
