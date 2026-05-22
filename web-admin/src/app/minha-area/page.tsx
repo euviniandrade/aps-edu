@@ -842,12 +842,13 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
 }
 
 // ─── AI ASSISTANT PANEL ───────────────────────────────────────
-function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated }: {
+function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated, onWorkDayUpdated }: {
   tasks: PersonalTask[]
   workDay: WorkDay
   userName: string
   onTaskCreated?: () => void
   onEventCreated?: () => void
+  onWorkDayUpdated?: (w: WorkDay) => void
 }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
   const [input, setInput] = useState('')
@@ -901,6 +902,11 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       } else if (action.type === 'create_doc') {
         const res = await api.post('/docs', action.data)
         if (res.data?.url) window.open(res.data.url, '_blank')
+      } else if (action.type === 'update_workday') {
+        const d = action.data as Partial<WorkDay>
+        const updated = { ...workDay, ...d }
+        localStorage.setItem('aps_workday', JSON.stringify(updated))
+        onWorkDayUpdated?.(updated)
       }
     } catch (e) {
       // falha silenciosa — mensagem já foi exibida
@@ -1408,6 +1414,7 @@ export default function MinhaAreaPage() {
               userName={user?.name?.split(' ')[0] || 'Vinicius'}
               onTaskCreated={loadTasks}
               onEventCreated={() => {}}
+              onWorkDayUpdated={w => setWorkDay(w)}
             />
           </div>
 

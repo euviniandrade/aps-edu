@@ -602,26 +602,37 @@ function aiRoute(method, action, body) {
       }
     } catch(e) {}
 
-    system += 'CAMPANHA DE MATRICULAS APS SUL 2026/2027:\n'
-      + '- Meta: 17.000 alunos ativos | 14 unidades escolares\n'
-      + '- Estrategias: Captacao 50%, Fidelizacao 30%, Resgate 20%\n'
-      + '- Programa: IndicaPlus (indicacao de alunos com recompensa)\n'
-      + '- 29 promotores historicos, 12 ativos, 20 posicoes necessarias 2027\n'
-      + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW\n'
-      + '- Risco MEDIO: CACLI II, CAEGW, EAA\n'
-      + '- Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB\n\n'
+    // Emails reais do Gmail como contexto
+    try {
+      var gmailThreads = GmailApp.search('is:unread', 0, 5)
+      if (gmailThreads.length > 0) {
+        system += 'EMAILS NAO LIDOS (' + gmailThreads.length + '):\n'
+        gmailThreads.forEach(function(t) {
+          var last = t.getMessages()[t.getMessageCount()-1]
+          system += '- De: ' + last.getFrom().replace(/<.*>/,'').trim()
+            + ' | Assunto: ' + t.getFirstMessageSubject() + '\n'
+        })
+        system += '\n'
+      }
+    } catch(e) {}
 
-    system += 'CAPACIDADES ESPECIAIS — quando usuario pedir acoes, responda SOMENTE com JSON valido:\n'
-      + 'Criar tarefa: {"content":"msg","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
-      + 'Criar evento Google Agenda: {"content":"msg","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n'
-      + 'Enviar email: {"content":"msg","action":{"type":"send_email","data":{"to":"email@dest.com","subject":"...","body":"..."}}}\n'
-      + 'Criar documento Google Docs: {"content":"msg","action":{"type":"create_doc","data":{"title":"...","content":"conteudo do documento"}}}\n'
-      + 'Para respostas normais sem acao, responda em texto puro.\n\n'
-      + 'INSTRUCOES GERAIS:\n'
-      + '- Quando perguntarem sobre o dia, liste tarefas pendentes e sugira prioridade\n'
-      + '- Para perguntas sobre campanha, baseie-se nos dados acima\n'
-      + '- Mantenha respostas concisas (max 3-4 paragrafos)\n'
-      + '- Pode fazer perguntas de volta para ajudar melhor\n'
+    system += 'CAMPANHA DE MATRICULAS APS SUL 2026/2027:\n'
+      + '- Meta: 17.000 alunos | 14 unidades | Captacao 50%, Fidelizacao 30%, Resgate 20%\n'
+      + '- Risco ALTO: CACLI I, CAIS, CAP, EACF, EAP, EATW\n'
+      + '- Risco MEDIO: CACLI II, CAEGW, EAA | Risco BAIXO: CAEA, CAR, CATS, EAJL, EAVB\n\n'
+
+    system += 'REGRAS OBRIGATORIAS:\n'
+      + '1. Respostas CURTAS: max 3 linhas. Sem enrolacao.\n'
+      + '2. NUNCA mostre JSON no texto. JSON e so para acoes internas.\n'
+      + '3. Quando executar uma acao, confirme em UMA linha: "✅ Feito!" ou "📅 Agendado!" etc.\n'
+      + '4. Use dados REAIS do contexto (tarefas, emails, agenda). Nunca invente.\n\n'
+
+    system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n'
+      + 'Atualizar horario fim de trabalho: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
+      + 'Criar tarefa: {"content":"✅ Tarefa criada!","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
+      + 'Criar evento: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n'
+      + 'Enviar email: {"content":"📧 Email enviado para X!","action":{"type":"send_email","data":{"to":"...","subject":"...","body":"..."}}}\n'
+      + 'Criar doc: {"content":"📄 Documento criado!","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
 
     var historyLines = messages.slice(0, -1).map(function(m){
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
@@ -630,24 +641,27 @@ function aiRoute(method, action, body) {
     var lastMsg = messages[messages.length - 1].content
     var fullPrompt = system
       + (historyLines ? 'HISTORICO:\n' + historyLines + '\n\n' : '')
-      + 'Vinicius: ' + lastMsg + '\nSofi:'
+      + 'Vinicius: ' + lastMsg + '\nSofi (resposta curta e direta):'
 
     var response = callGemini(fullPrompt)
     if (!response || response.trim() === '') {
       var hour2 = new Date().getHours()
       var grt = hour2 < 12 ? 'Bom dia' : hour2 < 18 ? 'Boa tarde' : 'Boa noite'
-      response = grt + ', ' + (context.userName || 'Vinicius') + '! Sou a Sofi, sua assistente. Como posso ajudar?'
+      response = grt + ', ' + (context.userName || 'Vinicius') + '! Sou a Sofi. Como posso ajudar?'
     }
 
-    // Tenta parsear JSON com action
-    var contentFinal = response
+    // Extrai JSON com action de qualquer parte da resposta
+    var contentFinal = response.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').trim()
     var actionFinal = null
     try {
-      var cleaned = response.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim()
-      var parsed = JSON.parse(cleaned)
-      if (parsed.content && parsed.action) {
-        contentFinal = parsed.content
-        actionFinal = parsed.action
+      var jsonMatch = response.match(/\{[\s\S]*"action"[\s\S]*\}/)
+      if (!jsonMatch) jsonMatch = response.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        var parsed = JSON.parse(jsonMatch[0])
+        if (parsed.content && parsed.action) {
+          contentFinal = parsed.content
+          actionFinal = parsed.action
+        }
       }
     } catch(e) {}
 
