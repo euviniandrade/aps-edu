@@ -901,10 +901,34 @@ function calendarRoute(method, id, body, me) {
     }
   }
 
+  if (method === 'PUT') {
+    // Procura o evento em todos os calendarios
+    var evToEdit = null
+    var calsList = CalendarApp.getAllCalendars()
+    for (var ci = 0; ci < calsList.length && !evToEdit; ci++) {
+      try { evToEdit = calsList[ci].getEventById(id) } catch(e) {}
+    }
+    if (!evToEdit) throw new Error('Evento nao encontrado')
+    if (body.title)       evToEdit.setTitle(body.title)
+    if (body.description !== undefined) evToEdit.setDescription(body.description)
+    if (body.location !== undefined)    evToEdit.setLocation(body.location)
+    if (body.start && body.end)         evToEdit.setTime(new Date(body.start), new Date(body.end))
+    return {
+      id: evToEdit.getId(),
+      title: evToEdit.getTitle(),
+      start: evToEdit.getStartTime().toISOString(),
+      end: evToEdit.getEndTime().toISOString(),
+    }
+  }
+
   if (method === 'DELETE') {
-    var cal3 = CalendarApp.getDefaultCalendar()
-    var ev2 = cal3.getEventById(id)
-    if (ev2) ev2.deleteEvent()
+    // Procura em todos os calendarios
+    var evToDelete = null
+    var calsListD = CalendarApp.getAllCalendars()
+    for (var di = 0; di < calsListD.length && !evToDelete; di++) {
+      try { evToDelete = calsListD[di].getEventById(id) } catch(e) {}
+    }
+    if (evToDelete) evToDelete.deleteEvent()
     return { success: true }
   }
 

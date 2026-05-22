@@ -1079,6 +1079,17 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   const [anchor, setAnchor] = useState(new Date())
   const today = new Date()
 
+  // modal state
+  const [sel, setSel] = useState<any | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editStart, setEditStart] = useState('')
+  const [editEnd, setEditEnd] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editLoc, setEditLoc] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   const fetchEvents = () => {
     setLoadingCal(true)
     api.get('/calendar', { params: { days: 90 } })
@@ -1088,6 +1099,77 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   }
 
   useEffect(() => { fetchEvents() }, [])
+
+  const openEvent = (e: any) => {
+    setSel(e)
+    setEditMode(false)
+    setEditTitle(e.title)
+    setEditStart(toLocalInput(e.start))
+    setEditEnd(toLocalInput(e.end))
+    setEditDesc(e.description || '')
+    setEditLoc(e.location || '')
+  }
+
+  const closeModal = () => { setSel(null); setEditMode(false) }
+
+  const saveEdit = async () => {
+    if (!sel) return
+    setSaving(true)
+    try {
+      const evId = sel.id.replace(/@.*/, '') // remove @google.com suffix
+      await api.put(`/calendar/${encodeURIComponent(sel.id)}`, {
+        title: editTitle,
+        start: new Date(editStart).toISOString(),
+        end: new Date(editEnd).toISOString(),
+        description: editDesc,
+        location: editLoc,
+      })
+      setGcalEvents(prev => prev.map(ev => ev.id === sel.id
+        ? { ...ev, title: editTitle, start: new Date(editStart).toISOString(), end: new Date(editEnd).toISOString(), description: editDesc, location: editLoc }
+        : ev
+      ))
+      setSel(s => s ? { ...s, title: editTitle, start: new Date(editStart).toISOString(), end: new Date(editEnd).toISOString(), description: editDesc, location: editLoc } : null)
+      setEditMode(false)
+    } catch { alert('Erro ao salvar. Verifique se o Apps Script está atualizado.') }
+    setSaving(false)
+  }
+
+  const deleteEvent = async (id: string) => {
+    if (!confirm('Excluir este evento do Google Calendar?')) return
+    setDeleting(true)
+    try {
+      await api.delete(`/calendar/${encodeURIComponent(id)}`)
+      setGcalEvents(prev => prev.filter(ev => ev.id !== id))
+      closeModal()
+    } catch { alert('Erro ao excluir.') }
+    setDeleting(false)
+  }
+
+  const gcalWeekLink = (d: Date) => {
+    const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate()
+    return `https://calendar.google.com/calendar/r/week/${y}/${m}/${day}`
+  }
+
+  function toLocalInput(iso: string) {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2,'0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  function fmtEventDate(e: any) {
+    const s = new Date(e.start)
+    const en = new Date(e.end)
+    if (e.allDay) {
+      const same = s.toDateString() === en.toDateString()
+      return same
+        ? s.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+        : `${s.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – ${en.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    }
+    const date = s.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const t1 = s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const t2 = en.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    return `${date} · ${t1} – ${t2}`
+  }
 
   const getWeekDates = (d: Date) => {
     const start = new Date(d)
@@ -1197,12 +1279,13 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                     ? ''
                     : new Date(e.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' '
                   return (
-                    <div key={e.id || ei}
-                      className="text-[9px] px-1.5 py-1 rounded-md truncate leading-snug cursor-default"
+                    <button key={e.id || ei}
+                      onClick={() => openEvent(e)}
+                      className="w-full text-left text-[9px] px-1.5 py-1 rounded-md truncate leading-snug transition-all hover:brightness-125 active:scale-95"
                       style={{ background: color + '22', color: color, border: `1px solid ${color}44` }}
-                      title={`${e.title}${e.location ? ' • ' + e.location : ''}`}>
+                      title={`${e.title}${e.location ? ' • ' + e.location : ''} — clique para ver detalhes`}>
                       {timeLabel}{e.title}
-                    </div>
+                    </button>
                   )
                 })}
                 {/* Tasks due on this date */}
@@ -1232,6 +1315,156 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
           <CalendarDaysIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
           <p className="text-sm">Nenhum evento encontrado nos próximos 90 dias</p>
           <p className="text-xs mt-1 opacity-60">Verifique se autorizou o acesso ao Google Calendar no Apps Script</p>
+        </div>
+      )}
+
+      {/* ── EVENT DETAIL MODAL ────────────────────────────── */}
+      {sel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+          onClick={closeModal}>
+          <div className="w-full max-w-md rounded-2xl overflow-hidden relative animate-fade-in-up"
+            style={{ background: '#0D0F1A', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+            onClick={ev => ev.stopPropagation()}>
+
+            {/* color bar */}
+            <div className="h-1 w-full" style={{ background: sel.calendarColor || '#4285F4' }} />
+
+            {/* header */}
+            <div className="px-5 pt-4 pb-3 flex items-start justify-between"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ background: sel.calendarColor || '#4285F4' }} />
+                <span className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {sel.calendarName || 'Google Calendar'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                {!editMode && (
+                  <button onClick={() => setEditMode(true)}
+                    className="text-[10px] px-2.5 py-1 rounded-lg transition-all"
+                    style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+                    ✏️ Editar
+                  </button>
+                )}
+                <a href={gcalWeekLink(new Date(sel.start))} target="_blank" rel="noreferrer"
+                  className="text-[10px] px-2.5 py-1 rounded-lg transition-all"
+                  style={{ background: 'rgba(66,133,244,0.1)', color: '#4285F4', border: '1px solid rgba(66,133,244,0.2)' }}>
+                  Abrir ↗
+                </a>
+                <button onClick={closeModal}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all"
+                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* body */}
+            <div className="px-5 py-4 space-y-4">
+              {/* title */}
+              {editMode ? (
+                <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                  className="w-full text-lg font-bold bg-transparent text-white border-b outline-none pb-1"
+                  style={{ borderColor: sel.calendarColor || '#4285F4' }} />
+              ) : (
+                <h3 className="text-lg font-bold text-white leading-snug">{sel.title}</h3>
+              )}
+
+              {/* date / time */}
+              <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Data e Horário
+                </p>
+                {editMode ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Início</p>
+                      <input type="datetime-local" value={editStart} onChange={e => setEditStart(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg text-xs text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }} />
+                    </div>
+                    <div>
+                      <p className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Fim</p>
+                      <input type="datetime-local" value={editEnd} onChange={e => setEditEnd(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg text-xs text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }} />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-white">{fmtEventDate(sel)}</p>
+                )}
+              </div>
+
+              {/* location */}
+              {(editMode || sel.location) && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    📍 Local
+                  </p>
+                  {editMode ? (
+                    <input value={editLoc} onChange={e => setEditLoc(e.target.value)}
+                      placeholder="Local do evento..."
+                      className="w-full px-3 py-2 rounded-xl text-sm text-white outline-none"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                  ) : (
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>{sel.location}</p>
+                  )}
+                </div>
+              )}
+
+              {/* description */}
+              {(editMode || sel.description) && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    📝 Descrição
+                  </p>
+                  {editMode ? (
+                    <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                      rows={3} placeholder="Adicione uma descrição..."
+                      className="w-full px-3 py-2 rounded-xl text-sm text-white outline-none resize-none"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'rgba(255,255,255,0.65)' }}>{sel.description}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* footer actions */}
+            <div className="px-5 pb-5 flex gap-2 flex-wrap"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
+              {editMode ? (
+                <>
+                  <button onClick={saveEdit} disabled={saving}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-black disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                    {saving ? 'Salvando...' : '✅ Salvar alterações'}
+                  </button>
+                  <button onClick={() => setEditMode(false)}
+                    className="px-4 py-2.5 rounded-xl text-sm"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setEditMode(true)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                    style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+                    ✏️ Editar evento
+                  </button>
+                  <button onClick={() => deleteEvent(sel.id)} disabled={deleting}
+                    className="px-4 py-2.5 rounded-xl text-sm disabled:opacity-50"
+                    style={{ background: 'rgba(255,71,87,0.1)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.2)' }}>
+                    {deleting ? '...' : '🗑'}
+                  </button>
+                </>
+              )}
+            </div>
+
+          </div>
         </div>
       )}
     </div>
