@@ -636,7 +636,7 @@ function aiRoute(method, action, body) {
 function callGemini(prompt) {
   const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY')
   if (!key) throw new Error('GEMINI_API_KEY não configurada nas propriedades do script')
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + key
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + key
   const res = UrlFetchApp.fetch(url, {
     method: 'POST',
     contentType: 'application/json',
