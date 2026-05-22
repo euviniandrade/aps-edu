@@ -634,21 +634,18 @@ function aiRoute(method, action, body) {
 }
 
 function callGemini(prompt) {
-  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY')
-  if (!key) throw new Error('GEMINI_API_KEY não configurada nas propriedades do script')
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + key
-  const res = UrlFetchApp.fetch(url, {
+  // Chama o proxy Gemini no Vercel (evita bloqueio de quota do Google Cloud)
+  const proxyUrl = PropertiesService.getScriptProperties().getProperty('GEMINI_PROXY_URL')
+  if (!proxyUrl) throw new Error('GEMINI_PROXY_URL não configurada nas propriedades do script')
+  const res = UrlFetchApp.fetch(proxyUrl, {
     method: 'POST',
     contentType: 'application/json',
-    payload: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
-    }),
+    payload: JSON.stringify({ prompt: prompt }),
     muteHttpExceptions: true,
   })
   const data = JSON.parse(res.getContentText())
-  if (data.error) throw new Error('Gemini: ' + data.error.message)
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  if (data.error) throw new Error('Gemini: ' + data.error)
+  return data.content || ''
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────
