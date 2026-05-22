@@ -1,30 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
 
 export async function POST(req: NextRequest) {
-  if (!GEMINI_API_KEY) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY não configurada' }, { status: 503 })
+  if (!GROQ_API_KEY) {
+    return NextResponse.json({ error: 'GROQ_API_KEY não configurada' }, { status: 503 })
   }
 
   try {
     const { prompt } = await req.json()
     if (!prompt) return NextResponse.json({ error: 'prompt obrigatório' }, { status: 400 })
 
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1024,
+        temperature: 0.7,
       }),
     })
 
     const data = await res.json()
     if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 })
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const text = data.choices?.[0]?.message?.content || ''
     return NextResponse.json({ content: text })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
