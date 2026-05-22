@@ -515,12 +515,27 @@ function aiRoute(method, action, body) {
     const feedbacks = getAll('feedback')
     const tStatus   = {}
     tasks.forEach(t => { tStatus[t.status] = (tStatus[t.status] || 0) + 1 })
-    const prompt = `Consultor de gestão educacional da rede adventista APS Sul.
-Dados: colaboradores ativos=${users.filter(u=>u.isActive!==false).length}, tarefas=${JSON.stringify(tStatus)}, eventos futuros=${events.filter(e=>new Date(e.date)>new Date()).length}, feedbacks pendentes=${feedbacks.filter(f=>f.status==='pending').length}
-Retorne APENAS JSON (sem markdown): {"insights":[{"title":"max 45 chars","description":"max 120 chars","priority":"high|medium|low","icon":"emoji"}]}`
-    const text  = callGemini(prompt)
-    const match = text.match(/\{[\s\S]*\}/)
-    return match ? JSON.parse(match[0]) : { insights: [] }
+    const ativos  = users.filter(function(u){ return u.isActive !== false }).length
+    const futuros = events.filter(function(e){ return new Date(e.date) > new Date() }).length
+    const pend    = feedbacks.filter(function(f){ return f.status === 'pending' }).length
+    const prompt  = 'Voce e um consultor de gestao educacional adventista. '
+                  + 'Dados da plataforma APS Sul: colaboradores ativos=' + ativos
+                  + ', status das tarefas=' + JSON.stringify(tStatus)
+                  + ', eventos futuros=' + futuros
+                  + ', feedbacks pendentes=' + pend + '. '
+                  + 'Gere exatamente 3 insights de gestao. '
+                  + 'Responda APENAS com JSON puro, sem markdown, sem explicacao: '
+                  + '{"insights":[{"title":"titulo curto","description":"descricao util","priority":"high","icon":"emoji"},...]}'
+    var rawText = callGemini(prompt)
+    // remove possivel markdown ```json ... ```
+    var clean = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    var match  = clean.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('Gemini nao retornou JSON valido. Resposta: ' + rawText.slice(0, 200))
+    try {
+      return JSON.parse(match[0])
+    } catch (parseErr) {
+      throw new Error('Erro ao parsear JSON do Gemini: ' + parseErr.message + ' | Raw: ' + rawText.slice(0, 200))
+    }
   }
   if (action === 'generate-text') {
     const { type, context } = body
