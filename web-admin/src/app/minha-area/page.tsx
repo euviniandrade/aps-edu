@@ -1177,9 +1177,12 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const trimmedMsgs = newMsgs.slice(-12).map(({ role, content }) => ({ role, content }))
         r = await api.post('/ai/chat', { messages: trimmedMsgs, context: { tasks, workDay, userName } })
       }
-      const content = r.data?.content || r.data?.message || ''
+      // Garante que content é sempre string (nunca objeto)
+      const rawContent = r.data?.content ?? r.data?.message ?? ''
+      const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
       const action = r.data?.action
-      const errMsg = r.data?.error
+      const rawErr = r.data?.error
+      const errMsg = rawErr ? (typeof rawErr === 'string' ? rawErr : JSON.stringify(rawErr)) : ''
       const fallbackMsg = errMsg
         ? `❌ Erro no servidor: ${errMsg}`
         : 'Não obtive resposta. Pode reformular?'
@@ -1256,17 +1259,20 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
                 color: 'rgba(255,255,255,0.85)',
                 borderBottomLeftRadius: 4,
               }}>
-              {m.content.startsWith('[IMAGE:') ? (
-                <div>
-                  <img
-                    src={m.content.replace('[IMAGE:', '').replace(/\]$/, '')}
-                    alt="Imagem gerada pela Sofi"
-                    className="rounded-xl max-w-full"
-                    style={{ maxHeight: 320 }}
-                  />
-                  <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>🎨 Gerado pela Sofi</p>
-                </div>
-              ) : (m.display ?? m.content)}
+              {(() => {
+                const txt = typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+                if (txt.startsWith('[IMAGE:')) {
+                  const src = txt.replace('[IMAGE:', '').replace(/\]$/, '')
+                  return (
+                    <div>
+                      <img src={src} alt="Imagem gerada pela Sofi" className="rounded-xl max-w-full" style={{ maxHeight: 320 }} />
+                      <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>🎨 Gerado pela Sofi</p>
+                    </div>
+                  )
+                }
+                const display = m.display ?? txt
+                return typeof display === 'string' ? display : JSON.stringify(display)
+              })()}
             </div>
           </div>
         ))}
@@ -1528,8 +1534,8 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
 
       {/* ── TODAY SECTION ──────────────────────────────── */}
       {(() => {
-        const todayEvents = gcalOnDate(today)
-        const todayTasks = tasksOnDate(today)
+        const todayEvents = Array.isArray(gcalEvents) ? gcalOnDate(today) : []
+        const todayTasks = Array.isArray(tasks) ? tasksOnDate(today) : []
         const allToday = [
           ...todayEvents.map(e => ({ type: 'event' as const, data: e })),
           ...todayTasks.map(t => ({ type: 'task' as const, data: t })),
