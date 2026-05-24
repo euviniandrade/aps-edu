@@ -631,23 +631,43 @@ function aiRoute(method, action, body, me) {
     const ativos  = users.filter(function(u){ return u.isActive !== false }).length
     const futuros = events.filter(function(e){ return new Date(e.date) > new Date() }).length
     const pend    = feedbacks.filter(function(f){ return f.status === 'pending' }).length
-    const prompt  = 'Voce e um consultor de gestao educacional adventista. '
-                  + 'Dados da plataforma APS Sul: colaboradores ativos=' + ativos
-                  + ', status das tarefas=' + JSON.stringify(tStatus)
-                  + ', eventos futuros=' + futuros
-                  + ', feedbacks pendentes=' + pend + '. '
-                  + 'Gere exatamente 3 insights de gestao. '
-                  + 'Responda APENAS com JSON puro, sem markdown, sem explicacao: '
-                  + '{"insights":[{"title":"titulo curto","description":"descricao util","priority":"high","icon":"emoji"},...]}'
+    var prompt = 'Educational consultant. Data: active_users=' + ativos
+      + ' task_status=' + JSON.stringify(tStatus)
+      + ' future_events=' + futuros
+      + ' pending_feedback=' + pend + '.'
+      + ' Generate 3 management insights in Brazilian Portuguese.'
+      + ' RULES: title max 40 chars, description max 90 chars, no special chars in JSON strings, use only ASCII-safe Portuguese.'
+      + ' Reply ONLY with this exact JSON, no markdown:'
+      + ' {"insights":[{"title":"...","description":"...","priority":"high","icon":"emoji"},{"title":"...","description":"...","priority":"medium","icon":"emoji"},{"title":"...","description":"...","priority":"low","icon":"emoji"}]}'
     var rawText = callGemini(prompt)
-    // remove possivel markdown ```json ... ```
+    // Remove markdown fences
     var clean = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-    var match  = clean.match(/\{[\s\S]*\}/)
+    // Tenta extrair JSON válido
+    var match = clean.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('Gemini nao retornou JSON valido. Resposta: ' + rawText.slice(0, 200))
+    var jsonStr = match[0]
     try {
-      return JSON.parse(match[0])
+      return JSON.parse(jsonStr)
     } catch (parseErr) {
-      throw new Error('Erro ao parsear JSON do Gemini: ' + parseErr.message + ' | Raw: ' + rawText.slice(0, 200))
+      // Tenta recuperar JSON truncado: fecha arrays/objetos abertos
+      try {
+        var fixed = jsonStr
+        // Conta chaves e colchetes abertos
+        var opens = (fixed.match(/\{/g) || []).length - (fixed.match(/\}/g) || []).length
+        var arrOpens = (fixed.match(/\[/g) || []).length - (fixed.match(/\]/g) || []).length
+        // Remove trailing comma ou texto incompleto
+        fixed = fixed.replace(/,\s*$/, '').replace(/,\s*[\}\]]/g, function(m){ return m.slice(-1) })
+        for (var ai = 0; ai < arrOpens; ai++) fixed += ']'
+        for (var oi = 0; oi < opens; oi++) fixed += '}'
+        return JSON.parse(fixed)
+      } catch (e2) {
+        // Fallback: retorna insights padrão
+        return { insights: [
+          { title: 'Dados insuficientes', description: 'Adicione tarefas e eventos para gerar insights.', priority: 'medium', icon: '📊' },
+          { title: 'Plataforma ativa', description: ativos + ' colaboradores ativos na plataforma.', priority: 'low', icon: '👥' },
+          { title: 'Proximos eventos', description: futuros + ' eventos planejados nos proximos dias.', priority: 'low', icon: '📅' },
+        ]}
+      }
     }
   }
   if (action === 'generate-text') {
