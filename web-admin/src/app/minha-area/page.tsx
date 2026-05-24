@@ -892,7 +892,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   onWorkspaceRefresh?: () => void
 }) {
   const CHAT_KEY = 'aps_sofi_chat_v2'
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; display?: string }[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const greetedRef = useRef(false)
@@ -1091,7 +1091,16 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     }
 
     if (!finalText) return
-    const userMsg = { role: 'user' as const, content: finalText }
+
+    // Monta display visível no chat (mascara conteúdo de arquivos)
+    let displayText = baseText
+    if (file) {
+      const icon = file.type.startsWith('image/') ? '🖼️' : file.type.startsWith('audio/') ? '🎵' : '📎'
+      const fileChip = `${icon} ${file.name}`
+      displayText = baseText ? `${fileChip}\n${baseText}` : fileChip
+    }
+
+    const userMsg = { role: 'user' as const, content: finalText, display: displayText || undefined }
     const newMsgs = [...messages, userMsg]
     setMessages(newMsgs)
     if (!override) setInput('')
@@ -1108,8 +1117,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const visionData = await visionRes.json()
         r = { data: { content: visionData.content || visionData.error || 'Não consegui analisar a imagem.' } }
       } else {
-        // Envia no máx as últimas 12 mensagens para não estourar o TPM do Groq free tier
-        const trimmedMsgs = newMsgs.slice(-12)
+        // Envia no máx as últimas 12 mensagens; usa 'content' real (não 'display' mascarado)
+        const trimmedMsgs = newMsgs.slice(-12).map(({ role, content }) => ({ role, content }))
         r = await api.post('/ai/chat', { messages: trimmedMsgs, context: { tasks, workDay, userName } })
       }
       const content = r.data?.content || r.data?.message || ''
@@ -1191,7 +1200,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
                 color: 'rgba(255,255,255,0.85)',
                 borderBottomLeftRadius: 4,
               }}>
-              {m.content}
+              {m.display ?? m.content}
             </div>
           </div>
         ))}
