@@ -16,20 +16,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'fileBase64 e mimeType são obrigatórios' }, { status: 400 })
     }
 
-    // Plain text files — just decode base64 and return
-    if (mimeType === 'text/plain' || fileName?.endsWith('.txt')) {
+    const buffer = Buffer.from(fileBase64, 'base64')
+    const nameLower = (fileName || '').toLowerCase()
+
+    // ── Plain text ──────────────────────────────────────────────
+    if (mimeType === 'text/plain' || nameLower.endsWith('.txt') || nameLower.endsWith('.csv')) {
+      return NextResponse.json({ text: buffer.toString('utf-8') })
+    }
+
+    // ── DOCX (Word) ──────────────────────────────────────────────
+    if (
+      nameLower.endsWith('.docx') ||
+      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
       try {
-        const text = Buffer.from(fileBase64, 'base64').toString('utf-8')
+        const mammoth = await import('mammoth')
+        const result = await mammoth.extractRawText({ buffer })
+        const text = result.value?.trim()
+        if (!text) return NextResponse.json({ text: '[Documento Word vazio ou sem texto extraível]' })
         return NextResponse.json({ text })
-      } catch {
-        return NextResponse.json({ error: 'Erro ao decodificar arquivo de texto' }, { status: 400 })
+      } catch (e: any) {
+        return NextResponse.json({ error: 'Erro ao ler DOCX: ' + e.message }, { status: 500 })
       }
     }
 
-    // Audio files — use Groq Whisper
-    if (mimeType.startsWith('audio/')) {
-      const audioBytes = Buffer.from(fileBase64, 'base64')
-      const blob = new Blob([audioBytes], { type: mimeType })
+    // ── DOC (Word antigo) ─────────────────────────────────────────
+    if (nameLower.endsWith('.doc') || mimeType === 'application/msword') {
+      // .doc não é suportado pelo mammoth — extrai texto bruto legível
+      try {
+        const raw = buffer.toString('latin1')
+        // Extrai sequências de caracteres ASCII legíveis (heurística para .doc)
+        const readable = raw.match(/[\x20-\x7E\xC0-\xFF]{4,}/g)?.join(' ') || ''
+        const cleaned = readable.replace(/\s+/g, ' ').trim().substring(0, 8000)
+        return NextResponse.json({ text: cleaned || '[Arquivo .doc — conteúdo não extraível. Use .docx]' })
+      } catch {
+        return NextResponse.json({ text: '[Arquivo .doc antigo — converta para .docx para melhor leitura]' })
+      }
+    }
+
+    // ── PDF ───────────────────────────────────────────────────────
+    if (nameLower.endsWith('.pdf') || mimeType === 'application/pdf') {
+      try {
+        // Extração heurística de texto do PDF (sem biblioteca externa)
+        const raw = buffer.toString('latin1')
+        // Busca por streams de texto PDF (BT...ET)
+        const btEtMatches = raw.match(/BT[\s\S]*?ET/g) || []
+        const lines: string[] = []
+        for (const block of btEtMatches) {
+          const tjMatches = block.match(/\(([^)]+)\)\s*Tj/g) || []
+          for (const tj of tjMatches) {
+            const m = tj.match(/\(([^)]+)\)/)
+            if (m?.[1]) lines.push(m[1])
+          }
+        }
+        const text = lines.join(' ').trim()
+        if (text.length > 20) {
+          return NextResponse.json({ text: text.substring(0, 8000) })
+        }
+        // Fallback: tenta extrair strings legíveis
+        const readable = raw.match(/[\x20-\x7E]{5,}/g)
+          ?.filter(s => /[a-zA-ZÀ-ÿ]{3,}/.test(s))
+          ?.join(' ')
+          ?.replace(/\s+/g, ' ')
+          ?.trim()
+          ?.substring(0, 8000) || ''
+        return NextResponse.json({ text: readable || '[PDF sem texto extraível — pode ser escaneado]' })
+      } catch {
+        return NextResponse.json({ text: '[Erro ao ler PDF]' })
+      }
+    }
+
+    // ── Audio ─────────────────────────────────────────────────────
+    if (mimeType.startsWith('audio/') || mimeType.startsWith('video/')) {
+      const blob = new Blob([buffer], { type: mimeType })
       const formData = new FormData()
       formData.append('file', blob, fileName || 'audio.wav')
       formData.append('model', 'whisper-large-v3')
@@ -41,7 +100,6 @@ export async function POST(req: NextRequest) {
         headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
         body: formData,
       })
-
       const data = await res.json()
       if (data.error) {
         return NextResponse.json({ error: data.error?.message || JSON.stringify(data.error) }, { status: 500 })
@@ -49,8 +107,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: data.text || '' })
     }
 
-    // Documents (PDF, Word etc.) — return a note that text extraction is not supported client-side
-    return NextResponse.json({ text: `[Arquivo: ${fileName || 'documento'}]` })
+    // ── Outros ────────────────────────────────────────────────────
+    return NextResponse.json({ text: `[Arquivo: ${fileName || 'documento'} — tipo ${mimeType} não suportado para leitura]` })
+
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
