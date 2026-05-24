@@ -961,7 +961,13 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           })
           const data = await res.json()
           if (data.text) {
-            resolve({ text: `[DOC_CONTENT:${file.name}]\n${data.text}` })
+            // Trunca para ~12000 chars (~3000 tokens) para não ultrapassar limite Groq free tier
+            const MAX_CHARS = 12_000
+            const rawText = data.text as string
+            const truncated = rawText.length > MAX_CHARS
+              ? rawText.substring(0, MAX_CHARS) + '\n\n[... texto truncado — documento muito longo ...]'
+              : rawText
+            resolve({ text: `[DOC_CONTENT:${file.name}]\n${truncated}` })
           } else {
             resolve({ text: `[Arquivo: ${file.name} — não foi possível extrair texto]` })
           }
@@ -1102,7 +1108,9 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const visionData = await visionRes.json()
         r = { data: { content: visionData.content || visionData.error || 'Não consegui analisar a imagem.' } }
       } else {
-        r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
+        // Envia no máx as últimas 12 mensagens para não estourar o TPM do Groq free tier
+        const trimmedMsgs = newMsgs.slice(-12)
+        r = await api.post('/ai/chat', { messages: trimmedMsgs, context: { tasks, workDay, userName } })
       }
       const content = r.data?.content || r.data?.message || ''
       const action = r.data?.action

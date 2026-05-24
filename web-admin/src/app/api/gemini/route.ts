@@ -5,16 +5,26 @@ export const maxDuration = 30
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
 
-// Modelos por capacidade
-const MODELS_FAST = ['llama-3.1-8b-instant', 'gemma2-9b-it']
-const MODELS_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it']
+// Modelos por capacidade (gemma2-9b-it foi descontinuado em mai/2025)
+const MODELS_FAST  = ['llama-3.1-8b-instant', 'llama3-8b-8192']
+const MODELS_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-8b-8192']
+
+// Limite de caracteres antes de enviar ao LLM (~3000 tokens de folga no free tier)
+const MAX_PROMPT_CHARS = 18_000
+
+// Trunca prompt para não ultrapassar o TPM do free tier
+function truncatePrompt(prompt: string): string {
+  if (prompt.length <= MAX_PROMPT_CHARS) return prompt
+  const head = prompt.substring(0, MAX_PROMPT_CHARS)
+  return head + '\n\n[... conteúdo truncado para caber no limite do modelo ...]'
+}
 
 // Seleciona lista de modelos com base no tipo de prompt
 function selectModels(prompt: string): string[] {
   const isComplex =
-    prompt.length > 800 ||                          // long prompt
-    /\[DOC_CONTENT:|AUDIO_TRANSCRIBED:/i.test(prompt) || // file content
-    /analise|resumo|relatório|compara|explique|estratégia/i.test(prompt) // analytical keywords
+    prompt.length > 800 ||
+    /\[DOC_CONTENT:|AUDIO_TRANSCRIBED:/i.test(prompt) ||
+    /analise|resumo|relatório|compara|explique|estratégia/i.test(prompt)
   return isComplex ? MODELS_SMART : MODELS_FAST
 }
 
@@ -25,7 +35,7 @@ const VISION_MODELS = [
   'llama-3.2-90b-vision-preview',
 ]
 
-async function callGroq(prompt: string, model: string) {
+async function callGroq(prompt: string, model: string, maxTokens = 2048) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -100,10 +110,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Text-only path — pick model list based on prompt complexity
-    const MODELS = selectModels(prompt)
+    const safePRompt = truncatePrompt(prompt)
+    const MODELS = selectModels(safePRompt)
     const errors: string[] = []
     for (const model of MODELS) {
-      const data = await callGroq(prompt, model)
+      const data = await callGroq(safePRompt, model)
       if (data.error) {
         const msg = typeof data.error === 'string' ? data.error : (data.error?.message || JSON.stringify(data.error))
         errors.push(`${model}: ${msg}`)
