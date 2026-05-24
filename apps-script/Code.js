@@ -852,7 +852,8 @@ function aiRoute(method, action, body, me) {
       + '--- PRODUTIVIDADE ---\n'
       + 'Atualizar horario: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
       + 'Criar tarefa: {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
-      + 'Criar evento calendario: {"content":"📅 Agendado!","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"..."}}}\n\n'
+      + 'Criar evento calendario: {"content":"⏳ Agendando...","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"...","reminderMinutes":60}}}\n'
+      + '  → reminderMinutes: minutos antes para lembrete (ex: 60 = 1h antes, 30 = 30min antes, 1440 = 1 dia antes)\n\n'
       + '--- GMAIL ---\n'
       + 'Enviar email: {"content":"⏳ Enviando...","action":{"type":"send_email","data":{"to":"email@real.com","subject":"...","body":"..."}}}\n'
       + 'Mover emails para lixeira (execute diretamente, sem pedir confirmacao): {"content":"⏳ Executando...","action":{"type":"gmail_trash","data":{"q":"Spotify","max":100}}}\n'
@@ -948,8 +949,19 @@ function aiRoute(method, action, body, me) {
           var evCal = CalendarApp.getDefaultCalendar()
           var startDt = new Date(evData.start)
           var endDt = evData.end ? new Date(evData.end) : new Date(startDt.getTime() + 60*60*1000)
-          evCal.createEvent(evData.title || 'Evento', startDt, endDt, { description: evData.description || '' })
-          actionFinal = null // ja executado no servidor
+          var newEv = evCal.createEvent(evData.title || 'Evento', startDt, endDt, { description: evData.description || '' })
+          // Lembrete configurável (padrão 30min, ou o que o usuário pediu)
+          var remMin = evData.reminderMinutes ? parseInt(evData.reminderMinutes) : 30
+          try { newEv.addPopupReminder(remMin) } catch(e) {}
+          try { newEv.addEmailReminder(remMin) } catch(e) {}
+          // Feedback rico como uma secretária daria
+          var fmtDate = startDt.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+          var fmtTime = startDt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          var remText = remMin >= 60
+            ? (Math.floor(remMin/60) + 'h' + (remMin%60 > 0 ? remMin%60 + 'min' : ''))
+            : remMin + 'min'
+          contentFinal = '✅ Pronto! "' + (evData.title || 'Evento') + '" agendado para ' + fmtDate + ' às ' + fmtTime + '. Lembrete configurado para ' + remText + ' antes. Boa reunião! 🗓️'
+          actionFinal = { type: 'refresh_workspace' }
         } catch(eErr) {
           contentFinal = '❌ Não consegui agendar: ' + eErr.message
           actionFinal = null
@@ -958,7 +970,8 @@ function aiRoute(method, action, body, me) {
         try {
           var emData = actionFinal.data
           GmailApp.sendEmail(emData.to, emData.subject || 'Sem assunto', emData.body || '')
-          actionFinal = null
+          contentFinal = '✅ E-mail enviado para ' + emData.to + '! Assunto: "' + (emData.subject || 'Sem assunto') + '". 📧'
+          actionFinal = { type: 'refresh_workspace' }
         } catch(emErr) {
           contentFinal = '❌ Não consegui enviar o email: ' + emErr.message
           actionFinal = null
@@ -969,6 +982,7 @@ function aiRoute(method, action, body, me) {
           var newDoc = DocumentApp.create(dData.title || 'Novo Documento')
           if (dData.content) newDoc.getBody().setText(dData.content)
           newDoc.saveAndClose()
+          contentFinal = '✅ Documento "' + (dData.title || 'Novo Documento') + '" criado no Google Docs! Abrindo agora... 📄'
           actionFinal = { type: 'open_url', data: { url: newDoc.getUrl() } }
         } catch(dErr) {
           contentFinal = '❌ Não consegui criar o documento: ' + dErr.message
