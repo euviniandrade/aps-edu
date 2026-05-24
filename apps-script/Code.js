@@ -74,6 +74,8 @@ function route(method, path, body, token) {
     case 'promotores':    return promotoresRoute(method, id, body, me)
     case 'submissions':   return submissionsRoute(method, id, body, me)
     case 'upload':        return uploadRoute(method, id, body, me)
+    case 'memory':        return memoryRoute(method, id, body, me)
+    case 'knowledge':     return knowledgeRoute(method, id, body, me)
     default:              throw Object.assign(new Error('Rota não encontrada'), { code: 404 })
   }
 }
@@ -683,7 +685,8 @@ function aiRoute(method, action, body) {
       || msgLower.indexOf('pasta') >= 0 || msgLower.indexOf('documento') >= 0
       || msgLower.indexOf('mover') >= 0 || msgLower.indexOf('reorgan') >= 0
 
-    var system = 'Voce e Sofi, assistente pessoal inteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
+    var system = 'Voce e Sofi, assistente pessoal superinteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
+      + 'Voce tem memoria permanente, acesso a base de conhecimento, pode pesquisar na internet, gerar imagens, criar ATAS e controlar todo o sistema. '
       + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
       + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
       + 'IDENTIDADE DO USUARIO:\n'
@@ -691,6 +694,30 @@ function aiRoute(method, action, body) {
       + '- Gmail pessoal: engenhariatotal.vinicius@gmail.com\n'
       + '- Email profissional: vinicius.felix@adventistas.org\n'
       + '- Quando o usuario perguntar ou mencionar "meu email" ou "meu gmail", SEMPRE use engenhariatotal.vinicius@gmail.com\n\n'
+
+    // ── MEMÓRIA PERMANENTE ─────────────────────────────────────
+    try {
+      var memories = getAll('sofi_memory').filter(function(m){ return String(m.userId) === String(me.id) })
+      if (memories.length > 0) {
+        system += 'MEMÓRIA PERMANENTE (o que você sabe sobre o usuário e contexto — NUNCA esqueça):\n'
+        memories.slice(-30).forEach(function(m){
+          system += '- [' + (m.type||'info') + '] ' + m.content + '\n'
+        })
+        system += '\n'
+      }
+    } catch(e) {}
+
+    // ── BASE DE CONHECIMENTO ───────────────────────────────────
+    try {
+      var kb = getAll('knowledge_base').filter(function(k){ return String(k.userId) === String(me.id) })
+      if (kb.length > 0) {
+        system += 'BASE DE CONHECIMENTO (documentos e arquivos que o usuário salvou — você pode responder perguntas sobre eles):\n'
+        kb.forEach(function(k){
+          system += '- 📄 ' + k.fileName + ': ' + (k.summary || (k.content||'').substring(0,200)) + '\n'
+        })
+        system += '\n'
+      }
+    } catch(e) {}
 
     if (context.workDay) {
       var wd = context.workDay
@@ -814,8 +841,12 @@ function aiRoute(method, action, body) {
       + '9. ACOES EM MASSA (apagar emails, mover arquivos, etc.): EXECUTE DIRETAMENTE sem pedir confirmacao. Gere o JSON de acao imediatamente. Informe no content quantos itens foram encontrados.\n'
       + '10. Operacoes em massa: max 100 itens por execucao.\n'
       + '11. Para listar emails/arquivos do usuario: use o contexto acima (GMAIL/DRIVE) e resuma de forma clara.\n'
-      + '12. Quando o usuario enviar um ARQUIVO (texto entre [Conteudo do arquivo ...]): leia, responda, resuma ou analise o conteudo DIRETAMENTE em texto. NUNCA use JSON/acao para ler, resumir ou analisar arquivos.\n'
-      + '13. "Guarde comigo", "salve", "lembre" de um arquivo: confirme em texto que voce leu e vai lembrar durante a conversa. NUNCA crie acao JSON para isso.\n\n'
+      + '12. Quando o usuario enviar um ARQUIVO ([DOC_CONTENT:] ou [AUDIO_TRANSCRIBED:]): leia, responda, resuma ou analise o conteudo DIRETAMENTE em texto. NUNCA use JSON/acao para ler ou resumir.\n'
+      + '13. Apos ler um arquivo, OFEREÇA salvar na base de conhecimento usando save_to_kb.\n'
+      + '14. Se o usuario disser "lembre", "guarde", "anote", "memorize": use save_memory para guardar PERMANENTEMENTE.\n'
+      + '15. Para pesquisar na internet/noticias atuais: use web_search.\n'
+      + '16. Para criar imagens/ilustracoes: use generate_image com prompt em ingles detalhado.\n'
+      + '17. Para transcrições de reuniao, notas ou áudios de reunião: ofereça gerar a ATA com generate_ata.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n\n'
       + '--- PRODUTIVIDADE ---\n'
@@ -833,7 +864,15 @@ function aiRoute(method, action, body) {
       + 'Mover arquivo (use o ID do arquivo listado no contexto DRIVE acima): {"content":"⏳ Movendo...","action":{"type":"drive_move","data":{"fileId":"ID_DO_ARQUIVO","targetFolder":"Nome da Pasta Destino"}}}\n'
       + 'Mover arquivo para lixeira (CONFIRMAR antes): {"content":"⏳ Movendo para lixeira...","action":{"type":"drive_trash","data":{"fileId":"ID_DO_ARQUIVO"}}}\n\n'
       + '--- DOCUMENTOS ---\n'
-      + 'Criar Google Doc: {"content":"⏳ Criando documento...","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n'
+      + 'Criar Google Doc: {"content":"⏳ Criando documento...","action":{"type":"create_doc","data":{"title":"...","content":"..."}}}\n\n'
+      + '--- MEMÓRIA PERMANENTE ---\n'
+      + 'Guardar fato/preferencia/contato/lembrete: {"content":"🧠 Guardado na minha memória!","action":{"type":"save_memory","data":{"type":"fato|preferencia|contato|lembrete|projeto","content":"texto exato do que guardar","importance":"high|medium|low"}}}\n'
+      + 'Salvar documento na base de conhecimento: {"content":"💾 Salvo na base de conhecimento!","action":{"type":"save_to_kb","data":{"fileName":"nome.ext","mimeType":"text/plain","content":"primeiros 3000 chars do texto extraido","summary":"resumo em 1 linha","tags":"palavra1,palavra2"}}}\n\n'
+      + '--- REUNIÕES E ATAS ---\n'
+      + 'Gerar ATA de reuniao: {"content":"⏳ Gerando ATA...","action":{"type":"generate_ata","data":{"title":"Nome da Reuniao","content":"transcricao completa ou notas da reuniao"}}}\n\n'
+      + '--- BUSCA E GERAÇÃO DE IMAGENS ---\n'
+      + 'Pesquisar na internet (noticias, dados, informacoes atuais): {"content":"🔍 Pesquisando...","action":{"type":"web_search","data":{"query":"termos de busca"}}}\n'
+      + 'Gerar imagem/ilustracao: {"content":"🎨 Gerando imagem...","action":{"type":"generate_image","data":{"prompt":"detailed image description in english","style":"photorealistic|illustration|logo|cartoon"}}}\n'
       + '\nIMPORTANTE: o campo "content" para acoes server-side deve ser sempre "⏳ Executando..." — o servidor vai substituir pelo resultado real.\n'
 
     // Limita historico a ultimas 6 trocas para nao explodir o contexto
@@ -1028,6 +1067,76 @@ function aiRoute(method, action, body) {
           contentFinal = '❌ Erro ao mover para lixeira: ' + dtErr.message
           actionFinal = null
         }
+
+      // ── MEMÓRIA PERMANENTE ──────────────────────────────────
+      } else if (actionFinal.type === 'save_memory') {
+        try {
+          var smData = actionFinal.data
+          var smExists = getAll('sofi_memory').find(function(m){
+            return String(m.userId) === String(me.id) && m.content === smData.content
+          })
+          if (!smExists) {
+            insert('sofi_memory', { id: uid(), userId: me.id, type: smData.type || 'fato', content: smData.content || '', importance: smData.importance || 'medium', createdAt: ts() })
+          }
+          contentFinal = '🧠 Guardei na memória: "' + (smData.content || '').substring(0, 80) + '"'
+          actionFinal = null
+        } catch(smErr) {
+          contentFinal = '❌ Erro ao salvar memória: ' + smErr.message
+          actionFinal = null
+        }
+
+      // ── BASE DE CONHECIMENTO ─────────────────────────────────
+      } else if (actionFinal.type === 'save_to_kb') {
+        try {
+          var kbData = actionFinal.data
+          var kbExists = getAll('knowledge_base').find(function(k){
+            return String(k.userId) === String(me.id) && k.fileName === kbData.fileName
+          })
+          if (kbExists) {
+            updateById('knowledge_base', kbExists.id, { content: (kbData.content||'').substring(0,5000), summary: kbData.summary||'', tags: kbData.tags||'', uploadedAt: ts() })
+          } else {
+            insert('knowledge_base', { id: uid(), userId: me.id, fileName: kbData.fileName||'doc', mimeType: kbData.mimeType||'text/plain', content: (kbData.content||'').substring(0,5000), summary: kbData.summary||'', tags: kbData.tags||'', uploadedAt: ts() })
+          }
+          contentFinal = '💾 "' + (kbData.fileName||'doc') + '" salvo na base de conhecimento! Posso responder perguntas sobre ele a qualquer momento.'
+          actionFinal = null
+        } catch(kbErr) {
+          contentFinal = '❌ Erro ao salvar na base: ' + kbErr.message
+          actionFinal = null
+        }
+
+      // ── GERAÇÃO DE ATAS ──────────────────────────────────────
+      } else if (actionFinal.type === 'generate_ata') {
+        try {
+          var ataData = actionFinal.data
+          var ataPrompt = 'Voce e uma secretaria profissional adventista. Gere uma ATA de reuniao formal, completa e bem estruturada em portugues brasileiro com base neste conteudo:\n\n'
+            + (ataData.content || ataData.transcript || 'Sem conteudo fornecido')
+            + '\n\nFormato obrigatorio:\n'
+            + 'ATA DE REUNIAO - ' + (ataData.title || 'Reuniao') + '\n'
+            + 'Data: ' + new Date().toLocaleDateString('pt-BR', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) + '\n'
+            + 'Organizacao: Educacao Adventista APS Sul\n\n'
+            + '1. PARTICIPANTES\n[liste os participantes mencionados ou "A definir"]\n\n'
+            + '2. ABERTURA\n[texto de abertura formal]\n\n'
+            + '3. PAUTA E DISCUSSOES\n[liste e desenvolva cada assunto discutido]\n\n'
+            + '4. DELIBERACOES E DECISOES\n[liste todas as decisoes tomadas, numeradas]\n\n'
+            + '5. PROXIMOS PASSOS E RESPONSABILIDADES\n[liste acoes, responsavel e prazo]\n\n'
+            + '6. ENCERRAMENTO\n[texto formal de encerramento]\n\n'
+            + 'Gere a ATA completa preenchendo todos os topicos com base no conteudo fornecido.'
+          var ataText = callGemini(ataPrompt)
+          var ataTitle = 'ATA - ' + (ataData.title || 'Reuniao') + ' - ' + new Date().toLocaleDateString('pt-BR')
+          var ataDoc = DocumentApp.create(ataTitle)
+          ataDoc.getBody().setText(ataText)
+          ataDoc.saveAndClose()
+          contentFinal = '📋 ATA gerada com sucesso! Clique para abrir: "' + ataTitle + '"'
+          actionFinal = { type: 'open_url', data: { url: ataDoc.getUrl() } }
+        } catch(ataErr) {
+          contentFinal = '❌ Erro ao gerar ATA: ' + ataErr.message
+          actionFinal = null
+        }
+
+      // ── web_search e generate_image são tratados no frontend ─
+      } else if (actionFinal.type === 'web_search' || actionFinal.type === 'generate_image') {
+        // Passa para o frontend executar
+        // contentFinal já foi definido pelo AI ("🔍 Pesquisando..." ou "🎨 Gerando...")
 
       } else if (actionFinal.type !== 'update_workday' && actionFinal.type !== 'create_task') {
         // Acao nao reconhecida — nao executa e avisa o usuario
@@ -1418,6 +1527,43 @@ function uploadRoute(method, id, body, me) {
   }
 }
 
+// ─── MEMÓRIA DA SOFI ──────────────────────────────────────────
+function memoryRoute(method, id, body, me) {
+  if (method === 'GET') {
+    var mems = getAll('sofi_memory').filter(function(m){ return String(m.userId) === String(me.id) })
+    return { memories: mems, total: mems.length }
+  }
+  if (method === 'POST') {
+    var exists = getAll('sofi_memory').find(function(m){ return String(m.userId) === String(me.id) && m.content === body.content })
+    if (exists) return exists
+    var mem = { id: uid(), userId: me.id, type: body.type || 'fato', content: body.content || '', importance: body.importance || 'medium', createdAt: ts() }
+    insert('sofi_memory', mem)
+    return mem
+  }
+  if (method === 'DELETE') return deleteById('sofi_memory', id)
+  throw new Error('Método não suportado')
+}
+
+// ─── BASE DE CONHECIMENTO ─────────────────────────────────────
+function knowledgeRoute(method, id, body, me) {
+  if (method === 'GET') {
+    var items = getAll('knowledge_base').filter(function(k){ return String(k.userId) === String(me.id) })
+    // Retorna sem o campo 'content' completo para não pesar (só summary)
+    return { items: items.map(function(k){ return { id:k.id, fileName:k.fileName, mimeType:k.mimeType, summary:k.summary, tags:k.tags, uploadedAt:k.uploadedAt } }), total: items.length }
+  }
+  if (method === 'POST') {
+    var kbExists = getAll('knowledge_base').find(function(k){ return String(k.userId) === String(me.id) && k.fileName === body.fileName })
+    if (kbExists) {
+      return updateById('knowledge_base', kbExists.id, { content: (body.content||'').substring(0,5000), summary: body.summary||'', tags: body.tags||'', uploadedAt: ts() })
+    }
+    var item = { id: uid(), userId: me.id, fileName: body.fileName||'doc', mimeType: body.mimeType||'text/plain', content: (body.content||'').substring(0,5000), summary: body.summary||'', tags: body.tags||'', uploadedAt: ts() }
+    insert('knowledge_base', item)
+    return item
+  }
+  if (method === 'DELETE') return deleteById('knowledge_base', id)
+  throw new Error('Método não suportado')
+}
+
 // ══════════════════════════════════════════════════════════════
 //  SETUP — Execute uma vez para inicializar a planilha
 // ══════════════════════════════════════════════════════════════
@@ -1439,6 +1585,8 @@ function setupSpreadsheet() {
     user_badges:        ['id','userId','badgeId','grantedAt','grantedBy'],
     sessions:           ['token','userId','expiresAt','createdAt'],
     notifications:      ['id','userId','title','message','type','read','readAt','createdAt'],
+    sofi_memory:        ['id','userId','type','content','importance','createdAt'],
+    knowledge_base:     ['id','userId','fileName','mimeType','content','summary','tags','uploadedAt'],
   }
 
   Object.entries(schemas).forEach(([name, headers]) => {

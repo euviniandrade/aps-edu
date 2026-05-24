@@ -1054,6 +1054,62 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const updated = { ...workDay, ...d }
         localStorage.setItem('aps_workday', JSON.stringify(updated))
         onWorkDayUpdated?.(updated)
+
+      // ── BUSCA NA INTERNET ──────────────────────────────────
+      } else if (action.type === 'web_search') {
+        setLoading(true)
+        try {
+          const res = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: action.data.query }),
+          })
+          const searchData = await res.json()
+          // Monta contexto de busca e pede à IA para resumir
+          const searchContext = searchData.answer
+            ? `Resposta direta: ${searchData.answer}\n\n`
+            : ''
+          const resultsText = (searchData.results || [])
+            .map((r: any, i: number) => `${i+1}. ${r.title}: ${r.snippet}`)
+            .join('\n')
+          const searchPrompt = `[RESULTADO DA BUSCA por "${action.data.query}"]\n${searchContext}${resultsText}\n\n---\nCom base nesses resultados, responda à pergunta original de forma clara e resumida em português.`
+          const aiRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: searchPrompt }),
+          })
+          const aiData = await aiRes.json()
+          const summary = aiData.content || searchContext + resultsText || 'Não encontrei resultados relevantes.'
+          setMessages(p => [...p, { role: 'assistant', content: `🔍 **Pesquisa: "${action.data.query}"**\n\n${summary}` }])
+        } catch {
+          setMessages(p => [...p, { role: 'assistant', content: '❌ Não consegui pesquisar na internet agora.' }])
+        }
+        setLoading(false)
+
+      // ── GERAÇÃO DE IMAGENS ─────────────────────────────────
+      } else if (action.type === 'generate_image') {
+        setLoading(true)
+        try {
+          const res = await fetch('/api/imagine', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: action.data.prompt, style: action.data.style }),
+          })
+          const imgData = await res.json()
+          if (imgData.imageBase64) {
+            const imgSrc = `data:${imgData.mimeType};base64,${imgData.imageBase64}`
+            setMessages(p => [...p, {
+              role: 'assistant',
+              content: `[IMAGE:${imgSrc}]`,
+              display: `🎨 Imagem gerada!`,
+            }])
+          } else {
+            setMessages(p => [...p, { role: 'assistant', content: `❌ Não consegui gerar a imagem: ${imgData.error}` }])
+          }
+        } catch {
+          setMessages(p => [...p, { role: 'assistant', content: '❌ Erro ao gerar imagem.' }])
+        }
+        setLoading(false)
       }
     } catch (e) {
       // falha silenciosa — mensagem já foi exibida
@@ -1200,7 +1256,17 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
                 color: 'rgba(255,255,255,0.85)',
                 borderBottomLeftRadius: 4,
               }}>
-              {m.display ?? m.content}
+              {m.content.startsWith('[IMAGE:') ? (
+                <div>
+                  <img
+                    src={m.content.replace('[IMAGE:', '').replace(/\]$/, '')}
+                    alt="Imagem gerada pela Sofi"
+                    className="rounded-xl max-w-full"
+                    style={{ maxHeight: 320 }}
+                  />
+                  <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>🎨 Gerado pela Sofi</p>
+                </div>
+              ) : (m.display ?? m.content)}
             </div>
           </div>
         ))}
