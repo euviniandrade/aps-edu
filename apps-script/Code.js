@@ -64,7 +64,7 @@ function route(method, path, body, token) {
     case 'units':         return unitsRoute(method, id, body)
     case 'gamification':  return gamificationRoute(method, id, sub, body, me)
     case 'reports':       return reportsRoute(method, id, body)
-    case 'ai':            return aiRoute(method, id, body)
+    case 'ai':            return aiRoute(method, id, body, me)
     case 'calendar':      return calendarRoute(method, id, body, me)
     case 'gmail':         return gmailRoute(method, id, body, me)
     case 'drive':         return driveRoute(method, id, body, me)
@@ -620,7 +620,7 @@ function reportsRoute(method, action, body) {
 }
 
 // ─── AI (Gemini) ──────────────────────────────────────────────
-function aiRoute(method, action, body) {
+function aiRoute(method, action, body, me) {
   if (action === 'insights') {
     const users     = getAll('users')
     const tasks     = getAll('tasks')
