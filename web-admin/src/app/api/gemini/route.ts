@@ -5,10 +5,11 @@ export const maxDuration = 30
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
 
+// Modelos em ordem de preferência — remove os descontinuados
 const MODELS = [
   'llama-3.3-70b-versatile',
-  'llama-3.1-70b-versatile',
-  'llama3-70b-8192',
+  'llama-3.1-8b-instant',
+  'gemma2-9b-it',
 ]
 
 async function callGroq(prompt: string, model: string) {
@@ -37,18 +38,19 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json()
     if (!prompt) return NextResponse.json({ error: 'prompt obrigatório' }, { status: 400 })
 
-    let lastError = ''
+    const errors: string[] = []
     for (const model of MODELS) {
       const data = await callGroq(prompt, model)
       if (data.error) {
-        lastError = typeof data.error === 'string' ? data.error : (data.error?.message || JSON.stringify(data.error))
-        continue // tenta próximo modelo
+        const msg = typeof data.error === 'string' ? data.error : (data.error?.message || JSON.stringify(data.error))
+        errors.push(`${model}: ${msg}`)
+        continue
       }
       const text = data.choices?.[0]?.message?.content || ''
-      return NextResponse.json({ content: text })
+      return NextResponse.json({ content: text, model })
     }
 
-    return NextResponse.json({ error: `Todos os modelos falharam: ${lastError}` }, { status: 500 })
+    return NextResponse.json({ error: `Modelos falharam — ${errors.join(' | ')}` }, { status: 500 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
