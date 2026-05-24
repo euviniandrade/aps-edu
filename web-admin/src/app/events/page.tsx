@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
+import { useToast } from '@/contexts/ToastContext'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const STATUS_LABELS: Record<string, string> = {
   planned: 'Planejado', ongoing: 'Em andamento', completed: 'Concluído', cancelled: 'Cancelado',
@@ -71,6 +73,8 @@ export default function EventsPage() {
     allowAttachments: true,
   })
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const { success, error: toastError } = useToast()
 
   // Evidência submission form
   const [subFile, setSubFile]       = useState<File | null>(null)
@@ -136,8 +140,23 @@ export default function EventsPage() {
       })
       setShowModal(false)
       setForm({ name: '', description: '', startDate: '', endDate: '', location: '', unitId: '', assignedUserIds: [], allowAttachments: true })
+      success('Evento criado!', `"${form.name}" foi agendado com sucesso.`)
       load()
-    } catch (_) {} finally { setSaving(false) }
+    } catch (e: any) {
+      toastError('Erro ao criar evento', e?.response?.data?.error || e.message)
+    } finally { setSaving(false) }
+  }
+
+  const deleteEvent = async (id: string) => {
+    try {
+      await api.delete(`/events/${id}`)
+      setEvents(prev => prev.filter(ev => ev.id !== id))
+      if (selectedEvent?.id === id) setSelectedEvent(null)
+      success('Evento excluído', 'O evento foi removido.')
+    } catch (e: any) {
+      toastError('Erro ao excluir', e?.response?.data?.error || e.message)
+    }
+    setConfirmDelete(null)
   }
 
   const submitEvidencia = async () => {
@@ -704,6 +723,16 @@ export default function EventsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        danger
+        title="Excluir Evento"
+        message={`Tem certeza que deseja excluir "${confirmDelete?.name}"? Esta ação é irreversível.`}
+        confirmLabel="Sim, excluir"
+        cancelLabel="Cancelar"
+        onConfirm={() => confirmDelete && deleteEvent(confirmDelete.id)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </AdminLayout>
   )
 }

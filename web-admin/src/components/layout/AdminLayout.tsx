@@ -23,21 +23,30 @@ import {
 } from '@heroicons/react/24/solid'
 
 const navItems = [
-  { href: '/dashboard',     label: 'Dashboard',   icon: HomeIcon,                      iconSolid: HomeIconSolid,     color: '#F8A303' },
-  { href: '/users',         label: 'Usuários',     icon: UsersIcon,                     iconSolid: UsersIconSolid,    color: '#4A9EFF' },
-  { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,               iconSolid: CheckIconSolid,    color: '#0ABD78' },
-  { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,                 iconSolid: UserGroupIconSolid, color: '#29ABE2' },
-  { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#8B5CF6' },
-  { href: '/announcements', label: 'Avisos',       icon: MegaphoneIcon,                 iconSolid: MegaphoneIconSolid,color: '#29ABE2' },
-  { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                    iconSolid: TrophyIconSolid,   color: '#F9C234' },
-  { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,                  iconSolid: ChartIconSolid,    color: '#E07B39' },
-  { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon,    iconSolid: ChatIconSolid,     color: '#FF4757' },
-  { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                       iconSolid: KeyIconSolid,      color: '#A78BFA' },
-  { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,           iconSolid: BuildingIconSolid, color: '#34D399' },
+  { href: '/dashboard',     label: 'Dashboard',   icon: HomeIcon,                      iconSolid: HomeIconSolid,     color: '#F8A303', roles: [] },
+  { href: '/meu-dia',       label: 'Meu Dia',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#4A9EFF', roles: [] },
+  { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,               iconSolid: CheckIconSolid,    color: '#0ABD78', roles: [] },
+  { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#8B5CF6', roles: [] },
+  { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,                 iconSolid: MegaphoneIconSolid,color: '#29ABE2', roles: [] },
+  { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                    iconSolid: TrophyIconSolid,   color: '#F9C234', roles: [] },
+  { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,                  iconSolid: ChartIconSolid,    color: '#E07B39', roles: ['leader', 'admin'] },
+  { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon,    iconSolid: ChatIconSolid,     color: '#FF4757', roles: [] },
+  { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,                 iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
+  { href: '/users',         label: 'Usuários',     icon: UsersIcon,                     iconSolid: UsersIconSolid,    color: '#4A9EFF', roles: ['admin'] },
+  { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                       iconSolid: KeyIconSolid,      color: '#A78BFA', roles: ['admin'] },
+  { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,           iconSolid: BuildingIconSolid, color: '#34D399', roles: ['admin'] },
 ]
 
 // Item exclusivo do admin — ícone reutilizado do KeyIcon com cor dourada especial
-const myAreaItem = { href: '/minha-area', label: '⚡ Minha Área', icon: KeyIcon, iconSolid: KeyIconSolid, color: '#FDC347' }
+const myAreaItem = { href: '/minha-area', label: '⚡ Sofi IA', icon: KeyIcon, iconSolid: KeyIconSolid, color: '#FDC347' }
+
+function getRoleLevel(role: string): string {
+  const r = role.toLowerCase()
+  if (r.includes('admin') || r.includes('administrador')) return 'admin'
+  if (r.includes('leader') || r.includes('lider') || r.includes('director') || r.includes('diretor') ||
+      r.includes('coordinator') || r.includes('coordenador')) return 'leader'
+  return 'member'
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -60,11 +69,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   let user: any = null
   try {
     const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
-    if (userCookie) user = JSON.parse(userCookie)
-  } catch (_) { user = null }
+    if (userCookie) user = JSON.parse(decodeURIComponent(userCookie))
+  } catch (_) {
+    try {
+      const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
+      if (userCookie) user = JSON.parse(userCookie)
+    } catch (_2) { user = null }
+  }
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'A'
   const userName = user?.name ?? 'Administrador'
-  const userRole = user?.role?.name ?? 'Admin'
+  const userRoleName = user?.role?.name ?? user?.role ?? 'Admin'
+  const userRole = userRoleName
+  const roleLevel = getRoleLevel(typeof userRoleName === 'string' ? userRoleName : 'member')
+
+  const visibleNavItems = navItems.filter(item => {
+    if (!item.roles || item.roles.length === 0) return true
+    if (item.roles.includes('admin') && roleLevel !== 'admin') return false
+    if (item.roles.includes('leader') && roleLevel !== 'admin' && roleLevel !== 'leader') return false
+    return true
+  })
 
   return (
     <div
@@ -180,7 +203,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <p className="section-label px-3 mb-3">Menu</p>
 
           <ul className="space-y-0.5">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive =
                 pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = isActive ? item.iconSolid : item.icon
@@ -245,6 +268,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{userRole}</p>
             </div>
           </div>
+
+          {/* Settings */}
+          <Link
+            href="/configuracoes"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all hover:bg-white/5 group"
+          >
+            <span style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.35)', fontSize: 16, lineHeight: '17px' }}>⚙️</span>
+            <span className="text-sm font-medium group-hover:text-white/70 transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Configurações
+            </span>
+          </Link>
 
           {/* Logout */}
           <button

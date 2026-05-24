@@ -2,6 +2,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
+import { useToast } from '@/contexts/ToastContext'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import {
   MagnifyingGlassIcon, PlusIcon, XMarkIcon, UserIcon,
   CheckCircleIcon, EnvelopeIcon, PhoneIcon
@@ -40,6 +42,8 @@ export default function UsersPage() {
   const [showModal, setShowModal]     = useState(false)
   const [saving, setSaving]           = useState(false)
   const [savedUser, setSavedUser]     = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const { success, error: toastError } = useToast()
   const [form, setForm] = useState({
     name: '', email: '', password: 'Teste@123', phone: '', roleId: '', unitId: ''
   })
@@ -75,9 +79,10 @@ export default function UsersPage() {
       setShowModal(false)
       setForm({ name: '', email: '', password: 'Teste@123', phone: '', roleId: '', unitId: '' })
       await load()
+      success('Usuário criado!', `${res.data?.name || form.name} foi adicionado ao sistema.`)
       setTimeout(() => setSavedUser(''), 4000)
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Erro ao criar usuário')
+      toastError('Erro ao criar usuário', e?.response?.data?.error || e.message)
     } finally {
       setSaving(false)
     }
@@ -417,6 +422,26 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        danger
+        title="Excluir Usuário"
+        message={`Tem certeza que deseja excluir "${confirmDelete?.name}"? Todos os dados vinculados serão removidos.`}
+        confirmLabel="Sim, excluir"
+        cancelLabel="Cancelar"
+        onConfirm={async () => {
+          if (!confirmDelete) return
+          try {
+            await api.delete(`/users/${confirmDelete.id}`)
+            setUsers(prev => prev.filter(u => u.id !== confirmDelete.id))
+            success('Usuário excluído', `${confirmDelete.name} foi removido.`)
+          } catch (e: any) {
+            toastError('Erro ao excluir', e?.response?.data?.error || e.message)
+          }
+          setConfirmDelete(null)
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </AdminLayout>
   )
 }

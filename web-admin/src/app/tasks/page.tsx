@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
+import { useToast } from '@/contexts/ToastContext'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3000'
 
@@ -42,11 +44,13 @@ export default function TasksPage() {
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', dueDate: '', assignedToId: '', unitId: '' })
   const [saving, setSaving]           = useState(false)
 
+  const { success, error: toastError } = useToast()
   const [drawer, setDrawer]           = useState<any>(null)
   const [drawerLoading, setDrawerLoading] = useState(false)
   const [uploading, setUploading]     = useState(false)
   const [uploadError, setUploadError] = useState('')
   const fileInputRef                  = useRef<HTMLInputElement>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ taskId: string; title: string } | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -103,8 +107,23 @@ export default function TasksPage() {
       await api.post('/tasks', { ...form, dueDate: form.dueDate || undefined, assignedToId: form.assignedToId || undefined })
       setShowModal(false)
       setForm({ title: '', description: '', priority: 'medium', dueDate: '', assignedToId: '', unitId: '' })
+      success('Tarefa criada!', `"${form.title}" foi adicionada com sucesso.`)
       load()
-    } catch (_) {} finally { setSaving(false) }
+    } catch (e: any) {
+      toastError('Erro ao criar tarefa', e?.response?.data?.error || e.message)
+    } finally { setSaving(false) }
+  }
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await api.delete(`/tasks/${taskId}`)
+      setTasks(prev => prev.filter(t => t.id !== taskId))
+      if (drawer?.id === taskId) setDrawer(null)
+      success('Tarefa excluída', 'A tarefa foi removida permanentemente.')
+    } catch (e: any) {
+      toastError('Erro ao excluir', e?.response?.data?.error || e.message)
+    }
+    setConfirmDelete(null)
   }
 
   const filtered = tasks.filter(t =>
@@ -325,13 +344,23 @@ export default function TasksPage() {
                   })()}
                 </div>
               </div>
-              <button
-                onClick={() => setDrawer(null)}
-                className="text-xl leading-none transition-colors"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setConfirmDelete({ taskId: drawer.id, title: drawer.title })}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                  style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.2)', color: '#FF4757' }}
+                  title="Excluir tarefa"
+                >
+                  🗑 Excluir
+                </button>
+                <button
+                  onClick={() => setDrawer(null)}
+                  className="text-xl leading-none transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {drawerLoading ? (
@@ -686,6 +715,16 @@ export default function TasksPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        danger
+        title="Excluir Tarefa"
+        message={`Tem certeza que deseja excluir "${confirmDelete?.title}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Sim, excluir"
+        cancelLabel="Cancelar"
+        onConfirm={() => confirmDelete && deleteTask(confirmDelete.taskId)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </AdminLayout>
   )
 }
