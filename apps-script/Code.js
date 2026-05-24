@@ -738,7 +738,9 @@ function aiRoute(method, action, body) {
       + '8. Para criar evento: so execute se o usuario informou data e titulo REAIS.\n'
       + '9. ACOES EM MASSA (apagar emails, mover arquivos, etc.): EXECUTE DIRETAMENTE sem pedir confirmacao. Gere o JSON de acao imediatamente. Informe no content quantos itens foram encontrados.\n'
       + '10. Operacoes em massa: max 100 itens por execucao.\n'
-      + '11. Para listar emails/arquivos do usuario: use o contexto acima (GMAIL/DRIVE) e resuma de forma clara.\n\n'
+      + '11. Para listar emails/arquivos do usuario: use o contexto acima (GMAIL/DRIVE) e resuma de forma clara.\n'
+      + '12. Quando o usuario enviar um ARQUIVO (texto entre [Conteudo do arquivo ...]): leia, responda, resuma ou analise o conteudo DIRETAMENTE em texto. NUNCA use JSON/acao para ler, resumir ou analisar arquivos.\n'
+      + '13. "Guarde comigo", "salve", "lembre" de um arquivo: confirme em texto que voce leu e vai lembrar durante a conversa. NUNCA crie acao JSON para isso.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n\n'
       + '--- PRODUTIVIDADE ---\n'
@@ -766,7 +768,10 @@ function aiRoute(method, action, body) {
     }).join('\n')
 
     // Instrucao final reforçando JSON obrigatorio para acoes
-    var actionReminder = '\nLEMBRETE: Se a mensagem do usuario pede uma ACAO (apagar, criar, mover, enviar, agendar), responda SOMENTE com JSON no formato {"content":"⏳ Executando...","action":{"type":"...","data":{...}}}. Nao use texto antes ou depois do JSON.\n\n'
+    var actionReminder = '\nLEMBRETE DE ACOES:\n'
+      + '- Use JSON SOMENTE para: apagar emails, criar tarefa, criar evento, enviar email, mover arquivo, criar pasta, criar doc.\n'
+      + '- NUNCA use JSON para: ler arquivo, resumir, analisar, responder perguntas, guardar na memoria. Para essas, responda direto em texto.\n'
+      + '- Se a mensagem contem [Conteudo do arquivo ...]: responda DIRETAMENTE em texto com o que foi pedido (resumo, analise, etc.).\n\n'
 
     var fullPrompt = system + actionReminder
       + (historyLines ? 'HISTORICO (recente):\n' + historyLines + '\n\n' : '')
