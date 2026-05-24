@@ -882,10 +882,15 @@ function aiRoute(method, action, body) {
     }).join('\n')
 
     // Instrucao final reforçando JSON obrigatorio para acoes
-    var actionReminder = '\nLEMBRETE DE ACOES:\n'
-      + '- Use JSON SOMENTE para: apagar emails, criar tarefa, criar evento, enviar email, mover arquivo, criar pasta, criar doc.\n'
-      + '- NUNCA use JSON para: ler arquivo, resumir, analisar, responder perguntas, guardar na memoria. Para essas, responda direto em texto.\n'
-      + '- Se a mensagem contem [Conteudo do arquivo ...]: responda DIRETAMENTE em texto com o que foi pedido (resumo, analise, etc.).\n\n'
+    var actionReminder = '\nLEMBRETE DE ACOES — quando usar JSON:\n'
+      + '✅ USE JSON para: apagar emails, criar tarefa, criar evento, enviar email, mover arquivo, criar pasta, criar doc, save_memory, save_to_kb, generate_ata, web_search, generate_image.\n'
+      + '❌ NUNCA use JSON para: ler arquivo, resumir em texto, analisar, responder perguntas gerais.\n'
+      + '🎨 Se usuario pedir imagem/ilustracao/foto: IMEDIATAMENTE retorne JSON com generate_image. Nao explique, apenas gere.\n'
+      + '🔍 Se usuario pedir pesquisa/busca na internet: IMEDIATAMENTE retorne JSON com web_search.\n'
+      + '🧠 Se usuario disser "lembre", "guarde", "anote": IMEDIATAMENTE retorne JSON com save_memory.\n'
+      + '💾 Se usuario confirmar salvar arquivo: IMEDIATAMENTE retorne JSON com save_to_kb com o conteudo do arquivo.\n'
+      + '📋 Se usuario pedir ATA: IMEDIATAMENTE retorne JSON com generate_ata com o conteudo da reuniao.\n'
+      + '- Se a mensagem contem [DOC_CONTENT:] ou [AUDIO_TRANSCRIBED:]: responda em TEXTO com resumo/analise. Depois OFEREÇA salvar com save_to_kb.\n\n'
 
     var fullPrompt = system + actionReminder
       + (historyLines ? 'HISTORICO (recente):\n' + historyLines + '\n\n' : '')
