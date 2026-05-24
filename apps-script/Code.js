@@ -207,7 +207,7 @@ function usersRoute(method, id, body, me) {
     return { users: paged, total: list.length }
   }
   if (method === 'GET') {
-    const u = findById('users', id)
+    const u = id === 'me' ? me : findById('users', id)
     if (!u) throw new Error('Usuário não encontrado')
     return enrichUser(u)
   }
@@ -259,7 +259,7 @@ function tasksRoute(method, id, body, me) {
     const task = {
       id: uid(), title: body.title, description: body.description || '',
       status: body.status || 'pending', priority: body.priority || 'medium',
-      dueDate: body.dueDate || '', assigneeId: body.assigneeId || '',
+      dueDate: body.dueDate || '', assigneeId: body.assigneeId || body.assignedToId || '',
       createdById: me.id, unitId: body.unitId || '',
       createdAt: ts(), updatedAt: ts(),
     }
@@ -271,6 +271,7 @@ function tasksRoute(method, id, body, me) {
     ;['title','description','status','priority','dueDate','assigneeId','unitId'].forEach(k => {
       if (body[k] !== undefined) upd[k] = body[k]
     })
+    if (body.assignedToId !== undefined) upd.assigneeId = body.assignedToId
     return updateById('tasks', id, upd)
   }
   if (method === 'DELETE') return deleteById('tasks', id)
@@ -485,6 +486,31 @@ function gamificationRoute(method, action, sub, body, me) {
     awardPoints(body.userId || me.id, parseInt(body.points) || 0)
     return { success: true }
   }
+  if (action === 'my-stats') {
+    const pts = getAll('user_points').find(p => p.userId === me.id) || { points: 0, level: 1 }
+    const badges = getAll('user_badges').filter(ub => ub.userId === me.id)
+      .map(ub => ({ ...ub, badge: findById('badges', ub.badgeId) }))
+    const levels = [
+      { level: 1, name: 'Iniciante',    minPoints: 0,    color: '#9CA3AF' },
+      { level: 2, name: 'Dedicado',     minPoints: 100,  color: '#3B82F6' },
+      { level: 3, name: 'Experiente',   minPoints: 300,  color: '#8B5CF6' },
+      { level: 4, name: 'Especialista', minPoints: 700,  color: '#F59E0B' },
+      { level: 5, name: 'Mestre',       minPoints: 1500, color: '#F8A303' },
+    ]
+    const currentLevel = levels.find(l => l.level === (parseInt(pts.level) || 1)) || levels[0]
+    const nextLevel = levels.find(l => l.level === currentLevel.level + 1) || null
+    const rank = getAll('user_points')
+      .sort((a, b) => (parseInt(b.points) || 0) - (parseInt(a.points) || 0))
+      .findIndex(p => p.userId === me.id) + 1
+    return {
+      points: parseInt(pts.points) || 0,
+      level: parseInt(pts.level) || 1,
+      levelInfo: currentLevel,
+      nextLevel,
+      badges,
+      rank,
+    }
+  }
   throw new Error('Ação não encontrada')
 }
 
@@ -537,6 +563,55 @@ function reportsRoute(method, action, body) {
       totalAnnouncements:  ann.length,
       totalUnits:          units.length,
       unitsRanking,
+    }
+  }
+  if (action === 'unit') {
+    const unitId = body.id || method === 'GET' && body
+    // id is passed as the second path segment — reportsRoute receives (method, action=id, body)
+    // but here action = 'unit' and id would be in body or sub-path
+    // caller uses GET /reports/unit/UUID → route parses resource=reports, id=unit, sub=UUID
+    // so we re-read sub from body._sub if needed — workaround: frontend passes unitId as query param
+    const targetId = body.unitId || action
+    const unit = findById('units', targetId)
+    if (!unit) throw new Error('Unidade não encontrada')
+    const users    = getAll('users').filter(u => u.unitId === targetId)
+    const tasks    = getAll('tasks').filter(t => t.unitId === targetId)
+    const pts      = getAll('user_points').filter(p => users.find(u => u.id === p.userId))
+    const totalPts = pts.reduce((s, p) => s + (parseInt(p.points) || 0), 0)
+    const avgPts   = pts.length ? Math.round(totalPts / pts.length) : 0
+    return {
+      unit,
+      totalUsers: users.length,
+      totalTasks: tasks.length,
+      tasksByStatus: {
+        pending:     tasks.filter(t => t.status === 'pending').length,
+        in_progress: tasks.filter(t => t.status === 'in_progress').length,
+        completed:   tasks.filter(t => t.status === 'completed').length,
+      },
+      totalPoints: totalPts,
+      avgPoints: avgPts,
+      users: users.map(enrichUser),
+    }
+  }
+  if (action === 'user') {
+    const targetId = body.userId
+    const user = findById('users', targetId)
+    if (!user) throw new Error('Usuário não encontrado')
+    const tasks    = getAll('tasks').filter(t => t.assigneeId === targetId)
+    const pts      = getAll('user_points').find(p => p.userId === targetId) || { points: 0, level: 1 }
+    const badges   = getAll('user_badges').filter(ub => ub.userId === targetId)
+      .map(ub => ({ ...ub, badge: findById('badges', ub.badgeId) }))
+    return {
+      user: enrichUser(user),
+      points: parseInt(pts.points) || 0,
+      level:  parseInt(pts.level)  || 1,
+      badges,
+      totalTasks: tasks.length,
+      tasksByStatus: {
+        pending:     tasks.filter(t => t.status === 'pending').length,
+        in_progress: tasks.filter(t => t.status === 'in_progress').length,
+        completed:   tasks.filter(t => t.status === 'completed').length,
+      },
     }
   }
   throw new Error('Relatório não encontrado')
