@@ -72,6 +72,8 @@ function route(method, path, body, token) {
     case 'notifications': return notificationsRoute(method, id, body, me)
     case 'personal':      return personalRoute(method, id, body, me)
     case 'promotores':    return promotoresRoute(method, id, body, me)
+    case 'submissions':   return submissionsRoute(method, id, body, me)
+    case 'upload':        return uploadRoute(method, id, body, me)
     default:              throw Object.assign(new Error('Rota não encontrada'), { code: 404 })
   }
 }
@@ -215,7 +217,8 @@ function usersRoute(method, id, body, me) {
       id: uid(), name: body.name, email: body.email,
       password: hashPwd(body.password || 'aps123'),
       roleId: body.roleId || '', unitId: body.unitId || '',
-      isActive: true, avatarUrl: '', phone: body.phone || '', createdAt: ts(),
+      isActive: true, avatarUrl: '', phone: body.phone || '',
+      department: body.department || '', createdAt: ts(),
     }
     insert('users', user)
     insert('user_points', { id: uid(), userId: user.id, points: 0, level: 1, updatedAt: ts() })
@@ -223,7 +226,7 @@ function usersRoute(method, id, body, me) {
   }
   if (method === 'PUT') {
     const upd = {}
-    ;['name','email','roleId','unitId','phone','isActive','avatarUrl'].forEach(k => {
+    ;['name','email','roleId','unitId','phone','isActive','avatarUrl','department'].forEach(k => {
       if (body[k] !== undefined) upd[k] = body[k]
     })
     if (body.password) upd.password = hashPwd(body.password)
@@ -275,33 +278,60 @@ function tasksRoute(method, id, body, me) {
 }
 
 // ─── EVENTS ───────────────────────────────────────────────────
+function enrichEvent_(ev) {
+  var out = Object.assign({}, ev)
+  out.unit = ev.unitId ? findById('units', ev.unitId) : null
+  // Enrich assignedUsers
+  var ids = []
+  try { ids = typeof ev.assignedUserIds === 'string' ? JSON.parse(ev.assignedUserIds || '[]') : (ev.assignedUserIds || []) } catch(_) {}
+  out.assignedUsers = ids.map(function(uid_) { return enrichUser(findById('users', uid_)) }).filter(Boolean)
+  return out
+}
+
 function eventsRoute(method, id, body, me) {
   if (method === 'GET' && !id) {
-    let list = getAll('events')
-    if (body.status) list = list.filter(e => e.status === body.status)
-    if (body.unitId) list = list.filter(e => e.unitId === body.unitId)
-    return page(list, body.limit, body.offset).map(ev => ({
-      ...ev, unit: ev.unitId ? findById('units', ev.unitId) : null,
-    }))
+    var list = getAll('events')
+    if (body.status) list = list.filter(function(e) { return e.status === body.status })
+    if (body.unitId) list = list.filter(function(e) { return e.unitId === body.unitId })
+    return page(list, body.limit, body.offset).map(enrichEvent_)
   }
-  if (method === 'GET') return findById('events', id)
+  if (method === 'GET') {
+    var ev = findById('events', id)
+    if (!ev) throw new Error('Evento não encontrado')
+    var enriched = enrichEvent_(ev)
+    // Include submissions for this event
+    enriched.submissions = getAll('event_submissions').filter(function(s) { return String(s.eventId) === String(id) }).map(function(s) {
+      return Object.assign({}, s, { user: enrichUser(findById('users', s.userId)) })
+    })
+    return enriched
+  }
   if (method === 'POST') {
-    const ev = {
+    var assignedIds = body.assignedUserIds
+    if (Array.isArray(assignedIds)) assignedIds = JSON.stringify(assignedIds)
+    else if (typeof assignedIds !== 'string') assignedIds = '[]'
+    var newEv = {
       id: uid(), title: body.title, description: body.description || '',
       date: body.date || '', endDate: body.endDate || '',
       location: body.location || '', status: body.status || 'planned',
       unitId: body.unitId || '', createdById: me.id,
-      coverImage: body.coverImage || '', createdAt: ts(),
+      coverImage: body.coverImage || '',
+      assignedUserIds: assignedIds,
+      allowAttachments: body.allowAttachments !== undefined ? body.allowAttachments : true,
+      createdAt: ts(),
     }
-    insert('events', ev)
-    return ev
+    insert('events', newEv)
+    return enrichEvent_(newEv)
   }
   if (method === 'PUT') {
-    const upd = {}
-    ;['title','description','date','endDate','location','status','unitId','coverImage'].forEach(k => {
+    var upd = {}
+    ;['title','description','date','endDate','location','status','unitId','coverImage','allowAttachments'].forEach(function(k) {
       if (body[k] !== undefined) upd[k] = body[k]
     })
-    return updateById('events', id, upd)
+    if (body.assignedUserIds !== undefined) {
+      var aIds = body.assignedUserIds
+      upd.assignedUserIds = Array.isArray(aIds) ? JSON.stringify(aIds) : (typeof aIds === 'string' ? aIds : '[]')
+    }
+    return enrichEvent_(updateById('events', id, upd))
   }
   if (method === 'DELETE') return deleteById('events', id)
   throw new Error('Método não suportado')
@@ -1221,6 +1251,93 @@ function promotoresRoute(method, id, body, me) {
   throw new Error('Metodo nao suportado')
 }
 
+// ─── SUBMISSIONS ──────────────────────────────────────────────
+function submissionsRoute(method, id, body, me) {
+  // Garante sheet existe
+  var ss = getSpreadsheet()
+  if (!ss.getSheetByName('event_submissions')) {
+    var s = ss.insertSheet('event_submissions')
+    var h = ['id','eventId','userId','type','fileUrl','driveFileId','fileName','mimeType','comment','submittedAt']
+    s.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1B3A6B').setFontColor('#FFFFFF')
+    s.setFrozenRows(1)
+  }
+
+  if (method === 'GET') {
+    var list = getAll('event_submissions')
+    if (body.eventId) list = list.filter(function(s) { return String(s.eventId) === String(body.eventId) })
+    return list.map(function(s) { return Object.assign({}, s, { user: enrichUser(findById('users', s.userId)) }) })
+  }
+
+  if (method === 'POST') {
+    var fileUrl = body.fileUrl || ''
+    var driveFileId = body.driveFileId || ''
+    var fileName = body.fileName || ''
+
+    // Se vier base64, faz upload para o Drive
+    if (body.fileBase64 && body.mimeType && body.fileName) {
+      try {
+        var folderName = 'APS EDU - Evidências'
+        var folders = DriveApp.getFoldersByName(folderName)
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName)
+        var blob = Utilities.newBlob(Utilities.base64Decode(body.fileBase64), body.mimeType, body.fileName)
+        var driveFile = folder.createFile(blob)
+        driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW)
+        driveFileId = driveFile.getId()
+        fileUrl = driveFile.getUrl()
+        fileName = driveFile.getName()
+      } catch(uploadErr) {
+        throw new Error('Erro ao fazer upload: ' + uploadErr.message)
+      }
+    }
+
+    var sub = {
+      id: uid(),
+      eventId: body.eventId || '',
+      userId: me.id,
+      type: body.type || (body.mimeType ? (body.mimeType.indexOf('image') >= 0 ? 'image' : body.mimeType.indexOf('video') >= 0 ? 'video' : body.mimeType.indexOf('audio') >= 0 ? 'audio' : 'file') : 'file'),
+      fileUrl: fileUrl,
+      driveFileId: driveFileId,
+      fileName: fileName,
+      mimeType: body.mimeType || '',
+      comment: body.comment || '',
+      submittedAt: ts(),
+    }
+    insert('event_submissions', sub)
+    return Object.assign({}, sub, { user: enrichUser(me) })
+  }
+
+  if (method === 'DELETE') {
+    var existing = findById('event_submissions', id)
+    if (!existing) throw new Error('Submissão não encontrada')
+    var meRole = findById('roles', me.roleId)
+    var isAdmin = meRole && (meRole.slug === 'admin' || (typeof meRole.permissions === 'string' ? JSON.parse(meRole.permissions || '{}') : (meRole.permissions || {})).canManageUsers)
+    if (String(existing.userId) !== String(me.id) && !isAdmin) throw new Error('Não autorizado')
+    return deleteById('event_submissions', id)
+  }
+
+  throw new Error('Método não suportado')
+}
+
+// ─── UPLOAD ───────────────────────────────────────────────────
+function uploadRoute(method, id, body, me) {
+  if (method !== 'POST') throw new Error('Método não suportado')
+  if (!body.fileBase64 || !body.mimeType || !body.fileName) throw new Error('fileBase64, mimeType e fileName são obrigatórios')
+
+  var folderName = body.folder || 'APS EDU - Uploads'
+  var folders = DriveApp.getFoldersByName(folderName)
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName)
+
+  var blob = Utilities.newBlob(Utilities.base64Decode(body.fileBase64), body.mimeType, body.fileName)
+  var driveFile = folder.createFile(blob)
+  driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW)
+
+  return {
+    id: driveFile.getId(),
+    url: driveFile.getUrl(),
+    name: driveFile.getName(),
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 //  SETUP — Execute uma vez para inicializar a planilha
 // ══════════════════════════════════════════════════════════════
@@ -1228,11 +1345,12 @@ function setupSpreadsheet() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
 
   const schemas = {
-    users:              ['id','name','email','password','roleId','unitId','isActive','avatarUrl','phone','createdAt'],
+    users:              ['id','name','email','password','roleId','unitId','isActive','avatarUrl','phone','department','createdAt'],
     roles:              ['id','name','slug','permissions'],
     units:              ['id','name','city','type','region','createdAt'],
     tasks:              ['id','title','description','status','priority','dueDate','assigneeId','createdById','unitId','createdAt','updatedAt'],
-    events:             ['id','title','description','date','endDate','location','status','unitId','createdById','coverImage','createdAt'],
+    events:             ['id','title','description','date','endDate','location','status','unitId','createdById','coverImage','assignedUserIds','allowAttachments','createdAt'],
+    event_submissions:  ['id','eventId','userId','type','fileUrl','driveFileId','fileName','mimeType','comment','submittedAt'],
     announcements:      ['id','title','content','type','authorId','targetRoleIds','targetUnitIds','expiresAt','createdAt'],
     announcement_reads: ['id','announcementId','userId','readAt'],
     feedback:           ['id','content','category','status','isAnonymous','userId','createdAt'],
@@ -1267,20 +1385,40 @@ function setupSpreadsheet() {
 }
 
 function setupRoles_() {
-  if (getAll('roles').length > 0) return
-  const roles = [
-    ['admin',         'Administrador', JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:true, canViewReports:true, canGrantBadges:true })],
-    ['director',      'Diretor',       JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:false, canViewReports:true, canGrantBadges:true })],
-    ['vice_director', 'Vice-Diretor',  JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false })],
-    ['coordinator',   'Coordenador',   JSON.stringify({ canCreateTasks:true, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
-    ['chaplain',      'Capelão',       JSON.stringify({ canCreateTasks:false, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:true })],
-    ['treasurer',     'Tesoureiro',    JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:true, canManageUsers:false, canViewReports:true, canGrantBadges:false })],
-    ['disciplinary',  'Disciplinar',   JSON.stringify({ canCreateTasks:true, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
-    ['counselor',     'Orientador',    JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
-    ['secretary',     'Secretário',    JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
+  const existingRoles = getAll('roles')
+  const existingSlugs = existingRoles.map(function(r) { return r.slug })
+
+  const allRoles = [
+    ['admin',              'Administrador',                   JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:true, canViewReports:true, canGrantBadges:true, canManageDepartment:true })],
+    ['director',           'Diretor',                         JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:false, canViewReports:true, canGrantBadges:true })],
+    ['vice_director',      'Vice-Diretor',                    JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false })],
+    ['coordinator',        'Coordenador',                     JSON.stringify({ canCreateTasks:true, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
+    ['chaplain',           'Capelão',                         JSON.stringify({ canCreateTasks:false, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:true })],
+    ['treasurer',          'Tesoureiro',                      JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:true, canManageUsers:false, canViewReports:true, canGrantBadges:false })],
+    ['disciplinary',       'Disciplinar',                     JSON.stringify({ canCreateTasks:true, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
+    ['counselor',          'Orientador',                      JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
+    ['secretary',          'Secretário',                      JSON.stringify({ canCreateTasks:false, canCreateEvents:false, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:false, canGrantBadges:false })],
+    // Líderes departamentais
+    ['dept_education',     'Departamental de Educação',        JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:true, canViewReports:true, canGrantBadges:true, canManageDepartment:true })],
+    ['coord_marketing',    'Coordenador de Marketing',         JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:true, canManageUsers:true, canViewReports:true, canGrantBadges:true, canManageDepartment:true })],
+    ['coord_pedagogical',  'Coordenação Pedagógica',           JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
+    ['coord_projects',     'Coordenadora de Projetos',         JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
+    ['coord_inclusion',    'Coordenador de Inclusão',          JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
+    ['leader_callcenter',  'Líder Callcenter/Promotores',      JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
+    ['coord_it',           'Coordenador de TI',                JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:false, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
+    ['coord_chaplaincy',   'Coordenador de Capelania',         JSON.stringify({ canCreateTasks:true, canCreateEvents:true, canPublishAnnouncements:true, canViewAllData:false, canManageUsers:false, canViewReports:true, canGrantBadges:false, canManageDepartment:true })],
   ]
-  roles.forEach(([slug, name, permissions]) => insert('roles', { id: uid(), name, slug, permissions }))
-  Logger.log(roles.length + ' cargos inseridos')
+
+  var inserted = 0
+  allRoles.forEach(function(roleData) {
+    var slug = roleData[0], name = roleData[1], permissions = roleData[2]
+    if (existingSlugs.indexOf(slug) === -1) {
+      insert('roles', { id: uid(), name: name, slug: slug, permissions: permissions })
+      inserted++
+    }
+  })
+  if (inserted > 0) Logger.log(inserted + ' novos cargos inseridos')
+  else Logger.log('Cargos já existiam — nenhum novo inserido')
 }
 
 function setupUnits_() {
@@ -1355,6 +1493,80 @@ function setupBadges_() {
     description: 'Conquista da rede APS EDU Sul', createdAt: ts(),
   }))
   Logger.log(badges.length + ' selos inseridos')
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SETUP LÍDERES DEPARTAMENTAIS — Execute manualmente uma vez
+// ══════════════════════════════════════════════════════════════
+function setupDepartmentLeaders() {
+  // Garante que a coluna department existe na sheet users
+  var ss = getSpreadsheet()
+  var usersSheet = ss.getSheetByName('users')
+  if (usersSheet) {
+    var headers = usersSheet.getRange(1, 1, 1, usersSheet.getLastColumn()).getValues()[0]
+    if (headers.indexOf('department') === -1) {
+      usersSheet.getRange(1, headers.length + 1).setValue('department')
+        .setFontWeight('bold').setBackground('#1B3A6B').setFontColor('#FFFFFF')
+      Logger.log('Coluna department adicionada à sheet users')
+    }
+  }
+
+  // Garante que setupRoles_ rodou
+  setupRoles_()
+
+  var roles = getAll('roles')
+  var existingUsers = getAll('users')
+
+  var leaders = [
+    { name: 'Heber Ceribelli',       email: 'heber.ceribelli@adventistas.org',        roleSlug: 'dept_education',    department: 'educacao' },
+    { name: 'Vinicius Andrade',      email: 'engenhariatotal.vinicius@gmail.com',       roleSlug: 'coord_marketing',   department: 'marketing' },
+    { name: 'Elaine Balancieri',     email: 'elaine.balancieri@adventistas.org',        roleSlug: 'coord_pedagogical', department: 'pedagogico_em' },
+    { name: 'Ellen Meire',           email: 'ellen.meire@adventistas.org',              roleSlug: 'coord_pedagogical', department: 'pedagogico_ei' },
+    { name: 'Raquel Justino',        email: 'raquel.justino@adventistas.org',           roleSlug: 'coord_projects',    department: 'projetos' },
+    { name: 'Fábio Lira',            email: 'fabio.lira@adventistas.org',               roleSlug: 'coord_inclusion',   department: 'inclusao' },
+    { name: 'Jakelina Araújo',       email: 'jakelina.araujo@adventistas.org',          roleSlug: 'leader_callcenter', department: 'callcenter' },
+    { name: 'Robson Silva',          email: 'robson.silva@adventistas.org',             roleSlug: 'coord_it',          department: 'ti' },
+    { name: 'Pr. Rodrigo Rodrigues', email: 'rodrigo.rodrigues@adventistas.org',        roleSlug: 'coord_chaplaincy',  department: 'capelania' },
+  ]
+
+  var created = 0, updated = 0
+  leaders.forEach(function(leader) {
+    var role = roles.find(function(r) { return r.slug === leader.roleSlug })
+    if (!role) { Logger.log('AVISO: Role não encontrada: ' + leader.roleSlug); return }
+
+    var existing = existingUsers.find(function(u) { return u.email === leader.email })
+    if (existing) {
+      updateById('users', existing.id, {
+        name: leader.name,
+        roleId: role.id,
+        department: leader.department,
+        isActive: true,
+      })
+      Logger.log('Atualizado: ' + leader.name + ' (' + leader.email + ')')
+      updated++
+    } else {
+      var newUser = {
+        id: uid(),
+        name: leader.name,
+        email: leader.email,
+        password: hashPwd('APS2025@'),
+        roleId: role.id,
+        unitId: '',
+        isActive: true,
+        avatarUrl: '',
+        phone: '',
+        department: leader.department,
+        createdAt: ts(),
+      }
+      insert('users', newUser)
+      insert('user_points', { id: uid(), userId: newUser.id, points: 0, level: 1, updatedAt: ts() })
+      Logger.log('Criado: ' + leader.name + ' (' + leader.email + ')')
+      created++
+    }
+  })
+
+  Logger.log('setupDepartmentLeaders concluído: ' + created + ' criados, ' + updated + ' atualizados')
+  Logger.log('Senha padrão: APS2025@')
 }
 
 // ══════════════════════════════════════════════════════════════

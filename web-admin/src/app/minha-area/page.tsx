@@ -899,6 +899,81 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   const bottomRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
+  // Attachment state
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [attachPreview, setAttachPreview] = useState<string>('') // emoji + filename label
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function getFileEmoji(file: File) {
+    if (file.type.startsWith('image/')) return '📷'
+    if (file.type.startsWith('audio/')) return '🎵'
+    if (file.type.startsWith('video/')) return '🎬'
+    if (file.type.includes('pdf')) return '📕'
+    return '📄'
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAttachedFile(file)
+    setAttachPreview(`${getFileEmoji(file)} ${file.name}`)
+  }
+
+  const clearAttachment = () => {
+    setAttachedFile(null)
+    setAttachPreview('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function processAttachment(file: File): Promise<{ text?: string; imageBase64?: string; imageMimeType?: string }> {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const result = reader.result as string
+        const base64 = result.split(',')[1] || result
+
+        if (file.type.startsWith('image/')) {
+          resolve({ imageBase64: base64, imageMimeType: file.type })
+          return
+        }
+
+        if (file.type.startsWith('audio/')) {
+          try {
+            const res = await fetch('/api/transcribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+            })
+            const data = await res.json()
+            resolve({ text: data.text ? `[Áudio transcrito]: ${data.text}` : '' })
+          } catch {
+            resolve({ text: `[Áudio: ${file.name}]` })
+          }
+          return
+        }
+
+        if (file.type === 'text/plain') {
+          try {
+            const res = await fetch('/api/transcribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+            })
+            const data = await res.json()
+            resolve({ text: data.text ? `[Conteúdo do arquivo ${file.name}]:\n${data.text}` : '' })
+          } catch {
+            resolve({ text: `[Arquivo: ${file.name}]` })
+          }
+          return
+        }
+
+        // Other docs
+        resolve({ text: `[Arquivo anexado: ${file.name}]` })
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const fallback = (period: string) => {
     const p = period.charAt(0).toUpperCase() + period.slice(1)
     const pending = tasks.filter(t => t.status !== 'done')
@@ -981,19 +1056,50 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   }
 
   const send = async (override?: string) => {
-    const text = (override ?? input).trim()
-    if (!text || loading) return
-    const userMsg = { role: 'user' as const, content: text }
+    const baseText = (override ?? input).trim()
+    if ((!baseText && !attachedFile) || loading) return
+
+    let finalText = baseText
+    let imageBase64: string | undefined
+    let imageMimeType: string | undefined
+    const file = attachedFile
+
+    if (file) {
+      setLoading(true)
+      const processed = await processAttachment(file)
+      if (processed.imageBase64) {
+        imageBase64 = processed.imageBase64
+        imageMimeType = processed.imageMimeType
+        finalText = baseText || 'O que há nesta imagem?'
+      } else if (processed.text) {
+        finalText = processed.text + (baseText ? '\n\n' + baseText : '')
+      }
+      clearAttachment()
+    }
+
+    if (!finalText) return
+    const userMsg = { role: 'user' as const, content: finalText }
     const newMsgs = [...messages, userMsg]
     setMessages(newMsgs)
     if (!override) setInput('')
     setLoading(true)
     try {
-      const r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
+      // For vision messages, call the gemini proxy directly
+      let r: any
+      if (imageBase64 && imageMimeType) {
+        const visionRes = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: finalText, imageBase64, imageMimeType }),
+        })
+        const visionData = await visionRes.json()
+        r = { data: { content: visionData.content || visionData.error || 'Não consegui analisar a imagem.' } }
+      } else {
+        r = await api.post('/ai/chat', { messages: newMsgs, context: { tasks, workDay, userName } })
+      }
       const content = r.data?.content || r.data?.message || ''
       const action = r.data?.action
       const errMsg = r.data?.error
-      // Mostra o erro real do backend para facilitar diagnóstico
       const fallbackMsg = errMsg
         ? `❌ Erro no servidor: ${errMsg}`
         : 'Não obtive resposta. Pode reformular?'
@@ -1104,14 +1210,45 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         </div>
       )}
 
+      {/* Attachment preview chip */}
+      {attachPreview && (
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs"
+            style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', color: '#A78BFA' }}>
+            <span>{attachPreview}</span>
+            <button onClick={clearAttachment} className="ml-1 hover:text-red-400 transition-colors" style={{ color: '#FF4757' }}>×</button>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="flex gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,audio/*,.pdf,.doc,.docx,.txt"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        {/* Paperclip button */}
+        <button
+          onClick={() => !loading && fileInputRef.current?.click()}
+          disabled={loading}
+          className="px-3 py-3 rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
+          title="Anexar arquivo"
+          style={{
+            background: attachedFile ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.06)',
+            border: attachedFile ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
+            color: attachedFile ? '#A78BFA' : 'rgba(255,255,255,0.4)',
+          }}>
+          📎
+        </button>
         <input type="text" value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="Pergunte sobre tarefas, agenda, campanha, promotores..."
           className="flex-1 px-4 py-3 rounded-xl text-sm text-white outline-none"
           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
-        <button onClick={send} disabled={loading || !input.trim()}
+        <button onClick={() => send()} disabled={loading || (!input.trim() && !attachedFile)}
           className="px-5 py-3 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
           style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
           ➤
