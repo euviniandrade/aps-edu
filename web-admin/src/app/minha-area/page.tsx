@@ -937,7 +937,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           return
         }
 
-        if (file.type.startsWith('audio/')) {
+        if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
           try {
             const res = await fetch('/api/transcribe', {
               method: 'POST',
@@ -945,30 +945,29 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
               body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
             })
             const data = await res.json()
-            resolve({ text: data.text ? `[Áudio transcrito]: ${data.text}` : '' })
+            resolve({ text: data.text ? `[AUDIO_TRANSCRIBED:${file.name}]\n${data.text}` : `[Áudio: ${file.name} — sem fala detectada]` })
           } catch {
             resolve({ text: `[Áudio: ${file.name}]` })
           }
           return
         }
 
-        if (file.type === 'text/plain') {
-          try {
-            const res = await fetch('/api/transcribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
-            })
-            const data = await res.json()
-            resolve({ text: data.text ? `[Conteúdo do arquivo ${file.name}]:\n${data.text}` : '' })
-          } catch {
-            resolve({ text: `[Arquivo: ${file.name}]` })
+        // All document types: txt, csv, pdf, docx, doc, etc.
+        try {
+          const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+          })
+          const data = await res.json()
+          if (data.text) {
+            resolve({ text: `[DOC_CONTENT:${file.name}]\n${data.text}` })
+          } else {
+            resolve({ text: `[Arquivo: ${file.name} — não foi possível extrair texto]` })
           }
-          return
+        } catch {
+          resolve({ text: `[Arquivo: ${file.name}]` })
         }
-
-        // Other docs
-        resolve({ text: `[Arquivo anexado: ${file.name}]` })
       }
       reader.readAsDataURL(file)
     })
@@ -1070,9 +1069,17 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       if (processed.imageBase64) {
         imageBase64 = processed.imageBase64
         imageMimeType = processed.imageMimeType
-        finalText = baseText || 'O que há nesta imagem?'
+        finalText = baseText || 'Analise esta imagem detalhadamente e descreva o que vê. Se houver texto, leia-o. Se for um documento, extraia as informações principais.'
       } else if (processed.text) {
-        finalText = processed.text + (baseText ? '\n\n' + baseText : '')
+        const isAudio = processed.text.startsWith('[AUDIO_TRANSCRIBED:')
+        const isDoc = processed.text.startsWith('[DOC_CONTENT:')
+        let instruction = ''
+        if (isAudio) {
+          instruction = `\n\n---\nSOFI, você recebeu a transcrição de um áudio do usuário. Analise o conteúdo transcrito: identifique o tema principal, pontos-chave e contexto. ${baseText ? 'O usuário também disse: ' + baseText : 'Responda de forma natural como se tivesse ouvido o áudio, resuma o conteúdo e pergunte se precisa de algo.'}`
+        } else if (isDoc) {
+          instruction = `\n\n---\nSOFI, você acabou de receber e ler o conteúdo completo do documento acima. Faça uma análise profissional e inteligente: (1) Resumo executivo em 3-5 pontos principais, (2) Informações mais relevantes e dados importantes encontrados, (3) Pergunte se o usuário quer algo específico sobre o conteúdo. ${baseText ? 'O usuário também pediu: ' + baseText : ''} Responda como uma secretária profissional e eficiente.`
+        }
+        finalText = processed.text + instruction
       }
       clearAttachment()
     }
@@ -1435,6 +1442,91 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
           )}
         </div>
       )}
+
+      {/* ── TODAY SECTION ──────────────────────────────── */}
+      {(() => {
+        const todayEvents = gcalOnDate(today)
+        const todayTasks = tasksOnDate(today)
+        const allToday = [
+          ...todayEvents.map(e => ({ type: 'event' as const, data: e })),
+          ...todayTasks.map(t => ({ type: 'task' as const, data: t })),
+        ].sort((a, b) => {
+          const aTime = a.type === 'event' ? new Date(a.data.start).getTime() : Infinity
+          const bTime = b.type === 'event' ? new Date(b.data.start).getTime() : Infinity
+          return aTime - bTime
+        })
+        return (
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#F8A303' }}>📅 Hoje</span>
+              <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+              {allToday.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+                  {allToday.length} item{allToday.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {allToday.length === 0 ? (
+              <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.25)' }}>
+                Nenhum compromisso para hoje 🎉
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {allToday.map((item, idx) => {
+                  if (item.type === 'event') {
+                    const e = item.data
+                    const color = e.calendarColor || '#4285F4'
+                    const timeLabel = e.allDay ? 'Dia todo' : new Date(e.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    return (
+                      <button key={`ev-${idx}`} onClick={() => openEvent(e)}
+                        className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all hover:brightness-110"
+                        style={{ background: color + '12', border: `1px solid ${color}30` }}>
+                        <div className="flex-shrink-0 text-center" style={{ minWidth: 40 }}>
+                          <p className="text-[10px] font-bold" style={{ color }}>{timeLabel}</p>
+                        </div>
+                        <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: color + '60' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{e.title}</p>
+                          {e.location && <p className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>📍 {e.location}</p>}
+                          {e.calendarName && <p className="text-[10px]" style={{ color: color + 'AA' }}>{e.calendarName}</p>}
+                        </div>
+                        <span className="text-[10px] flex-shrink-0" style={{ color: color + '99' }}>↗</span>
+                      </button>
+                    )
+                  } else {
+                    const t = item.data as typeof tasks[0]
+                    const cat = CAT_STYLE[t.category] || CAT_STYLE.trabalho
+                    return (
+                      <div key={`tk-${idx}`} className="rounded-xl px-3 py-2.5 flex items-center gap-3"
+                        style={{ background: cat.bg, border: `1px solid ${cat.color}33` }}>
+                        <div className="flex-shrink-0 text-center" style={{ minWidth: 40 }}>
+                          <p className="text-[10px] font-bold" style={{ color: cat.color }}>prazo</p>
+                        </div>
+                        <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: cat.color + '60' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${t.status === 'done' ? 'line-through opacity-40' : ''}`} style={{ color: 'rgba(255,255,255,0.9)' }}>
+                            📋 {t.title}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* ── THIS WEEK SECTION ──────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>📆 Esta Semana</span>
+        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+        </span>
+      </div>
 
       {/* Week Grid */}
       <div className="grid grid-cols-7 gap-2">

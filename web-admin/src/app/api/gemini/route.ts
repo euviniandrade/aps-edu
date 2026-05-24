@@ -5,12 +5,18 @@ export const maxDuration = 30
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
 
-// Modelos em ordem de preferência — remove os descontinuados
-const MODELS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'gemma2-9b-it',
-]
+// Modelos por capacidade
+const MODELS_FAST = ['llama-3.1-8b-instant', 'gemma2-9b-it']
+const MODELS_SMART = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it']
+
+// Seleciona lista de modelos com base no tipo de prompt
+function selectModels(prompt: string): string[] {
+  const isComplex =
+    prompt.length > 800 ||                          // long prompt
+    /\[DOC_CONTENT:|AUDIO_TRANSCRIBED:/i.test(prompt) || // file content
+    /analise|resumo|relatório|compara|explique|estratégia/i.test(prompt) // analytical keywords
+  return isComplex ? MODELS_SMART : MODELS_FAST
+}
 
 // Modelos de visão em ordem de preferência
 const VISION_MODELS = [
@@ -93,7 +99,8 @@ export async function POST(req: NextRequest) {
       console.warn('Vision models failed, falling back to text:', errSummary)
     }
 
-    // Text-only path
+    // Text-only path — pick model list based on prompt complexity
+    const MODELS = selectModels(prompt)
     const errors: string[] = []
     for (const model of MODELS) {
       const data = await callGroq(prompt, model)
