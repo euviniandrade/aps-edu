@@ -10,7 +10,7 @@ import {
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
-  UserGroupIcon,
+  UserGroupIcon, RocketLaunchIcon,
 } from '@heroicons/react/24/outline'
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
@@ -20,7 +20,7 @@ import {
   ChartBarIcon as ChartIconSolid,
   ChatBubbleLeftEllipsisIcon as ChatIconSolid,
   KeyIcon as KeyIconSolid, BuildingLibraryIcon as BuildingIconSolid,
-  UserGroupIcon as UserGroupIconSolid,
+  UserGroupIcon as UserGroupIconSolid, RocketLaunchIcon as RocketLaunchIconSolid,
 } from '@heroicons/react/24/solid'
 
 // Nav organizado em seções
@@ -48,6 +48,7 @@ const navSections = [
     items: [
       { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
       { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
+      { href: '/inovacao',      label: 'Inovação IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
       { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#E07B39', roles: ['leader', 'admin'] },
     ],
   },
@@ -602,7 +603,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { href: '/tasks',        icon: '✅', label: 'Tarefas' },
           { href: '/minha-area',   icon: '⚡', label: 'Sofi' },
           { href: '/notificacoes', icon: '🔔', label: 'Notif.' },
-          { href: '/analytics',    icon: '📊', label: 'Analytics' },
+          { href: '/inovacao',     icon: '🚀', label: 'Inovar' },
         ].map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (

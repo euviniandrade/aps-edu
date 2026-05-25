@@ -25,6 +25,7 @@ const NAV_COMMANDS = [
   { id: 'go-notif',         label: 'Notificações',          icon: '🔔', path: '/notificacoes',  keywords: ['notif', 'alerta'] },
   { id: 'go-automacoes',    label: 'Automações IA',         icon: '⚡', path: '/automacoes',    keywords: ['automation', 'regra', 'fluxo'] },
   { id: 'go-analytics',     label: 'Analytics Preditivo',   icon: '🔮', path: '/analytics',     keywords: ['predicao', 'forecast', 'tendencia'] },
+  { id: 'go-inovacao',      label: 'Central de Inovação IA', icon: '🚀', path: '/inovacao',      keywords: ['inovacao', 'ia', 'agentes', 'marketing', 'saas', 'dados'] },
   { id: 'go-config',        label: 'Configurações',         icon: '⚙️', path: '/configuracoes', keywords: ['config', 'perfil', 'senha'] },
 ]
 
