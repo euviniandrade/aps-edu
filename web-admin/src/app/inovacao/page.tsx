@@ -58,6 +58,13 @@ interface AgentBlueprint {
   color: string
 }
 
+interface AiMeta {
+  provider?: string
+  providerLabel?: string
+  model?: string
+  attemptedProviders?: string[]
+}
+
 const LS_EXPERIMENTS = 'apsedu_innovation_experiments'
 
 const tabs: { key: TabKey; label: string; icon: string }[] = [
@@ -258,10 +265,16 @@ const agentBlueprints: AgentBlueprint[] = [
 const aiProviders = [
   { name: 'Gemini', type: 'Texto e raciocínio', status: 'Ativo com GEMINI_API_KEY', cost: 'Free tier disponível', use: 'Briefings, análises, planos e conversa da Sofi' },
   { name: 'Groq', type: 'Texto rápido, visão e áudio', status: 'Ativo com GROQ_API_KEY', cost: 'Free tier disponível', use: 'Chat rápido, transcrição e leitura de imagem' },
+  { name: 'OpenAI', type: 'Raciocínio e agentes', status: 'Opcional com OPENAI_API_KEY', cost: 'Pago/free credits', use: 'Planos executivos, agentes e respostas de alta qualidade' },
+  { name: 'Anthropic Claude', type: 'Análise e escrita', status: 'Opcional com ANTHROPIC_API_KEY', cost: 'Pago', use: 'Relatórios longos, revisão, estratégia e comunicação cuidadosa' },
+  { name: 'Mistral AI', type: 'Modelo europeu', status: 'Opcional com MISTRAL_API_KEY', cost: 'Free tier/pago', use: 'Fallback rápido para texto e automações' },
+  { name: 'DeepSeek', type: 'Raciocínio técnico', status: 'Opcional com DEEPSEEK_API_KEY', cost: 'Baixo custo', use: 'Análise, lógica e apoio técnico' },
+  { name: 'OpenRouter', type: 'Hub multi-modelo', status: 'Opcional com OPENROUTER_API_KEY', cost: 'Conforme modelo', use: 'Acesso unificado a modelos de vários provedores' },
+  { name: 'xAI Grok', type: 'Texto e raciocínio', status: 'Opcional com XAI_API_KEY', cost: 'Pago', use: 'Fallback alternativo para planos e diagnósticos' },
+  { name: 'Perplexity', type: 'Busca com IA', status: 'Opcional com PERPLEXITY_API_KEY', cost: 'Pago', use: 'Respostas com contexto externo quando ativado' },
   { name: 'Pollinations', type: 'Imagem', status: 'Sem chave', cost: 'Gratuito', use: 'Geração de imagens e peças visuais simples' },
   { name: 'Hugging Face', type: 'Imagem fallback', status: 'Opcional com HF_TOKEN', cost: 'Free tier/limites', use: 'Fallback para geração visual' },
   { name: 'DuckDuckGo Instant Answer', type: 'Busca', status: 'Sem chave', cost: 'Gratuito', use: 'Pesquisa rápida para contexto da Sofi' },
-  { name: 'OpenAI/Anthropic', type: 'Premium opcional', status: 'Somente se chave existir', cost: 'Pago', use: 'Fallback avançado sem travar o produto' },
 ]
 
 const defaultExperiments: Experiment[] = [
@@ -312,12 +325,65 @@ function SectionCard({ children, className = '' }: { children: React.ReactNode; 
   )
 }
 
+function formatAiLine(line: string) {
+  return line
+    .replace(/^#+\s*/, '')
+    .replace(/\*\*/g, '')
+    .replace(/^\s*[-*]\s*/, '')
+    .trim()
+}
+
+function renderAiReport(content: string) {
+  const lines = content.split('\n').map(line => line.trim()).filter(Boolean)
+  if (!lines.length) return null
+
+  return (
+    <div className="space-y-3">
+      {lines.map((line, index) => {
+        const isHeading = /^#{1,3}\s+/.test(line) || /^\*\*[^*]+:\*\*$/.test(line) || /^\*\*[^*]+\*\*$/.test(line)
+        const isNumbered = /^\d+\.\s+/.test(line)
+        const isBullet = /^[-*]\s+/.test(line)
+        const cleaned = formatAiLine(line.replace(/^\d+\.\s+/, ''))
+
+        if (isHeading) {
+          return (
+            <div key={`${line}-${index}`} className="pt-2">
+              <p className="text-sm font-extrabold text-white">{cleaned.replace(/:$/, '')}</p>
+              <div className="mt-2 h-px" style={{ background: 'linear-gradient(90deg, rgba(248,163,3,0.55), rgba(248,163,3,0))' }} />
+            </div>
+          )
+        }
+
+        if (isNumbered || isBullet) {
+          return (
+            <div key={`${line}-${index}`} className="flex gap-3 rounded-2xl p-3"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0"
+                style={{ background: 'rgba(248,163,3,0.16)', color: '#FDC347' }}>
+                {isNumbered ? line.match(/^\d+/)?.[0] : '•'}
+              </span>
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.74)' }}>{cleaned}</p>
+            </div>
+          )
+        }
+
+        return (
+          <p key={`${line}-${index}`} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)' }}>
+            {cleaned}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function InovacaoPage() {
   const responseRef = useRef<HTMLDivElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [selectedTool, setSelectedTool] = useState<ToolCard>(toolCards[0])
   const [context, setContext] = useState('Prioridades da semana, dados das unidades, tarefas em atraso, campanhas e decisões pendentes.')
   const [aiOutput, setAiOutput] = useState('')
+  const [aiMeta, setAiMeta] = useState<AiMeta | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [actionNotice, setActionNotice] = useState('')
   const [experiments, setExperiments] = useState<Experiment[]>(defaultExperiments)
@@ -359,6 +425,7 @@ export default function InovacaoPage() {
     setSelectedTool(tool)
     setAiLoading(true)
     setAiOutput('')
+    setAiMeta(null)
     setActionNotice(`Sofi está gerando o plano: ${tool.title}`)
     window.setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
     try {
@@ -382,6 +449,12 @@ Responda em português, com:
       })
       const data = await res.json()
       setAiOutput(data.content || data.error || 'A Sofi não retornou conteúdo agora.')
+      setAiMeta({
+        provider: data.provider,
+        providerLabel: data.providerLabel,
+        model: data.model,
+        attemptedProviders: data.attemptedProviders,
+      })
       setActionNotice(data.content ? `Plano pronto: ${tool.title}` : `A Sofi retornou um aviso para ${tool.title}`)
     } catch {
       setAiOutput('Não consegui chamar a Sofi agora. Verifique as chaves dos provedores ou tente novamente.')
@@ -823,25 +896,53 @@ Responda em português, com:
 
         {(aiOutput || aiLoading) && (
           <div ref={responseRef}>
-            <SectionCard className="border-gold">
-              <div className="flex items-center gap-3 mb-3">
-                <ChatBubbleBottomCenterTextIcon className="w-6 h-6" style={{ color: '#F8A303' }} />
-                <div>
-                  <p className="text-base font-extrabold text-white">Resposta da Sofi</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.36)' }}>{selectedTool.title}</p>
+            <div className="rounded-3xl overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, rgba(248,163,3,0.14), rgba(10,189,120,0.08) 45%, rgba(74,158,255,0.10))', border: '1px solid rgba(248,163,3,0.24)', boxShadow: '0 22px 70px rgba(0,0,0,0.22)' }}>
+              <div className="p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', color: '#000', boxShadow: '0 0 32px rgba(248,163,3,0.24)' }}>
+                      <ChatBubbleBottomCenterTextIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-extrabold text-white">Plano executivo da Sofi</p>
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.48)' }}>{selectedTool.title}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge color="#F8A303">{aiLoading ? 'Gerando agora' : 'Plano pronto'}</Badge>
+                    {aiMeta?.providerLabel && <Badge color="#4A9EFF">{aiMeta.providerLabel}</Badge>}
+                    {aiMeta?.model && <Badge color="#0ABD78">{aiMeta.model}</Badge>}
+                  </div>
                 </div>
               </div>
+              {aiMeta?.attemptedProviders?.length ? (
+                <div className="px-5 pt-4 flex flex-wrap gap-1.5">
+                  {aiMeta.attemptedProviders.map(provider => <Badge key={provider} color="#8B5CF6">{provider}</Badge>)}
+                </div>
+              ) : null}
               {aiLoading ? (
-                <div className="flex items-center gap-2 py-6">
-                  {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F8A303', animationDelay: `${i * 0.2}s` }} />)}
-                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Sofi está montando o plano...</span>
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[0, 1, 2].map(i => <span key={i} className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: '#F8A303', animationDelay: `${i * 0.2}s` }} />)}
+                    </div>
+                    <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.68)' }}>Sofi está escolhendo o melhor provedor e montando o plano...</span>
+                  </div>
+                  {[72, 94, 64, 88].map((width, index) => (
+                    <div key={width} className="h-4 rounded-full animate-pulse"
+                      style={{ width: `${width}%`, background: 'rgba(255,255,255,0.08)', animationDelay: `${index * 0.12}s` }} />
+                  ))}
                 </div>
               ) : (
-                <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'rgba(255,255,255,0.74)' }}>
-                  {aiOutput}
+                <div className="p-5">
+                  <div className="rounded-2xl p-5" style={{ background: 'rgba(3,7,18,0.42)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {renderAiReport(aiOutput)}
+                  </div>
                 </div>
               )}
-            </SectionCard>
+            </div>
           </div>
         )}
 
