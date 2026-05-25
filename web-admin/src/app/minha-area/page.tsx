@@ -71,38 +71,122 @@ function calcXpLevel(xp: number) {
   return { level, progress, next: 100 }
 }
 
-// ─── CREDENTIALS VAULT (localStorage, PIN-protected) ─────────
+// ─── CREDENTIALS VAULT (local-only, PIN-derived encryption) ─────────
 const VAULT_KEY = 'aps_edu_vault_v2'
 const VAULT_PIN_KEY = 'aps_edu_vault_pin'
 
-function saveVault(creds: Credential[], pin: string) {
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(creds) + '|||' + pin)))
-  localStorage.setItem(VAULT_KEY, encoded)
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+  return btoa(binary)
 }
 
-function loadVault(pin: string): Credential[] | null {
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value)
+  return Uint8Array.from(binary, char => char.charCodeAt(0))
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
+async function deriveVaultBits(pin: string, salt: Uint8Array, usage: 'verify' | 'encrypt') {
+  const pinBytes = new TextEncoder().encode(pin)
+  const material = await crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(pinBytes),
+    'PBKDF2',
+    false,
+    ['deriveBits', 'deriveKey']
+  )
+  if (usage === 'verify') {
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: toArrayBuffer(salt), iterations: 210_000, hash: 'SHA-256' },
+      material,
+      256
+    )
+    return new Uint8Array(bits)
+  }
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: toArrayBuffer(salt), iterations: 210_000, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+async function setVaultPin(pin: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const hash = await deriveVaultBits(pin, salt, 'verify') as Uint8Array
+  localStorage.setItem(VAULT_PIN_KEY, JSON.stringify({
+    v: 3,
+    salt: bytesToBase64(salt),
+    hash: bytesToBase64(hash),
+  }))
+}
+
+async function verifyVaultPin(pin: string): Promise<boolean> {
+  try {
+    const raw = localStorage.getItem(VAULT_PIN_KEY)
+    if (!raw) return false
+    if (!raw.trim().startsWith('{')) return raw === pin
+    const stored = JSON.parse(raw)
+    const salt = base64ToBytes(stored.salt)
+    const expected = base64ToBytes(stored.hash)
+    const actual = await deriveVaultBits(pin, salt, 'verify') as Uint8Array
+    if (actual.length !== expected.length) return false
+    return actual.every((byte, i) => byte === expected[i])
+  } catch {
+    return false
+  }
+}
+
+async function saveVault(creds: Credential[], pin: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await deriveVaultBits(pin, salt, 'encrypt') as CryptoKey
+  const plain = new TextEncoder().encode(JSON.stringify(creds))
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: toArrayBuffer(iv) },
+    key,
+    toArrayBuffer(plain)
+  )
+  localStorage.setItem(VAULT_KEY, JSON.stringify({
+    v: 3,
+    salt: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(encrypted)),
+  }))
+}
+
+async function loadVault(pin: string): Promise<Credential[] | null> {
   try {
     const raw = localStorage.getItem(VAULT_KEY)
     if (!raw) return []
-    const decoded = decodeURIComponent(escape(atob(raw)))
-    const sep = decoded.lastIndexOf('|||')
-    if (sep === -1) return null
-    const storedPin = decoded.slice(sep + 3)
-    if (storedPin !== pin) return null
-    return JSON.parse(decoded.slice(0, sep))
-  } catch { return null }
+    if (!raw.trim().startsWith('{')) {
+      const decoded = decodeURIComponent(escape(atob(raw)))
+      const sep = decoded.lastIndexOf('|||')
+      if (sep === -1) return null
+      const storedPin = decoded.slice(sep + 3)
+      if (storedPin !== pin) return null
+      return JSON.parse(decoded.slice(0, sep))
+    }
+    const stored = JSON.parse(raw)
+    const key = await deriveVaultBits(pin, base64ToBytes(stored.salt), 'encrypt') as CryptoKey
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: toArrayBuffer(base64ToBytes(stored.iv)) },
+      key,
+      toArrayBuffer(base64ToBytes(stored.data))
+    )
+    return JSON.parse(new TextDecoder().decode(decrypted))
+  } catch {
+    return null
+  }
 }
 
 function hasPinSet(): boolean {
   return !!localStorage.getItem(VAULT_PIN_KEY)
-}
-
-function verifyPin(pin: string): boolean {
-  return localStorage.getItem(VAULT_PIN_KEY) === pin
-}
-
-function setPin(pin: string) {
-  localStorage.setItem(VAULT_PIN_KEY, pin)
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────
@@ -493,7 +577,14 @@ function TaskCard({
 
 // ─── TASK FORM ────────────────────────────────────────────────
 function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => void; onClose: () => void }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string
+    category: PersonalTask['category']
+    duration: number
+    priority: PersonalTask['priority']
+    notes: string
+    dueDate: string
+  }>({
     title: '', category: 'trabalho', duration: 30, priority: 'medium', notes: '', dueDate: ''
   })
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -586,40 +677,48 @@ function CredentialsVault() {
   const [showPwd, setShowPwd]   = useState<Record<string, boolean>>({})
   const [isSetup, setIsSetup]   = useState(false)
   const [confirmPin, setConfirmPin] = useState('')
+  const [vaultBusy, setVaultBusy] = useState(false)
 
   useEffect(() => {
     setIsSetup(!hasPinSet())
   }, [])
 
-  const unlock = () => {
+  const unlock = async () => {
+    if (!crypto?.subtle) {
+      setPinError('Criptografia do navegador indisponível.')
+      return
+    }
+    setVaultBusy(true)
     if (isSetup) {
-      if (pin.length < 4) { setPinError('PIN deve ter pelo menos 4 dígitos'); return }
-      if (pin !== confirmPin) { setPinError('PINs não coincidem'); return }
-      localStorage.setItem(VAULT_PIN_KEY, pin)
-      saveVault([], pin)
+      if (pin.length < 4) { setPinError('PIN deve ter pelo menos 4 dígitos'); setVaultBusy(false); return }
+      if (pin !== confirmPin) { setPinError('PINs não coincidem'); setVaultBusy(false); return }
+      await setVaultPin(pin)
+      await saveVault([], pin)
       setCreds([])
       setUnlocked(true)
     } else {
-      if (!verifyPin(pin)) { setPinError('PIN incorreto'); return }
-      const loaded = loadVault(pin)
-      if (loaded === null) { setPinError('Erro ao carregar cofre'); return }
+      if (!await verifyVaultPin(pin)) { setPinError('PIN incorreto'); setVaultBusy(false); return }
+      const loaded = await loadVault(pin)
+      if (loaded === null) { setPinError('Erro ao carregar cofre'); setVaultBusy(false); return }
       setCreds(loaded)
+      await saveVault(loaded, pin)
       setUnlocked(true)
     }
     setPinError('')
+    setVaultBusy(false)
   }
 
-  const save = (newCreds: Credential[]) => {
+  const save = async (newCreds: Credential[]) => {
     setCreds(newCreds)
-    saveVault(newCreds, pin)
+    await saveVault(newCreds, pin)
   }
 
-  const addCred = (c: Omit<Credential, 'id' | 'createdAt'>) => {
+  const addCred = async (c: Omit<Credential, 'id' | 'createdAt'>) => {
     const newCreds = [...creds, { ...c, id: Date.now().toString(), createdAt: new Date().toISOString() }]
-    save(newCreds)
+    await save(newCreds)
   }
 
-  const delCred = (id: string) => save(creds.filter(c => c.id !== id))
+  const delCred = async (id: string) => save(creds.filter(c => c.id !== id))
 
   const filtered = creds.filter(c =>
     c.service.toLowerCase().includes(search.toLowerCase()) ||
@@ -657,14 +756,14 @@ function CredentialsVault() {
               style={{ background: 'rgba(255,255,255,0.07)', border: `1px solid ${pinError ? 'rgba(255,71,87,0.4)' : 'rgba(255,255,255,0.1)'}` }} />
           )}
           {pinError && <p className="text-xs text-center" style={{ color: '#FF4757' }}>{pinError}</p>}
-          <button onClick={unlock}
-            className="w-full py-3 rounded-xl text-sm font-bold text-black"
+          <button onClick={unlock} disabled={vaultBusy}
+            className="w-full py-3 rounded-xl text-sm font-bold text-black disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-            {isSetup ? 'Criar Cofre' : 'Desbloquear'}
+            {vaultBusy ? 'Protegendo...' : isSetup ? 'Criar Cofre' : 'Desbloquear'}
           </button>
         </div>
         <p className="text-[10px] text-center max-w-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          🔒 Dados armazenados apenas neste dispositivo. Nunca enviados ao servidor.
+          🔒 Dados criptografados neste dispositivo com chave derivada do PIN. Nunca enviados ao servidor.
         </p>
       </div>
     )
@@ -1495,7 +1594,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   const today = new Date()
 
   // modal state
-  const [sel, setSel] = useState<any | null>(null)
+  const [sel, setSel] = useState<Record<string, any> | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editStart, setEditStart] = useState('')

@@ -14,6 +14,8 @@ const QUICK_PROMPTS = [
   { label: '📋 Tarefas urgentes',   text: 'Quais são as tarefas mais urgentes da rede? O que precisa de atenção imediata?' },
   { label: '👥 Engajamento',        text: 'Como está o engajamento dos colaboradores? Dê dicas práticas para melhorar.' },
   { label: '🚀 Plano da semana',    text: 'Sugira um plano de ação para essa semana com base nos dados da plataforma.' },
+  { label: '🧭 Radar de unidade',   text: 'Monte um Radar de Unidade: riscos, prioridades e próximos passos para a Associação Paulista Sul.' },
+  { label: '📝 Ata + tarefas',      text: 'Ajude a transformar uma reunião em ata, decisões, responsáveis e tarefas de acompanhamento.' },
 ]
 
 function SparklesIcon({ size = 20 }: { size?: number }) {

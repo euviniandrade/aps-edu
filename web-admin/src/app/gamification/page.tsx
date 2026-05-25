@@ -72,7 +72,9 @@ export default function GamificationPage() {
           { icon: StarIcon,    accent: '#A78BFA', value: badges.length,            label: 'Selos Disponíveis' },
           { icon: ChartBarIcon,accent: '#4A9EFF', value: ranking[0]?.points ?? 0,  label: 'Maior Pontuação' },
           { icon: null,        accent: '#0ABD78', value: myStats?.points ?? 0,     label: 'Meus Pontos', emoji: '🏅' },
-        ].map((kpi, i) => (
+        ].map((kpi, i) => {
+          const Icon = kpi.icon
+          return (
           <div
             key={i}
             className="rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02]"
@@ -89,7 +91,7 @@ export default function GamificationPage() {
               >
                 {kpi.emoji
                   ? <span className="text-xl">{kpi.emoji}</span>
-                  : <kpi.icon className="w-5 h-5" style={{ color: kpi.accent }} />
+                  : Icon && <Icon className="w-5 h-5" style={{ color: kpi.accent }} />
                 }
               </div>
               <div>
@@ -100,7 +102,7 @@ export default function GamificationPage() {
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Tabs */}

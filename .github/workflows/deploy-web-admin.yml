@@ -12,6 +12,7 @@ jobs:
   deploy:
     name: Deploy Web Admin
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -35,4 +36,5 @@ jobs:
 
       - name: Deploy to Vercel
         working-directory: web-admin
+        timeout-minutes: 8
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

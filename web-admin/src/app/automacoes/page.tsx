@@ -41,6 +41,8 @@ const ACTIONS = [
   { id: 'add_points',         label: 'Adicionar pontos de gamificação',  icon: '⭐' },
   { id: 'generate_report',    label: 'Gerar relatório PDF',              icon: '📊' },
   { id: 'sofi_summary',       label: 'Sofi gera resumo semanal',         icon: '🤖' },
+  { id: 'sofi_risk_radar',    label: 'Sofi atualiza Radar de Unidade',   icon: '🧭' },
+  { id: 'create_followup',    label: 'Criar follow-up de acompanhamento', icon: '🎯' },
   { id: 'webhook',            label: 'Chamar webhook externo',           icon: '🔗' },
 ]
 
@@ -87,6 +89,20 @@ const PRESET_RULES: Omit<AutomationRule, 'id' | 'runs' | 'lastRun' | 'createdAt'
     condition: 'points_below_100',
     action: 'send_email',
     active: false,
+  },
+  {
+    name: '🧭 Radar APS de unidade em risco',
+    trigger: 'daily_9am',
+    condition: 'overdue_3days',
+    action: 'sofi_risk_radar',
+    active: true,
+  },
+  {
+    name: '🎯 Follow-up automático de atraso',
+    trigger: 'task_overdue',
+    condition: 'priority_high',
+    action: 'create_followup',
+    active: true,
   },
 ]
 

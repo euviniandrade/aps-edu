@@ -103,7 +103,7 @@ export default function EventsPage() {
     })
     // Load current user from cookie/local storage via API
     try {
-      const token = document.cookie.split(';').find(c => c.trim().startsWith('token='))?.split('=')[1]
+      const token = document.cookie.split(';').find(c => c.trim().startsWith('accessToken='))?.split('=')[1]
       if (token) {
         api.get('/users/me').then(r => setCurrentUser(r.data)).catch(() => {})
       }

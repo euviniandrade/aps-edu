@@ -128,6 +128,28 @@ Seja direto, use dados, máximo 4 linhas no total.`
   }))
 
   const riskUnits = (data?.unitsRanking || []).filter((u: any) => (u.avgPoints || 0) < 50)
+  const radarActions = [
+    {
+      title: 'Intervenção em 48h',
+      metric: `${riskUnits.length} unidade${riskUnits.length === 1 ? '' : 's'}`,
+      detail: riskUnits.length > 0
+        ? 'Priorize conversa com direção local e redistribuição de tarefas críticas.'
+        : 'Nenhuma unidade exige intervenção imediata hoje.',
+      color: riskUnits.length > 0 ? '#FF4757' : '#0ABD78',
+    },
+    {
+      title: 'Ritual de engajamento',
+      metric: `${Math.max(1, Math.ceil((data?.totalActiveUsers || 0) / 25))} grupos`,
+      detail: 'Rodadas semanais curtas com foco em pendências, vitórias e próximos compromissos.',
+      color: '#4A9EFF',
+    },
+    {
+      title: 'Briefing executivo',
+      metric: 'Segunda 9h',
+      detail: 'Use a Sofi para gerar resumo de riscos, avanços e decisões recomendadas.',
+      color: '#F8A303',
+    },
+  ]
 
   const COLORS = ['#F8A303', '#4A9EFF', '#0ABD78', '#8B5CF6', '#FF4757', '#29ABE2', '#F9C234']
 
@@ -190,6 +212,25 @@ Seja direto, use dados, máximo 4 linhas no total.`
         ) : (
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando análise...</p>
         )}
+      </div>
+
+      {/* APS Intelligence Radar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        {radarActions.map(action => (
+          <div key={action.title} className="rounded-2xl p-4"
+            style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${action.color}30` }}>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-sm font-bold text-white">{action.title}</p>
+              <span className="text-xs font-extrabold px-2 py-1 rounded-lg"
+                style={{ background: `${action.color}18`, color: action.color }}>
+                {action.metric}
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.42)' }}>
+              {action.detail}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Charts row 1 */}

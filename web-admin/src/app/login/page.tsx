@@ -41,8 +41,8 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      Cookies.set('accessToken', data.accessToken, { expires: 365 })
-      Cookies.set('refreshToken', data.refreshToken, { expires: 365 })
+      Cookies.set('accessToken', data.accessToken, { expires: 7, sameSite: 'strict', secure: true })
+      Cookies.set('refreshToken', data.refreshToken, { expires: 30, sameSite: 'strict', secure: true })
       // Salva apenas os campos essenciais para evitar estourar o limite de 4KB do cookie
       const userMinimal = {
         id:    data.user.id,
@@ -51,7 +51,7 @@ export default function LoginPage() {
         role:  { slug: data.user.role?.slug, name: data.user.role?.name },
         unit:  data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
       }
-      Cookies.set('user', JSON.stringify(userMinimal), { expires: 365 })
+      Cookies.set('user', JSON.stringify(userMinimal), { expires: 30, sameSite: 'strict', secure: true })
       router.replace('/dashboard')
     } catch {
       setError('E-mail ou senha incorretos.')
