@@ -274,7 +274,7 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
 const HOURS_24 = Array.from({ length: 24 }, (_, i) => i)
 const MINUTES_5 = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
-const selectStyle: React.CSSProperties = {
+const selectStyle = {
   background: 'rgba(255,255,255,0.07)',
   border: '1px solid rgba(255,255,255,0.12)',
   color: 'white',
@@ -282,11 +282,12 @@ const selectStyle: React.CSSProperties = {
   padding: '8px 6px',
   fontSize: '0.85rem',
   fontWeight: 700,
-  textAlign: 'center',
+  textAlign: 'center' as const,
   outline: 'none',
   width: '100%',
   cursor: 'pointer',
-  appearance: 'none' as any,
+  WebkitAppearance: 'none' as const,
+  MozAppearance: 'none' as const,
 }
 
 function WorkDayEditor({ wd, onSave }: { wd: WorkDay; onSave: (w: WorkDay) => void }) {
