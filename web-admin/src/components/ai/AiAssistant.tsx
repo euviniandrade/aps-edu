@@ -59,6 +59,20 @@ function TypingDots() {
 }
 
 // JSON action parser — same logic as minha-area
+function calendarPayloadForTask(task: any) {
+  if (!task?.dueDate || !task?.title) return null
+  const start = new Date(`${task.dueDate}T09:00:00`)
+  const duration = Math.max(15, Number(task.duration) || 30)
+  const end = new Date(start.getTime() + duration * 60 * 1000)
+  return {
+    title: `Tarefa: ${task.title}`,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    description: task.notes || 'Criado automaticamente pela Sofi na APS-EDU.',
+    reminderMinutes: 60,
+  }
+}
+
 function parseAction(response: string): { content: string; action: any | null } {
   let contentFinal = response.replace(/```json[\s\S]*?```/g, '').replace(/```[\s\S]*?```/g, '').trim()
   let actionFinal: any = null
@@ -271,6 +285,8 @@ export default function AiAssistant() {
         window.dispatchEvent(new CustomEvent('workday_updated', { detail: updated }))
       } else if (action.type === 'create_task') {
         const created = await api.post('/personal', action.data)
+        const calendarPayload = calendarPayloadForTask(created.data)
+        if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
         window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: [created.data] } }))
         addMsg('assistant', `✅ Tarefa criada e destacada na sua área: **${created.data?.title || action.data?.title || 'Nova tarefa'}**`)
       } else if (action.type === 'create_tasks') {
@@ -279,6 +295,8 @@ export default function AiAssistant() {
         for (const item of items) {
           if (!item?.title) continue
           const res = await api.post('/personal', item)
+          const calendarPayload = calendarPayloadForTask(res.data)
+          if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
           created.push(res.data)
         }
         if (created.length) {

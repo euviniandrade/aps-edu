@@ -118,6 +118,19 @@ function parsePersonalTasksFromText(text: string): Partial<PersonalTask>[] {
   }).filter(task => !!task.title)
 }
 
+function calendarPayloadForTask(task: Partial<PersonalTask>) {
+  if (!task.dueDate || !task.title) return null
+  const start = new Date(`${task.dueDate}T09:00:00`)
+  const end = new Date(start.getTime() + Math.max(15, Number(task.duration) || 30) * 60 * 1000)
+  return {
+    title: `Tarefa: ${task.title}`,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    description: task.notes || 'Criado automaticamente pela Sofi na APS-EDU.',
+    reminderMinutes: 60,
+  }
+}
+
 // ─── CREDENTIALS VAULT (local-only, PIN-derived encryption) ─────────
 const VAULT_KEY = 'aps_edu_vault_v2'
 const VAULT_PIN_KEY = 'aps_edu_vault_pin'
@@ -1270,6 +1283,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     try {
       if (action.type === 'create_task') {
         const res = await api.post('/personal', action.data)
+        const calendarPayload = calendarPayloadForTask(res.data)
+        if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
         setMessages(p => [...p, { role: 'assistant', content: `✅ Tarefa criada e destacada: **${res.data?.title || action.data?.title || 'Nova tarefa'}**` }])
         onTaskCreated?.()
       } else if (action.type === 'create_tasks') {
@@ -1278,6 +1293,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         for (const item of items) {
           if (!item?.title) continue
           const res = await api.post('/personal', item)
+          const calendarPayload = calendarPayloadForTask(res.data)
+          if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
           created.push(res.data)
         }
         if (created.length) {
@@ -1429,6 +1446,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           const created: PersonalTask[] = []
           for (const item of parsedTasks) {
             const res = await api.post('/personal', item)
+            const calendarPayload = calendarPayloadForTask(res.data)
+            if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
             created.push(res.data)
           }
           window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: created } }))
@@ -2357,6 +2376,8 @@ export default function MinhaAreaPage() {
   const addTask = async (data: Partial<PersonalTask>) => {
     try {
       const res = await api.post('/personal', data)
+      const calendarPayload = calendarPayloadForTask(res.data)
+      if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
       setTasks(p => [res.data, ...p])
       setSearch('')
       setFilterCat('all')
