@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import {
   BeakerIcon,
@@ -16,7 +16,7 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
-type TabKey = 'overview' | 'agents' | 'people' | 'marketing' | 'data' | 'saas' | 'lab'
+type TabKey = 'overview' | 'market' | 'agents' | 'agentops' | 'people' | 'marketing' | 'data' | 'saas' | 'roi' | 'lab'
 
 interface ToolCard {
   title: string
@@ -39,15 +39,37 @@ interface Experiment {
   createdAt: string
 }
 
+interface MarketSignal {
+  title: string
+  source: string
+  insight: string
+  apsMove: string
+  urgency: 'Agora' | 'Próximo' | 'Explorar'
+  color: string
+}
+
+interface AgentBlueprint {
+  name: string
+  mission: string
+  inputs: string[]
+  actions: string[]
+  guardrail: string
+  metric: string
+  color: string
+}
+
 const LS_EXPERIMENTS = 'apsedu_innovation_experiments'
 
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'overview', label: 'Visão Geral', icon: '✦' },
+  { key: 'market', label: 'Radar 2026', icon: '🛰️' },
   { key: 'agents', label: 'Agentes IA', icon: '🤖' },
+  { key: 'agentops', label: 'AgentOps', icon: '🛡️' },
   { key: 'people', label: 'Pessoas', icon: '👥' },
   { key: 'marketing', label: 'Marketing', icon: '📣' },
   { key: 'data', label: 'Dados', icon: '📊' },
   { key: 'saas', label: 'SaaS', icon: '⚙️' },
+  { key: 'roi', label: 'ROI', icon: '💎' },
   { key: 'lab', label: 'Laboratório', icon: '🧪' },
 ]
 
@@ -111,6 +133,125 @@ const toolCards: ToolCard[] = [
     effort: 'Médio',
     freeStack: ['Rules engine', 'LocalStorage', 'Reports'],
     color: '#FF4757',
+  },
+  {
+    title: 'AgentOps Board',
+    area: 'Agentes IA',
+    description: 'Governança operacional para agentes: dono, logs, risco, aprovação humana e ROI.',
+    prompt: 'Desenhe um AgentOps Board para a APS com agentes, donos, permissões, logs, métricas, riscos, aprovação humana e plano de escala.',
+    impact: 'Agentes deixam de ser experimento e viram operação confiável.',
+    effort: 'Médio',
+    freeStack: ['Logs locais', 'Sofi', 'Automações', 'Revisão humana'],
+    color: '#A78BFA',
+  },
+  {
+    title: 'AI Talent Marketplace',
+    area: 'People Analytics',
+    description: 'Mapeia habilidades, necessidades, oportunidades de mentoria e realocação de talentos.',
+    prompt: 'Monte um marketplace interno de talentos da APS: habilidades, lacunas, mentores, oportunidades, trilhas e próximos movimentos.',
+    impact: 'Mais mobilidade, aprendizado e melhor alocação de pessoas.',
+    effort: 'Alto',
+    freeStack: ['Usuários', 'Cargos', 'Tarefas', 'Feedbacks'],
+    color: '#34D399',
+  },
+]
+
+const marketSignals: MarketSignal[] = [
+  {
+    title: 'Agentes específicos por função',
+    source: 'Gartner, Workday, Gloat, Fountain',
+    insight: 'O mercado saiu do chatbot genérico para agentes por tarefa: RH, finanças, frontline, vendas, operações e atendimento.',
+    apsMove: 'Transformar Sofi em família de agentes: Diretoria, Pessoas, Unidade, Comunicação, Dados e Rotina.',
+    urgency: 'Agora',
+    color: '#F8A303',
+  },
+  {
+    title: 'AgentOps e governança viraram requisito',
+    source: 'Primitive, Covasant, WitnessAI, Gartner',
+    insight: 'Quanto mais autonomia, mais importam contexto, permissões, logs, aprovação humana e medição de risco.',
+    apsMove: 'Toda automação da APS deve ter dono, métrica, revisão humana e trilha de auditoria.',
+    urgency: 'Agora',
+    color: '#A78BFA',
+  },
+  {
+    title: 'People AI precisa amplificar pessoas',
+    source: 'Deloitte, Gartner, McKinsey',
+    insight: 'Projetos com maior retorno são os que redesenham trabalho e capacitam pessoas, não os que apenas cortam custo.',
+    apsMove: 'Criar People OS com carga, engajamento, reconhecimento, habilidades e plano de desenvolvimento.',
+    urgency: 'Agora',
+    color: '#0ABD78',
+  },
+  {
+    title: 'Dados conversacionais e ação no fluxo',
+    source: 'Snowflake, Salesforce, Gong, McKinsey',
+    insight: 'A camada vencedora conecta dados empresariais à execução: perguntar, decidir, criar ação e medir.',
+    apsMove: 'Levar Analytics para “pergunta → diagnóstico → tarefa → acompanhamento”.',
+    urgency: 'Próximo',
+    color: '#4A9EFF',
+  },
+  {
+    title: 'AI-native HR consolidado',
+    source: 'Bolto, HrFlow.ai, Workday, Gloat',
+    insight: 'Startups estão unificando recrutamento, folha, dados e contexto em plataformas AI-native.',
+    apsMove: 'Consolidar pessoas, cargos, unidades, feedback e tarefas em um mapa de talentos APS.',
+    urgency: 'Próximo',
+    color: '#34D399',
+  },
+  {
+    title: 'Marketing com agente e AEO',
+    source: 'Prophet MAIA, HubSpot, Gong',
+    insight: 'Marketing passa a otimizar para respostas de IA, personalização e ciclo completo de campanha.',
+    apsMove: 'Growth Studio APS: campanha, público, canais, assets, AEO, métricas e aprendizado.',
+    urgency: 'Explorar',
+    color: '#29ABE2',
+  },
+]
+
+const agentBlueprints: AgentBlueprint[] = [
+  {
+    name: 'Agente Diretoria APS',
+    mission: 'Gerar briefing executivo, riscos, decisões e follow-ups semanais.',
+    inputs: ['Dashboard', 'Tarefas', 'Eventos', 'Unidades', 'Feedbacks'],
+    actions: ['Criar resumo', 'Sugerir decisões', 'Abrir follow-ups', 'Priorizar riscos'],
+    guardrail: 'Nunca envia comunicação externa sem aprovação humana.',
+    metric: 'Decisões com responsável e prazo em 100% das reuniões.',
+    color: '#F8A303',
+  },
+  {
+    name: 'Agente People OS',
+    mission: 'Detectar sobrecarga, lacunas de habilidade, reconhecimento e oportunidades de mentoria.',
+    inputs: ['Usuários', 'Cargos', 'Gamificação', 'Feedbacks', 'Tarefas'],
+    actions: ['Sinalizar risco', 'Sugerir reconhecimento', 'Criar trilha de desenvolvimento'],
+    guardrail: 'Não classifica desempenho individual sem contexto e revisão humana.',
+    metric: 'Reduzir atrasos recorrentes e aumentar reconhecimento útil.',
+    color: '#0ABD78',
+  },
+  {
+    name: 'Agente Unidade',
+    mission: 'Acompanhar saúde operacional por unidade e recomendar intervenção.',
+    inputs: ['Ranking por unidade', 'Tarefas atrasadas', 'Eventos', 'Engajamento'],
+    actions: ['Radar de risco', 'Plano de 7 dias', 'Mensagem ao responsável'],
+    guardrail: 'Toda recomendação sensível deve ser revisada pela liderança.',
+    metric: 'Reduzir unidades em risco mês a mês.',
+    color: '#4A9EFF',
+  },
+  {
+    name: 'Agente Growth APS',
+    mission: 'Criar campanhas, comunicados e peças com AEO e métricas.',
+    inputs: ['Mural', 'Eventos', 'Públicos', 'Calendário'],
+    actions: ['Gerar campanha', 'Criar variações', 'Sugerir imagem', 'Medir resposta'],
+    guardrail: 'Respeitar identidade institucional e aprovação de comunicação.',
+    metric: 'Comunicações mais claras, reutilizáveis e mensuráveis.',
+    color: '#29ABE2',
+  },
+  {
+    name: 'Agente Dados',
+    mission: 'Responder perguntas executivas e converter insight em ação.',
+    inputs: ['Reports', 'Analytics', 'Tarefas', 'Eventos'],
+    actions: ['Explicar tendência', 'Encontrar causa provável', 'Criar tarefa'],
+    guardrail: 'Exibir incerteza quando os dados forem insuficientes.',
+    metric: 'Tempo de diagnóstico reduzido em 50%.',
+    color: '#8B5CF6',
   },
 ]
 
@@ -178,6 +319,12 @@ export default function InovacaoPage() {
   const [aiOutput, setAiOutput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [experiments, setExperiments] = useState<Experiment[]>(defaultExperiments)
+  const [roiInputs, setRoiInputs] = useState({
+    people: 18,
+    hoursPerWeek: 4,
+    hourlyCost: 65,
+    automationPct: 35,
+  })
 
   useEffect(() => {
     try {
@@ -197,6 +344,14 @@ export default function InovacaoPage() {
     const ideas = experiments.filter(e => e.status === 'Ideia').length * 6
     return Math.min(100, 38 + scale + test + ideas)
   }, [experiments])
+
+  const roi = useMemo(() => {
+    const savedHours = roiInputs.people * roiInputs.hoursPerWeek * (roiInputs.automationPct / 100)
+    const weeklySavings = savedHours * roiInputs.hourlyCost
+    const monthlySavings = weeklySavings * 4.33
+    const annualSavings = monthlySavings * 12
+    return { savedHours, weeklySavings, monthlySavings, annualSavings }
+  }, [roiInputs])
 
   const generateWithSofi = async (tool = selectedTool) => {
     setSelectedTool(tool)
@@ -294,6 +449,10 @@ Responda em português, com:
     )
   }
 
+  const updateRoiInput = (key: keyof typeof roiInputs, value: number) => {
+    setRoiInputs(prev => ({ ...prev, [key]: Number.isFinite(value) ? Math.max(0, value) : 0 }))
+  }
+
   return (
     <AdminLayout>
       <div className="flex flex-col gap-5">
@@ -378,6 +537,56 @@ Responda em português, com:
           </>
         )}
 
+        {activeTab === 'market' && (
+          <>
+            <SectionCard>
+              <div className="flex items-start gap-3 mb-4">
+                <LightBulbIcon className="w-6 h-6 flex-shrink-0" style={{ color: '#F8A303' }} />
+                <div>
+                  <p className="text-base font-extrabold text-white">Radar profundo de mercado aplicado à APS-EDU</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                    Tendências atuais de IA, startups, SaaS, gestão de pessoas, marketing e analytics convertidas em movimentos práticos para a plataforma.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                {marketSignals.map(signal => (
+                  <div key={signal.title} className="rounded-2xl p-4"
+                    style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.075)' }}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <p className="text-sm font-extrabold text-white">{signal.title}</p>
+                        <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.32)' }}>{signal.source}</p>
+                      </div>
+                      <Badge color={signal.color}>{signal.urgency}</Badge>
+                    </div>
+                    <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(255,255,255,0.48)' }}>{signal.insight}</p>
+                    <div className="rounded-xl p-3" style={{ background: `${signal.color}10`, border: `1px solid ${signal.color}22` }}>
+                      <p className="text-[10px] uppercase font-black tracking-wider mb-1" style={{ color: signal.color }}>Movimento APS</p>
+                      <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.68)' }}>{signal.apsMove}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard>
+              <p className="text-base font-extrabold text-white mb-3">Agenda de implantação de alto nível</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { title: '0-30 dias', text: 'Sofi com áudio, transcrição, prompts operacionais, radar de inovação e laboratório de experimentos.', color: '#0ABD78' },
+                  { title: '31-60 dias', text: 'Agentes por função, AgentOps Board, métricas de adoção e analytics conversacional com ações.', color: '#F8A303' },
+                  { title: '61-90 dias', text: 'People OS, marketplace de talentos, campanhas AEO, anomalias automáticas e relatórios recorrentes.', color: '#4A9EFF' },
+                ].map(item => (
+                  <div key={item.title} className="rounded-2xl p-4" style={{ background: `${item.color}10`, border: `1px solid ${item.color}22` }}>
+                    <p className="text-sm font-extrabold" style={{ color: item.color }}>{item.title}</p>
+                    <p className="text-xs leading-relaxed mt-2" style={{ color: 'rgba(255,255,255,0.56)' }}>{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </>
+        )}
+
         {activeTab === 'agents' && (
           <>
             <SectionCard>
@@ -407,10 +616,115 @@ Responda em português, com:
           </>
         )}
 
+        {activeTab === 'agentops' && (
+          <>
+            <SectionCard>
+              <div className="flex items-start gap-3 mb-4">
+                <ClipboardDocumentCheckIcon className="w-6 h-6 flex-shrink-0" style={{ color: '#A78BFA' }} />
+                <div>
+                  <p className="text-base font-extrabold text-white">AgentOps Board</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.36)' }}>
+                    Estrutura para colocar agentes em produção com controle, dono, métricas, logs e revisão humana.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                {agentBlueprints.map(agent => (
+                  <div key={agent.name} className="rounded-2xl p-4"
+                    style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.075)' }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-extrabold text-white">{agent.name}</p>
+                        <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.48)' }}>{agent.mission}</p>
+                      </div>
+                      <Badge color={agent.color}>Ativo</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                      <div>
+                        <p className="text-[10px] uppercase font-black tracking-wider mb-2" style={{ color: agent.color }}>Entradas</p>
+                        <div className="flex flex-wrap gap-1.5">{agent.inputs.map(input => <Badge key={input} color={agent.color}>{input}</Badge>)}</div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-black tracking-wider mb-2" style={{ color: agent.color }}>Ações</p>
+                        <div className="flex flex-wrap gap-1.5">{agent.actions.map(action => <Badge key={action} color={agent.color}>{action}</Badge>)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="rounded-xl p-3" style={{ background: `${agent.color}0F`, border: `1px solid ${agent.color}22` }}>
+                        <p className="text-[10px] uppercase font-black tracking-wider" style={{ color: agent.color }}>Guardrail</p>
+                        <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.58)' }}>{agent.guardrail}</p>
+                      </div>
+                      <div className="rounded-xl p-3" style={{ background: `${agent.color}0F`, border: `1px solid ${agent.color}22` }}>
+                        <p className="text-[10px] uppercase font-black tracking-wider" style={{ color: agent.color }}>Métrica</p>
+                        <p className="text-xs leading-relaxed mt-1" style={{ color: 'rgba(255,255,255,0.58)' }}>{agent.metric}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+            {renderTools('Agentes')}
+          </>
+        )}
+
         {activeTab === 'people' && renderTools('People')}
         {activeTab === 'marketing' && renderTools('Marketing')}
         {activeTab === 'data' && renderTools('Dados')}
         {activeTab === 'saas' && renderTools('SaaS')}
+
+        {activeTab === 'roi' && (
+          <SectionCard>
+            <div className="flex items-start gap-3 mb-4">
+              <ChartBarIcon className="w-6 h-6 flex-shrink-0" style={{ color: '#F8A303' }} />
+              <div>
+                <p className="text-base font-extrabold text-white">ROI Studio de IA</p>
+                <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.36)' }}>
+                  Simule ganho financeiro e horas recuperadas antes de escalar agentes e automações.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { key: 'people' as const, label: 'Pessoas impactadas', suffix: '' },
+                  { key: 'hoursPerWeek' as const, label: 'Horas semanais por pessoa', suffix: 'h' },
+                  { key: 'hourlyCost' as const, label: 'Custo/hora médio', suffix: 'R$' },
+                  { key: 'automationPct' as const, label: 'Automatização estimada', suffix: '%' },
+                ].map(input => (
+                  <label key={input.key} className="rounded-2xl p-4"
+                    style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.075)' }}>
+                    <span className="block text-[10px] uppercase font-black tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.36)' }}>{input.label}</span>
+                    <div className="flex items-center gap-2">
+                      {input.suffix === 'R$' && <span className="text-xs font-bold" style={{ color: '#F8A303' }}>R$</span>}
+                      <input
+                        type="number"
+                        min="0"
+                        value={roiInputs[input.key]}
+                        onChange={e => updateRoiInput(input.key, Number(e.target.value))}
+                        className="w-full rounded-xl px-3 py-2 text-sm font-bold text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                      />
+                      {input.suffix !== 'R$' && input.suffix && <span className="text-xs font-bold" style={{ color: '#F8A303' }}>{input.suffix}</span>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: 'Horas recuperadas/semana', value: `${roi.savedHours.toFixed(1)}h`, color: '#0ABD78' },
+                  { label: 'Economia semanal', value: roi.weeklySavings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), color: '#F8A303' },
+                  { label: 'Economia mensal', value: roi.monthlySavings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), color: '#4A9EFF' },
+                  { label: 'Economia anual', value: roi.annualSavings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), color: '#A78BFA' },
+                ].map(result => (
+                  <div key={result.label} className="rounded-2xl p-4" style={{ background: `${result.color}10`, border: `1px solid ${result.color}22` }}>
+                    <p className="text-xl font-extrabold" style={{ color: result.color }}>{result.value}</p>
+                    <p className="text-[10px] uppercase tracking-wider mt-1" style={{ color: 'rgba(255,255,255,0.36)' }}>{result.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionCard>
+        )}
 
         {activeTab === 'lab' && (
           <SectionCard>
