@@ -47,3 +47,5 @@ backend/prisma/migrations/
 
 # Build
 dist/
+
+.vercel
