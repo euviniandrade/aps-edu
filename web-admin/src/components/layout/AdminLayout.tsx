@@ -23,23 +23,47 @@ import {
   UserGroupIcon as UserGroupIconSolid,
 } from '@heroicons/react/24/solid'
 
-const navItems = [
-  { href: '/dashboard',     label: 'Dashboard',       icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
-  { href: '/meu-dia',       label: 'Meu Dia 🎯',       icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#4A9EFF', roles: [] },
-  { href: '/tasks',         label: 'Tarefas',          icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
-  { href: '/events',        label: 'Eventos',          icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
-  { href: '/announcements', label: 'Mural',            icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
-  { href: '/analytics',     label: 'Analytics IA 🔮',  icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
-  { href: '/automacoes',    label: 'Automações ⚡',     icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
-  { href: '/notificacoes',  label: 'Notificações 🔔',   icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
-  { href: '/gamification',  label: 'Gamificação',       icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
-  { href: '/reports',       label: 'Relatórios',        icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#E07B39', roles: ['leader', 'admin'] },
-  { href: '/feedback',      label: 'Feedback',          icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
-  { href: '/promotores',    label: 'Promotores',        icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
-  { href: '/users',         label: 'Usuários',          icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
-  { href: '/roles',         label: 'Cargos',            icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
-  { href: '/units',         label: 'Unidades',          icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
+// Nav organizado em seções
+const navSections = [
+  {
+    label: 'Principal',
+    items: [
+      { href: '/dashboard',     label: 'Dashboard',    icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
+      { href: '/meu-dia',       label: 'Meu Dia',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#4A9EFF', roles: [] },
+      { href: '/notificacoes',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
+    ],
+  },
+  {
+    label: 'Trabalho',
+    items: [
+      { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
+      { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
+      { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
+      { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
+      { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
+    ],
+  },
+  {
+    label: 'Inteligência IA',
+    items: [
+      { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
+      { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
+      { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#E07B39', roles: ['leader', 'admin'] },
+    ],
+  },
+  {
+    label: 'Administração',
+    items: [
+      { href: '/users',         label: 'Usuários',     icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
+      { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
+      { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
+      { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
+    ],
+  },
 ]
+
+// Flatten para manter compatibilidade com currentPage lookup
+const navItems = navSections.flatMap(s => s.items)
 
 // Item exclusivo do admin — ícone reutilizado do KeyIcon com cor dourada especial
 const myAreaItem = { href: '/minha-area', label: '⚡ Sofi IA', icon: KeyIcon, iconSolid: KeyIconSolid, color: '#FDC347' }
@@ -98,13 +122,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRoleName = user?.role?.name ?? user?.role ?? 'Admin'
   const userRole = userRoleName
   const roleLevel = getRoleLevel(typeof userRoleName === 'string' ? userRoleName : 'member')
-
-  const visibleNavItems = navItems.filter(item => {
-    if (!item.roles || item.roles.length === 0) return true
-    if (item.roles.includes('admin') && roleLevel !== 'admin') return false
-    if (item.roles.includes('leader') && roleLevel !== 'admin' && roleLevel !== 'leader') return false
-    return true
-  })
 
   return (
     <div
@@ -215,52 +232,76 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
 
-        {/* ── NAVIGATION ──────────────────────────────── */}
-        <nav className="flex-1 py-2 px-3 overflow-y-auto">
-          <p className="section-label px-3 mb-3">Menu</p>
+        {/* ── NAVIGATION (por seções) ──────────────────── */}
+        <nav className="flex-1 py-2 px-3 overflow-y-auto scrollbar-thin space-y-1">
+          {navSections.map((section) => {
+            // Filtrar itens visíveis da seção
+            const sectionItems = section.items.filter(item => {
+              if (!item.roles || item.roles.length === 0) return true
+              if (item.roles.includes('admin')  && roleLevel !== 'admin') return false
+              if (item.roles.includes('leader') && roleLevel !== 'admin' && roleLevel !== 'leader') return false
+              return true
+            })
+            if (sectionItems.length === 0) return null
 
-          <ul className="space-y-0.5">
-            {visibleNavItems.map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + '/')
-              const Icon = isActive ? item.iconSolid : item.icon
-
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl
-                               transition-all duration-200 group relative"
-                    style={{
-                      background: isActive ? `${item.color}18` : 'transparent',
-                      color: isActive ? item.color : 'rgba(255,255,255,0.55)',
-                      boxShadow: isActive ? `inset 3px 0 0 ${item.color}` : 'none',
-                    }}
-                  >
-                    <Icon
-                      className="flex-shrink-0 transition-all duration-200"
-                      style={{
-                        width: 18, height: 18,
-                        color: isActive ? item.color : 'rgba(255,255,255,0.4)',
-                      }}
-                    />
-                    <span
-                      className="text-sm font-medium flex-1 transition-colors"
-                      style={{ color: isActive ? item.color : 'rgba(255,255,255,0.7)' }}
-                    >
-                      {item.label}
-                    </span>
-                    {isActive && (
-                      <ChevronRightIcon
-                        style={{ width: 13, height: 13, color: item.color, opacity: 0.7 }}
-                      />
-                    )}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+            return (
+              <div key={section.label}>
+                {/* Section label */}
+                <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em]"
+                  style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  {section.label}
+                </p>
+                <ul className="space-y-0.5">
+                  {sectionItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    const Icon = isActive ? item.iconSolid : item.icon
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group relative"
+                          style={{
+                            background: isActive ? `${item.color}18` : 'transparent',
+                            boxShadow: isActive ? `inset 3px 0 0 ${item.color}` : 'none',
+                          }}
+                        >
+                          <Icon className="flex-shrink-0"
+                            style={{ width: 16, height: 16, color: isActive ? item.color : 'rgba(255,255,255,0.35)' }} />
+                          <span className="text-sm font-medium flex-1 truncate"
+                            style={{ color: isActive ? item.color : 'rgba(255,255,255,0.65)' }}>
+                            {item.label}
+                          </span>
+                          {/* Badge especial para Notificações */}
+                          {item.href === '/notificacoes' && !isActive && (
+                            <span className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ background: '#FF4757' }} />
+                          )}
+                          {/* Badge especial para Automações */}
+                          {item.href === '/automacoes' && !isActive && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                              style={{ background: 'rgba(74,158,255,0.15)', color: '#4A9EFF' }}>
+                              IA
+                            </span>
+                          )}
+                          {/* Badge especial para Analytics */}
+                          {item.href === '/analytics' && !isActive && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                              style={{ background: 'rgba(249,194,52,0.15)', color: '#F9C234' }}>
+                              ✨
+                            </span>
+                          )}
+                          {isActive && (
+                            <ChevronRightIcon style={{ width: 12, height: 12, color: item.color, opacity: 0.7 }} />
+                          )}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
         </nav>
 
         {/* ── USER + LOGOUT ────────────────────────────── */}
