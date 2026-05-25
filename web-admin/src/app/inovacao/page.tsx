@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import {
   BeakerIcon,
@@ -313,11 +313,13 @@ function SectionCard({ children, className = '' }: { children: React.ReactNode; 
 }
 
 export default function InovacaoPage() {
+  const responseRef = useRef<HTMLDivElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [selectedTool, setSelectedTool] = useState<ToolCard>(toolCards[0])
   const [context, setContext] = useState('Prioridades da semana, dados das unidades, tarefas em atraso, campanhas e decisões pendentes.')
   const [aiOutput, setAiOutput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
+  const [actionNotice, setActionNotice] = useState('')
   const [experiments, setExperiments] = useState<Experiment[]>(defaultExperiments)
   const [roiInputs, setRoiInputs] = useState({
     people: 18,
@@ -357,6 +359,8 @@ export default function InovacaoPage() {
     setSelectedTool(tool)
     setAiLoading(true)
     setAiOutput('')
+    setActionNotice(`Sofi está gerando o plano: ${tool.title}`)
+    window.setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
     try {
       const prompt = `${tool.prompt}
 
@@ -378,14 +382,18 @@ Responda em português, com:
       })
       const data = await res.json()
       setAiOutput(data.content || data.error || 'A Sofi não retornou conteúdo agora.')
+      setActionNotice(data.content ? `Plano pronto: ${tool.title}` : `A Sofi retornou um aviso para ${tool.title}`)
     } catch {
       setAiOutput('Não consegui chamar a Sofi agora. Verifique as chaves dos provedores ou tente novamente.')
+      setActionNotice('Não foi possível conectar com a Sofi agora.')
     } finally {
       setAiLoading(false)
+      window.setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
     }
   }
 
   const addExperiment = (tool: ToolCard) => {
+    setSelectedTool(tool)
     const next: Experiment = {
       id: `${tool.title}-${Date.now()}`.toLowerCase().replace(/\s+/g, '-'),
       title: tool.title,
@@ -397,14 +405,37 @@ Responda em português, com:
     }
     saveExperiments([next, ...experiments])
     setActiveTab('lab')
+    setActionNotice(`${tool.title} foi levado para o laboratório.`)
+    window.setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80)
   }
 
   const updateExperiment = (id: string, status: Experiment['status']) => {
     saveExperiments(experiments.map(exp => exp.id === id ? { ...exp, status } : exp))
+    setActionNotice(`Experimento atualizado para ${status}.`)
   }
 
   const removeExperiment = (id: string) => {
     saveExperiments(experiments.filter(exp => exp.id !== id))
+    setActionNotice('Experimento removido.')
+  }
+
+  const copyPrompt = async (tool: ToolCard) => {
+    setSelectedTool(tool)
+    try {
+      const textarea = document.createElement('textarea')
+      textarea.value = tool.prompt
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      const copied = document.execCommand('copy')
+      document.body.removeChild(textarea)
+
+      setActionNotice(copied ? `Prompt copiado: ${tool.title}` : 'Não consegui copiar automaticamente neste navegador.')
+    } catch {
+      setActionNotice('Não consegui copiar automaticamente neste navegador.')
+    }
   }
 
   const renderTools = (area?: string) => {
@@ -428,16 +459,21 @@ Responda em português, com:
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => generateWithSofi(tool)}
+                disabled={aiLoading}
                 className="px-3 py-2 rounded-xl text-xs font-bold text-black"
-                style={{ background: `linear-gradient(135deg, ${tool.color}, #FDC347)` }}>
-                Gerar plano com Sofi
+                style={{
+                  background: `linear-gradient(135deg, ${tool.color}, #FDC347)`,
+                  opacity: aiLoading ? 0.68 : 1,
+                  cursor: aiLoading ? 'wait' : 'pointer',
+                }}>
+                {aiLoading && selectedTool.title === tool.title ? 'Gerando...' : 'Gerar plano com Sofi'}
               </button>
               <button onClick={() => addExperiment(tool)}
                 className="px-3 py-2 rounded-xl text-xs font-semibold"
                 style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.68)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 Levar ao laboratório
               </button>
-              <button onClick={() => navigator.clipboard?.writeText(tool.prompt)}
+              <button onClick={() => copyPrompt(tool)}
                 className="px-3 py-2 rounded-xl text-xs font-semibold"
                 style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.42)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 Copiar prompt
@@ -499,6 +535,13 @@ Responda em português, com:
             </button>
           ))}
         </div>
+
+        {actionNotice && (
+          <div className="rounded-2xl px-4 py-3 text-xs font-bold"
+            style={{ background: 'rgba(248,163,3,0.11)', border: '1px solid rgba(248,163,3,0.24)', color: '#FDC347' }}>
+            {actionNotice}
+          </div>
+        )}
 
         {activeTab === 'overview' && (
           <>
@@ -779,25 +822,27 @@ Responda em português, com:
         )}
 
         {(aiOutput || aiLoading) && (
-          <SectionCard className="border-gold">
-            <div className="flex items-center gap-3 mb-3">
-              <ChatBubbleBottomCenterTextIcon className="w-6 h-6" style={{ color: '#F8A303' }} />
-              <div>
-                <p className="text-base font-extrabold text-white">Resposta da Sofi</p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.36)' }}>{selectedTool.title}</p>
+          <div ref={responseRef}>
+            <SectionCard className="border-gold">
+              <div className="flex items-center gap-3 mb-3">
+                <ChatBubbleBottomCenterTextIcon className="w-6 h-6" style={{ color: '#F8A303' }} />
+                <div>
+                  <p className="text-base font-extrabold text-white">Resposta da Sofi</p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.36)' }}>{selectedTool.title}</p>
+                </div>
               </div>
-            </div>
-            {aiLoading ? (
-              <div className="flex items-center gap-2 py-6">
-                {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F8A303', animationDelay: `${i * 0.2}s` }} />)}
-                <span className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Sofi está montando o plano...</span>
-              </div>
-            ) : (
-              <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'rgba(255,255,255,0.74)' }}>
-                {aiOutput}
-              </div>
-            )}
-          </SectionCard>
+              {aiLoading ? (
+                <div className="flex items-center gap-2 py-6">
+                  {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F8A303', animationDelay: `${i * 0.2}s` }} />)}
+                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Sofi está montando o plano...</span>
+                </div>
+              ) : (
+                <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'rgba(255,255,255,0.74)' }}>
+                  {aiOutput}
+                </div>
+              )}
+            </SectionCard>
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
