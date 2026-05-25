@@ -502,6 +502,4 @@ export default function AutomacoesPage() {
     </AdminLayout>
   )
 
-  function getTriggerLabel(id: string) { return TRIGGERS.find(t => t.id === id)?.label || id }
-  function getActionLabel(id: string)  { return ACTIONS.find(a => a.id === id)?.label  || id }
 }
