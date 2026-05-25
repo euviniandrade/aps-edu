@@ -3,12 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 60
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
+const GROQ_TRANSCRIBE_MODEL = process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3'
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
-  if (!GROQ_API_KEY) {
-    return NextResponse.json({ error: 'GROQ_API_KEY não configurada' }, { status: 503 })
-  }
-
   try {
     const { fileBase64, mimeType, fileName } = await req.json()
 
@@ -88,12 +86,19 @@ export async function POST(req: NextRequest) {
 
     // ── Audio ─────────────────────────────────────────────────────
     if (mimeType.startsWith('audio/') || mimeType.startsWith('video/')) {
+      if (!GROQ_API_KEY) {
+        return NextResponse.json({ error: 'GROQ_API_KEY não configurada para transcrição de áudio' }, { status: 503 })
+      }
+      if (buffer.byteLength > MAX_AUDIO_BYTES) {
+        return NextResponse.json({ error: 'Áudio acima de 25MB. Envie um arquivo menor ou comprimido.' }, { status: 413 })
+      }
       const blob = new Blob([buffer], { type: mimeType })
       const formData = new FormData()
       formData.append('file', blob, fileName || 'audio.wav')
-      formData.append('model', 'whisper-large-v3')
+      formData.append('model', GROQ_TRANSCRIBE_MODEL)
       formData.append('language', 'pt')
       formData.append('response_format', 'json')
+      formData.append('prompt', 'Português do Brasil. Contexto: gestão educacional, Associação Paulista Sul, Educação Adventista, reuniões, tarefas, unidades, colaboradores e decisões executivas.')
 
       const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
         method: 'POST',

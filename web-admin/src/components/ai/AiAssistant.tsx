@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
-import { XMarkIcon, PaperAirplaneIcon, MicrophoneIcon, SpeakerWaveIcon, SpeakerXMarkIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PaperAirplaneIcon, MicrophoneIcon, SpeakerWaveIcon, SpeakerXMarkIcon, PaperClipIcon, StopCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -17,6 +17,27 @@ const QUICK_PROMPTS = [
   { label: '🧭 Radar de unidade',   text: 'Monte um Radar de Unidade: riscos, prioridades e próximos passos para a Associação Paulista Sul.' },
   { label: '📝 Ata + tarefas',      text: 'Ajude a transformar uma reunião em ata, decisões, responsáveis e tarefas de acompanhamento.' },
 ]
+
+const TRANSCRIBE_INTENT = /transcrev|transcri[cç][aã]o|degrav|texto do [aá]udio|s[oó] transcri/i
+
+function formatSeconds(total: number) {
+  const min = Math.floor(total / 60).toString().padStart(2, '0')
+  const sec = (total % 60).toString().padStart(2, '0')
+  return `${min}:${sec}`
+}
+
+function isAudioOrVideo(file: File) {
+  return file.type.startsWith('audio/') || file.type.startsWith('video/')
+}
+
+function renderRichText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>
+  })
+}
 
 function SparklesIcon({ size = 20 }: { size?: number }) {
   return (
@@ -79,11 +100,18 @@ export default function AiAssistant() {
   const [isSpeaking, setIsSpeaking]    = useState(false)
   const [pulse, setPulse]         = useState(false)
   const [unread, setUnread]       = useState(0)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [transcriptionPreview, setTranscriptionPreview] = useState('')
+  const [errorText, setErrorText] = useState('')
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
   const recogRef      = useRef<any>(null)
   const fileInputRef  = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
   // Init greeter
@@ -115,6 +143,15 @@ export default function AiAssistant() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    return () => {
+      recogRef.current?.stop?.()
+      mediaRecorderRef.current?.stream?.getTracks().forEach(track => track.stop())
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+      window.speechSynthesis?.cancel()
+    }
+  }, [])
 
   // Voice recognition
   const initRecognition = useCallback(() => {
@@ -156,6 +193,71 @@ export default function AiAssistant() {
   }, [voiceEnabled])
 
   const stopSpeaking = () => { window.speechSynthesis?.cancel(); setIsSpeaking(false) }
+
+  const transcribeFile = async (file: File) => {
+    const b64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo.'))
+      reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+      reader.readAsDataURL(file)
+    })
+
+    const res = await fetch('/api/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64: b64, mimeType: file.type || 'application/octet-stream', fileName: file.name }),
+    })
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || 'Falha ao transcrever arquivo.')
+    return data.text || ''
+  }
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current
+    if (!recorder || recorder.state === 'inactive') return
+    recorder.stop()
+  }, [])
+
+  const startRecording = useCallback(async () => {
+    setErrorText('')
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setErrorText('Gravação de áudio não suportada neste navegador. Use anexo de áudio.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
+      const recorder = new MediaRecorder(stream, { mimeType })
+      audioChunksRef.current = []
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+      }
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop())
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+        setIsRecording(false)
+        const blob = new Blob(audioChunksRef.current, { type: mimeType })
+        if (blob.size === 0) {
+          setErrorText('Não consegui capturar áudio. Tente novamente.')
+          return
+        }
+        const file = new File([blob], `sofi-audio-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`, { type: mimeType })
+        sendMessage(input.trim() || 'Transcreva este áudio.', file)
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setRecordingSeconds(0)
+      setIsRecording(true)
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
+    } catch {
+      setErrorText('Não consegui acessar o microfone. Verifique a permissão do navegador.')
+    }
+  }, [input])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) stopRecording()
+    else startRecording()
+  }, [isRecording, startRecording, stopRecording])
 
   // Execute AI actions
   const executeAction = async (action: { type: string; data: any }) => {
@@ -225,28 +327,39 @@ export default function AiAssistant() {
     let finalContent = content
     let imageBase64: string | undefined
     let imageMimeType: string | undefined
+    let extractedTextContent = ''
     const sendFile = file || attachedFile
+    const wantsTranscriptOnly = !!sendFile && isAudioOrVideo(sendFile) && (!content || TRANSCRIBE_INTENT.test(content))
 
     if (sendFile) {
       setLoading(true)
-      await new Promise<void>(resolve => {
-        const reader = new FileReader()
-        reader.onload = async () => {
-          const b64 = (reader.result as string).split(',')[1] || ''
-          if (sendFile.type.startsWith('image/')) {
-            imageBase64 = b64; imageMimeType = sendFile.type
-            finalContent = content || 'Analise esta imagem.'
-          } else {
-            try {
-              const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileBase64: b64, mimeType: sendFile.type, fileName: sendFile.name }) })
-              const d = await r.json()
-              finalContent = `[DOC_CONTENT:${sendFile.name}]\n${d.text || ''}\n\n${content}`
-            } catch { finalContent = `[Arquivo: ${sendFile.name}] ${content}` }
-          }
-          resolve()
+      setErrorText('')
+      if (sendFile.type.startsWith('image/')) {
+        const b64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onerror = () => reject(new Error('Erro ao ler imagem.'))
+          reader.onload = () => resolve((reader.result as string).split(',')[1] || '')
+          reader.readAsDataURL(sendFile)
+        })
+        imageBase64 = b64
+        imageMimeType = sendFile.type
+        finalContent = content || 'Analise esta imagem.'
+      } else {
+        try {
+          const extractedText = await transcribeFile(sendFile)
+          extractedTextContent = extractedText
+          const marker = isAudioOrVideo(sendFile) ? 'AUDIO_TRANSCRIBED' : 'DOC_CONTENT'
+          const instruction = content || (isAudioOrVideo(sendFile) ? 'Transcreva este áudio.' : 'Analise este arquivo.')
+          finalContent = `[${marker}:${sendFile.name}]\n${extractedText}\n\n${instruction}`
+          setTranscriptionPreview(extractedText)
+        } catch (err: any) {
+          setLoading(false)
+          setErrorText(err?.message || 'Não consegui processar o arquivo.')
+          addMsg('assistant', `⚠️ ${err?.message || 'Não consegui processar o arquivo.'}`)
+          setAttachedFile(null)
+          return
         }
-        reader.readAsDataURL(sendFile)
-      })
+      }
       setAttachedFile(null)
     }
 
@@ -255,6 +368,17 @@ export default function AiAssistant() {
     setMessages(newMessages)
     setInput('')
     setLoading(true)
+
+    if (sendFile && wantsTranscriptOnly) {
+      const transcript = extractedTextContent.trim()
+      const answer = transcript
+        ? `📝 **Transcrição do áudio**\n\n${transcript}`
+        : 'Não encontrei texto audível neste áudio.'
+      addMsg('assistant', answer)
+      speak(transcript ? 'Transcrição concluída.' : 'Não encontrei texto audível neste áudio.')
+      setLoading(false)
+      return
+    }
 
     try {
       let rawContent = ''
@@ -266,9 +390,27 @@ export default function AiAssistant() {
         rawContent = d.content || ''
       } else {
         const trimmed = newMessages.slice(-12).map(({ role, content }) => ({ role, content }))
-        const res = await api.post('/ai/chat', { messages: trimmed, context: { userName: 'Vinicius' } })
-        rawContent = res.data?.content ?? res.data?.message ?? ''
-        rawAction  = res.data?.action ?? null
+        try {
+          const res = await api.post('/ai/chat', { messages: trimmed, context: { userName: 'Vinicius' } })
+          rawContent = res.data?.content ?? res.data?.message ?? ''
+          rawAction  = res.data?.action ?? null
+        } catch {
+          const fallbackPrompt = `Você é a Sofi, assistente virtual do Departamento de Educação da Associação Paulista Sul (APS).
+Responda em português do Brasil com padrão executivo, prático e humano.
+Quando houver transcrição de áudio ou conteúdo de documento, trate como fonte principal.
+
+Histórico recente:
+${trimmed.map(m => `${m.role === 'user' ? 'Usuário' : 'Sofi'}: ${m.content}`).join('\n\n')}
+
+Entregue uma resposta clara, acionável e de alto nível.`
+          const fallback = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: fallbackPrompt }),
+          })
+          const fd = await fallback.json()
+          rawContent = fd.content || fd.error || ''
+        }
       }
 
       // Parse inline JSON if action not already extracted
@@ -394,7 +536,7 @@ export default function AiAssistant() {
                   {msg.content.startsWith('[IMAGE:') ? (
                     <img src={msg.content.replace('[IMAGE:', '').replace(']', '')} alt="gerado" className="rounded-lg max-w-full" />
                   ) : (
-                    (msg.display || msg.content).replace(/\*\*(.*?)\*\*/g, '**$1**')
+                    renderRichText(msg.display || msg.content)
                   )}
                 </div>
               </div>
@@ -432,8 +574,28 @@ export default function AiAssistant() {
             <div className="px-3 pb-1 flex-shrink-0">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs"
                 style={{ background: 'rgba(248,163,3,0.1)', border: '1px solid rgba(248,163,3,0.2)', color: '#FDC347' }}>
-                <span>📎 {attachedFile.name}</span>
+                <span>{isAudioOrVideo(attachedFile) ? '🎙️ Áudio pronto para transcrição' : '📎 Arquivo anexado'} · {attachedFile.name}</span>
                 <button onClick={() => setAttachedFile(null)} className="ml-auto opacity-60 hover:opacity-100">✕</button>
+              </div>
+            </div>
+          )}
+
+          {(isRecording || errorText) && (
+            <div className="px-3 pb-1 flex-shrink-0">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs"
+                style={{
+                  background: isRecording ? 'rgba(255,71,87,0.1)' : 'rgba(255,71,87,0.08)',
+                  border: '1px solid rgba(255,71,87,0.18)',
+                  color: isRecording ? '#FF8A95' : '#FF6B78',
+                }}>
+                {isRecording ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FF4757' }} />
+                    <span>Gravando áudio · {formatSeconds(recordingSeconds)}</span>
+                  </>
+                ) : (
+                  <span>{errorText}</span>
+                )}
               </div>
             </div>
           )}
@@ -450,13 +612,26 @@ export default function AiAssistant() {
               <input ref={fileInputRef} type="file" className="hidden"
                 accept="image/*,audio/*,.pdf,.txt,.doc,.docx,.csv"
                 onChange={e => e.target.files?.[0] && setAttachedFile(e.target.files[0])} />
+              <button
+                onClick={toggleRecording}
+                disabled={loading}
+                className="flex-shrink-0 p-1.5 rounded-xl transition-all"
+                style={{
+                  color: isRecording ? '#FF4757' : 'rgba(255,255,255,0.35)',
+                  background: isRecording ? 'rgba(255,71,87,0.15)' : 'transparent',
+                  boxShadow: isRecording ? '0 0 0 1px rgba(255,71,87,0.25)' : 'none',
+                }}
+                title={isRecording ? 'Parar e transcrever áudio' : 'Gravar áudio para transcrever'}
+              >
+                {isRecording ? <StopCircleIcon className="w-4 h-4" /> : <DocumentTextIcon className="w-4 h-4" />}
+              </button>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={isListening ? '🎤 Ouvindo...' : 'Pergunte à Sofi...'}
-                disabled={loading}
+                placeholder={isRecording ? 'Gravando áudio para transcrição...' : isListening ? '🎤 Ouvindo...' : 'Pergunte à Sofi...'}
+                disabled={loading || isRecording}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-40 min-w-0"
                 style={{ color: 'rgba(255,255,255,0.9)' }}
               />
@@ -474,7 +649,7 @@ export default function AiAssistant() {
               </button>
               <button
                 onClick={() => sendMessage()}
-                disabled={(!input.trim() && !attachedFile) || loading}
+                disabled={(!input.trim() && !attachedFile) || loading || isRecording}
                 className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all"
                 style={{
                   background: (input.trim() || attachedFile) && !loading
