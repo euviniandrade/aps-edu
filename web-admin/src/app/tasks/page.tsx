@@ -52,6 +52,27 @@ export default function TasksPage() {
   const fileInputRef                  = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ taskId: string; title: string } | null>(null)
 
+  const exportCSV = () => {
+    const filtered = tasks.filter(t => !search || t.title?.toLowerCase().includes(search.toLowerCase()))
+    const header = ['Título', 'Status', 'Prioridade', 'Unidade', 'Responsável', 'Vencimento', 'Criação']
+    const rows = filtered.map(t => [
+      t.title || '',
+      STATUS_LABELS[t.status] || t.status || '',
+      PRIORITY_LABELS[t.priority] || t.priority || '',
+      t.unit?.name || t.unitId || '',
+      t.assignedTo?.name || t.assignedToId || '',
+      t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : '',
+      t.createdAt ? new Date(t.createdAt).toLocaleDateString('pt-BR') : '',
+    ])
+    const csv = [header, ...rows].map(r => r.map((c: string) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `tarefas_${new Date().toISOString().slice(0,10)}.csv`; a.click()
+    URL.revokeObjectURL(url)
+    success('CSV exportado com sucesso!')
+  }
+
   const load = async () => {
     setLoading(true)
     try {
@@ -142,17 +163,27 @@ export default function TasksPage() {
             {filtered.length} tarefa{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
-          style={{
-            background: 'linear-gradient(135deg, #F8A303, #FDC347)',
-            color: '#000',
-            boxShadow: '0 4px 20px rgba(248,163,3,0.3)',
-          }}
-        >
-          + Nova Tarefa
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
+            title="Exportar CSV"
+          >
+            ↓ CSV
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #F8A303, #FDC347)',
+              color: '#000',
+              boxShadow: '0 4px 20px rgba(248,163,3,0.3)',
+            }}
+          >
+            + Nova Tarefa
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

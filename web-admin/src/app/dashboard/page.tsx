@@ -125,8 +125,11 @@ export default function DashboardPage() {
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
-
   const [aiRaw, setAiRaw] = useState<string | null>(null)
+
+  // Daily briefing (once per day)
+  const [briefing, setBriefing] = useState<string>('')
+  const [briefingLoading, setBriefingLoading] = useState(false)
 
   const loadAiInsights = async () => {
     setAiLoading(true)
@@ -154,6 +157,30 @@ export default function DashboardPage() {
     }
   }
 
+  const loadBriefing = async (dashData: any) => {
+    const key = `apsedu_briefing_${new Date().toISOString().slice(0,10)}`
+    const cached = localStorage.getItem(key)
+    if (cached) { setBriefing(cached); return }
+    setBriefingLoading(true)
+    try {
+      const h = new Date().getHours()
+      const period = h < 12 ? 'manhã' : h < 18 ? 'tarde' : 'noite'
+      const prompt = `Você é Sofi, assistente do Departamento de Educação - APS.
+Dados do sistema: ${JSON.stringify({
+  usuarios_ativos: dashData?.totalActiveUsers || 0,
+  tarefas_pendentes: dashData?.tasks?.pending || 0,
+  tarefas_atrasadas: dashData?.tasks?.overdue || 0,
+  eventos_futuros: (dashData?.events?.planned || 0) + (dashData?.events?.ongoing || 0),
+})}
+Crie um briefing matinal de ${period} para Vinicius Felix em 2-3 frases: destaque o ponto mais crítico de atenção hoje, mencione algo positivo dos dados e termine com uma dica motivacional. Seja direto e use no máximo 80 palavras.`
+      const res = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) })
+      const d = await res.json()
+      const text = d.content || ''
+      if (text) { setBriefing(text); localStorage.setItem(key, text) }
+    } catch (_) {}
+    setBriefingLoading(false)
+  }
+
   useEffect(() => {
     setMounted(true)
     Promise.all([
@@ -163,6 +190,7 @@ export default function DashboardPage() {
       .then(([d, r]) => {
         setData(d.data)
         setRanking(r.data.ranking || [])
+        loadBriefing(d.data)
       })
       .catch(console.error)
     loadAiInsights()
@@ -213,6 +241,32 @@ export default function DashboardPage() {
           📅 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
       </div>
+
+      {/* ── AI DAILY BRIEFING ──────────────────────────────────── */}
+      {(briefing || briefingLoading) && (
+        <div className="mb-5 animate-fade-in-up rounded-2xl p-4 flex items-start gap-3"
+          style={{ background: 'linear-gradient(135deg, rgba(248,163,3,0.08) 0%, rgba(253,195,71,0.04) 100%)', border: '1px solid rgba(248,163,3,0.2)' }}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-black"
+            style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', boxShadow: '0 0 12px rgba(248,163,3,0.3)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6L12 2z"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs font-bold" style={{ color: '#FDC347' }}>☀️ Briefing do dia · Sofi</p>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(248,163,3,0.15)', color: 'rgba(248,163,3,0.7)', border: '1px solid rgba(248,163,3,0.2)' }}>IA</span>
+            </div>
+            {briefingLoading ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                {[0,0.15,0.3].map((d,i) => <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'rgba(248,163,3,0.5)', animationDelay: `${d}s` }} />)}
+              </div>
+            ) : (
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>{briefing}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

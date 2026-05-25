@@ -2109,6 +2109,14 @@ export default function MinhaAreaPage() {
     const saved = localStorage.getItem('aps_workday')
     if (saved) try { setWorkDay(JSON.parse(saved)) } catch {}
     loadTasks()
+
+    // Listen for workday updates from floating Sofi on other pages
+    const handleWdUpdate = (e: any) => {
+      const updated = e.detail as WorkDay
+      if (updated) { setWorkDay(updated); localStorage.setItem('aps_workday', JSON.stringify(updated)) }
+    }
+    window.addEventListener('workday_updated', handleWdUpdate)
+    return () => window.removeEventListener('workday_updated', handleWdUpdate)
   }, [])
 
   // Notification reminder every 30 min

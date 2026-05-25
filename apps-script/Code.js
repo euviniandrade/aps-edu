@@ -707,12 +707,14 @@ function aiRoute(method, action, body, me) {
       || msgLower.indexOf('pasta') >= 0 || msgLower.indexOf('documento') >= 0
       || msgLower.indexOf('mover') >= 0 || msgLower.indexOf('reorgan') >= 0
 
-    var system = 'Voce e Sofi, assistente pessoal superinteligente de Vinicius Felix, coordenador de marketing e captacao da Educacao Adventista APS Sul. '
+    var system = 'Voce e Sofi, assistente pessoal superinteligente de Vinicius Felix, coordenador de marketing e captacao do Departamento de Educacao da Associacao Paulista Sul (APS). '
       + 'Voce tem memoria permanente, acesso a base de conhecimento, pode pesquisar na internet, gerar imagens, criar ATAS e controlar todo o sistema. '
       + 'Seja prestativa, direta, organizada e motivadora. Use linguagem profissional mas amigavel. Responda SEMPRE em portugues brasileiro.\n\n'
+      + 'CONTEXTO ORGANIZACIONAL: Associacao Paulista Sul (APS) | Departamento de Educacao - APS | Use sempre estes termos corretos.\n\n'
       + 'DATA/HORA ATUAL: ' + dateStr + ', ' + timeStr + '\n\n'
       + 'IDENTIDADE DO USUARIO:\n'
       + '- Nome: Vinicius Felix\n'
+      + '- Organizacao: Departamento de Educacao - APS (Associacao Paulista Sul)\n'
       + '- Gmail pessoal: engenhariatotal.vinicius@gmail.com\n'
       + '- Email profissional: vinicius.felix@adventistas.org\n'
       + '- Quando o usuario perguntar ou mencionar "meu email" ou "meu gmail", SEMPRE use engenhariatotal.vinicius@gmail.com\n\n'

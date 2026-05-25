@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Cookies from 'js-cookie'
@@ -76,20 +76,101 @@ function getRoleLevel(role: string): string {
   return 'member'
 }
 
+function LiveClock() {
+  const [time, setTime] = useState('')
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date()
+      setTime(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <svg className="w-3.5 h-3.5" style={{ color: 'rgba(248,163,3,0.6)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" strokeWidth="1.5"/>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6v6l4 2"/>
+      </svg>
+      <span className="text-xs font-mono font-bold" style={{ color: 'rgba(255,255,255,0.6)' }}>{time}</span>
+    </div>
+  )
+}
+
+function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [open, onClose])
+  if (!open) return null
+  const shortcuts = [
+    { key: '⌘K / Ctrl+K', desc: 'Abrir buscador / Sofi IA' },
+    { key: '?',            desc: 'Ver atalhos de teclado' },
+    { key: 'Esc',          desc: 'Fechar modal / painel' },
+    { key: 'G + D',        desc: 'Ir para Dashboard' },
+    { key: 'G + T',        desc: 'Ir para Tarefas' },
+    { key: 'G + E',        desc: 'Ir para Eventos' },
+    { key: 'G + N',        desc: 'Ir para Notificações' },
+    { key: 'G + A',        desc: 'Ir para Analytics IA' },
+    { key: 'G + M',        desc: 'Ir para Minha Área (Sofi)' },
+  ]
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}>
+      <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: 'rgba(12,14,30,0.98)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-bold text-white">Atalhos de teclado</h3>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">✕</button>
+        </div>
+        <div className="space-y-2">
+          {shortcuts.map(s => (
+            <div key={s.key} className="flex items-center justify-between py-1.5">
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{s.desc}</span>
+              <kbd className="text-xs px-2 py-1 rounded-lg font-mono" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#FDC347' }}>{s.key}</kbd>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-center mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Pressione ? a qualquer momento para ver esta lista</p>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [sidebarOpen, setSidebarOpen]     = useState(false)
-  const [searchOpen, setSearchOpen]       = useState(false)
-  const [paletteOpen, setPaletteOpen]     = useState(false)
+  const [sidebarOpen, setSidebarOpen]       = useState(false)
+  const [searchOpen, setSearchOpen]         = useState(false)
+  const [paletteOpen, setPaletteOpen]       = useState(false)
+  const [shortcutsOpen, setShortcutsOpen]   = useState(false)
 
-  // ⌘K / Ctrl+K global shortcut
+  // Global keyboard shortcuts
+  const gPressedRef = useRef(false)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // ⌘K / Ctrl+K → Command Palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       setPaletteOpen(v => !v)
+      return
     }
-  }, [])
+    // ? → shortcuts modal (only when not typing)
+    const tag = (e.target as HTMLElement)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    if (e.key === '?') { setShortcutsOpen(v => !v); return }
+    // G + key navigation
+    if (e.key === 'g' || e.key === 'G') { gPressedRef.current = true; setTimeout(() => { gPressedRef.current = false }, 1000); return }
+    if (gPressedRef.current) {
+      const map: Record<string, string> = { d: '/dashboard', t: '/tasks', e: '/events', n: '/notificacoes', a: '/analytics', m: '/minha-area' }
+      const dest = map[e.key.toLowerCase()]
+      if (dest) { e.preventDefault(); router.push(dest); gPressedRef.current = false }
+    }
+  }, [router])
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -446,6 +527,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
 
+            {/* Live clock */}
+            <LiveClock />
+
+            {/* Keyboard shortcuts hint */}
+            <button onClick={() => setShortcutsOpen(true)} className="hidden lg:flex items-center gap-1 p-2 rounded-xl transition-all hover:bg-white/5"
+              style={{ color: 'rgba(255,255,255,0.25)' }} title="Atalhos (?)">
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>?</kbd>
+            </button>
+
             {/* Bell → Notificações */}
             <Link href="/notificacoes"
               className="relative p-2 rounded-xl transition-all hover:bg-white/5"
@@ -490,7 +580,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="absolute inset-0 dot-grid pointer-events-none" style={{ zIndex: -1 }} />
 
         {/* ── PAGE CONTENT ────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto p-5 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-5 lg:p-6 pb-24 lg:pb-6">
           {children}
         </main>
       </div>
@@ -500,6 +590,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── COMMAND PALETTE ⌘K ──────────────────────── */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {/* ── KEYBOARD SHORTCUTS MODAL ─────────────────── */}
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      {/* ── MOBILE BOTTOM NAV ────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2"
+        style={{ background: 'rgba(7,9,22,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {[
+          { href: '/dashboard',    icon: '🏠', label: 'Início' },
+          { href: '/tasks',        icon: '✅', label: 'Tarefas' },
+          { href: '/minha-area',   icon: '⚡', label: 'Sofi' },
+          { href: '/notificacoes', icon: '🔔', label: 'Notif.' },
+          { href: '/analytics',    icon: '📊', label: 'Analytics' },
+        ].map(item => {
+          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          return (
+            <Link key={item.href} href={item.href}
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+              style={{ color: active ? '#FDC347' : 'rgba(255,255,255,0.35)', background: active ? 'rgba(248,163,3,0.1)' : 'transparent' }}>
+              <span className="text-lg leading-none">{item.icon}</span>
+              <span className="text-[9px] font-semibold">{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }
