@@ -270,7 +270,21 @@ export default function AiAssistant() {
         // Dispatch event so minha-area can listen
         window.dispatchEvent(new CustomEvent('workday_updated', { detail: updated }))
       } else if (action.type === 'create_task') {
-        await api.post('/personal', action.data)
+        const created = await api.post('/personal', action.data)
+        window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: [created.data] } }))
+        addMsg('assistant', `✅ Tarefa criada e destacada na sua área: **${created.data?.title || action.data?.title || 'Nova tarefa'}**`)
+      } else if (action.type === 'create_tasks') {
+        const items = Array.isArray(action.data?.tasks) ? action.data.tasks : []
+        const created = []
+        for (const item of items) {
+          if (!item?.title) continue
+          const res = await api.post('/personal', item)
+          created.push(res.data)
+        }
+        if (created.length) {
+          window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: created } }))
+          addMsg('assistant', `✅ ${created.length} tarefas criadas e destacadas na sua área:\n${created.map((t: any, i: number) => `${i + 1}. ${t.title}`).join('\n')}`)
+        }
       } else if (action.type === 'create_event') {
         await api.post('/calendar', action.data)
       } else if (action.type === 'send_email') {
@@ -398,6 +412,9 @@ export default function AiAssistant() {
           const fallbackPrompt = `Você é a Sofi, assistente virtual do Departamento de Educação da Associação Paulista Sul (APS).
 Responda em português do Brasil com padrão executivo, prático e humano.
 Quando houver transcrição de áudio ou conteúdo de documento, trate como fonte principal.
+Não invente tarefas existentes. Se o usuário pedir para criar várias tarefas, devolva uma ação JSON create_tasks com data.tasks.
+Formato de lote:
+{"content":"✅ Vou criar as tarefas agora.","action":{"type":"create_tasks","data":{"tasks":[{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD","notes":"..."}]}}}
 
 Histórico recente:
 ${trimmed.map(m => `${m.role === 'user' ? 'Usuário' : 'Sofi'}: ${m.content}`).join('\n\n')}

@@ -30,6 +30,10 @@ interface PersonalTask {
   createdAt: string
 }
 
+interface TaskCreatedEvent extends Event {
+  detail?: { tasks?: PersonalTask[] }
+}
+
 interface Credential {
   id: string
   service: string
@@ -69,6 +73,49 @@ function calcXpLevel(xp: number) {
   const level = Math.floor(xp / 100) + 1
   const progress = xp % 100
   return { level, progress, next: 100 }
+}
+
+function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function parsePersonalTasksFromText(text: string): Partial<PersonalTask>[] {
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  const pieces = text
+    .split(/\n|;|(?:^|\s)\d+[.)]\s+/g)
+    .map(item => item.trim())
+    .filter(item => item.length > 12 && !/^crie|^criar|^adicione|^adicionar/i.test(item))
+
+  return pieces.slice(0, 12).map(raw => {
+    const durationMatch = raw.match(/(\d+)\s*(h|hora|horas|min|minuto|minutos)/i)
+    const duration = durationMatch
+      ? durationMatch[2].toLowerCase().startsWith('h') ? Number(durationMatch[1]) * 60 : Number(durationMatch[1])
+      : 30
+    const dateMatch = raw.match(/(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/)
+    let dueDate = ''
+    if (/hoje/i.test(raw)) dueDate = toIsoDate(today)
+    else if (/amanh[ãa]/i.test(raw)) dueDate = toIsoDate(tomorrow)
+    else if (dateMatch) {
+      const year = dateMatch[3] ? Number(dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]) : today.getFullYear()
+      dueDate = toIsoDate(new Date(year, Number(dateMatch[2]) - 1, Number(dateMatch[1])))
+    }
+
+    const title = raw
+      .replace(/\([^)]*\)/g, '')
+      .replace(/prazo\s*:?\s*(hoje|amanh[ãa]|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)/ig, '')
+      .replace(/\d+\s*(h|hora|horas|min|minuto|minutos)/ig, '')
+      .replace(/^\s*[-–•]\s*/, '')
+      .trim()
+    const lower = raw.toLowerCase()
+    const category: PersonalTask['category'] = /campanha|instagram|tiktok|marketing|drone|conte[úu]do|postar/.test(lower)
+      ? 'campanha'
+      : /pessoal/.test(lower) ? 'pessoal' : 'trabalho'
+    const priority: PersonalTask['priority'] = dueDate === toIsoDate(today) || /urgente|prioridade|hoje/.test(lower) ? 'high' : 'medium'
+
+    return { title, duration, dueDate, category, priority, notes: raw }
+  }).filter(task => !!task.title)
 }
 
 // ─── CREDENTIALS VAULT (local-only, PIN-derived encryption) ─────────
@@ -1222,8 +1269,21 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   const executeAction = async (action: { type: string; data: any }) => {
     try {
       if (action.type === 'create_task') {
-        await api.post('/personal', action.data)
+        const res = await api.post('/personal', action.data)
+        setMessages(p => [...p, { role: 'assistant', content: `✅ Tarefa criada e destacada: **${res.data?.title || action.data?.title || 'Nova tarefa'}**` }])
         onTaskCreated?.()
+      } else if (action.type === 'create_tasks') {
+        const items = Array.isArray(action.data?.tasks) ? action.data.tasks : []
+        const created: PersonalTask[] = []
+        for (const item of items) {
+          if (!item?.title) continue
+          const res = await api.post('/personal', item)
+          created.push(res.data)
+        }
+        if (created.length) {
+          setMessages(p => [...p, { role: 'assistant', content: `✅ ${created.length} tarefas criadas e destacadas:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}` }])
+          onTaskCreated?.()
+        }
       } else if (action.type === 'create_event') {
         await api.post('/calendar', action.data)
         onEventCreated?.()
@@ -1345,6 +1405,45 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     setMessages(newMsgs)
     if (!override) setInput('')
     setLoading(true)
+
+    const asksTasks = /(minhas tarefas|tarefas de hoje|o que tenho.*fazer|quais.*tarefas|lista.*tarefas)/i.test(baseText)
+    const createsTasks = /(crie|criar|adicione|adicionar|nova tarefa|novas tarefas)/i.test(baseText)
+    if (asksTasks && !createsTasks && !file) {
+      const pending = tasks.filter(t => t.status !== 'done')
+      const today = new Date().toISOString().slice(0, 10)
+      const todayTasks = pending.filter(t => t.dueDate === today)
+      const source = todayTasks.length ? todayTasks : pending
+      const answer = source.length
+        ? `Você tem ${source.length} tarefa${source.length !== 1 ? 's' : ''} ${todayTasks.length ? 'para hoje' : 'pendente' + (source.length !== 1 ? 's' : '')}:\n${source.map((t, i) => `${i + 1}. ${t.title} (${fmtTime(t.duration)}${t.dueDate ? `, prazo: ${new Date(t.dueDate + 'T12:00').toLocaleDateString('pt-BR')}` : ''})`).join('\n')}`
+        : 'Sua lista de tarefas está vazia agora. Posso criar tarefas para você e elas vão aparecer em destaque aqui e no calendário da sua área.'
+      setMessages(p => [...p, { role: 'assistant', content: answer }])
+      speakText(answer)
+      setLoading(false)
+      return
+    }
+
+    if (createsTasks && !file) {
+      const parsedTasks = parsePersonalTasksFromText(baseText)
+      if (parsedTasks.length > 1) {
+        try {
+          const created: PersonalTask[] = []
+          for (const item of parsedTasks) {
+            const res = await api.post('/personal', item)
+            created.push(res.data)
+          }
+          window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: created } }))
+          const answer = `✅ ${created.length} tarefas criadas, destacadas e colocadas no calendário da sua área quando têm prazo:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}`
+          setMessages(p => [...p, { role: 'assistant', content: answer }])
+          speakText(answer)
+        } catch (err: any) {
+          const msg = err?.response?.data?.error || err?.message || 'Erro ao criar tarefas'
+          setMessages(p => [...p, { role: 'assistant', content: `❌ ${msg}` }])
+        }
+        setLoading(false)
+        return
+      }
+    }
+
     try {
       // For vision messages, call the gemini proxy directly
       let r: any
@@ -2215,8 +2314,20 @@ export default function MinhaAreaPage() {
       const updated = e.detail as WorkDay
       if (updated) { setWorkDay(updated); localStorage.setItem('aps_workday', JSON.stringify(updated)) }
     }
+    const handleTasksUpdated = (e: TaskCreatedEvent) => {
+      const created = e.detail?.tasks || []
+      setSearch('')
+      setFilterCat('all')
+      setFilterStatus('all')
+      if (created.length) setTasks(p => [...created, ...p.filter(t => !created.some(c => c.id === t.id))])
+      loadTasks()
+    }
     window.addEventListener('workday_updated', handleWdUpdate)
-    return () => window.removeEventListener('workday_updated', handleWdUpdate)
+    window.addEventListener('personal_tasks_updated', handleTasksUpdated)
+    return () => {
+      window.removeEventListener('workday_updated', handleWdUpdate)
+      window.removeEventListener('personal_tasks_updated', handleTasksUpdated)
+    }
   }, [])
 
   // Notification reminder every 30 min
@@ -2247,6 +2358,9 @@ export default function MinhaAreaPage() {
     try {
       const res = await api.post('/personal', data)
       setTasks(p => [res.data, ...p])
+      setSearch('')
+      setFilterCat('all')
+      setFilterStatus('all')
     } catch {}
   }
 
@@ -2286,6 +2400,23 @@ export default function MinhaAreaPage() {
   const doneToday    = tasks.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()).length
   const totalXp      = tasks.filter(t => t.status === 'done').reduce((a, t) => a + (parseInt(t.xp as any) || 0), 0)
   const { level }    = calcXpLevel(totalXp)
+  const highlightedTasks = tasks
+    .filter(t => t.status !== 'done')
+    .sort((a, b) => {
+      const today = new Date().toISOString().slice(0, 10)
+      const aToday = a.dueDate === today ? -1 : 0
+      const bToday = b.dueDate === today ? -1 : 0
+      if (aToday !== bToday) return aToday - bToday
+      const pri = { high: 0, medium: 1, low: 2 }
+      return (pri[a.priority] || 1) - (pri[b.priority] || 1)
+    })
+    .slice(0, 4)
+  const filtersActive = !!search.trim() || filterCat !== 'all' || filterStatus !== 'all'
+  const clearTaskFilters = () => {
+    setSearch('')
+    setFilterCat('all')
+    setFilterStatus('all')
+  }
 
   return (
     <AdminLayout>
@@ -2343,6 +2474,50 @@ export default function MinhaAreaPage() {
       {/* ══════════════════════════════════════════════════════
            SEÇÃO 1 — CALENDÁRIO GOOGLE (destaque principal)
       ══════════════════════════════════════════════════════ */}
+      {highlightedTasks.length > 0 && (
+        <section className="mb-6 animate-fade-in-up">
+          <div className="rounded-2xl p-4"
+            style={{ background: 'linear-gradient(135deg, rgba(248,163,3,0.14), rgba(10,189,120,0.08))', border: '1px solid rgba(248,163,3,0.24)' }}>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p className="text-sm font-extrabold text-white">Tarefas em destaque</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  Sempre visíveis, mesmo quando filtros ou busca escondem a lista.
+                </p>
+              </div>
+              {filtersActive && (
+                <button onClick={clearTaskFilters}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#FDC347' }}>
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              {highlightedTasks.map(task => {
+                const pri = PRI_STYLE[task.priority] || PRI_STYLE.medium
+                return (
+                  <div key={task.id} className="rounded-2xl p-3"
+                    style={{ background: 'rgba(3,7,18,0.38)', border: `1px solid ${pri.color}33` }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-bold text-white leading-snug">{task.title}</p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ background: `${pri.color}18`, color: pri.color, border: `1px solid ${pri.color}30` }}>
+                        {pri.label}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.48)' }}>
+                      <span>{fmtTime(task.duration)}</span>
+                      {task.dueDate && <span>Prazo {new Date(task.dueDate + 'T12:00').toLocaleDateString('pt-BR')}</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mb-6 animate-fade-in-up">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -2428,6 +2603,8 @@ export default function MinhaAreaPage() {
               <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.25)' }} />
               <input type="text" placeholder="Buscar..." value={search}
                 onChange={e => setSearch(e.target.value)}
+                autoComplete="off"
+                name="task-search"
                 className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs text-white outline-none"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
             </div>
@@ -2464,12 +2641,21 @@ export default function MinhaAreaPage() {
             ) : filteredTasks.length === 0 ? (
               <div className="text-center py-10" style={{ color: 'rgba(255,255,255,0.2)' }}>
                 <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">Nenhuma tarefa</p>
-                <button onClick={() => setShowForm(true)}
-                  className="mt-2 text-xs px-4 py-1.5 rounded-xl"
-                  style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-                  Criar tarefa
-                </button>
+                <p className="text-sm">{tasks.length > 0 && filtersActive ? 'Tarefas ocultas pelos filtros' : 'Nenhuma tarefa'}</p>
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  {tasks.length > 0 && filtersActive && (
+                    <button onClick={clearTaskFilters}
+                      className="text-xs px-4 py-1.5 rounded-xl"
+                      style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
+                      Mostrar minhas {tasks.length} tarefas
+                    </button>
+                  )}
+                  <button onClick={() => setShowForm(true)}
+                    className="text-xs px-4 py-1.5 rounded-xl"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.62)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                    Criar tarefa
+                  </button>
+                </div>
               </div>
             ) : (
               filteredTasks.map(task => (

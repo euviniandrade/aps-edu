@@ -870,10 +870,13 @@ function aiRoute(method, action, body, me) {
       + '14. Se o usuario disser "lembre", "guarde", "anote", "memorize": use save_memory para guardar PERMANENTEMENTE.\n'
       + '15. Para pesquisar na internet/noticias atuais: use web_search.\n'
       + '16. Para criar imagens/ilustracoes: use generate_image com prompt em ingles detalhado.\n'
+      + '18. NUNCA invente tarefas existentes. Para listar tarefas, use apenas as tarefas do CONTEXTO. Se nao houver tarefas no contexto, diga que a lista esta vazia.\n'
+      + '19. Se o usuario pedir para criar varias tarefas, use create_tasks em lote. Nao responda apenas em texto.\n'
       + '17. Para transcrições de reuniao, notas ou áudios de reunião: ofereça gerar a ATA com generate_ata.\n\n'
 
     system += 'ACOES DISPONIVEIS - responda APENAS com JSON quando detectar intencao de acao:\n\n'
       + '--- PRODUTIVIDADE ---\n'
+      + 'Criar varias tarefas: {"content":"Tarefas criadas.","action":{"type":"create_tasks","data":{"tasks":[{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD","notes":"..."},{"title":"...","priority":"high|medium|low","duration":60,"category":"campanha","dueDate":"YYYY-MM-DD","notes":"..."}]}}}\n'
       + 'Atualizar horario: {"content":"✅ Horário atualizado para HH:MM!","action":{"type":"update_workday","data":{"endHour":16,"endMin":0}}}\n'
       + 'Criar tarefa: {"content":"✅ Tarefa criada! (~30min)","action":{"type":"create_task","data":{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD"}}}\n'
       + 'Criar evento calendario: {"content":"⏳ Agendando...","action":{"type":"create_event","data":{"title":"...","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","description":"...","reminderMinutes":60}}}\n'
@@ -1199,7 +1202,7 @@ function aiRoute(method, action, body, me) {
         // Passa para o frontend executar
         // contentFinal já foi definido pelo AI ("🔍 Pesquisando..." ou "🎨 Gerando...")
 
-      } else if (actionFinal.type !== 'update_workday' && actionFinal.type !== 'create_task') {
+      } else if (actionFinal.type !== 'update_workday' && actionFinal.type !== 'create_task' && actionFinal.type !== 'create_tasks') {
         // Acao nao reconhecida — nao executa e avisa o usuario
         contentFinal = '⚠️ Não consegui executar essa ação (' + actionFinal.type + '). Verifique se o Apps Script está na versão mais recente e reimplante.'
         actionFinal = null
