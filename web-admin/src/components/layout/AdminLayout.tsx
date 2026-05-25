@@ -183,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="relative flex-shrink-0">
             <img
               src="/aps30-logo.png"
-              alt="APS30"
+              alt="APS"
               className="w-10 h-10 object-contain"
               style={{ filter: 'drop-shadow(0 0 8px rgba(248,163,3,0.4))' }}
             />
@@ -196,7 +196,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className="text-[10px] font-semibold tracking-[0.16em] truncate mt-0.5 uppercase"
               style={{ color: 'var(--gold)', opacity: 0.8 }}
             >
-              APS Sul
+              Associação Paulista Sul
             </p>
           </div>
         </div>
@@ -358,7 +358,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        {/* ── APS30 COLOR BAND ─────────────────────────── */}
+        {/* ── APS COLOR BAND ──────────────────────────── */}
         <div className="flex h-0.5">
           <div className="flex-1" style={{ background: '#F9C234' }} />
           <div className="flex-1" style={{ background: '#29ABE2' }} />

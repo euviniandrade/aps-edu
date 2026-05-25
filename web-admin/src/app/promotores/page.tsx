@@ -178,7 +178,7 @@ export default function PromotoresPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-white">Gestão de Promotores</h1>
           <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Campanha de Matrículas 2027 · APS Sul · 14 unidades
+            Campanha de Matrículas 2027 · APS · 14 unidades
           </p>
         </div>
         <div className="flex items-center gap-2">

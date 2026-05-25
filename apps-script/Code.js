@@ -904,9 +904,14 @@ function aiRoute(method, action, body, me) {
       return (m.role === 'user' ? 'Vinicius' : 'Sofi') + ': ' + m.content
     }).join('\n')
 
+    // Hora atual para calculos de horario de trabalho
+    var nowForWorkday = new Date()
+    var nowHourWd = nowForWorkday.getHours()
+    var nowMinWd  = nowForWorkday.getMinutes()
+
     // Instrucao final reforçando JSON obrigatorio para acoes
     var actionReminder = '\nLEMBRETE DE ACOES — quando usar JSON:\n'
-      + '✅ USE JSON para: apagar emails, criar tarefa, criar evento, enviar email, mover arquivo, criar pasta, criar doc, save_memory, save_to_kb, generate_ata, web_search, generate_image.\n'
+      + '✅ USE JSON para: apagar emails, criar tarefa, criar evento, enviar email, mover arquivo, criar pasta, criar doc, save_memory, save_to_kb, generate_ata, web_search, generate_image, update_workday.\n'
       + '❌ NUNCA use JSON para: ler arquivo, resumir em texto, analisar, responder perguntas gerais.\n'
       + '🎨 Se usuario pedir imagem/ilustracao/foto: IMEDIATAMENTE retorne JSON com generate_image. Nao explique, apenas gere.\n'
       + '🔍 Se usuario pedir pesquisa/busca na internet: IMEDIATAMENTE retorne JSON com web_search.\n'
@@ -914,6 +919,19 @@ function aiRoute(method, action, body, me) {
       + '💾 Se usuario confirmar salvar arquivo: IMEDIATAMENTE retorne JSON com save_to_kb com o conteudo do arquivo.\n'
       + '📋 Se usuario pedir ATA: IMEDIATAMENTE retorne JSON com generate_ata com o conteudo da reuniao.\n'
       + '- Se a mensagem contem [DOC_CONTENT:] ou [AUDIO_TRANSCRIBED:]: responda em TEXTO com resumo/analise. Depois OFEREÇA salvar com save_to_kb.\n\n'
+      + '⏰ HORÁRIO DE TRABALHO — REGRA CRÍTICA (hora atual: ' + nowHourWd + ':' + String(nowMinWd).padStart(2,'0') + '):\n'
+      + 'Se o usuario mencionar QUALQUER coisa sobre duração/horário de trabalho: IMEDIATAMENTE retorne JSON update_workday.\n'
+      + 'Calculos obrigatorios:\n'
+      + '  "vou trabalhar X horas" → endHour = ' + nowHourWd + ' + X (considere minutos também)\n'
+      + '  "só X minutos" / "mais X min" → endHour = ' + nowHourWd + ', endMin = ' + nowMinWd + ' + X (ajuste hora se min >= 60)\n'
+      + '  "trabalho até HH:MM" / "termino às HH:MM" → endHour = HH, endMin = MM\n'
+      + '  "começo às HH:MM" / "inicio às HH:MM" → startHour = HH, startMin = MM\n'
+      + 'Exemplos OBRIGATORIOS:\n'
+      + '  "vou trabalhar 2 horas" → {"content":"✅ Horário atualizado! Você trabalha até as ' + (nowHourWd+2) + ':' + String(nowMinWd).padStart(2,'0') + '","action":{"type":"update_workday","data":{"endHour":' + (nowHourWd+2) + ',"endMin":' + nowMinWd + '}}}\n'
+      + '  "só 30 minutos agora" → endMin = ' + nowMinWd + ' + 30 (se >= 60: endHour++, endMin -= 60)\n'
+      + '  "trabalho até 18h" → {"content":"✅ Horário atualizado para 18:00!","action":{"type":"update_workday","data":{"endHour":18,"endMin":0}}}\n'
+      + '  "começo às 8 e termino às 17" → {"content":"✅ Horário 08:00 — 17:00 configurado!","action":{"type":"update_workday","data":{"startHour":8,"startMin":0,"endHour":17,"endMin":0}}}\n'
+      + 'NUNCA responda em texto puro quando detectar menção de horário/duração de trabalho. SEMPRE use JSON update_workday.\n\n'
 
     var fullPrompt = system + actionReminder
       + (historyLines ? 'HISTORICO (recente):\n' + historyLines + '\n\n' : '')

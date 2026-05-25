@@ -111,7 +111,7 @@ export default function LoginPage() {
           <div className="flex items-center gap-4">
             <img
               src="/aps30-logo.png"
-              alt="APS30"
+              alt="APS"
               className="h-14 w-14 object-contain flex-shrink-0"
               style={{ filter: 'drop-shadow(0 0 12px rgba(248,163,3,0.5))' }}
             />
@@ -203,7 +203,7 @@ export default function LoginPage() {
             ))}
           </div>
 
-          {/* APS30 stats row */}
+          {/* APS stats row */}
           <div className={`mt-8 flex gap-5 ${mounted ? 'animate-fade-in-up delay-600' : 'opacity-0'}`}>
             {[
               { value: '15', label: 'Unidades' },
@@ -227,7 +227,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom APS30 color band */}
+        {/* Bottom APS color band */}
         <div className="relative z-10 flex h-1">
           <div className="flex-1" style={{ backgroundColor: '#F9C234' }} />
           <div className="flex-1" style={{ backgroundColor: '#29ABE2' }} />
@@ -257,7 +257,7 @@ export default function LoginPage() {
           <div className="lg:hidden flex flex-col items-center mb-10">
             <img
               src="/aps30-logo.png"
-              alt="APS30"
+              alt="APS"
               className="w-16 h-16 object-contain mb-3"
               style={{ filter: 'drop-shadow(0 0 12px rgba(248,163,3,0.5))' }}
             />

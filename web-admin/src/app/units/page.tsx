@@ -93,7 +93,7 @@ export default function UnitsPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-white">Unidades Educacionais</h1>
           <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            {units.length} unidade{units.length !== 1 ? 's' : ''} cadastrada{units.length !== 1 ? 's' : ''} na rede APS Sul
+            {units.length} unidade{units.length !== 1 ? 's' : ''} cadastrada{units.length !== 1 ? 's' : ''} na rede — Associação Paulista Sul
           </p>
         </div>
         <button

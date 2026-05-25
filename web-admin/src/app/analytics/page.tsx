@@ -144,7 +144,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
             </span>
           </div>
           <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Insights preditivos e análise avançada da rede APS Sul
+            Insights preditivos e análise avançada da rede — Associação Paulista Sul
           </p>
         </div>
         <button onClick={loadPrediction} disabled={aiLoading}

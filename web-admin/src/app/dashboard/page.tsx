@@ -199,7 +199,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-white">Dashboard Geral</h1>
           <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Visão em tempo real da rede APS Sul
+            Visão em tempo real da rede — Departamento de Educação - APS
           </p>
         </div>
         <div

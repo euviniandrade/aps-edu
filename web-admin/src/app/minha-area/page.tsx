@@ -271,6 +271,24 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
   )
 }
 
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i)
+const MINUTES_5 = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+const selectStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.07)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  color: 'white',
+  borderRadius: '0.5rem',
+  padding: '8px 6px',
+  fontSize: '0.85rem',
+  fontWeight: 700,
+  textAlign: 'center',
+  outline: 'none',
+  width: '100%',
+  cursor: 'pointer',
+  appearance: 'none' as any,
+}
+
 function WorkDayEditor({ wd, onSave }: { wd: WorkDay; onSave: (w: WorkDay) => void }) {
   const [v, setV] = useState(wd)
   return (
@@ -282,18 +300,28 @@ function WorkDayEditor({ wd, onSave }: { wd: WorkDay; onSave: (w: WorkDay) => vo
       ].map(({ label, hKey, mKey }) => (
         <div key={label}>
           <p className="text-xs text-white/40 mb-1.5 uppercase tracking-widest">{label}</p>
-          <div className="flex gap-2">
-            <input type="number" min={0} max={23}
+          <div className="flex items-center gap-1">
+            <select
               value={(v as any)[hKey]}
-              onChange={e => setV(p => ({ ...p, [hKey]: parseInt(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 rounded-lg text-sm text-center font-bold outline-none"
-              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
-            <span className="text-white self-center font-bold">:</span>
-            <input type="number" min={0} max={59}
+              onChange={e => setV(p => ({ ...p, [hKey]: parseInt(e.target.value) }))}
+              style={selectStyle}>
+              {HOURS_24.map(h => (
+                <option key={h} value={h} style={{ background: '#1a1a2e', color: 'white' }}>
+                  {String(h).padStart(2, '0')}
+                </option>
+              ))}
+            </select>
+            <span className="text-white font-bold text-lg">:</span>
+            <select
               value={(v as any)[mKey]}
-              onChange={e => setV(p => ({ ...p, [mKey]: parseInt(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 rounded-lg text-sm text-center font-bold outline-none"
-              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
+              onChange={e => setV(p => ({ ...p, [mKey]: parseInt(e.target.value) }))}
+              style={selectStyle}>
+              {MINUTES_5.map(m => (
+                <option key={m} value={m} style={{ background: '#1a1a2e', color: 'white' }}>
+                  {String(m).padStart(2, '0')}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       ))}
