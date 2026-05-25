@@ -76,6 +76,8 @@ function route(method, path, body, token) {
     case 'upload':        return uploadRoute(method, id, body, me)
     case 'memory':        return memoryRoute(method, id, body, me)
     case 'knowledge':     return knowledgeRoute(method, id, body, me)
+    case 'automations':   return automationsRoute(method, id, body, me)
+    case 'analytics':     return analyticsRoute(method, id, body, me)
     default:              throw Object.assign(new Error('Rota não encontrada'), { code: 404 })
   }
 }
@@ -1604,6 +1606,90 @@ function knowledgeRoute(method, id, body, me) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  AUTOMATIONS ROUTE
+// ══════════════════════════════════════════════════════════════
+function automationsRoute(method, id, body, me) {
+  if (method === 'GET') {
+    var rules = getAll('automations').filter(function(r) {
+      return String(r.userId) === String(me.id) || me.role === 'admin'
+    })
+    return { automations: rules, total: rules.length }
+  }
+  if (method === 'POST') {
+    var rule = {
+      id: makeId(), userId: me.id,
+      name: body.name || 'Nova automação',
+      trigger: body.trigger || '',
+      condition: body.condition || 'any',
+      action: body.action || '',
+      active: true,
+      runs: 0,
+      createdAt: new Date().toISOString(),
+    }
+    insert('automations', rule)
+    return rule
+  }
+  if (method === 'PUT' && id) {
+    var existing = findById('automations', id)
+    if (!existing) throw new Error('Automação não encontrada')
+    var updated = Object.assign({}, existing, body, { id: id })
+    update('automations', id, updated)
+    return updated
+  }
+  if (method === 'DELETE' && id) {
+    remove('automations', id)
+    return { success: true }
+  }
+  return {}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ANALYTICS ROUTE — dados agregados para analytics preditivo
+// ══════════════════════════════════════════════════════════════
+function analyticsRoute(method, id, body, me) {
+  if (method === 'GET' && id === 'summary') {
+    var tasks  = getAll('tasks')
+    var events = getAll('events')
+    var users  = getAll('users').filter(function(u) { return u.status !== 'inactive' })
+    var gam    = getAll('gamification')
+
+    var now    = new Date()
+    var week   = new Date(now.getTime() - 7 * 86400000)
+    var month  = new Date(now.getTime() - 30 * 86400000)
+
+    // Weekly task completion rate
+    var recentTasks   = tasks.filter(function(t) { return new Date(t.createdAt) >= week })
+    var recentDone    = recentTasks.filter(function(t) { return t.status === 'completed' })
+    var completionRate = recentTasks.length > 0 ? Math.round((recentDone.length / recentTasks.length) * 100) : 0
+
+    // Engagement score (avg points per active user)
+    var totalPoints = gam.reduce(function(a, g) { return a + (Number(g.points) || 0) }, 0)
+    var avgPoints   = users.length > 0 ? Math.round(totalPoints / users.length) : 0
+
+    // Trend: compare this week vs last week
+    var lastWeek    = new Date(now.getTime() - 14 * 86400000)
+    var prevTasks   = tasks.filter(function(t) { var d = new Date(t.createdAt); return d >= lastWeek && d < week })
+    var prevDone    = prevTasks.filter(function(t) { return t.status === 'completed' })
+    var prevRate    = prevTasks.length > 0 ? Math.round((prevDone.length / prevTasks.length) * 100) : 0
+    var trend       = completionRate - prevRate
+
+    return {
+      completionRate: completionRate,
+      completionTrend: trend,
+      avgEngagement: avgPoints,
+      totalUsers: users.length,
+      overdueCount: tasks.filter(function(t) { return t.status === 'overdue' }).length,
+      upcomingEvents: events.filter(function(ev) {
+        var d = new Date(ev.startDate || ev.date || '')
+        return d >= now && d <= new Date(now.getTime() + 7 * 86400000)
+      }).length,
+      recentActivity: recentTasks.length,
+    }
+  }
+  return {}
+}
+
+// ══════════════════════════════════════════════════════════════
 //  SETUP — Execute uma vez para inicializar a planilha
 // ══════════════════════════════════════════════════════════════
 function setupSpreadsheet() {
@@ -1626,6 +1712,7 @@ function setupSpreadsheet() {
     notifications:      ['id','userId','title','message','type','read','readAt','createdAt'],
     sofi_memory:        ['id','userId','type','content','importance','createdAt'],
     knowledge_base:     ['id','userId','fileName','mimeType','content','summary','tags','uploadedAt'],
+    automations:        ['id','userId','name','trigger','condition','action','active','runs','lastRun','createdAt'],
   }
 
   Object.entries(schemas).forEach(([name, headers]) => {

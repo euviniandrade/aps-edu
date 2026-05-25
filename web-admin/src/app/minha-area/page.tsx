@@ -904,6 +904,62 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   const [attachPreview, setAttachPreview] = useState<string>('') // emoji + filename label
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Voice state ────────────────────────────────────────────
+  const [isListening, setIsListening]     = useState(false)
+  const [isSpeaking, setIsSpeaking]       = useState(false)
+  const [voiceEnabled, setVoiceEnabled]   = useState(false)
+  const recognitionRef = useRef<any>(null)
+
+  // Init speech recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+    const rec = new SpeechRecognition()
+    rec.lang = 'pt-BR'
+    rec.continuous = false
+    rec.interimResults = false
+    rec.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript
+      setInput(prev => prev ? prev + ' ' + transcript : transcript)
+      setIsListening(false)
+    }
+    rec.onerror = () => setIsListening(false)
+    rec.onend   = () => setIsListening(false)
+    recognitionRef.current = rec
+  }, [])
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return
+    if (isListening) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+    } else {
+      recognitionRef.current.start()
+      setIsListening(true)
+    }
+  }
+
+  const speakText = (text: string) => {
+    if (!voiceEnabled || !window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const clean = text.replace(/[*_`#[\]()]/g, '').slice(0, 500)
+    const utter = new SpeechSynthesisUtterance(clean)
+    utter.lang = 'pt-BR'
+    utter.rate = 1.05
+    utter.pitch = 1.0
+    const voices = window.speechSynthesis.getVoices()
+    const ptVoice = voices.find(v => v.lang.startsWith('pt'))
+    if (ptVoice) utter.voice = ptVoice
+    utter.onstart = () => setIsSpeaking(true)
+    utter.onend   = () => setIsSpeaking(false)
+    window.speechSynthesis.speak(utter)
+  }
+
+  const stopSpeaking = () => {
+    window.speechSynthesis?.cancel()
+    setIsSpeaking(false)
+  }
+
   function getFileEmoji(file: File) {
     if (file.type.startsWith('image/')) return '📷'
     if (file.type.startsWith('audio/')) return '🎵'
@@ -1186,7 +1242,9 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       const fallbackMsg = errMsg
         ? `❌ Erro no servidor: ${errMsg}`
         : 'Não obtive resposta. Pode reformular?'
-      setMessages(p => [...p, { role: 'assistant', content: content || fallbackMsg }])
+      const finalContent = content || fallbackMsg
+      setMessages(p => [...p, { role: 'assistant', content: finalContent }])
+      speakText(finalContent)
       if (action) await executeAction(action)
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || 'Erro de conexão'
@@ -1317,38 +1375,84 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         </div>
       )}
 
-      {/* Input */}
-      <div className="flex gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,audio/*,.pdf,.doc,.docx,.txt"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        {/* Paperclip button */}
-        <button
-          onClick={() => !loading && fileInputRef.current?.click()}
-          disabled={loading}
-          className="px-3 py-3 rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
-          title="Anexar arquivo"
-          style={{
-            background: attachedFile ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.06)',
-            border: attachedFile ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
-            color: attachedFile ? '#A78BFA' : 'rgba(255,255,255,0.4)',
-          }}>
-          📎
-        </button>
-        <input type="text" value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Pergunte sobre tarefas, agenda, campanha, promotores..."
-          className="flex-1 px-4 py-3 rounded-xl text-sm text-white outline-none"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
-        <button onClick={() => send()} disabled={loading || (!input.trim() && !attachedFile)}
-          className="px-5 py-3 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
-          style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-          ➤
-        </button>
+      {/* Input row */}
+      <div className="space-y-2">
+        {/* Voice controls bar */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleListening}
+            disabled={!recognitionRef.current}
+            title={recognitionRef.current ? (isListening ? 'Parar gravação' : 'Falar para Sofi') : 'Voz não suportada neste navegador'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-30"
+            style={{
+              background: isListening ? 'rgba(255,71,87,0.15)' : 'rgba(255,255,255,0.05)',
+              border: isListening ? '1px solid rgba(255,71,87,0.4)' : '1px solid rgba(255,255,255,0.08)',
+              color: isListening ? '#FF4757' : 'rgba(255,255,255,0.4)',
+            }}>
+            {isListening ? (
+              <><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Gravando...</>
+            ) : (
+              <><span>🎤</span> Falar</>
+            )}
+          </button>
+          <button
+            onClick={() => setVoiceEnabled(v => !v)}
+            title={voiceEnabled ? 'Desativar voz da Sofi' : 'Ativar voz da Sofi'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={{
+              background: voiceEnabled ? 'rgba(10,189,120,0.12)' : 'rgba(255,255,255,0.05)',
+              border: voiceEnabled ? '1px solid rgba(10,189,120,0.25)' : '1px solid rgba(255,255,255,0.08)',
+              color: voiceEnabled ? '#0ABD78' : 'rgba(255,255,255,0.4)',
+            }}>
+            {voiceEnabled ? '🔊 Voz ON' : '🔇 Voz OFF'}
+          </button>
+          {isSpeaking && (
+            <button onClick={stopSpeaking}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold animate-pulse"
+              style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.25)', color: '#F8A303' }}>
+              ⏹ Parar fala
+            </button>
+          )}
+          <span className="ml-auto text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>
+            {voiceEnabled ? '🎙️ Sofi falará as respostas' : 'Clique 🔇 para ativar voz'}
+          </span>
+        </div>
+
+        {/* Text input row */}
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,audio/*,.pdf,.doc,.docx,.txt"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <button
+            onClick={() => !loading && fileInputRef.current?.click()}
+            disabled={loading}
+            className="px-3 py-3 rounded-xl transition-all disabled:opacity-40 flex-shrink-0"
+            title="Anexar arquivo"
+            style={{
+              background: attachedFile ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.06)',
+              border: attachedFile ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
+              color: attachedFile ? '#A78BFA' : 'rgba(255,255,255,0.4)',
+            }}>
+            📎
+          </button>
+          <input type="text" value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send()}
+            placeholder={isListening ? '🎤 Ouvindo...' : 'Pergunte sobre tarefas, agenda, campanha, promotores...'}
+            className="flex-1 px-4 py-3 rounded-xl text-sm text-white outline-none transition-all"
+            style={{
+              background: isListening ? 'rgba(255,71,87,0.06)' : 'rgba(255,255,255,0.06)',
+              border: isListening ? '1px solid rgba(255,71,87,0.3)' : '1px solid rgba(255,255,255,0.1)',
+            }} />
+          <button onClick={() => send()} disabled={loading || (!input.trim() && !attachedFile)}
+            className="px-5 py-3 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
+            style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+            ➤
+          </button>
+        </div>
       </div>
     </div>
   )

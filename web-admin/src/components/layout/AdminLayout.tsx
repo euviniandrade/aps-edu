@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Cookies from 'js-cookie'
+import CommandPalette from '@/components/ui/CommandPalette'
 import {
   HomeIcon, UsersIcon, CheckCircleIcon, CalendarDaysIcon,
   MegaphoneIcon, TrophyIcon, ChartBarIcon,
@@ -23,18 +24,21 @@ import {
 } from '@heroicons/react/24/solid'
 
 const navItems = [
-  { href: '/dashboard',     label: 'Dashboard',   icon: HomeIcon,                      iconSolid: HomeIconSolid,     color: '#F8A303', roles: [] },
-  { href: '/meu-dia',       label: 'Meu Dia',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#4A9EFF', roles: [] },
-  { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,               iconSolid: CheckIconSolid,    color: '#0ABD78', roles: [] },
-  { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,              iconSolid: CalendarIconSolid, color: '#8B5CF6', roles: [] },
-  { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,                 iconSolid: MegaphoneIconSolid,color: '#29ABE2', roles: [] },
-  { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                    iconSolid: TrophyIconSolid,   color: '#F9C234', roles: [] },
-  { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,                  iconSolid: ChartIconSolid,    color: '#E07B39', roles: ['leader', 'admin'] },
-  { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon,    iconSolid: ChatIconSolid,     color: '#FF4757', roles: [] },
-  { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,                 iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
-  { href: '/users',         label: 'Usuários',     icon: UsersIcon,                     iconSolid: UsersIconSolid,    color: '#4A9EFF', roles: ['admin'] },
-  { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                       iconSolid: KeyIconSolid,      color: '#A78BFA', roles: ['admin'] },
-  { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,           iconSolid: BuildingIconSolid, color: '#34D399', roles: ['admin'] },
+  { href: '/dashboard',     label: 'Dashboard',       icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
+  { href: '/meu-dia',       label: 'Meu Dia 🎯',       icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#4A9EFF', roles: [] },
+  { href: '/tasks',         label: 'Tarefas',          icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
+  { href: '/events',        label: 'Eventos',          icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
+  { href: '/announcements', label: 'Mural',            icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
+  { href: '/analytics',     label: 'Analytics IA 🔮',  icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
+  { href: '/automacoes',    label: 'Automações ⚡',     icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
+  { href: '/notificacoes',  label: 'Notificações 🔔',   icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
+  { href: '/gamification',  label: 'Gamificação',       icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
+  { href: '/reports',       label: 'Relatórios',        icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#E07B39', roles: ['leader', 'admin'] },
+  { href: '/feedback',      label: 'Feedback',          icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
+  { href: '/promotores',    label: 'Promotores',        icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
+  { href: '/users',         label: 'Usuários',          icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
+  { href: '/roles',         label: 'Cargos',            icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
+  { href: '/units',         label: 'Unidades',          icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
 ]
 
 // Item exclusivo do admin — ícone reutilizado do KeyIcon com cor dourada especial
@@ -51,8 +55,21 @@ function getRoleLevel(role: string): string {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen]     = useState(false)
+  const [searchOpen, setSearchOpen]       = useState(false)
+  const [paletteOpen, setPaletteOpen]     = useState(false)
+
+  // ⌘K / Ctrl+K global shortcut
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault()
+      setPaletteOpen(v => !v)
+    }
+  }, [])
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   const handleLogout = () => {
     Cookies.remove('accessToken')
@@ -362,45 +379,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* Search button */}
+            {/* ⌘K Command Palette trigger */}
             <button
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 rounded-xl transition-all"
+              onClick={() => setPaletteOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <MagnifyingGlassIcon className="w-3.5 h-3.5" />
+              <span className="text-xs">Buscar...</span>
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                ⌘K
+              </kbd>
+            </button>
+            {/* Mobile search */}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="sm:hidden p-2 rounded-xl transition-all"
               style={{ color: 'rgba(255,255,255,0.4)' }}
             >
-              {searchOpen
-                ? <XMarkIcon className="w-5 h-5" />
-                : <MagnifyingGlassIcon className="w-5 h-5" />
-              }
+              <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
 
-            {/* Search input */}
-            {searchOpen && (
-              <input
-                autoFocus
-                type="text"
-                placeholder="Buscar..."
-                className="animate-scale-in text-sm px-3 py-1.5 rounded-xl outline-none"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white',
-                  width: 200,
-                }}
-              />
-            )}
-
-            {/* Bell */}
-            <button
-              className="relative p-2 rounded-xl transition-all"
+            {/* Bell → Notificações */}
+            <Link href="/notificacoes"
+              className="relative p-2 rounded-xl transition-all hover:bg-white/5"
               style={{ color: 'rgba(255,255,255,0.4)' }}
+              title="Notificações"
             >
               <BellIcon className="w-5 h-5" />
               <span
-                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full animate-pulse-dot"
-                style={{ background: 'var(--gold)' }}
+                className="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse-dot"
+                style={{ background: '#FF4757' }}
               />
-            </button>
+            </Link>
 
             {/* Avatar */}
             <div
@@ -440,6 +456,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── AI ASSISTANT FLOAT ──────────────────────── */}
       <AiAssistant />
+
+      {/* ── COMMAND PALETTE ⌘K ──────────────────────── */}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }
