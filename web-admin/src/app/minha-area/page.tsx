@@ -937,6 +937,11 @@ function IntelligentNotebook() {
   const [typeFilter, setTypeFilter] = useState<'todos' | NotebookEntry['type']>('todos')
   const [aiBusy, setAiBusy] = useState(false)
   const [saveHint, setSaveHint] = useState('')
+  const [sofiPanel, setSofiPanel] = useState<{ title: string; content: string; status: 'idle' | 'loading' | 'done' | 'error' }>({
+    title: 'Resposta da Sofi',
+    content: '',
+    status: 'idle',
+  })
 
   useEffect(() => {
     try {
@@ -999,6 +1004,7 @@ function IntelligentNotebook() {
     saveDraft()
     setActiveId(entry.id)
     setDraft(entry)
+    if (entry.aiOutput) setSofiPanel({ title: entry.title, content: entry.aiOutput, status: 'done' })
   }
 
   const deleteEntry = (id: string) => {
@@ -1027,20 +1033,33 @@ function IntelligentNotebook() {
     }))
   }
 
+  const blankEntry = (type: NotebookEntry['type'] = draft.type): NotebookEntry => ({
+    ...starterEntry(type),
+    content: '',
+  })
+
   const organizeWithSofi = async () => {
-    if (!draft.content.trim()) {
+    const currentDraft: NotebookEntry = { ...draft, updatedAt: new Date().toISOString() }
+    if (!currentDraft.content.trim()) {
       setSaveHint('Escreva uma anotação primeiro')
       window.setTimeout(() => setSaveHint(''), 1800)
       return
     }
-    setAiBusy(true)
-    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul. Organize esta anotação como um caderno digital de alto nível, inspirado nas melhores práticas de Notion AI, Microsoft Loop, ClickUp Brain e Mem: pouco atrito, estrutura contextual, decisões claras, ações rastreáveis e memória útil.
 
-Titulo: ${draft.title}
-Tipo: ${draft.type}
-Tags: ${draft.tags.join(', ')}
-Conteudo:
-${draft.content}
+    setAiBusy(true)
+    setSofiPanel({
+      title: currentDraft.title || notebookTitle(currentDraft.type),
+      content: 'A Sofi está lendo sua anotação e organizando a resposta...',
+      status: 'loading',
+    })
+
+    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul. Organize esta anotação como um caderno digital de alto nível, com clareza executiva, decisões rastreáveis e próximos passos acionáveis.
+
+Título: ${currentDraft.title}
+Tipo: ${currentDraft.type}
+Tags: ${currentDraft.tags.join(', ')}
+Conteúdo:
+${currentDraft.content}
 
 Responda em português do Brasil, com acentuação correta, pontuação profissional e este formato:
 Resumo executivo
@@ -1058,9 +1077,22 @@ Versão refinada da anotação`
       })
       const data = await res.json()
       const output = data.content || data.error || 'A Sofi não conseguiu organizar esta anotação agora.'
-      saveDraft({ aiOutput: output })
+      const completed: NotebookEntry = { ...currentDraft, aiOutput: output, updatedAt: new Date().toISOString() }
+      const fresh = blankEntry(currentDraft.type)
+      const withoutCompleted = entries.filter(item => item.id !== completed.id)
+
+      persist([fresh, completed, ...withoutCompleted])
+      setActiveId(fresh.id)
+      setDraft(fresh)
+      setSofiPanel({ title: completed.title, content: output, status: data.error ? 'error' : 'done' })
+      setSaveHint('Enviado para Sofi')
+      window.setTimeout(() => setSaveHint(''), 1800)
     } catch (err: any) {
-      saveDraft({ aiOutput: `Erro ao chamar a Sofi: ${err.message}` })
+      const output = `Erro ao chamar a Sofi: ${err.message}`
+      const completed: NotebookEntry = { ...currentDraft, aiOutput: output, updatedAt: new Date().toISOString() }
+      const withoutCompleted = entries.filter(item => item.id !== completed.id)
+      persist([completed, ...withoutCompleted])
+      setSofiPanel({ title: completed.title, content: output, status: 'error' })
     } finally {
       setAiBusy(false)
     }
@@ -1094,6 +1126,29 @@ Versão refinada da anotação`
               title="Nova anotação">
               <PlusIcon className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="rounded-2xl p-3 mb-4"
+            style={{
+              background: sofiPanel.status === 'idle' ? 'rgba(255,255,255,0.035)' : `linear-gradient(160deg,${typeMeta.soft},rgba(248,163,3,0.04))`,
+              border: `1px solid ${sofiPanel.status === 'error' ? 'rgba(255,71,87,0.28)' : sofiPanel.status === 'idle' ? 'rgba(255,255,255,0.07)' : `${typeMeta.color}35`}`,
+            }}>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <p className="text-sm font-extrabold text-white truncate">Sofi ao lado</p>
+                <p className="text-[10px] text-white/35 truncate">{sofiPanel.title}</p>
+              </div>
+              <BoltIcon className="w-4 h-4 flex-shrink-0" style={{ color: sofiPanel.status === 'error' ? '#FF4757' : typeMeta.color }} />
+            </div>
+            {sofiPanel.content ? (
+              <div className="text-xs leading-5 text-white/70 whitespace-pre-wrap max-h-[260px] overflow-y-auto pr-1">
+                {sofiPanel.content.replace(/\*\*/g, '')}
+              </div>
+            ) : (
+              <div className="h-[120px] flex items-center justify-center text-center text-xs text-white/28 px-3">
+                Envie a anotação para a Sofi e a resposta aparecerá aqui. O editor será limpo para o próximo preenchimento.
+              </div>
+            )}
           </div>
 
           <div className="relative mb-3">
@@ -1207,12 +1262,12 @@ Versão refinada da anotação`
               <button onClick={() => saveDraft()}
                 className="px-3 py-2 rounded-xl text-sm font-bold"
                 style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                Salvar
+                Salvar anotação
               </button>
-              <button onClick={organizeWithSofi} disabled={aiBusy}
-                className="px-3 py-2 rounded-xl text-sm font-bold text-black flex items-center gap-1.5 disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 12px 28px rgba(248,163,3,0.24)' }}>
-                <BoltIcon className="w-4 h-4" /> {aiBusy ? 'Sofi pensando...' : 'Organizar com Sofi'}
+              <button onClick={() => saveDraft({ content: notebookTemplate(draft.type), tags: notebookTags(draft.type) })}
+                className="px-3 py-2 rounded-xl text-sm font-bold"
+                style={{ background: typeMeta.soft, color: typeMeta.color, border: `1px solid ${typeMeta.color}30` }}>
+                Aplicar modelo
               </button>
               <button onClick={() => deleteEntry(draft.id)}
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -1285,26 +1340,6 @@ Versão refinada da anotação`
               </div>
             </div>
 
-            <aside className="rounded-2xl p-4"
-              style={{ background: `linear-gradient(160deg,${typeMeta.soft},rgba(248,163,3,0.035))`, border: `1px solid ${typeMeta.color}2E` }}>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <div>
-                  <p className="text-sm font-extrabold text-white">Leitura da Sofi</p>
-                  <p className="text-[10px] text-white/35">Resumo, tarefas e refinamento automático</p>
-                </div>
-                <BoltIcon className="w-5 h-5" style={{ color: typeMeta.color }} />
-              </div>
-              {draft.aiOutput ? (
-                <div className="text-sm leading-6 text-white/75 whitespace-pre-wrap max-h-[220px] overflow-y-auto pr-1">
-                  {draft.aiOutput.replace(/\*\*/g, '')}
-                </div>
-              ) : (
-                <div className="h-[150px] flex flex-col items-center justify-center text-center text-white/30 px-6">
-                  <PencilIcon className="w-10 h-10 mb-3 opacity-40" />
-                  <p className="text-sm">Clique em Organizar com Sofi para transformar a anotação em resumo, plano e próximas ações.</p>
-                </div>
-              )}
-            </aside>
           </div>
         </div>
       </div>
@@ -1318,6 +1353,7 @@ function CredentialsVault() {
   const [pinError, setPinError] = useState('')
   const [creds, setCreds]       = useState<Credential[]>([])
   const [search, setSearch]     = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('Todas')
   const [showForm, setShowForm] = useState(false)
   const [showPwd, setShowPwd]   = useState<Record<string, boolean>>({})
   const [isSetup, setIsSetup]   = useState(false)
@@ -1365,11 +1401,14 @@ function CredentialsVault() {
 
   const delCred = async (id: string) => save(creds.filter(c => c.id !== id))
 
-  const filtered = creds.filter(c =>
-    c.service.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase()) ||
-    (c.category || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const categories = ['Todas', ...Array.from(new Set(creds.map(c => c.category || 'Geral')))]
+  const filtered = creds.filter(c => {
+    const matchesSearch = c.service.toLowerCase().includes(search.toLowerCase()) ||
+      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      (c.category || '').toLowerCase().includes(search.toLowerCase())
+    const matchesCategory = categoryFilter === 'Todas' || (c.category || 'Geral') === categoryFilter
+    return matchesSearch && matchesCategory
+  })
 
   if (!unlocked) {
     return (
@@ -1440,13 +1479,36 @@ function CredentialsVault() {
         </div>
       </div>
 
+      {creds.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          {categories.map(category => (
+            <button key={category} onClick={() => setCategoryFilter(category)}
+              className="px-3 py-1.5 rounded-full text-xs font-bold transition"
+              style={{
+                background: categoryFilter === category ? 'rgba(248,163,3,0.16)' : 'rgba(255,255,255,0.045)',
+                color: categoryFilter === category ? '#F8A303' : 'rgba(255,255,255,0.45)',
+                border: `1px solid ${categoryFilter === category ? 'rgba(248,163,3,0.28)' : 'rgba(255,255,255,0.07)'}`,
+              }}>
+              {category}
+            </button>
+          ))}
+        </div>
+      )}
+
       {showForm && <CredentialForm onAdd={addCred} onClose={() => setShowForm(false)} />}
 
       <div className="space-y-3">
         {filtered.length === 0 && (
           <div className="text-center py-12" style={{ color: 'rgba(255,255,255,0.2)' }}>
             <KeyIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">{creds.length === 0 ? 'Nenhuma credencial ainda' : 'Nenhuma encontrada'}</p>
+            <p className="text-sm">{creds.length === 0 ? 'Nenhum acesso salvo ainda' : 'Nenhum acesso encontrado'}</p>
+            {creds.length === 0 && (
+              <button onClick={() => setShowForm(true)}
+                className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-black"
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                Adicionar primeiro acesso
+              </button>
+            )}
           </div>
         )}
         {filtered.map(c => (
@@ -1538,6 +1600,19 @@ function CredentialForm({ onAdd, onClose }: { onAdd: (c: Omit<Credential, 'id' |
             onChange={e => set(k, e.target.value)}
             className={`${full ? 'col-span-2' : ''} px-3 py-2 rounded-lg text-xs text-white outline-none`}
             style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }} />
+        ))}
+      </div>
+      <div className="flex gap-1.5 flex-wrap mb-2">
+        {['Geral', 'Google', 'IA', 'Financeiro', 'Sites', 'Redes sociais'].map(category => (
+          <button key={category} onClick={() => set('category', category)}
+            className="px-2.5 py-1 rounded-full text-[11px] font-bold"
+            style={{
+              background: form.category === category ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.05)',
+              color: form.category === category ? '#A78BFA' : 'rgba(255,255,255,0.45)',
+              border: `1px solid ${form.category === category ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.08)'}`,
+            }}>
+            {category}
+          </button>
         ))}
       </div>
       <div className="relative mb-2">
