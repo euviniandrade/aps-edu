@@ -817,50 +817,67 @@ function notebookTags(type: NotebookEntry['type']) {
 
 function notebookTemplate(type: NotebookEntry['type']) {
   const templates: Record<NotebookEntry['type'], string> = {
-    ideia: `Ideia:
+    ideia: `IDEIA
+Nome curto:
 
-Por que isso importa:
+Problema que resolve:
 
 Público ou área impactada:
 
 Hipótese:
 
-Primeiro experimento:
+Valor esperado:
 
-Critério de sucesso:
+Menor experimento possível:
 
-Próximo passo:`,
-    reuniao: `Data:
+Recursos necessários:
+
+Riscos ou dúvidas:
+
+Próxima ação concreta:`,
+    reuniao: `REUNIÃO
+Data:
 Participantes:
+Objetivo da reunião:
 
 Pauta:
 1.
 2.
+3.
 
-Decisões:
+Principais pontos discutidos:
+-
+
+Decisões tomadas:
 -
 
 Tarefas e responsáveis:
-- Responsável | Entrega | Prazo
+- Responsável | Entrega | Prazo | Status
 
 Pendências:
 -
 
-Próxima reunião:`,
-    frase: `Frase:
+Próxima reunião ou acompanhamento:`,
+    frase: `FRASE / REPERTÓRIO
+Frase:
 
 Autor ou origem:
 
 Contexto:
 
+Por que vale guardar:
+
 Onde posso usar:
 
-Ideia relacionada:
+Versão adaptada para APS-EDU:
 
-Versão adaptada para APS-EDU:`,
-    plano: `Objetivo:
+Ideias relacionadas:`,
+    plano: `PLANO
+Objetivo:
 
 Resultado esperado:
+
+Escopo:
 
 Marcos:
 1.
@@ -869,14 +886,18 @@ Marcos:
 
 Responsáveis:
 
-Indicadores:
+Indicadores de sucesso:
 
-Riscos:
+Riscos e mitigação:
 
-Plano dos próximos 7 dias:`,
-    livre: `Captura rápida:
+Plano dos próximos 7 dias:
+1.
+2.
+3.`,
+    livre: `CAPTURA RÁPIDA
+Ideia, lembrete ou contexto:
 
-Contexto:
+Detalhes importantes:
 
 Links ou referências:
 
@@ -1059,8 +1080,8 @@ Versão refinada da anotação`
         border: '1px solid rgba(255,255,255,0.08)',
         boxShadow: '0 24px 70px rgba(0,0,0,0.22)',
       }}>
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-[520px]">
-        <aside className="p-4 border-b lg:border-b-0 lg:border-r"
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(620px,1fr)_320px] min-h-[680px]">
+        <aside className="p-4 border-b lg:border-b-0 lg:border-l lg:order-2"
           style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'linear-gradient(180deg,rgba(248,163,3,0.055),rgba(255,255,255,0.018))' }}>
           <div className="flex items-center justify-between gap-2 mb-4">
             <div>
@@ -1151,7 +1172,7 @@ Versão refinada da anotação`
           </div>
         </aside>
 
-        <div className="p-4 lg:p-5">
+        <div className="p-4 lg:p-5 lg:order-1">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-4">
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-3"
@@ -1202,20 +1223,27 @@ Versão refinada da anotação`
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <textarea
                 value={draft.content}
                 onChange={e => setDraftField('content', e.target.value)}
                 onBlur={() => saveDraft()}
                 placeholder={typeMeta.placeholder}
-                className="w-full min-h-[310px] resize-y rounded-2xl p-4 text-sm leading-6 text-white outline-none"
+                className="w-full min-h-[520px] resize-y rounded-2xl p-5 text-base leading-7 text-white outline-none"
                 style={{
                   background: `linear-gradient(180deg,${typeMeta.soft},rgba(0,0,0,0.22))`,
                   border: `1px solid ${typeMeta.color}25`,
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               />
+              <div className="flex justify-end mt-3">
+                <button onClick={organizeWithSofi} disabled={aiBusy}
+                  className="px-5 py-3 rounded-2xl text-sm font-extrabold text-black flex items-center gap-2 disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 14px 34px rgba(248,163,3,0.24)' }}>
+                  <BoltIcon className="w-4 h-4" /> {aiBusy ? 'Enviando para Sofi...' : 'Enviar para Sofi'}
+                </button>
+              </div>
               <div className="flex items-center gap-2 flex-wrap mt-3 rounded-2xl p-3"
                 style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 {[
@@ -1267,11 +1295,11 @@ Versão refinada da anotação`
                 <BoltIcon className="w-5 h-5" style={{ color: typeMeta.color }} />
               </div>
               {draft.aiOutput ? (
-                <div className="text-sm leading-6 text-white/75 whitespace-pre-wrap max-h-[360px] overflow-y-auto pr-1">
+                <div className="text-sm leading-6 text-white/75 whitespace-pre-wrap max-h-[220px] overflow-y-auto pr-1">
                   {draft.aiOutput.replace(/\*\*/g, '')}
                 </div>
               ) : (
-                <div className="h-[260px] flex flex-col items-center justify-center text-center text-white/30 px-6">
+                <div className="h-[150px] flex flex-col items-center justify-center text-center text-white/30 px-6">
                   <PencilIcon className="w-10 h-10 mb-3 opacity-40" />
                   <p className="text-sm">Clique em Organizar com Sofi para transformar a anotação em resumo, plano e próximas ações.</p>
                 </div>
@@ -1407,7 +1435,7 @@ function CredentialsVault() {
           <button onClick={() => setShowForm(f => !f)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-black"
             style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-            <PlusIcon className="w-4 h-4" /> Adicionar
+            <PlusIcon className="w-4 h-4" /> Adicionar acesso
           </button>
         </div>
       </div>
@@ -1496,7 +1524,7 @@ function CredentialForm({ onAdd, onClose }: { onAdd: (c: Omit<Credential, 'id' |
     <div className="rounded-xl p-4 mb-4 animate-scale-in"
       style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.2)' }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-bold text-white">Nova Credencial</p>
+        <p className="text-sm font-bold text-white">Novo acesso ou senha</p>
         <button onClick={onClose}><XMarkIcon className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.4)' }} /></button>
       </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
@@ -3265,6 +3293,20 @@ export default function MinhaAreaPage() {
         <IntelligentNotebook />
       </section>
 
+      <section className="mb-6 animate-fade-in-up">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+            style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.18)' }}>
+            <KeyIcon className="w-4 h-4" style={{ color: '#FF4757' }} />
+          </div>
+          <div>
+            <h2 className="text-sm font-extrabold text-white leading-none">Gaveta Segura de Acessos</h2>
+            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Adicione e organize e-mails, logins e senhas com PIN local</p>
+          </div>
+        </div>
+        <CredentialsVault />
+      </section>
+
       {/* ══════════════════════════════════════════════════════
            SEÇÃO 4 — GOOGLE WORKSPACE (Gmail + Drive)
       ══════════════════════════════════════════════════════ */}
@@ -3285,7 +3327,7 @@ export default function MinhaAreaPage() {
       {/* ══════════════════════════════════════════════════════
            SEÇÃO 5 — CONQUISTAS + CREDENCIAIS (lado a lado)
       ══════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 animate-fade-in-up">
+      <div className="animate-fade-in-up">
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
@@ -3297,19 +3339,6 @@ export default function MinhaAreaPage() {
           <GamificationPanel tasks={tasks} />
         </section>
 
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
-              style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.18)' }}>
-              🔑
-            </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-white leading-none">Gaveta Segura de Acessos</h2>
-              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Logins e senhas protegidos por PIN local</p>
-            </div>
-          </div>
-          <CredentialsVault />
-        </section>
       </div>
 
     </AdminLayout>
