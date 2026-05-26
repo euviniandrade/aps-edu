@@ -942,6 +942,7 @@ function IntelligentNotebook() {
     content: '',
     status: 'idle',
   })
+  const [sofiInstruction, setSofiInstruction] = useState('')
 
   useEffect(() => {
     try {
@@ -1098,6 +1099,57 @@ Versão refinada da anotação`
     }
   }
 
+  const copySofiOutput = async () => {
+    if (!sofiPanel.content) return
+    await navigator.clipboard?.writeText(sofiPanel.content)
+    setSaveHint('Resposta copiada')
+    window.setTimeout(() => setSaveHint(''), 1800)
+  }
+
+  const useSofiOutputInEditor = () => {
+    if (!sofiPanel.content) return
+    setDraft(prev => ({ ...prev, content: sofiPanel.content, title: sofiPanel.title || prev.title }))
+    setSaveHint('Resposta colocada no editor')
+    window.setTimeout(() => setSaveHint(''), 1800)
+  }
+
+  const askSofiToAdjust = async () => {
+    if (!sofiPanel.content || !sofiInstruction.trim()) return
+    const instruction = sofiInstruction.trim()
+    setAiBusy(true)
+    setSofiPanel(prev => ({
+      ...prev,
+      content: `${prev.content}\n\n---\nAjustando com a Sofi: ${instruction}`,
+      status: 'loading',
+    }))
+
+    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul.
+
+Texto anterior:
+${sofiPanel.content}
+
+Pedido de ajuste do usuário:
+${instruction}
+
+Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use português do Brasil, títulos curtos, bullets claros, decisões, próximos passos e tarefas quando fizer sentido.`
+
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await res.json()
+      const output = data.content || data.error || 'A Sofi não conseguiu ajustar a resposta agora.'
+      setSofiPanel(prev => ({ ...prev, content: output, status: data.error ? 'error' : 'done' }))
+      setSofiInstruction('')
+    } catch (err: any) {
+      setSofiPanel(prev => ({ ...prev, content: `Erro ao ajustar com a Sofi: ${err.message}`, status: 'error' }))
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
   const filtered = entries.filter(entry => {
     const haystack = `${entry.title} ${entry.content} ${entry.tags.join(' ')}`.toLowerCase()
     return haystack.includes(query.toLowerCase()) && (typeFilter === 'todos' || entry.type === typeFilter)
@@ -1141,9 +1193,44 @@ Versão refinada da anotação`
               <BoltIcon className="w-4 h-4 flex-shrink-0" style={{ color: sofiPanel.status === 'error' ? '#FF4757' : typeMeta.color }} />
             </div>
             {sofiPanel.content ? (
-              <div className="text-xs leading-5 text-white/70 whitespace-pre-wrap max-h-[260px] overflow-y-auto pr-1">
-                {sofiPanel.content.replace(/\*\*/g, '')}
-              </div>
+              <>
+                <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                  <button onClick={copySofiOutput}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.68)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                    Copiar
+                  </button>
+                  <button onClick={useSofiOutputInEditor}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                    style={{ background: typeMeta.soft, color: typeMeta.color, border: `1px solid ${typeMeta.color}30` }}>
+                    Editar no bloco
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                  {sofiPanel.content.replace(/\*\*/g, '').split('\n').filter(line => line.trim()).map((line, index) => {
+                    const clean = line.replace(/^#{1,4}\s*/, '').trim()
+                    const isHeading = /^#{1,4}\s/.test(line) || /^(Resumo executivo|Ideias-chave|Próximas ações|Possíveis tarefas|Perguntas|Versão refinada)/i.test(clean)
+                    const isBullet = /^[-*•]\s/.test(clean) || /^\d+[.)]\s/.test(clean)
+                    if (isHeading) return <p key={index} className="text-xs font-extrabold text-white mt-3 first:mt-0">{clean}</p>
+                    if (isBullet) return <p key={index} className="text-xs leading-5 text-white/70 pl-3 border-l" style={{ borderColor: `${typeMeta.color}55` }}>{clean.replace(/^[-*•]\s*/, '')}</p>
+                    return <p key={index} className="text-xs leading-5 text-white/65">{clean}</p>
+                  })}
+                </div>
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <textarea
+                    value={sofiInstruction}
+                    onChange={e => setSofiInstruction(e.target.value)}
+                    placeholder="Peça para a Sofi corrigir, resumir, deixar mais executivo, transformar em tarefas..."
+                    className="w-full h-20 resize-none rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  />
+                  <button onClick={askSofiToAdjust} disabled={aiBusy || !sofiInstruction.trim()}
+                    className="mt-2 w-full py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-45"
+                    style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                    {aiBusy ? 'Sofi ajustando...' : 'Pedir ajuste à Sofi'}
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="h-[120px] flex items-center justify-center text-center text-xs text-white/28 px-3">
                 Envie a anotação para a Sofi e a resposta aparecerá aqui. O editor será limpo para o próximo preenchimento.
