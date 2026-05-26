@@ -147,12 +147,54 @@ function calendarPayloadForTask(task: Partial<PersonalTask>) {
 const VAULT_KEY = 'aps_edu_vault_v2'
 const VAULT_PIN_KEY = 'aps_edu_vault_pin'
 const NOTEBOOK_KEY = 'aps_edu_notebooks_v1'
-const NOTEBOOK_TYPES: { value: NotebookEntry['type']; label: string; color: string }[] = [
-  { value: 'ideia', label: 'Ideia', color: '#F8A303' },
-  { value: 'reuniao', label: 'Reuniao', color: '#4A9EFF' },
-  { value: 'frase', label: 'Frase', color: '#A78BFA' },
-  { value: 'plano', label: 'Plano', color: '#0ABD78' },
-  { value: 'livre', label: 'Livre', color: '#FFFFFF' },
+const NOTEBOOK_TYPES: {
+  value: NotebookEntry['type']
+  label: string
+  color: string
+  soft: string
+  description: string
+  placeholder: string
+}[] = [
+  {
+    value: 'ideia',
+    label: 'Ideia',
+    color: '#F8A303',
+    soft: 'rgba(248,163,3,0.12)',
+    description: 'Hipótese, impacto e primeiro experimento.',
+    placeholder: 'Capture a ideia, por que ela importa e qual seria o menor teste possível...',
+  },
+  {
+    value: 'reuniao',
+    label: 'Reunião',
+    color: '#4A9EFF',
+    soft: 'rgba(74,158,255,0.12)',
+    description: 'Pauta, decisões, responsáveis e próximos passos.',
+    placeholder: 'Registre participantes, pauta, decisões, tarefas e pendências da reunião...',
+  },
+  {
+    value: 'frase',
+    label: 'Frase',
+    color: '#A78BFA',
+    soft: 'rgba(167,139,250,0.12)',
+    description: 'Citações, repertório e aplicações futuras.',
+    placeholder: 'Guarde a frase, contexto, autor e onde ela pode ser usada...',
+  },
+  {
+    value: 'plano',
+    label: 'Plano',
+    color: '#0ABD78',
+    soft: 'rgba(10,189,120,0.12)',
+    description: 'Objetivo, marcos, indicadores e riscos.',
+    placeholder: 'Desenhe objetivo, entregas, responsáveis, prazos, métricas e riscos...',
+  },
+  {
+    value: 'livre',
+    label: 'Livre',
+    color: '#FFFFFF',
+    soft: 'rgba(255,255,255,0.08)',
+    description: 'Captura rápida sem fricção.',
+    placeholder: 'Escreva qualquer pensamento solto, link, briefing ou lembrança...',
+  },
 ]
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -747,13 +789,121 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
 }
 
 // ─── CREDENTIALS VAULT ────────────────────────────────────────
+function getNotebookMeta(type: NotebookEntry['type']) {
+  return NOTEBOOK_TYPES.find(item => item.value === type) || NOTEBOOK_TYPES[0]
+}
+
+function notebookTitle(type: NotebookEntry['type']) {
+  const titles: Record<NotebookEntry['type'], string> = {
+    ideia: 'Nova ideia',
+    reuniao: 'Nova reunião',
+    frase: 'Nova frase',
+    plano: 'Novo plano',
+    livre: 'Nova anotação',
+  }
+  return titles[type]
+}
+
+function notebookTags(type: NotebookEntry['type']) {
+  const tags: Record<NotebookEntry['type'], string[]> = {
+    ideia: ['ideia', 'experimento'],
+    reuniao: ['reunião', 'decisões'],
+    frase: ['frase', 'repertório'],
+    plano: ['plano', 'execução'],
+    livre: ['captura'],
+  }
+  return tags[type]
+}
+
+function notebookTemplate(type: NotebookEntry['type']) {
+  const templates: Record<NotebookEntry['type'], string> = {
+    ideia: `Ideia:
+
+Por que isso importa:
+
+Público ou área impactada:
+
+Hipótese:
+
+Primeiro experimento:
+
+Critério de sucesso:
+
+Próximo passo:`,
+    reuniao: `Data:
+Participantes:
+
+Pauta:
+1.
+2.
+
+Decisões:
+-
+
+Tarefas e responsáveis:
+- Responsável | Entrega | Prazo
+
+Pendências:
+-
+
+Próxima reunião:`,
+    frase: `Frase:
+
+Autor ou origem:
+
+Contexto:
+
+Onde posso usar:
+
+Ideia relacionada:
+
+Versão adaptada para APS-EDU:`,
+    plano: `Objetivo:
+
+Resultado esperado:
+
+Marcos:
+1.
+2.
+3.
+
+Responsáveis:
+
+Indicadores:
+
+Riscos:
+
+Plano dos próximos 7 dias:`,
+    livre: `Captura rápida:
+
+Contexto:
+
+Links ou referências:
+
+Próxima ação:`,
+  }
+  return templates[type]
+}
+
+function normalizeNotebookEntry(entry: NotebookEntry): NotebookEntry {
+  const type = entry.type || 'livre'
+  const oldEmptyTitles = ['Nova anotacao', 'Nova anotação']
+  return {
+    ...entry,
+    type,
+    title: oldEmptyTitles.includes(entry.title) ? notebookTitle(type) : entry.title.replace('anotacao', 'anotação'),
+    tags: entry.tags?.length ? entry.tags.map(tag => tag.replace('reuniao', 'reunião')) : notebookTags(type),
+    content: entry.content || notebookTemplate(type),
+  }
+}
+
 function IntelligentNotebook() {
-  const starterEntry = (): NotebookEntry => ({
+  const starterEntry = (type: NotebookEntry['type'] = 'ideia'): NotebookEntry => ({
     id: Date.now().toString(),
-    title: 'Nova anotacao',
-    type: 'ideia',
-    content: '',
-    tags: ['insight'],
+    title: notebookTitle(type),
+    type,
+    content: notebookTemplate(type),
+    tags: notebookTags(type),
     favorite: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -770,7 +920,7 @@ function IntelligentNotebook() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(NOTEBOOK_KEY)
-      const parsed: NotebookEntry[] = stored ? JSON.parse(stored) : []
+      const parsed: NotebookEntry[] = stored ? JSON.parse(stored).map((entry: NotebookEntry) => normalizeNotebookEntry(entry)) : []
       if (parsed.length) {
         setEntries(parsed)
         setActiveId(parsed[0].id)
@@ -799,7 +949,7 @@ function IntelligentNotebook() {
     const updated: NotebookEntry = {
       ...draft,
       ...extra,
-      title: (extra?.title ?? draft.title).trim() || 'Sem titulo',
+      title: (extra?.title ?? draft.title).trim() || 'Sem título',
       updatedAt: new Date().toISOString(),
     }
     const exists = entries.some(item => item.id === updated.id)
@@ -845,14 +995,25 @@ function IntelligentNotebook() {
     setDraft(prev => ({ ...prev, [key]: value }))
   }
 
+  const applyNotebookType = (type: NotebookEntry['type']) => {
+    const currentIsTemplate = NOTEBOOK_TYPES.some(item => draft.content.trim() === notebookTemplate(item.value).trim())
+    setDraft(prev => ({
+      ...prev,
+      type,
+      title: !prev.title.trim() || prev.title.startsWith('Nova ') || prev.title.startsWith('Novo ') ? notebookTitle(type) : prev.title,
+      tags: prev.tags.length <= 2 ? notebookTags(type) : prev.tags,
+      content: !prev.content.trim() || currentIsTemplate ? notebookTemplate(type) : prev.content,
+    }))
+  }
+
   const organizeWithSofi = async () => {
     if (!draft.content.trim()) {
-      setSaveHint('Escreva uma anotacao primeiro')
+      setSaveHint('Escreva uma anotação primeiro')
       window.setTimeout(() => setSaveHint(''), 1800)
       return
     }
     setAiBusy(true)
-    const prompt = `Voce e a Sofi, assistente executiva da Associacao Paulista Sul. Organize esta anotacao como um caderno digital de alto nivel.
+    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul. Organize esta anotação como um caderno digital de alto nível, inspirado nas melhores práticas de Notion AI, Microsoft Loop, ClickUp Brain e Mem: pouco atrito, estrutura contextual, decisões claras, ações rastreáveis e memória útil.
 
 Titulo: ${draft.title}
 Tipo: ${draft.type}
@@ -860,13 +1021,13 @@ Tags: ${draft.tags.join(', ')}
 Conteudo:
 ${draft.content}
 
-Responda em portugues do Brasil, com este formato:
+Responda em português do Brasil, com acentuação correta, pontuação profissional e este formato:
 Resumo executivo
 Ideias-chave
-Proximas acoes
-Possiveis tarefas
+Próximas ações
+Possíveis tarefas
 Perguntas que eu deveria responder
-Versao refinada da anotacao`
+Versão refinada da anotação`
 
     try {
       const res = await fetch('/api/gemini', {
@@ -875,7 +1036,7 @@ Versao refinada da anotacao`
         body: JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      const output = data.content || data.error || 'A Sofi nao conseguiu organizar esta anotacao agora.'
+      const output = data.content || data.error || 'A Sofi não conseguiu organizar esta anotação agora.'
       saveDraft({ aiOutput: output })
     } catch (err: any) {
       saveDraft({ aiOutput: `Erro ao chamar a Sofi: ${err.message}` })
@@ -889,23 +1050,27 @@ Versao refinada da anotacao`
     return haystack.includes(query.toLowerCase()) && (typeFilter === 'todos' || entry.type === typeFilter)
   })
 
-  const typeMeta = NOTEBOOK_TYPES.find(item => item.value === draft.type) || NOTEBOOK_TYPES[0]
+  const typeMeta = getNotebookMeta(draft.type)
 
   return (
     <div className="rounded-2xl overflow-hidden"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      style={{
+        background: 'linear-gradient(135deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 24px 70px rgba(0,0,0,0.22)',
+      }}>
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-[520px]">
         <aside className="p-4 border-b lg:border-b-0 lg:border-r"
-          style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
+          style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'linear-gradient(180deg,rgba(248,163,3,0.055),rgba(255,255,255,0.018))' }}>
           <div className="flex items-center justify-between gap-2 mb-4">
             <div>
               <p className="text-sm font-bold text-white">Cadernos Inteligentes</p>
               <p className="text-[10px] text-white/35">Notas, ideias, frases e planos com Sofi</p>
             </div>
             <button onClick={createEntry}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-black"
-              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}
-              title="Nova anotacao">
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-black transition hover:scale-105"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 12px 28px rgba(248,163,3,0.28)' }}
+              title="Nova anotação">
               <PlusIcon className="w-4 h-4" />
             </button>
           </div>
@@ -915,7 +1080,7 @@ Versao refinada da anotacao`
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar anotacoes..."
+              placeholder="Buscar anotações..."
               className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
             />
@@ -935,7 +1100,7 @@ Versao refinada da anotacao`
               <button key={type.value} onClick={() => setTypeFilter(type.value)}
                 className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
                 style={{
-                  background: typeFilter === type.value ? `${type.color}26` : 'rgba(255,255,255,0.05)',
+                  background: typeFilter === type.value ? type.soft : 'rgba(255,255,255,0.05)',
                   color: typeFilter === type.value ? type.color : 'rgba(255,255,255,0.45)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}>
@@ -944,24 +1109,35 @@ Versao refinada da anotacao`
             ))}
           </div>
 
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {NOTEBOOK_TYPES.slice(0, 4).map(type => (
+              <button key={type.value} onClick={() => applyNotebookType(type.value)}
+                className="text-left rounded-xl p-2.5 transition hover:scale-[1.02]"
+                style={{ background: type.soft, border: `1px solid ${type.color}33` }}>
+                <p className="text-xs font-extrabold" style={{ color: type.color }}>{type.label}</p>
+                <p className="text-[10px] text-white/35 mt-1 line-clamp-2">{type.description}</p>
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
             {filtered.map(entry => {
-              const meta = NOTEBOOK_TYPES.find(item => item.value === entry.type) || NOTEBOOK_TYPES[0]
+              const meta = getNotebookMeta(entry.type)
               return (
                 <button key={entry.id} onClick={() => selectEntry(entry)}
-                  className="w-full text-left rounded-xl p-3 transition"
+                  className="w-full text-left rounded-xl p-3 transition hover:translate-x-1"
                   style={{
-                    background: activeId === entry.id ? 'rgba(248,163,3,0.12)' : 'rgba(255,255,255,0.035)',
-                    border: `1px solid ${activeId === entry.id ? 'rgba(248,163,3,0.28)' : 'rgba(255,255,255,0.06)'}`,
+                    background: activeId === entry.id ? `linear-gradient(135deg,${meta.soft},rgba(255,255,255,0.03))` : 'rgba(255,255,255,0.035)',
+                    border: `1px solid ${activeId === entry.id ? `${meta.color}55` : 'rgba(255,255,255,0.06)'}`,
                   }}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-white truncate">{entry.title || 'Sem titulo'}</p>
+                    <p className="text-sm font-bold text-white truncate">{entry.title || 'Sem título'}</p>
                     {entry.favorite && <StarSolid className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#F8A303' }} />}
                   </div>
-                  <p className="text-[11px] text-white/35 line-clamp-2 mt-1">{entry.content || 'Sem conteudo ainda'}</p>
+                  <p className="text-[11px] text-white/35 line-clamp-2 mt-1">{entry.content || 'Sem conteúdo ainda'}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded"
-                      style={{ color: meta.color, background: `${meta.color}1A`, border: `1px solid ${meta.color}30` }}>
+                      style={{ color: meta.color, background: meta.soft, border: `1px solid ${meta.color}30` }}>
                       {meta.label}
                     </span>
                     <span className="text-[10px] text-white/25">{new Date(entry.updatedAt).toLocaleDateString('pt-BR')}</span>
@@ -970,7 +1146,7 @@ Versao refinada da anotacao`
               )
             })}
             {filtered.length === 0 && (
-              <div className="text-center py-10 text-white/25 text-sm">Nenhuma anotacao encontrada</div>
+              <div className="text-center py-10 text-white/25 text-sm">Nenhuma anotação encontrada</div>
             )}
           </div>
         </aside>
@@ -978,15 +1154,21 @@ Versao refinada da anotacao`
         <div className="p-4 lg:p-5">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-4">
             <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-3"
+                style={{ background: typeMeta.soft, border: `1px solid ${typeMeta.color}35`, color: typeMeta.color }}>
+                <PencilIcon className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-extrabold">{typeMeta.label}</span>
+                <span className="text-[11px] text-white/35">{typeMeta.description}</span>
+              </div>
               <input
                 value={draft.title}
                 onChange={e => setDraftField('title', e.target.value)}
                 onBlur={() => saveDraft()}
                 className="w-full text-xl font-extrabold text-white bg-transparent outline-none"
-                placeholder="Titulo da anotacao"
+                placeholder="Título da anotação"
               />
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <select value={draft.type} onChange={e => setDraftField('type', e.target.value as NotebookEntry['type'])}
+                <select value={draft.type} onChange={e => applyNotebookType(e.target.value as NotebookEntry['type'])}
                   className="px-2.5 py-1.5 rounded-lg text-xs font-bold outline-none"
                   style={{ background: 'rgba(255,255,255,0.07)', color: typeMeta.color, border: '1px solid rgba(255,255,255,0.1)', colorScheme: 'dark' }}>
                   {NOTEBOOK_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
@@ -1008,13 +1190,13 @@ Versao refinada da anotacao`
               </button>
               <button onClick={organizeWithSofi} disabled={aiBusy}
                 className="px-3 py-2 rounded-xl text-sm font-bold text-black flex items-center gap-1.5 disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 12px 28px rgba(248,163,3,0.24)' }}>
                 <BoltIcon className="w-4 h-4" /> {aiBusy ? 'Sofi pensando...' : 'Organizar com Sofi'}
               </button>
               <button onClick={() => deleteEntry(draft.id)}
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: 'rgba(255,71,87,0.08)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.16)' }}
-                title="Excluir anotacao">
+                title="Excluir anotação">
                 <TrashIcon className="w-4 h-4" />
               </button>
             </div>
@@ -1026,10 +1208,28 @@ Versao refinada da anotacao`
                 value={draft.content}
                 onChange={e => setDraftField('content', e.target.value)}
                 onBlur={() => saveDraft()}
-                placeholder="Escreva ideias, frases, reunioes, links, planos, briefing ou qualquer pensamento solto..."
+                placeholder={typeMeta.placeholder}
                 className="w-full min-h-[310px] resize-y rounded-2xl p-4 text-sm leading-6 text-white outline-none"
-                style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.08)' }}
+                style={{
+                  background: `linear-gradient(180deg,${typeMeta.soft},rgba(0,0,0,0.22))`,
+                  border: `1px solid ${typeMeta.color}25`,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                }}
               />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+                {[
+                  { label: 'Resumo', value: draft.content.trim() ? `${Math.ceil(draft.content.trim().length / 280)} min leitura` : 'vazio' },
+                  { label: 'Tipo', value: typeMeta.label },
+                  { label: 'Tags', value: `${draft.tags.length}` },
+                  { label: 'Sofi', value: draft.aiOutput ? 'analisado' : 'pendente' },
+                ].map(item => (
+                  <div key={item.label} className="rounded-xl px-3 py-2"
+                    style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <p className="text-[10px] uppercase tracking-widest text-white/25">{item.label}</p>
+                    <p className="text-xs font-bold text-white/70 mt-0.5">{item.value}</p>
+                  </div>
+                ))}
+              </div>
               <div className="mt-3">
                 <div className="flex items-center gap-2 mb-2">
                   <TagIcon className="w-4 h-4 text-white/30" />
@@ -1039,7 +1239,7 @@ Versao refinada da anotacao`
                   value={draft.tags.join(', ')}
                   onChange={e => setDraftField('tags', e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
                   onBlur={() => saveDraft()}
-                  placeholder="marketing, reuniao, insight..."
+                  placeholder="marketing, reunião, insight..."
                   className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
                 />
@@ -1047,13 +1247,13 @@ Versao refinada da anotacao`
             </div>
 
             <aside className="rounded-2xl p-4"
-              style={{ background: 'rgba(248,163,3,0.055)', border: '1px solid rgba(248,163,3,0.14)' }}>
+              style={{ background: `linear-gradient(160deg,${typeMeta.soft},rgba(248,163,3,0.035))`, border: `1px solid ${typeMeta.color}2E` }}>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div>
                   <p className="text-sm font-extrabold text-white">Leitura da Sofi</p>
-                  <p className="text-[10px] text-white/35">Resumo, tarefas e refinamento automatico</p>
+                  <p className="text-[10px] text-white/35">Resumo, tarefas e refinamento automático</p>
                 </div>
-                <BoltIcon className="w-5 h-5" style={{ color: '#F8A303' }} />
+                <BoltIcon className="w-5 h-5" style={{ color: typeMeta.color }} />
               </div>
               {draft.aiOutput ? (
                 <div className="text-sm leading-6 text-white/75 whitespace-pre-wrap max-h-[360px] overflow-y-auto pr-1">
@@ -1062,7 +1262,7 @@ Versao refinada da anotacao`
               ) : (
                 <div className="h-[260px] flex flex-col items-center justify-center text-center text-white/30 px-6">
                   <PencilIcon className="w-10 h-10 mb-3 opacity-40" />
-                  <p className="text-sm">Clique em Organizar com Sofi para transformar a anotacao em resumo, plano e proximas acoes.</p>
+                  <p className="text-sm">Clique em Organizar com Sofi para transformar a anotação em resumo, plano e próximas ações.</p>
                 </div>
               )}
             </aside>
