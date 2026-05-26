@@ -8,7 +8,8 @@ import {
 } from 'recharts'
 import {
   UsersIcon, CheckCircleIcon, ExclamationTriangleIcon, CalendarDaysIcon,
-  ArrowTrendingUpIcon, BellAlertIcon
+  ArrowTrendingUpIcon, BellAlertIcon, ChartBarIcon, ClipboardDocumentCheckIcon,
+  ChatBubbleLeftRightIcon, SparklesIcon
 } from '@heroicons/react/24/outline'
 
 // Animated counter hook
@@ -33,6 +34,26 @@ function useCountUp(target: number, duration = 1400) {
 
 const CHART_COLORS = ['#4A9EFF', '#0ABD78', '#F8A303', '#FF4757']
 const UNIT_COLORS  = ['#F8A303', '#4A9EFF', '#0ABD78', '#8B5CF6', '#29ABE2', '#F9C234', '#E07B39']
+
+function InsightIcon({ icon, color }: { icon?: string; color: string }) {
+  const normalized = String(icon || '').toLowerCase().replace(/[\s-]/g, '_')
+  const Icon = normalized.includes('calendar') ? CalendarDaysIcon
+    : normalized.includes('clipboard') || normalized.includes('task') ? ClipboardDocumentCheckIcon
+    : normalized.includes('chart') || normalized.includes('trend') || normalized.includes('up') ? ChartBarIcon
+    : normalized.includes('feedback') || normalized.includes('chat') ? ChatBubbleLeftRightIcon
+    : normalized.includes('alert') || normalized.includes('bell') ? BellAlertIcon
+    : SparklesIcon
+
+  return (
+    <span
+      className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+      style={{ background: `${color}18`, border: `1px solid ${color}35` }}
+      aria-hidden="true"
+    >
+      <Icon className="w-5 h-5" style={{ color }} />
+    </span>
+  )
+}
 
 function KpiCard({
   label, value, icon: Icon, accentColor, sub, delay = '0s'
@@ -350,9 +371,9 @@ Crie um briefing matinal de ${period} para Vinicius Felix em 2-3 frases: destaqu
                   }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg leading-none">{insight.icon}</span>
-                      <p className="text-sm font-semibold text-white leading-snug">{insight.title}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <InsightIcon icon={insight.icon} color={ps.color} />
+                      <p className="text-sm font-semibold text-white leading-snug min-w-0">{insight.title}</p>
                     </div>
                     <span
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
