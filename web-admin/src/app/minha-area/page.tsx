@@ -45,6 +45,18 @@ interface Credential {
   createdAt: string
 }
 
+interface NotebookEntry {
+  id: string
+  title: string
+  type: 'ideia' | 'reuniao' | 'frase' | 'plano' | 'livre'
+  content: string
+  tags: string[]
+  favorite: boolean
+  aiOutput?: string
+  createdAt: string
+  updatedAt: string
+}
+
 interface WorkDay {
   startHour: number
   startMin: number
@@ -134,6 +146,14 @@ function calendarPayloadForTask(task: Partial<PersonalTask>) {
 // ─── CREDENTIALS VAULT (local-only, PIN-derived encryption) ─────────
 const VAULT_KEY = 'aps_edu_vault_v2'
 const VAULT_PIN_KEY = 'aps_edu_vault_pin'
+const NOTEBOOK_KEY = 'aps_edu_notebooks_v1'
+const NOTEBOOK_TYPES: { value: NotebookEntry['type']; label: string; color: string }[] = [
+  { value: 'ideia', label: 'Ideia', color: '#F8A303' },
+  { value: 'reuniao', label: 'Reuniao', color: '#4A9EFF' },
+  { value: 'frase', label: 'Frase', color: '#A78BFA' },
+  { value: 'plano', label: 'Plano', color: '#0ABD78' },
+  { value: 'livre', label: 'Livre', color: '#FFFFFF' },
+]
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = ''
@@ -727,6 +747,332 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
 }
 
 // ─── CREDENTIALS VAULT ────────────────────────────────────────
+function IntelligentNotebook() {
+  const starterEntry = (): NotebookEntry => ({
+    id: Date.now().toString(),
+    title: 'Nova anotacao',
+    type: 'ideia',
+    content: '',
+    tags: ['insight'],
+    favorite: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+
+  const [entries, setEntries] = useState<NotebookEntry[]>([])
+  const [activeId, setActiveId] = useState('')
+  const [draft, setDraft] = useState<NotebookEntry>(() => starterEntry())
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'todos' | NotebookEntry['type']>('todos')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [saveHint, setSaveHint] = useState('')
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(NOTEBOOK_KEY)
+      const parsed: NotebookEntry[] = stored ? JSON.parse(stored) : []
+      if (parsed.length) {
+        setEntries(parsed)
+        setActiveId(parsed[0].id)
+        setDraft(parsed[0])
+      } else {
+        const first = starterEntry()
+        setEntries([first])
+        setActiveId(first.id)
+        setDraft(first)
+        localStorage.setItem(NOTEBOOK_KEY, JSON.stringify([first]))
+      }
+    } catch {
+      const first = starterEntry()
+      setEntries([first])
+      setActiveId(first.id)
+      setDraft(first)
+    }
+  }, [])
+
+  const persist = (next: NotebookEntry[]) => {
+    setEntries(next)
+    try { localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(next)) } catch {}
+  }
+
+  const saveDraft = (extra?: Partial<NotebookEntry>) => {
+    const updated: NotebookEntry = {
+      ...draft,
+      ...extra,
+      title: (extra?.title ?? draft.title).trim() || 'Sem titulo',
+      updatedAt: new Date().toISOString(),
+    }
+    const exists = entries.some(item => item.id === updated.id)
+    const next = exists
+      ? entries.map(item => item.id === updated.id ? updated : item)
+      : [updated, ...entries]
+    persist(next)
+    setDraft(updated)
+    setActiveId(updated.id)
+    setSaveHint('Salvo agora')
+    window.setTimeout(() => setSaveHint(''), 1800)
+  }
+
+  const createEntry = () => {
+    saveDraft()
+    const savedCurrent = { ...draft, updatedAt: new Date().toISOString() }
+    const entry = starterEntry()
+    const next = [entry, ...entries.map(item => item.id === draft.id ? savedCurrent : item)]
+    persist(next)
+    setActiveId(entry.id)
+    setDraft(entry)
+    setQuery('')
+  }
+
+  const selectEntry = (entry: NotebookEntry) => {
+    saveDraft()
+    setActiveId(entry.id)
+    setDraft(entry)
+  }
+
+  const deleteEntry = (id: string) => {
+    const next = entries.filter(item => item.id !== id)
+    persist(next)
+    if (activeId === id) {
+      const fallback = next[0] || starterEntry()
+      if (!next.length) persist([fallback])
+      setActiveId(fallback.id)
+      setDraft(fallback)
+    }
+  }
+
+  const setDraftField = (key: keyof NotebookEntry, value: any) => {
+    setDraft(prev => ({ ...prev, [key]: value }))
+  }
+
+  const organizeWithSofi = async () => {
+    if (!draft.content.trim()) {
+      setSaveHint('Escreva uma anotacao primeiro')
+      window.setTimeout(() => setSaveHint(''), 1800)
+      return
+    }
+    setAiBusy(true)
+    const prompt = `Voce e a Sofi, assistente executiva da Associacao Paulista Sul. Organize esta anotacao como um caderno digital de alto nivel.
+
+Titulo: ${draft.title}
+Tipo: ${draft.type}
+Tags: ${draft.tags.join(', ')}
+Conteudo:
+${draft.content}
+
+Responda em portugues do Brasil, com este formato:
+Resumo executivo
+Ideias-chave
+Proximas acoes
+Possiveis tarefas
+Perguntas que eu deveria responder
+Versao refinada da anotacao`
+
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await res.json()
+      const output = data.content || data.error || 'A Sofi nao conseguiu organizar esta anotacao agora.'
+      saveDraft({ aiOutput: output })
+    } catch (err: any) {
+      saveDraft({ aiOutput: `Erro ao chamar a Sofi: ${err.message}` })
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  const filtered = entries.filter(entry => {
+    const haystack = `${entry.title} ${entry.content} ${entry.tags.join(' ')}`.toLowerCase()
+    return haystack.includes(query.toLowerCase()) && (typeFilter === 'todos' || entry.type === typeFilter)
+  })
+
+  const typeMeta = NOTEBOOK_TYPES.find(item => item.value === draft.type) || NOTEBOOK_TYPES[0]
+
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-[520px]">
+        <aside className="p-4 border-b lg:border-b-0 lg:border-r"
+          style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div>
+              <p className="text-sm font-bold text-white">Cadernos Inteligentes</p>
+              <p className="text-[10px] text-white/35">Notas, ideias, frases e planos com Sofi</p>
+            </div>
+            <button onClick={createEntry}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-black"
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}
+              title="Nova anotacao">
+              <PlusIcon className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="relative mb-3">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar anotacoes..."
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+            />
+          </div>
+
+          <div className="flex gap-1.5 flex-wrap mb-4">
+            <button onClick={() => setTypeFilter('todos')}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
+              style={{
+                background: typeFilter === 'todos' ? 'rgba(248,163,3,0.18)' : 'rgba(255,255,255,0.05)',
+                color: typeFilter === 'todos' ? '#F8A303' : 'rgba(255,255,255,0.45)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+              Todas
+            </button>
+            {NOTEBOOK_TYPES.map(type => (
+              <button key={type.value} onClick={() => setTypeFilter(type.value)}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                style={{
+                  background: typeFilter === type.value ? `${type.color}26` : 'rgba(255,255,255,0.05)',
+                  color: typeFilter === type.value ? type.color : 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                {type.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            {filtered.map(entry => {
+              const meta = NOTEBOOK_TYPES.find(item => item.value === entry.type) || NOTEBOOK_TYPES[0]
+              return (
+                <button key={entry.id} onClick={() => selectEntry(entry)}
+                  className="w-full text-left rounded-xl p-3 transition"
+                  style={{
+                    background: activeId === entry.id ? 'rgba(248,163,3,0.12)' : 'rgba(255,255,255,0.035)',
+                    border: `1px solid ${activeId === entry.id ? 'rgba(248,163,3,0.28)' : 'rgba(255,255,255,0.06)'}`,
+                  }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-white truncate">{entry.title || 'Sem titulo'}</p>
+                    {entry.favorite && <StarSolid className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#F8A303' }} />}
+                  </div>
+                  <p className="text-[11px] text-white/35 line-clamp-2 mt-1">{entry.content || 'Sem conteudo ainda'}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded"
+                      style={{ color: meta.color, background: `${meta.color}1A`, border: `1px solid ${meta.color}30` }}>
+                      {meta.label}
+                    </span>
+                    <span className="text-[10px] text-white/25">{new Date(entry.updatedAt).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </button>
+              )
+            })}
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-white/25 text-sm">Nenhuma anotacao encontrada</div>
+            )}
+          </div>
+        </aside>
+
+        <div className="p-4 lg:p-5">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-4">
+            <div className="flex-1">
+              <input
+                value={draft.title}
+                onChange={e => setDraftField('title', e.target.value)}
+                onBlur={() => saveDraft()}
+                className="w-full text-xl font-extrabold text-white bg-transparent outline-none"
+                placeholder="Titulo da anotacao"
+              />
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <select value={draft.type} onChange={e => setDraftField('type', e.target.value as NotebookEntry['type'])}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold outline-none"
+                  style={{ background: 'rgba(255,255,255,0.07)', color: typeMeta.color, border: '1px solid rgba(255,255,255,0.1)', colorScheme: 'dark' }}>
+                  {NOTEBOOK_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+                </select>
+                <button onClick={() => saveDraft({ favorite: !draft.favorite })}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1"
+                  style={{ background: draft.favorite ? 'rgba(248,163,3,0.15)' : 'rgba(255,255,255,0.06)', color: draft.favorite ? '#F8A303' : 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {draft.favorite ? <StarSolid className="w-3.5 h-3.5" /> : <StarIcon className="w-3.5 h-3.5" />} Favorita
+                </button>
+                {saveHint && <span className="text-[11px] text-white/35">{saveHint}</span>}
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => saveDraft()}
+                className="px-3 py-2 rounded-xl text-sm font-bold"
+                style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                Salvar
+              </button>
+              <button onClick={organizeWithSofi} disabled={aiBusy}
+                className="px-3 py-2 rounded-xl text-sm font-bold text-black flex items-center gap-1.5 disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                <BoltIcon className="w-4 h-4" /> {aiBusy ? 'Sofi pensando...' : 'Organizar com Sofi'}
+              </button>
+              <button onClick={() => deleteEntry(draft.id)}
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(255,71,87,0.08)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.16)' }}
+                title="Excluir anotacao">
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
+            <div>
+              <textarea
+                value={draft.content}
+                onChange={e => setDraftField('content', e.target.value)}
+                onBlur={() => saveDraft()}
+                placeholder="Escreva ideias, frases, reunioes, links, planos, briefing ou qualquer pensamento solto..."
+                className="w-full min-h-[310px] resize-y rounded-2xl p-4 text-sm leading-6 text-white outline-none"
+                style={{ background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.08)' }}
+              />
+              <div className="mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <TagIcon className="w-4 h-4 text-white/30" />
+                  <p className="text-[10px] uppercase tracking-widest text-white/30">Tags</p>
+                </div>
+                <input
+                  value={draft.tags.join(', ')}
+                  onChange={e => setDraftField('tags', e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
+                  onBlur={() => saveDraft()}
+                  placeholder="marketing, reuniao, insight..."
+                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                />
+              </div>
+            </div>
+
+            <aside className="rounded-2xl p-4"
+              style={{ background: 'rgba(248,163,3,0.055)', border: '1px solid rgba(248,163,3,0.14)' }}>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div>
+                  <p className="text-sm font-extrabold text-white">Leitura da Sofi</p>
+                  <p className="text-[10px] text-white/35">Resumo, tarefas e refinamento automatico</p>
+                </div>
+                <BoltIcon className="w-5 h-5" style={{ color: '#F8A303' }} />
+              </div>
+              {draft.aiOutput ? (
+                <div className="text-sm leading-6 text-white/75 whitespace-pre-wrap max-h-[360px] overflow-y-auto pr-1">
+                  {draft.aiOutput.replace(/\*\*/g, '')}
+                </div>
+              ) : (
+                <div className="h-[260px] flex flex-col items-center justify-center text-center text-white/30 px-6">
+                  <PencilIcon className="w-10 h-10 mb-3 opacity-40" />
+                  <p className="text-sm">Clique em Organizar com Sofi para transformar a anotacao em resumo, plano e proximas acoes.</p>
+                </div>
+              )}
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CredentialsVault() {
   const [unlocked, setUnlocked] = useState(false)
   const [pin, setPin]           = useState('')
@@ -795,9 +1141,9 @@ function CredentialsVault() {
           <LockClosedIcon className="w-8 h-8" style={{ color: '#F8A303' }} />
         </div>
         <div className="text-center">
-          <p className="text-base font-bold text-white">{isSetup ? 'Criar PIN do Cofre' : 'Cofre de Credenciais'}</p>
+          <p className="text-base font-bold text-white">{isSetup ? 'Criar PIN da Gaveta Segura' : 'Gaveta Segura de Acessos'}</p>
           <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            {isSetup ? 'Defina um PIN para proteger suas senhas' : 'Digite seu PIN para acessar'}
+            {isSetup ? 'Defina um PIN para proteger logins, senhas e acessos' : 'Digite seu PIN para acessar'}
           </p>
         </div>
         <div className="w-full max-w-xs space-y-3">
@@ -819,7 +1165,7 @@ function CredentialsVault() {
           <button onClick={unlock} disabled={vaultBusy}
             className="w-full py-3 rounded-xl text-sm font-bold text-black disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-            {vaultBusy ? 'Protegendo...' : isSetup ? 'Criar Cofre' : 'Desbloquear'}
+            {vaultBusy ? 'Protegendo...' : isSetup ? 'Criar Gaveta Segura' : 'Desbloquear'}
           </button>
         </div>
         <p className="text-[10px] text-center max-w-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
@@ -844,7 +1190,7 @@ function CredentialsVault() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => { setUnlocked(false); setPin(''); setCreds([]) }}
-            className="p-2 rounded-xl" style={{ color: 'rgba(255,255,255,0.3)' }} title="Bloquear cofre">
+            className="p-2 rounded-xl" style={{ color: 'rgba(255,255,255,0.3)' }} title="Bloquear gaveta">
             <LockClosedIcon className="w-4 h-4" />
           </button>
           <button onClick={() => setShowForm(f => !f)}
@@ -974,7 +1320,7 @@ function CredentialForm({ onAdd, onClose }: { onAdd: (c: Omit<Credential, 'id' |
         disabled={!form.service || !form.email || !form.password}
         className="w-full py-2 rounded-xl text-sm font-bold text-black disabled:opacity-40"
         style={{ background: 'linear-gradient(135deg,#8B5CF6,#A78BFA)' }}>
-        Salvar no Cofre
+        Salvar na Gaveta Segura
       </button>
     </div>
   )
@@ -2694,6 +3040,20 @@ export default function MinhaAreaPage() {
         <WorkDayTimer tasks={tasks} workDay={workDay} onWorkDayUpdated={w => setWorkDay(w)} />
       </div>
 
+      <section className="mb-6 animate-fade-in-up">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+            style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.22)' }}>
+            <PencilIcon className="w-4 h-4" style={{ color: '#F8A303' }} />
+          </div>
+          <div>
+            <h2 className="text-sm font-extrabold text-white leading-none">Cadernos Inteligentes</h2>
+            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Notas estilo Notion com IA Sofi</p>
+          </div>
+        </div>
+        <IntelligentNotebook />
+      </section>
+
       {/* ══════════════════════════════════════════════════════
            SEÇÃO 4 — GOOGLE WORKSPACE (Gmail + Drive)
       ══════════════════════════════════════════════════════ */}
@@ -2732,7 +3092,10 @@ export default function MinhaAreaPage() {
               style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.18)' }}>
               🔑
             </div>
-            <h2 className="text-sm font-extrabold text-white">Cofre de Senhas</h2>
+            <div>
+              <h2 className="text-sm font-extrabold text-white leading-none">Gaveta Segura de Acessos</h2>
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Logins e senhas protegidos por PIN local</p>
+            </div>
           </div>
           <CredentialsVault />
         </section>
