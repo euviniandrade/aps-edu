@@ -1216,32 +1216,43 @@ Versão refinada da anotação`
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+              <div className="flex items-center gap-2 flex-wrap mt-3 rounded-2xl p-3"
+                style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 {[
-                  { label: 'Resumo', value: draft.content.trim() ? `${Math.ceil(draft.content.trim().length / 280)} min leitura` : 'vazio' },
+                  { label: 'Leitura', value: draft.content.trim() ? `${Math.ceil(draft.content.trim().length / 280)} min` : 'vazio' },
                   { label: 'Tipo', value: typeMeta.label },
                   { label: 'Tags', value: `${draft.tags.length}` },
                   { label: 'Sofi', value: draft.aiOutput ? 'analisado' : 'pendente' },
                 ].map(item => (
-                  <div key={item.label} className="rounded-xl px-3 py-2"
-                    style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <p className="text-[10px] uppercase tracking-widest text-white/25">{item.label}</p>
-                    <p className="text-xs font-bold text-white/70 mt-0.5">{item.value}</p>
-                  </div>
+                  <span key={item.label} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-bold"
+                    style={{ background: item.label === 'Tipo' ? typeMeta.soft : 'rgba(255,255,255,0.055)', color: item.label === 'Tipo' ? typeMeta.color : 'rgba(255,255,255,0.65)', border: `1px solid ${item.label === 'Tipo' ? `${typeMeta.color}35` : 'rgba(255,255,255,0.08)'}` }}>
+                    <span className="text-white/30 font-semibold">{item.label}</span>
+                    {item.value}
+                  </span>
                 ))}
               </div>
-              <div className="mt-3">
+              <div className="mt-3 rounded-2xl p-3"
+                style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <TagIcon className="w-4 h-4 text-white/30" />
-                  <p className="text-[10px] uppercase tracking-widest text-white/30">Tags</p>
+                  <p className="text-[10px] uppercase tracking-widest text-white/30">Etiquetas</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {draft.tags.map(tag => (
+                    <span key={tag}
+                      className="inline-flex items-center h-7 px-2.5 rounded-full text-[11px] font-bold"
+                      style={{ background: typeMeta.soft, color: typeMeta.color, border: `1px solid ${typeMeta.color}30` }}>
+                      {tag}
+                    </span>
+                  ))}
                 </div>
                 <input
                   value={draft.tags.join(', ')}
                   onChange={e => setDraftField('tags', e.target.value.split(',').map(tag => tag.trim()).filter(Boolean))}
                   onBlur={() => saveDraft()}
-                  placeholder="marketing, reunião, insight..."
-                  className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                  placeholder="Adicionar etiquetas..."
+                  className="w-full px-3 py-2.5 rounded-full text-sm text-white outline-none"
+                  style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }}
                 />
               </div>
             </div>
