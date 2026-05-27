@@ -2,7 +2,17 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 # Instala dependências do sistema necessárias para Prisma
-RUN apk add --no-cache openssl
+RUN apk add --no-cache \
+    ca-certificates \
+    chromium \
+    freetype \
+    harfbuzz \
+    nss \
+    openssl \
+    ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Copia manifests de dependências
 COPY package*.json ./
@@ -18,7 +28,7 @@ RUN npx prisma generate
 COPY src ./src/
 
 # Cria pasta de uploads e configura permissões
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads /app/.wwebjs_auth
 
 # Usuário não-root por segurança
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001

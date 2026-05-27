@@ -2,6 +2,7 @@ require('dotenv').config()
 const path = require('path')
 const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
+const whatsappService = require('./modules/whatsapp/whatsapp.service')
 
 // Garante que a pasta de uploads existe ao iniciar
 const uploadsDir = path.join(process.cwd(), 'uploads')
@@ -59,6 +60,9 @@ fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOS
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: '0.0.0.0' })
+    if (process.env.WHATSAPP_ENABLED === 'true') {
+      whatsappService.start().catch(err => fastify.log.error(err, 'Erro ao iniciar WhatsApp'))
+    }
     console.log(`\n🚀 APS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
     console.log(`📚 Documentação em http://localhost:${process.env.PORT || 3000}/docs\n`)
   } catch (err) {

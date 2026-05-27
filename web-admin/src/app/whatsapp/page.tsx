@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
+import api from '@/lib/api'
 import {
   ArrowPathIcon,
   BoltIcon,
@@ -53,6 +54,24 @@ interface Campaign {
   template: string
 }
 
+interface WhatsAppStatus {
+  connected: boolean
+  ready: boolean
+  qrDataUrl?: string | null
+  error?: string | null
+  mode?: 'live' | 'preview'
+  autoReplies?: number
+  handoffs?: number
+  automation?: {
+    mode: 'paused' | 'assist' | 'auto'
+    tone: string
+    maxChars: number
+    allowGroups: boolean
+    handoffKeywords: string[]
+    training: string[]
+  }
+}
+
 const STORAGE_KEY = 'aps_edu_whatsapp_crm_v1'
 
 const stages: { id: StageId; label: string; color: string }[] = [
@@ -69,10 +88,10 @@ const seedContacts: WaContact[] = [
     name: 'Tatiane Alvarenga',
     phone: '5511979861056',
     unit: 'Call Center',
-    tags: ['retorno', 'matrícula', 'família'],
+    tags: ['retorno', 'matrÃ­cula', 'famÃ­lia'],
     stage: 'interessado',
     score: 92,
-    lastMessage: 'Ele está se adaptando bem. Obrigada pelo retorno.',
+    lastMessage: 'Ele estÃ¡ se adaptando bem. Obrigada pelo retorno.',
     lastAt: '10:42',
     unread: 2,
     consent: true,
@@ -81,11 +100,11 @@ const seedContacts: WaContact[] = [
     id: 'c2',
     name: 'Pamela Souza',
     phone: '551121281010',
-    unit: 'Educação Infantil',
+    unit: 'EducaÃ§Ã£o Infantil',
     tags: ['potencial', 'tour 360'],
     stage: 'contato',
     score: 74,
-    lastMessage: 'Gostaria de receber valores e horários.',
+    lastMessage: 'Gostaria de receber valores e horÃ¡rios.',
     lastAt: '09:18',
     unread: 0,
     consent: true,
@@ -98,7 +117,7 @@ const seedContacts: WaContact[] = [
     tags: ['bolsa', 'agendamento'],
     stage: 'agendado',
     score: 86,
-    lastMessage: 'Pode ser amanhã às 15h.',
+    lastMessage: 'Pode ser amanhÃ£ Ã s 15h.',
     lastAt: 'Ontem',
     unread: 1,
     consent: true,
@@ -107,8 +126,8 @@ const seedContacts: WaContact[] = [
     id: 'c4',
     name: 'Michele Sena',
     phone: '551198606197',
-    unit: 'Rematrícula',
-    tags: ['perdido', 'reativação'],
+    unit: 'RematrÃ­cula',
+    tags: ['perdido', 'reativaÃ§Ã£o'],
     stage: 'novo',
     score: 51,
     lastMessage: 'Vou conversar com meu esposo e retorno.',
@@ -119,9 +138,9 @@ const seedContacts: WaContact[] = [
 ]
 
 const seedMessages: WaMessage[] = [
-  { id: 'm1', contactId: 'c1', from: 'lead', text: 'Olá, bom dia! Tudo bem com você?', at: '10:40' },
-  { id: 'm2', contactId: 'c1', from: 'agent', text: 'Bom dia, Tatiane! Tudo bem. Como está a adaptação?', at: '10:41' },
-  { id: 'm3', contactId: 'c1', from: 'lead', text: 'Ele está se adaptando bem. Obrigada pelo retorno.', at: '10:42' },
+  { id: 'm1', contactId: 'c1', from: 'lead', text: 'OlÃ¡, bom dia! Tudo bem com vocÃª?', at: '10:40' },
+  { id: 'm2', contactId: 'c1', from: 'agent', text: 'Bom dia, Tatiane! Tudo bem. Como estÃ¡ a adaptaÃ§Ã£o?', at: '10:41' },
+  { id: 'm3', contactId: 'c1', from: 'lead', text: 'Ele estÃ¡ se adaptando bem. Obrigada pelo retorno.', at: '10:42' },
 ]
 
 const seedCampaigns: Campaign[] = [
@@ -131,15 +150,15 @@ const seedCampaigns: Campaign[] = [
     segment: 'Interessados com opt-in',
     status: 'programada',
     recipients: 128,
-    template: 'Olá, {{nome}}! Temos um tour virtual da unidade {{unidade}} para você conhecer melhor nossa proposta.',
+    template: 'OlÃ¡, {{nome}}! Temos um tour virtual da unidade {{unidade}} para vocÃª conhecer melhor nossa proposta.',
   },
   {
     id: 'cp2',
-    name: 'Reativação de visitas',
-    segment: 'Leads sem retorno há 30 dias',
+    name: 'ReativaÃ§Ã£o de visitas',
+    segment: 'Leads sem retorno hÃ¡ 30 dias',
     status: 'rascunho',
     recipients: 74,
-    template: 'Olá, {{nome}}. Posso te ajudar a retomar o agendamento da visita?',
+    template: 'OlÃ¡, {{nome}}. Posso te ajudar a retomar o agendamento da visita?',
   },
 ]
 
@@ -166,6 +185,10 @@ export default function WhatsAppCrmPage() {
   const [aiDraft, setAiDraft] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
   const [bulkText, setBulkText] = useState(seedCampaigns[0].template)
+  const [liveStatus, setLiveStatus] = useState<WhatsAppStatus | null>(null)
+  const [liveBusy, setLiveBusy] = useState(false)
+  const [trainingInput, setTrainingInput] = useState('')
+  const [toneInput, setToneInput] = useState('humano, acolhedor, objetivo e profissional')
 
   useEffect(() => {
     try {
@@ -186,6 +209,23 @@ export default function WhatsAppCrmPage() {
     } catch {}
   }, [connected, contacts, messages, campaigns, selectedId])
 
+  const refreshLiveStatus = async () => {
+    try {
+      const { data } = await api.get('/whatsapp-live/status')
+      setLiveStatus(data)
+      setConnected(!!data.connected)
+      if (data.automation?.tone) setToneInput(data.automation.tone)
+    } catch {
+      setLiveStatus(null)
+    }
+  }
+
+  useEffect(() => {
+    refreshLiveStatus()
+    const id = window.setInterval(refreshLiveStatus, 10000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const selected = contacts.find(c => c.id === selectedId) || contacts[0]
   const allTags = useMemo(() => ['Todos', ...Array.from(new Set(contacts.flatMap(c => c.tags)))], [contacts])
   const filteredContacts = contacts.filter(contact => {
@@ -199,9 +239,14 @@ export default function WhatsAppCrmPage() {
   const unread = contacts.reduce((sum, c) => sum + c.unread, 0)
   const avgScore = Math.round(contacts.reduce((sum, c) => sum + c.score, 0) / contacts.length)
 
-  const sendMessage = (text = composer, from: WaMessage['from'] = 'agent') => {
+  const sendMessage = async (text = composer, from: WaMessage['from'] = 'agent') => {
     if (!selected || !text.trim()) return
     const msg: WaMessage = { id: crypto.randomUUID(), contactId: selected.id, from, text: text.trim(), at: timeNow() }
+    if (liveStatus?.ready && from !== 'lead') {
+      try {
+        await api.post('/whatsapp-live/send', { phone: selected.phone, text: text.trim() })
+      } catch {}
+    }
     setMessages(prev => [...prev, msg])
     setContacts(prev => prev.map(contact => contact.id === selected.id
       ? { ...contact, lastMessage: text.trim(), lastAt: msg.at, unread: from === 'lead' ? contact.unread + 1 : 0 }
@@ -217,13 +262,13 @@ export default function WhatsAppCrmPage() {
   const extractContacts = (mode: 'geral' | 'segmentado' | 'grupos' | 'selo') => {
     const newContact: WaContact = {
       id: crypto.randomUUID(),
-      name: mode === 'grupos' ? 'Grupo Pais Interessados' : mode === 'selo' ? 'Lead com selo Tour' : 'Novo contato extraído',
+      name: mode === 'grupos' ? 'Grupo Pais Interessados' : mode === 'selo' ? 'Lead com selo Tour' : 'Novo contato extraÃ­do',
       phone: `55${Math.floor(11000000000 + Math.random() * 89999999999)}`,
-      unit: mode === 'segmentado' ? 'Segmento APS' : 'Importação WhatsApp',
+      unit: mode === 'segmentado' ? 'Segmento APS' : 'ImportaÃ§Ã£o WhatsApp',
       tags: [mode, 'importado'],
       stage: 'novo',
       score: 60 + Math.floor(Math.random() * 30),
-      lastMessage: 'Contato importado para qualificação.',
+      lastMessage: 'Contato importado para qualificaÃ§Ã£o.',
       lastAt: timeNow(),
       unread: 0,
       consent: mode !== 'grupos',
@@ -235,16 +280,16 @@ export default function WhatsAppCrmPage() {
   const generateAiDraft = async () => {
     if (!selected) return
     setAiBusy(true)
-    const prompt = `Você é a Sofi, agente humanizada de WhatsApp da Associação Paulista Sul.
+    const prompt = `VocÃª Ã© a Sofi, agente humanizada de WhatsApp da AssociaÃ§Ã£o Paulista Sul.
 Crie uma resposta curta, calorosa e objetiva para este lead.
 
 Contato: ${selected.name}
 Telefone: ${selected.phone}
 Unidade/segmento: ${selected.unit}
 Tags: ${selected.tags.join(', ')}
-Última mensagem: ${selected.lastMessage}
+Ãšltima mensagem: ${selected.lastMessage}
 
-Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres, terminar com uma pergunta simples.`
+Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 caracteres, terminar com uma pergunta simples.`
     try {
       const res = await fetch('/api/gemini', {
         method: 'POST',
@@ -252,9 +297,9 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
         body: JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      setAiDraft(data.content || 'Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
+      setAiDraft(data.content || 'Oi! Posso te ajudar com as informaÃ§Ãµes e o melhor prÃ³ximo passo para sua famÃ­lia?')
     } catch {
-      setAiDraft('Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
+      setAiDraft('Oi! Posso te ajudar com as informaÃ§Ãµes e o melhor prÃ³ximo passo para sua famÃ­lia?')
     } finally {
       setAiBusy(false)
     }
@@ -272,6 +317,50 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
     setCampaigns(prev => [campaign, ...prev])
   }
 
+  const connectLiveWhatsApp = async () => {
+    setLiveBusy(true)
+    try {
+      const { data } = await api.post('/whatsapp-live/start', {})
+      setLiveStatus(data)
+      setConnected(!!data.connected)
+    } finally {
+      setLiveBusy(false)
+    }
+  }
+
+  const setAutomationMode = async (mode: 'paused' | 'assist' | 'auto') => {
+    setLiveBusy(true)
+    try {
+      const { data } = await api.post('/whatsapp-live/automation', { mode, tone: toneInput })
+      setLiveStatus(data)
+    } finally {
+      setLiveBusy(false)
+    }
+  }
+
+  const addTraining = async () => {
+    if (!trainingInput.trim()) return
+    setLiveBusy(true)
+    try {
+      const { data } = await api.post('/whatsapp-live/training', { text: trainingInput.trim() })
+      setLiveStatus(data)
+      setTrainingInput('')
+    } finally {
+      setLiveBusy(false)
+    }
+  }
+
+  const pauseAndAssume = async () => {
+    setLiveBusy(true)
+    try {
+      const { data } = await api.post('/whatsapp-live/handoff', {})
+      setLiveStatus(data)
+      setComposer('')
+    } finally {
+      setLiveBusy(false)
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-5">
@@ -284,34 +373,54 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               </div>
               <div>
                 <h1 className="text-2xl font-extrabold text-white">WhatsApp CRM APS</h1>
-                <p className="text-sm text-white/40">Atendimento, campanhas, extração, Kanban e agente Sofi em um cockpit único.</p>
+                <p className="text-sm text-white/40">Atendimento, campanhas, extraÃ§Ã£o, Kanban e agente Sofi em um cockpit Ãºnico.</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => setConnected(v => !v)}
+            <button onClick={connectLiveWhatsApp} disabled={liveBusy}
               className="px-4 py-2.5 rounded-2xl text-sm font-extrabold flex items-center gap-2"
               style={{
-                background: connected ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.16)',
-                color: connected ? '#0ABD78' : '#F8A303',
-                border: `1px solid ${connected ? 'rgba(10,189,120,0.28)' : 'rgba(248,163,3,0.28)'}`,
+                background: liveStatus?.ready ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.16)',
+                color: liveStatus?.ready ? '#0ABD78' : '#F8A303',
+                border: `1px solid ${liveStatus?.ready ? 'rgba(10,189,120,0.28)' : 'rgba(248,163,3,0.28)'}`,
               }}>
-              {connected ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
-              {connected ? 'WhatsApp conectado' : 'Conectar WhatsApp'}
+              {liveBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : liveStatus?.ready ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
+              {liveStatus?.ready ? 'WhatsApp real conectado' : 'Conectar WhatsApp real'}
             </button>
-            <button className="px-4 py-2.5 rounded-2xl text-sm font-bold text-white/65"
-              style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              Sessão automática ativa
+            <button onClick={() => setAutomationMode('auto')} disabled={liveBusy}
+              className="px-4 py-2.5 rounded-2xl text-sm font-extrabold flex items-center gap-2"
+              style={{ background: liveStatus?.automation?.mode === 'auto' ? 'rgba(10,189,120,0.16)' : 'rgba(255,255,255,0.055)', color: liveStatus?.automation?.mode === 'auto' ? '#0ABD78' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <BoltIcon className="w-4 h-4" />
+              IA responde por mim
+            </button>
+            <button onClick={pauseAndAssume} disabled={liveBusy}
+              className="px-4 py-2.5 rounded-2xl text-sm font-extrabold"
+              style={{ background: liveStatus?.automation?.mode === 'paused' ? 'rgba(255,71,87,0.16)' : 'rgba(255,255,255,0.055)', color: liveStatus?.automation?.mode === 'paused' ? '#FF4757' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              Pausar e assumir
             </button>
           </div>
         </header>
 
+        {(liveStatus?.qrDataUrl || liveStatus?.error) && (
+          <section className="rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center"
+            style={{ background: 'rgba(248,163,3,0.07)', border: '1px solid rgba(248,163,3,0.18)' }}>
+            {liveStatus?.qrDataUrl && <img src={liveStatus.qrDataUrl} alt="QR Code do WhatsApp" className="w-32 h-32 rounded-xl bg-white p-2" />}
+            <div>
+              <p className="text-sm font-extrabold text-white">{liveStatus?.qrDataUrl ? 'Escaneie o QR Code para conectar' : 'Status da conexão real'}</p>
+              <p className="text-sm text-white/55 leading-6 mt-1">
+                {liveStatus?.qrDataUrl ? 'Abra o WhatsApp no celular, vá em aparelhos conectados e leia este código. Depois a sessão fica salva no backend.' : liveStatus?.error}
+              </p>
+            </div>
+          </section>
+        )}
+
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Conversas', value: contacts.length, icon: ChatBubbleLeftRightIcon, color: '#4A9EFF' },
-            { label: 'Não lidas', value: unread, icon: MegaphoneIcon, color: '#F8A303' },
-            { label: 'Opt-in válido', value: optedIn, icon: CheckCircleIcon, color: '#0ABD78' },
-            { label: 'Score médio', value: `${avgScore}%`, icon: SparklesIcon, color: '#A78BFA' },
+            { label: 'NÃ£o lidas', value: unread, icon: MegaphoneIcon, color: '#F8A303' },
+            { label: 'Opt-in vÃ¡lido', value: optedIn, icon: CheckCircleIcon, color: '#0ABD78' },
+            { label: 'Score mÃ©dio', value: `${avgScore}%`, icon: SparklesIcon, color: '#A78BFA' },
           ].map(item => {
             const Icon = item.icon
             return (
@@ -334,7 +443,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
             { id: 'inbox', label: 'Atendimento', icon: ChatBubbleLeftRightIcon },
             { id: 'kanban', label: 'CRM Kanban', icon: ClipboardDocumentCheckIcon },
             { id: 'campanhas', label: 'Envio em massa', icon: MegaphoneIcon },
-            { id: 'contatos', label: 'Extração', icon: UserGroupIcon },
+            { id: 'contatos', label: 'ExtraÃ§Ã£o', icon: UserGroupIcon },
             { id: 'agente', label: 'Agente IA', icon: BoltIcon },
           ].map(item => {
             const Icon = item.icon
@@ -393,7 +502,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
                           <p className="text-sm font-extrabold text-white truncate">{contact.name}</p>
                           <span className="text-[10px] text-white/30">{contact.lastAt}</span>
                         </div>
-                        <p className="text-xs text-white/35">{contact.phone} · {contact.unit}</p>
+                        <p className="text-xs text-white/35">{contact.phone} Â· {contact.unit}</p>
                         <p className="text-xs text-white/50 truncate mt-1">{contact.lastMessage}</p>
                         <div className="flex gap-1.5 mt-2 flex-wrap">
                           {contact.tags.slice(0, 3).map(tag => (
@@ -414,7 +523,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               <div className="p-4 flex items-center justify-between border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
                 <div>
                   <p className="text-lg font-extrabold text-white">{selected?.name}</p>
-                  <p className="text-xs text-white/35">{selected?.phone} · {selected?.unit}</p>
+                  <p className="text-xs text-white/35">{selected?.phone} Â· {selected?.unit}</p>
                 </div>
                 <select value={selected?.stage} onChange={e => selected && moveContact(selected.id, e.target.value as StageId)}
                   className="px-3 py-2 rounded-xl text-xs font-bold outline-none"
@@ -440,7 +549,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
 
               {aiDraft && (
                 <div className="mx-4 mb-3 rounded-2xl p-3" style={{ background: 'rgba(248,163,3,0.08)', border: '1px solid rgba(248,163,3,0.18)' }}>
-                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-1">Sugestão da Sofi</p>
+                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-1">SugestÃ£o da Sofi</p>
                   <p className="text-sm text-white/75 leading-6">{aiDraft}</p>
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => setComposer(aiDraft)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-black" style={{ background: '#F8A303' }}>Usar</button>
@@ -477,7 +586,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
                     <p className="text-[10px] text-white/30">Opt-in</p>
-                    <p className="text-xl font-extrabold" style={{ color: selected?.consent ? '#0ABD78' : '#FF4757' }}>{selected?.consent ? 'Sim' : 'Não'}</p>
+                    <p className="text-xl font-extrabold" style={{ color: selected?.consent ? '#0ABD78' : '#FF4757' }}>{selected?.consent ? 'Sim' : 'NÃ£o'}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -490,7 +599,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               </div>
 
               <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-sm font-extrabold text-white">Ações rápidas</p>
+                <p className="text-sm font-extrabold text-white">AÃ§Ãµes rÃ¡pidas</p>
                 <div className="space-y-2 mt-3">
                   {stages.map(stage => (
                     <button key={stage.id} onClick={() => selected && moveContact(selected.id, stage.id)}
@@ -541,7 +650,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-lg font-extrabold text-white">Campanhas WhatsApp</p>
-                  <p className="text-xs text-white/35">Envio em massa apenas para contatos com opt-in e segmentação.</p>
+                  <p className="text-xs text-white/35">Envio em massa apenas para contatos com opt-in e segmentaÃ§Ã£o.</p>
                 </div>
                 <button onClick={createCampaign} className="px-4 py-2 rounded-xl text-sm font-bold text-black" style={{ background: '#F8A303' }}>
                   <PlusIcon className="w-4 h-4 inline mr-1" />Nova campanha
@@ -555,7 +664,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-extrabold text-white">{campaign.name}</p>
-                          <p className="text-xs text-white/35">{campaign.segment} · {campaign.recipients} contatos</p>
+                          <p className="text-xs text-white/35">{campaign.segment} Â· {campaign.recipients} contatos</p>
                         </div>
                         <span className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: `${st.color}18`, color: st.color }}>{st.label}</span>
                       </div>
@@ -568,13 +677,13 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
 
             <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <p className="text-sm font-extrabold text-white">Composer de campanha</p>
-              <p className="text-xs text-white/35 mt-1">{'Use variáveis como {{nome}}, {{unidade}} e respeite opt-in.'}</p>
+              <p className="text-xs text-white/35 mt-1">{'Use variÃ¡veis como {{nome}}, {{unidade}} e respeite opt-in.'}</p>
               <textarea value={bulkText} onChange={e => setBulkText(e.target.value)}
                 className="w-full h-44 mt-4 rounded-2xl p-4 text-sm text-white outline-none resize-none"
                 style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }} />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <div className="rounded-xl p-3" style={{ background: 'rgba(10,189,120,0.1)' }}>
-                  <p className="text-[10px] text-white/35">Elegíveis</p>
+                  <p className="text-[10px] text-white/35">ElegÃ­veis</p>
                   <p className="text-xl font-extrabold" style={{ color: '#0ABD78' }}>{optedIn}</p>
                 </div>
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,71,87,0.08)' }}>
@@ -589,13 +698,13 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
         {tab === 'contatos' && (
           <section className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
             <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-lg font-extrabold text-white">Extração de contatos</p>
+              <p className="text-lg font-extrabold text-white">ExtraÃ§Ã£o de contatos</p>
               <p className="text-xs text-white/35 mt-1">Organize contatos gerais, segmentados, por grupos e por selos.</p>
               <div className="space-y-2 mt-4">
                 {[
-                  { id: 'geral', label: 'Extração geral', desc: 'Importa contatos conversados e qualifica duplicados.' },
+                  { id: 'geral', label: 'ExtraÃ§Ã£o geral', desc: 'Importa contatos conversados e qualifica duplicados.' },
                   { id: 'segmentado', label: 'Segmentada', desc: 'Extrai por unidade, campanha, origem ou interesse.' },
-                  { id: 'grupos', label: 'Grupos', desc: 'Mapeia grupos e identifica possíveis responsáveis.' },
+                  { id: 'grupos', label: 'Grupos', desc: 'Mapeia grupos e identifica possÃ­veis responsÃ¡veis.' },
                   { id: 'selo', label: 'Com selo', desc: 'Importa contatos marcados por tags/selo de atendimento.' },
                 ].map(item => (
                   <button key={item.id} onClick={() => extractContacts(item.id as any)}
@@ -629,10 +738,77 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
 
         {tab === 'agente' && (
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="xl:col-span-3 rounded-2xl p-5"
+              style={{ background: 'rgba(10,189,120,0.07)', border: '1px solid rgba(10,189,120,0.18)' }}>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <p className="text-lg font-extrabold text-white">Central de comando da Sofi no WhatsApp</p>
+                  <p className="text-sm text-white/50 mt-1">Escolha se ela responde sozinha, só sugere respostas ou pausa para você assumir.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setAutomationMode('auto')} disabled={liveBusy}
+                    className="px-4 py-2 rounded-xl text-sm font-extrabold text-black"
+                    style={{ background: liveStatus?.automation?.mode === 'auto' ? '#0ABD78' : '#F8A303' }}>
+                    IA responde tudo
+                  </button>
+                  <button onClick={() => setAutomationMode('assist')} disabled={liveBusy}
+                    className="px-4 py-2 rounded-xl text-sm font-bold text-white/70"
+                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    Só sugerir
+                  </button>
+                  <button onClick={pauseAndAssume} disabled={liveBusy}
+                    className="px-4 py-2 rounded-xl text-sm font-extrabold"
+                    style={{ background: 'rgba(255,71,87,0.13)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.25)' }}>
+                    Pausar e eu assumo
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_220px] gap-3 mt-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-2">Tom da Sofi</p>
+                  <input value={toneInput} onChange={e => setToneInput(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl text-sm text-white outline-none"
+                    style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-2">Corrigir ou treinar</p>
+                  <input value={trainingInput} onChange={e => setTrainingInput(e.target.value)}
+                    placeholder="Ex.: quando perguntarem preço, ofereça visita antes..."
+                    className="w-full px-4 py-3 rounded-2xl text-sm text-white outline-none"
+                    style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                </div>
+                <button onClick={addTraining} disabled={liveBusy || !trainingInput.trim()}
+                  className="self-end px-4 py-3 rounded-2xl text-sm font-extrabold text-black disabled:opacity-40"
+                  style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                  Salvar treino
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
+                {[
+                  { label: 'Modo', value: liveStatus?.automation?.mode || 'pausado' },
+                  { label: 'Respostas IA', value: liveStatus?.autoReplies || 0 },
+                  { label: 'Handoffs', value: liveStatus?.handoffs || 0 },
+                  { label: 'Status', value: liveStatus?.ready ? 'conectado' : 'aguardando' },
+                ].map(item => (
+                  <div key={item.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
+                    <p className="text-[10px] uppercase tracking-widest text-white/30">{item.label}</p>
+                    <p className="text-sm font-extrabold text-white mt-1">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.14)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <p className="text-xs font-extrabold text-white/70 mb-2">Memória ativa de treinamento</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {(liveStatus?.automation?.training || []).slice(0, 8).map((item, index) => (
+                    <p key={`${item}-${index}`} className="text-xs text-white/50 leading-5">• {item}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
             {[
-              { title: 'Agente humanizado', text: 'Responde rápido, reconhece intenção, pede dados faltantes e transfere para humano quando necessário.', icon: SparklesIcon, color: '#F8A303' },
-              { title: 'Governança e handoff', text: 'Define quando a Sofi pode responder, quando precisa aprovação e para qual etapa do Kanban mover.', icon: FunnelIcon, color: '#4A9EFF' },
-              { title: 'Memória de atendimento', text: 'Resume histórico, destaca objeções, sentiment, próximos passos e tarefas do atendimento.', icon: ClipboardDocumentCheckIcon, color: '#0ABD78' },
+              { title: 'Agente humanizado', text: 'Responde rÃ¡pido, reconhece intenÃ§Ã£o, pede dados faltantes e transfere para humano quando necessÃ¡rio.', icon: SparklesIcon, color: '#F8A303' },
+              { title: 'GovernanÃ§a e handoff', text: 'Define quando a Sofi pode responder, quando precisa aprovaÃ§Ã£o e para qual etapa do Kanban mover.', icon: FunnelIcon, color: '#4A9EFF' },
+              { title: 'MemÃ³ria de atendimento', text: 'Resume histÃ³rico, destaca objeÃ§Ãµes, sentiment, prÃ³ximos passos e tarefas do atendimento.', icon: ClipboardDocumentCheckIcon, color: '#0ABD78' },
             ].map(item => {
               const Icon = item.icon
               return (
@@ -644,13 +820,13 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               )
             })}
             <div className="xl:col-span-3 rounded-2xl p-5" style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.16)' }}>
-              <p className="text-base font-extrabold text-white">Integração técnica whatsapp-web.js</p>
+              <p className="text-base font-extrabold text-white">IntegraÃ§Ã£o tÃ©cnica whatsapp-web.js</p>
               <p className="text-sm text-white/55 leading-6 mt-2">
-                O cockpit já está pronto para operar. A conexão real com WhatsApp Web deve rodar no backend/Fly com sessão persistente, LocalAuth ou RemoteAuth,
-                eventos de QR/ready/message e fila de envio. No Vercel a interface consome esse serviço via API.
+                O cockpit jÃ¡ estÃ¡ pronto para operar. A conexÃ£o real com WhatsApp Web deve rodar no backend/Fly com sessÃ£o persistente, LocalAuth ou RemoteAuth,
+                eventos de QR/ready/message e fila de envio. No Vercel a interface consome esse serviÃ§o via API.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-                {['QR + sessão', 'Eventos em tempo real', 'Fila anti-spam', 'Webhooks para CRM'].map(step => (
+                {['QR + sessÃ£o', 'Eventos em tempo real', 'Fila anti-spam', 'Webhooks para CRM'].map(step => (
                   <div key={step} className="rounded-xl p-3 text-xs font-bold text-white/65" style={{ background: 'rgba(255,255,255,0.045)' }}>{step}</div>
                 ))}
               </div>

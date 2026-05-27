@@ -6,6 +6,22 @@ module.exports = async function (fastify) {
 
   fastify.post('/start', { preHandler: [authenticate] }, async () => whatsappService.start())
 
+  fastify.post('/automation', { preHandler: [authenticate] }, async (request) => {
+    return whatsappService.updateAutomation(request.body || {})
+  })
+
+  fastify.post('/training', { preHandler: [authenticate] }, async (request) => {
+    return whatsappService.addTraining(request.body?.text)
+  })
+
+  fastify.post('/handoff', { preHandler: [authenticate] }, async (request) => {
+    return whatsappService.handoff(request.body?.chatId)
+  })
+
+  fastify.post('/resume-auto', { preHandler: [authenticate] }, async () => {
+    return whatsappService.resumeAuto()
+  })
+
   fastify.get('/chats', { preHandler: [authenticate] }, async (request) => {
     const { limit = 30 } = request.query
     return whatsappService.listChats(limit)
