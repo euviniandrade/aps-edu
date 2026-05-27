@@ -40,6 +40,7 @@ const navSections = [
       { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
       { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
       { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
+      { href: '/whatsapp',      label: 'WhatsApp CRM', icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#0ABD78', roles: [] },
       { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
     ],
   },
