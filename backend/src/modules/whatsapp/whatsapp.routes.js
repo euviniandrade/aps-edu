@@ -27,6 +27,12 @@ module.exports = async function (fastify) {
     return whatsappService.listChats(limit)
   })
 
+  fastify.get('/messages', { preHandler: [authenticate] }, async (request) => {
+    const { chatId, limit = 50 } = request.query
+    if (!chatId) return []
+    return whatsappService.getMessages(chatId, Number(limit))
+  })
+
   fastify.post('/send', { preHandler: [authenticate] }, async (request, reply) => {
     try {
       const result = await whatsappService.sendMessage(request.body || {})
@@ -34,5 +40,44 @@ module.exports = async function (fastify) {
     } catch (error) {
       return reply.code(error.statusCode || 500).send({ error: error.message })
     }
+  })
+
+  // SSE — eventos em tempo real (estado + mensagens recebidas)
+  fastify.get('/events', { preHandler: [authenticate] }, async (request, reply) => {
+    const raw = reply.raw
+    raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    })
+
+    const send = (event, data) => {
+      try {
+        raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      } catch {}
+    }
+
+    // Estado inicial imediato
+    send('state', whatsappService.getState())
+
+    const onMessage = (data) => send('message', data)
+    const onState = (data) => send('state', data)
+
+    whatsappService.emitter.on('message', onMessage)
+    whatsappService.emitter.on('state', onState)
+
+    const keepalive = setInterval(() => {
+      try { raw.write(': keepalive\n\n') } catch {}
+    }, 25000)
+
+    await new Promise((resolve) => {
+      request.raw.on('close', resolve)
+      request.raw.on('error', resolve)
+    })
+
+    clearInterval(keepalive)
+    whatsappService.emitter.off('message', onMessage)
+    whatsappService.emitter.off('state', onState)
   })
 }

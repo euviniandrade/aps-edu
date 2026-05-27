@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
+import Cookies from 'js-cookie'
 import {
   ArrowPathIcon,
   BoltIcon,
@@ -88,10 +89,10 @@ const seedContacts: WaContact[] = [
     name: 'Tatiane Alvarenga',
     phone: '5511979861056',
     unit: 'Call Center',
-    tags: ['retorno', 'matrÃ­cula', 'famÃ­lia'],
+    tags: ['retorno', 'matrícula', 'família'],
     stage: 'interessado',
     score: 92,
-    lastMessage: 'Ele estÃ¡ se adaptando bem. Obrigada pelo retorno.',
+    lastMessage: 'Ele está se adaptando bem. Obrigada pelo retorno.',
     lastAt: '10:42',
     unread: 2,
     consent: true,
@@ -100,11 +101,11 @@ const seedContacts: WaContact[] = [
     id: 'c2',
     name: 'Pamela Souza',
     phone: '551121281010',
-    unit: 'EducaÃ§Ã£o Infantil',
+    unit: 'Educação Infantil',
     tags: ['potencial', 'tour 360'],
     stage: 'contato',
     score: 74,
-    lastMessage: 'Gostaria de receber valores e horÃ¡rios.',
+    lastMessage: 'Gostaria de receber valores e horários.',
     lastAt: '09:18',
     unread: 0,
     consent: true,
@@ -117,7 +118,7 @@ const seedContacts: WaContact[] = [
     tags: ['bolsa', 'agendamento'],
     stage: 'agendado',
     score: 86,
-    lastMessage: 'Pode ser amanhÃ£ Ã s 15h.',
+    lastMessage: 'Pode ser amanhã Ã s 15h.',
     lastAt: 'Ontem',
     unread: 1,
     consent: true,
@@ -126,8 +127,8 @@ const seedContacts: WaContact[] = [
     id: 'c4',
     name: 'Michele Sena',
     phone: '551198606197',
-    unit: 'RematrÃ­cula',
-    tags: ['perdido', 'reativaÃ§Ã£o'],
+    unit: 'Rematrícula',
+    tags: ['perdido', 'reativação'],
     stage: 'novo',
     score: 51,
     lastMessage: 'Vou conversar com meu esposo e retorno.',
@@ -138,9 +139,9 @@ const seedContacts: WaContact[] = [
 ]
 
 const seedMessages: WaMessage[] = [
-  { id: 'm1', contactId: 'c1', from: 'lead', text: 'OlÃ¡, bom dia! Tudo bem com vocÃª?', at: '10:40' },
-  { id: 'm2', contactId: 'c1', from: 'agent', text: 'Bom dia, Tatiane! Tudo bem. Como estÃ¡ a adaptaÃ§Ã£o?', at: '10:41' },
-  { id: 'm3', contactId: 'c1', from: 'lead', text: 'Ele estÃ¡ se adaptando bem. Obrigada pelo retorno.', at: '10:42' },
+  { id: 'm1', contactId: 'c1', from: 'lead', text: 'Olá, bom dia! Tudo bem com você?', at: '10:40' },
+  { id: 'm2', contactId: 'c1', from: 'agent', text: 'Bom dia, Tatiane! Tudo bem. Como está a adaptação?', at: '10:41' },
+  { id: 'm3', contactId: 'c1', from: 'lead', text: 'Ele está se adaptando bem. Obrigada pelo retorno.', at: '10:42' },
 ]
 
 const seedCampaigns: Campaign[] = [
@@ -150,15 +151,15 @@ const seedCampaigns: Campaign[] = [
     segment: 'Interessados com opt-in',
     status: 'programada',
     recipients: 128,
-    template: 'OlÃ¡, {{nome}}! Temos um tour virtual da unidade {{unidade}} para vocÃª conhecer melhor nossa proposta.',
+    template: 'Olá, {{nome}}! Temos um tour virtual da unidade {{unidade}} para você conhecer melhor nossa proposta.',
   },
   {
     id: 'cp2',
-    name: 'ReativaÃ§Ã£o de visitas',
-    segment: 'Leads sem retorno hÃ¡ 30 dias',
+    name: 'Reativação de visitas',
+    segment: 'Leads sem retorno há 30 dias',
     status: 'rascunho',
     recipients: 74,
-    template: 'OlÃ¡, {{nome}}. Posso te ajudar a retomar o agendamento da visita?',
+    template: 'Olá, {{nome}}. Posso te ajudar a retomar o agendamento da visita?',
   },
 ]
 
@@ -189,6 +190,8 @@ export default function WhatsAppCrmPage() {
   const [liveBusy, setLiveBusy] = useState(false)
   const [trainingInput, setTrainingInput] = useState('')
   const [toneInput, setToneInput] = useState('humano, acolhedor, objetivo e profissional')
+  const [sseStatus, setSseStatus] = useState<'connecting' | 'connected' | 'offline'>('offline')
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     try {
@@ -209,22 +212,162 @@ export default function WhatsAppCrmPage() {
     } catch {}
   }, [connected, contacts, messages, campaigns, selectedId])
 
-  const refreshLiveStatus = async () => {
+  // Carrega chats reais do WhatsApp quando conectado
+  const loadRealChats = useCallback(async () => {
     try {
-      const { data } = await api.get('/whatsapp-live/status')
-      setLiveStatus(data)
-      setConnected(!!data.connected)
-      if (data.automation?.tone) setToneInput(data.automation.tone)
-    } catch {
-      setLiveStatus(null)
-    }
-  }
-
-  useEffect(() => {
-    refreshLiveStatus()
-    const id = window.setInterval(refreshLiveStatus, 10000)
-    return () => window.clearInterval(id)
+      const { data } = await api.get('/whatsapp-live/chats?limit=50')
+      if (!Array.isArray(data) || data.length === 0) return
+      setContacts(prev => {
+        const existing = new Map(prev.map(c => [c.phone, c]))
+        const merged: WaContact[] = data
+          .filter((chat: any) => !chat.isGroup)
+          .map((chat: any) => {
+            const phone = (chat.id || '').replace('@c.us', '')
+            const ex = existing.get(phone)
+            return ex
+              ? { ...ex, id: phone, unread: chat.unreadCount ?? ex.unread, lastAt: chat.timestamp ? new Date(chat.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ex.lastAt }
+              : {
+                  id: phone,
+                  name: chat.name || phone,
+                  phone,
+                  unit: 'WhatsApp',
+                  tags: ['whatsapp'],
+                  stage: 'novo' as StageId,
+                  score: 50,
+                  lastMessage: '',
+                  lastAt: chat.timestamp ? new Date(chat.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+                  unread: chat.unreadCount ?? 0,
+                  consent: true,
+                }
+          })
+        return merged.length > 0 ? merged : prev
+      })
+    } catch {}
   }, [])
+
+  // Carrega mensagens reais de um chat específico
+  const loadChatMessages = useCallback(async (chatId: string, phone: string) => {
+    try {
+      const { data } = await api.get(`/whatsapp-live/messages?chatId=${phone}@c.us&limit=50`)
+      if (!Array.isArray(data) || data.length === 0) return
+      setMessages(prev => {
+        const realMsgs: WaMessage[] = data.map((m: any) => ({
+          id: m.id || `${chatId}_${m.at}`,
+          contactId: chatId,
+          from: m.from as WaMessage['from'],
+          text: m.text,
+          at: m.at ? new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : timeNow(),
+        }))
+        const otherMsgs = prev.filter(m => m.contactId !== chatId)
+        return [...otherMsgs, ...realMsgs]
+      })
+    } catch {}
+  }, [])
+
+  // SSE — tempo real de verdade
+  const connectSSE = useCallback(async (signal: AbortSignal) => {
+    const token = Cookies.get('accessToken')
+    if (!token) return
+
+    setSseStatus('connecting')
+    try {
+      const response = await fetch('/api/whatsapp-live/events', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
+        signal,
+        cache: 'no-store',
+      })
+
+      if (!response.ok || !response.body) {
+        setSseStatus('offline')
+        return
+      }
+
+      setSseStatus('connected')
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let currentEvent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim()
+          } else if (line.startsWith('data: ')) {
+            try {
+              const payload = JSON.parse(line.slice(6))
+              if (currentEvent === 'state') {
+                setLiveStatus(payload)
+                setConnected(!!payload.connected)
+                if (payload.automation?.tone) setToneInput(payload.automation.tone)
+                if (payload.ready) loadRealChats()
+              } else if (currentEvent === 'message') {
+                // Mensagem chegou em tempo real
+                const incoming: WaMessage = {
+                  id: payload.id || crypto.randomUUID(),
+                  contactId: payload.chatId?.replace('@c.us', '') || payload.chatId,
+                  from: payload.from as WaMessage['from'],
+                  text: payload.text,
+                  at: payload.at ? new Date(payload.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : timeNow(),
+                }
+                const phone = incoming.contactId
+                setContacts(prev => {
+                  const idx = prev.findIndex(c => c.phone === phone || c.id === phone)
+                  if (idx >= 0) {
+                    const updated = [...prev]
+                    updated[idx] = { ...updated[idx], lastMessage: payload.text, lastAt: incoming.at, unread: updated[idx].unread + (incoming.from === 'lead' ? 1 : 0) }
+                    return updated
+                  }
+                  return [{ id: phone, name: payload.name || phone, phone, unit: 'WhatsApp', tags: ['whatsapp'], stage: 'novo', score: 50, lastMessage: payload.text, lastAt: incoming.at, unread: 1, consent: true }, ...prev]
+                })
+                setMessages(prev => [...prev, incoming])
+              }
+            } catch {}
+            currentEvent = ''
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') setSseStatus('offline')
+    }
+  }, [loadRealChats])
+
+  // Gerencia ciclo de vida do SSE com reconexão automática
+  useEffect(() => {
+    let aborted = false
+    const controller = new AbortController()
+    sseAbortRef.current = controller
+
+    const run = async () => {
+      // Busca estado inicial via REST primeiro
+      try {
+        const { data } = await api.get('/whatsapp-live/status')
+        setLiveStatus(data)
+        setConnected(!!data.connected)
+        if (data.automation?.tone) setToneInput(data.automation.tone)
+        if (data.ready) loadRealChats()
+      } catch {}
+
+      while (!aborted) {
+        await connectSSE(controller.signal)
+        if (!aborted) {
+          setSseStatus('offline')
+          await new Promise(r => setTimeout(r, 5000))
+        }
+      }
+    }
+
+    run()
+    return () => {
+      aborted = true
+      controller.abort()
+    }
+  }, [connectSSE, loadRealChats])
 
   const selected = contacts.find(c => c.id === selectedId) || contacts[0]
   const allTags = useMemo(() => ['Todos', ...Array.from(new Set(contacts.flatMap(c => c.tags)))], [contacts])
@@ -262,13 +405,13 @@ export default function WhatsAppCrmPage() {
   const extractContacts = (mode: 'geral' | 'segmentado' | 'grupos' | 'selo') => {
     const newContact: WaContact = {
       id: crypto.randomUUID(),
-      name: mode === 'grupos' ? 'Grupo Pais Interessados' : mode === 'selo' ? 'Lead com selo Tour' : 'Novo contato extraÃ­do',
+      name: mode === 'grupos' ? 'Grupo Pais Interessados' : mode === 'selo' ? 'Lead com selo Tour' : 'Novo contato extraído',
       phone: `55${Math.floor(11000000000 + Math.random() * 89999999999)}`,
-      unit: mode === 'segmentado' ? 'Segmento APS' : 'ImportaÃ§Ã£o WhatsApp',
+      unit: mode === 'segmentado' ? 'Segmento APS' : 'Importação WhatsApp',
       tags: [mode, 'importado'],
       stage: 'novo',
       score: 60 + Math.floor(Math.random() * 30),
-      lastMessage: 'Contato importado para qualificaÃ§Ã£o.',
+      lastMessage: 'Contato importado para qualificação.',
       lastAt: timeNow(),
       unread: 0,
       consent: mode !== 'grupos',
@@ -280,16 +423,16 @@ export default function WhatsAppCrmPage() {
   const generateAiDraft = async () => {
     if (!selected) return
     setAiBusy(true)
-    const prompt = `VocÃª Ã© a Sofi, agente humanizada de WhatsApp da AssociaÃ§Ã£o Paulista Sul.
+    const prompt = `Você é a Sofi, agente humanizada de WhatsApp da Associação Paulista Sul.
 Crie uma resposta curta, calorosa e objetiva para este lead.
 
 Contato: ${selected.name}
 Telefone: ${selected.phone}
 Unidade/segmento: ${selected.unit}
 Tags: ${selected.tags.join(', ')}
-Ãšltima mensagem: ${selected.lastMessage}
+Última mensagem: ${selected.lastMessage}
 
-Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 caracteres, terminar com uma pergunta simples.`
+Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres, terminar com uma pergunta simples.`
     try {
       const res = await fetch('/api/gemini', {
         method: 'POST',
@@ -297,9 +440,9 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
         body: JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      setAiDraft(data.content || 'Oi! Posso te ajudar com as informaÃ§Ãµes e o melhor prÃ³ximo passo para sua famÃ­lia?')
+      setAiDraft(data.content || 'Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
     } catch {
-      setAiDraft('Oi! Posso te ajudar com as informaÃ§Ãµes e o melhor prÃ³ximo passo para sua famÃ­lia?')
+      setAiDraft('Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
     } finally {
       setAiBusy(false)
     }
@@ -372,8 +515,17 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
                 <ChatBubbleLeftRightIcon className="w-6 h-6 text-black" />
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold text-white">WhatsApp CRM APS</h1>
-                <p className="text-sm text-white/40">Atendimento, campanhas, extraÃ§Ã£o, Kanban e agente Sofi em um cockpit Ãºnico.</p>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-extrabold text-white">WhatsApp CRM APS</h1>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    style={{
+                      background: sseStatus === 'connected' ? 'rgba(10,189,120,0.18)' : sseStatus === 'connecting' ? 'rgba(248,163,3,0.16)' : 'rgba(255,255,255,0.07)',
+                      color: sseStatus === 'connected' ? '#0ABD78' : sseStatus === 'connecting' ? '#F8A303' : 'rgba(255,255,255,0.3)',
+                    }}>
+                    {sseStatus === 'connected' ? '● ao vivo' : sseStatus === 'connecting' ? '○ conectando' : '○ offline'}
+                  </span>
+                </div>
+                <p className="text-sm text-white/40">Atendimento, campanhas, extração, Kanban e agente Sofi em um cockpit único.</p>
               </div>
             </div>
           </div>
@@ -418,9 +570,9 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Conversas', value: contacts.length, icon: ChatBubbleLeftRightIcon, color: '#4A9EFF' },
-            { label: 'NÃ£o lidas', value: unread, icon: MegaphoneIcon, color: '#F8A303' },
-            { label: 'Opt-in vÃ¡lido', value: optedIn, icon: CheckCircleIcon, color: '#0ABD78' },
-            { label: 'Score mÃ©dio', value: `${avgScore}%`, icon: SparklesIcon, color: '#A78BFA' },
+            { label: 'Não lidas', value: unread, icon: MegaphoneIcon, color: '#F8A303' },
+            { label: 'Opt-in válido', value: optedIn, icon: CheckCircleIcon, color: '#0ABD78' },
+            { label: 'Score médio', value: `${avgScore}%`, icon: SparklesIcon, color: '#A78BFA' },
           ].map(item => {
             const Icon = item.icon
             return (
@@ -443,7 +595,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
             { id: 'inbox', label: 'Atendimento', icon: ChatBubbleLeftRightIcon },
             { id: 'kanban', label: 'CRM Kanban', icon: ClipboardDocumentCheckIcon },
             { id: 'campanhas', label: 'Envio em massa', icon: MegaphoneIcon },
-            { id: 'contatos', label: 'ExtraÃ§Ã£o', icon: UserGroupIcon },
+            { id: 'contatos', label: 'Extração', icon: UserGroupIcon },
             { id: 'agente', label: 'Agente IA', icon: BoltIcon },
           ].map(item => {
             const Icon = item.icon
@@ -486,7 +638,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               </div>
               <div className="max-h-[650px] overflow-y-auto">
                 {filteredContacts.map(contact => (
-                  <button key={contact.id} onClick={() => setSelectedId(contact.id)}
+                  <button key={contact.id} onClick={() => { setSelectedId(contact.id); if (liveStatus?.ready) loadChatMessages(contact.id, contact.phone) }}
                     className="w-full text-left p-4 border-b transition"
                     style={{
                       background: selected?.id === contact.id ? 'rgba(10,189,120,0.09)' : 'transparent',
@@ -502,7 +654,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
                           <p className="text-sm font-extrabold text-white truncate">{contact.name}</p>
                           <span className="text-[10px] text-white/30">{contact.lastAt}</span>
                         </div>
-                        <p className="text-xs text-white/35">{contact.phone} Â· {contact.unit}</p>
+                        <p className="text-xs text-white/35">{contact.phone} · {contact.unit}</p>
                         <p className="text-xs text-white/50 truncate mt-1">{contact.lastMessage}</p>
                         <div className="flex gap-1.5 mt-2 flex-wrap">
                           {contact.tags.slice(0, 3).map(tag => (
@@ -523,7 +675,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               <div className="p-4 flex items-center justify-between border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
                 <div>
                   <p className="text-lg font-extrabold text-white">{selected?.name}</p>
-                  <p className="text-xs text-white/35">{selected?.phone} Â· {selected?.unit}</p>
+                  <p className="text-xs text-white/35">{selected?.phone} · {selected?.unit}</p>
                 </div>
                 <select value={selected?.stage} onChange={e => selected && moveContact(selected.id, e.target.value as StageId)}
                   className="px-3 py-2 rounded-xl text-xs font-bold outline-none"
@@ -549,7 +701,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
 
               {aiDraft && (
                 <div className="mx-4 mb-3 rounded-2xl p-3" style={{ background: 'rgba(248,163,3,0.08)', border: '1px solid rgba(248,163,3,0.18)' }}>
-                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-1">SugestÃ£o da Sofi</p>
+                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-1">Sugestão da Sofi</p>
                   <p className="text-sm text-white/75 leading-6">{aiDraft}</p>
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => setComposer(aiDraft)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-black" style={{ background: '#F8A303' }}>Usar</button>
@@ -586,7 +738,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
                   </div>
                   <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
                     <p className="text-[10px] text-white/30">Opt-in</p>
-                    <p className="text-xl font-extrabold" style={{ color: selected?.consent ? '#0ABD78' : '#FF4757' }}>{selected?.consent ? 'Sim' : 'NÃ£o'}</p>
+                    <p className="text-xl font-extrabold" style={{ color: selected?.consent ? '#0ABD78' : '#FF4757' }}>{selected?.consent ? 'Sim' : 'Não'}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -599,7 +751,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               </div>
 
               <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-sm font-extrabold text-white">AÃ§Ãµes rÃ¡pidas</p>
+                <p className="text-sm font-extrabold text-white">Ações rápidas</p>
                 <div className="space-y-2 mt-3">
                   {stages.map(stage => (
                     <button key={stage.id} onClick={() => selected && moveContact(selected.id, stage.id)}
@@ -650,7 +802,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-lg font-extrabold text-white">Campanhas WhatsApp</p>
-                  <p className="text-xs text-white/35">Envio em massa apenas para contatos com opt-in e segmentaÃ§Ã£o.</p>
+                  <p className="text-xs text-white/35">Envio em massa apenas para contatos com opt-in e segmentação.</p>
                 </div>
                 <button onClick={createCampaign} className="px-4 py-2 rounded-xl text-sm font-bold text-black" style={{ background: '#F8A303' }}>
                   <PlusIcon className="w-4 h-4 inline mr-1" />Nova campanha
@@ -664,7 +816,7 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-extrabold text-white">{campaign.name}</p>
-                          <p className="text-xs text-white/35">{campaign.segment} Â· {campaign.recipients} contatos</p>
+                          <p className="text-xs text-white/35">{campaign.segment} · {campaign.recipients} contatos</p>
                         </div>
                         <span className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: `${st.color}18`, color: st.color }}>{st.label}</span>
                       </div>
@@ -677,13 +829,13 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
 
             <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <p className="text-sm font-extrabold text-white">Composer de campanha</p>
-              <p className="text-xs text-white/35 mt-1">{'Use variÃ¡veis como {{nome}}, {{unidade}} e respeite opt-in.'}</p>
+              <p className="text-xs text-white/35 mt-1">{'Use variáveis como {{nome}}, {{unidade}} e respeite opt-in.'}</p>
               <textarea value={bulkText} onChange={e => setBulkText(e.target.value)}
                 className="w-full h-44 mt-4 rounded-2xl p-4 text-sm text-white outline-none resize-none"
                 style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }} />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <div className="rounded-xl p-3" style={{ background: 'rgba(10,189,120,0.1)' }}>
-                  <p className="text-[10px] text-white/35">ElegÃ­veis</p>
+                  <p className="text-[10px] text-white/35">Elegíveis</p>
                   <p className="text-xl font-extrabold" style={{ color: '#0ABD78' }}>{optedIn}</p>
                 </div>
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,71,87,0.08)' }}>
@@ -698,13 +850,13 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
         {tab === 'contatos' && (
           <section className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
             <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-lg font-extrabold text-white">ExtraÃ§Ã£o de contatos</p>
+              <p className="text-lg font-extrabold text-white">Extração de contatos</p>
               <p className="text-xs text-white/35 mt-1">Organize contatos gerais, segmentados, por grupos e por selos.</p>
               <div className="space-y-2 mt-4">
                 {[
-                  { id: 'geral', label: 'ExtraÃ§Ã£o geral', desc: 'Importa contatos conversados e qualifica duplicados.' },
+                  { id: 'geral', label: 'Extração geral', desc: 'Importa contatos conversados e qualifica duplicados.' },
                   { id: 'segmentado', label: 'Segmentada', desc: 'Extrai por unidade, campanha, origem ou interesse.' },
-                  { id: 'grupos', label: 'Grupos', desc: 'Mapeia grupos e identifica possÃ­veis responsÃ¡veis.' },
+                  { id: 'grupos', label: 'Grupos', desc: 'Mapeia grupos e identifica possíveis responsáveis.' },
                   { id: 'selo', label: 'Com selo', desc: 'Importa contatos marcados por tags/selo de atendimento.' },
                 ].map(item => (
                   <button key={item.id} onClick={() => extractContacts(item.id as any)}
@@ -806,9 +958,9 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               </div>
             </div>
             {[
-              { title: 'Agente humanizado', text: 'Responde rÃ¡pido, reconhece intenÃ§Ã£o, pede dados faltantes e transfere para humano quando necessÃ¡rio.', icon: SparklesIcon, color: '#F8A303' },
-              { title: 'GovernanÃ§a e handoff', text: 'Define quando a Sofi pode responder, quando precisa aprovaÃ§Ã£o e para qual etapa do Kanban mover.', icon: FunnelIcon, color: '#4A9EFF' },
-              { title: 'MemÃ³ria de atendimento', text: 'Resume histÃ³rico, destaca objeÃ§Ãµes, sentiment, prÃ³ximos passos e tarefas do atendimento.', icon: ClipboardDocumentCheckIcon, color: '#0ABD78' },
+              { title: 'Agente humanizado', text: 'Responde rápido, reconhece intenção, pede dados faltantes e transfere para humano quando necessário.', icon: SparklesIcon, color: '#F8A303' },
+              { title: 'Governança e handoff', text: 'Define quando a Sofi pode responder, quando precisa aprovação e para qual etapa do Kanban mover.', icon: FunnelIcon, color: '#4A9EFF' },
+              { title: 'Memória de atendimento', text: 'Resume histórico, destaca objeções, sentiment, próximos passos e tarefas do atendimento.', icon: ClipboardDocumentCheckIcon, color: '#0ABD78' },
             ].map(item => {
               const Icon = item.icon
               return (
@@ -820,13 +972,13 @@ Regras: portuguÃªs do Brasil, tom humano, sem parecer robÃ´, atÃ© 450 cara
               )
             })}
             <div className="xl:col-span-3 rounded-2xl p-5" style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.16)' }}>
-              <p className="text-base font-extrabold text-white">IntegraÃ§Ã£o tÃ©cnica whatsapp-web.js</p>
+              <p className="text-base font-extrabold text-white">Integração técnica whatsapp-web.js</p>
               <p className="text-sm text-white/55 leading-6 mt-2">
-                O cockpit jÃ¡ estÃ¡ pronto para operar. A conexÃ£o real com WhatsApp Web deve rodar no backend/Fly com sessÃ£o persistente, LocalAuth ou RemoteAuth,
-                eventos de QR/ready/message e fila de envio. No Vercel a interface consome esse serviÃ§o via API.
+                O cockpit já está pronto para operar. A conexão real com WhatsApp Web deve rodar no backend/Fly com sessão persistente, LocalAuth ou RemoteAuth,
+                eventos de QR/ready/message e fila de envio. No Vercel a interface consome esse serviço via API.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-                {['QR + sessÃ£o', 'Eventos em tempo real', 'Fila anti-spam', 'Webhooks para CRM'].map(step => (
+                {['QR + sessão', 'Eventos em tempo real', 'Fila anti-spam', 'Webhooks para CRM'].map(step => (
                   <div key={step} className="rounded-xl p-3 text-xs font-bold text-white/65" style={{ background: 'rgba(255,255,255,0.045)' }}>{step}</div>
                 ))}
               </div>

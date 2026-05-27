@@ -2,9 +2,16 @@ const fs = require('fs')
 const path = require('path')
 const QRCode = require('qrcode')
 const { GoogleGenerativeAI } = require('@google/generative-ai')
+const { EventEmitter } = require('events')
 
 const SESSION_PATH = process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), '.wwebjs_auth')
 const MEMORY_PATH = process.env.WHATSAPP_MEMORY_PATH || path.join(SESSION_PATH, 'sofi-whatsapp-memory.json')
+
+const emitter = new EventEmitter()
+emitter.setMaxListeners(100)
+
+// Histórico de mensagens em memória (últimas 100 por chat)
+const messageHistory = new Map()
 
 const defaultAutomation = {
   mode: process.env.WHATSAPP_AI_MODE || 'paused',
@@ -73,6 +80,21 @@ function getState() {
   }
 }
 
+function emitState() {
+  emitter.emit('state', getState())
+}
+
+function storeMessage(chatId, message) {
+  if (!messageHistory.has(chatId)) messageHistory.set(chatId, [])
+  const msgs = messageHistory.get(chatId)
+  msgs.push(message)
+  if (msgs.length > 100) msgs.shift()
+}
+
+function getMessages(chatId, limit = 50) {
+  return (messageHistory.get(chatId) || []).slice(-limit)
+}
+
 async function start() {
   if (!state.enabled) {
     state.error = 'Ative WHATSAPP_ENABLED=true no Fly para iniciar a sessão real.'
@@ -104,6 +126,7 @@ async function start() {
     state.ready = false
     state.connected = false
     state.lastEventAt = new Date().toISOString()
+    emitState()
   })
 
   client.on('ready', () => {
@@ -113,6 +136,7 @@ async function start() {
     state.connected = true
     state.error = null
     state.lastEventAt = new Date().toISOString()
+    emitState()
   })
 
   client.on('message', handleIncomingMessage)
@@ -122,6 +146,7 @@ async function start() {
     state.connected = false
     state.error = message || 'Falha de autenticação no WhatsApp.'
     state.lastEventAt = new Date().toISOString()
+    emitState()
   })
 
   client.on('disconnected', reason => {
@@ -130,6 +155,7 @@ async function start() {
     state.error = reason || 'WhatsApp desconectado.'
     state.lastEventAt = new Date().toISOString()
     client = null
+    emitState()
   })
 
   await client.initialize()
@@ -143,29 +169,44 @@ async function handleIncomingMessage(message) {
   state.lastMessageAt = new Date().toISOString()
   const text = String(message.body || '')
   const normalized = text.toLowerCase()
-  const shouldHandoff = automation.handoffKeywords.some(keyword => normalized.includes(keyword.toLowerCase()))
+  const pushName = message._data?.notifyName || ''
+  const at = new Date().toISOString()
 
+  const incomingMsg = {
+    id: message.id?._serialized || message.id || crypto.randomUUID?.() || Date.now().toString(),
+    chatId: message.from,
+    name: pushName,
+    text,
+    from: 'lead',
+    at,
+  }
+  storeMessage(message.from, incomingMsg)
+  emitter.emit('message', incomingMsg)
+
+  const shouldHandoff = automation.handoffKeywords.some(keyword => normalized.includes(keyword.toLowerCase()))
   if (shouldHandoff) {
     manualChats.add(message.from)
     state.handoffs += 1
+    emitState()
     return
   }
 
   if (manualChats.has(message.from) || automation.mode === 'paused') return
 
-  const reply = await generateSofiReply({
-    text,
-    from: message.from,
-    pushName: message._data?.notifyName || '',
-  })
+  const replyText = await generateSofiReply({ text, from: message.from, pushName })
 
   if (automation.mode === 'assist') {
-    suggestions.push({ chatId: message.from, text: reply, at: new Date().toISOString() })
+    suggestions.push({ chatId: message.from, text: replyText, at })
     return
   }
 
-  await client.sendMessage(message.from, reply)
+  await client.sendMessage(message.from, replyText)
   state.autoReplies += 1
+
+  const outMsg = { id: `out_${Date.now()}`, chatId: message.from, name: 'Sofi', text: replyText, from: 'sofi', at: new Date().toISOString() }
+  storeMessage(message.from, outMsg)
+  emitter.emit('message', outMsg)
+  emitState()
 }
 
 async function generateSofiReply({ text, from, pushName }) {
@@ -267,8 +308,10 @@ module.exports = {
   start,
   sendMessage,
   listChats,
+  getMessages,
   updateAutomation,
   addTraining,
   handoff,
   resumeAuto,
+  emitter,
 }
