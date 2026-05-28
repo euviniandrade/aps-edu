@@ -118,10 +118,14 @@ async function start() {
   emitState()
 
   try {
-    // Importação dinâmica compatível com CJS e ESM
-    const baileys = await import('@whiskeysockets/baileys')
-    const makeWASocket = baileys.default
-    const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = baileys
+    // Importação CJS — Baileys expõe exports nomeados diretamente
+    const {
+      default: makeWASocket,
+      DisconnectReason,
+      useMultiFileAuthState,
+      fetchLatestBaileysVersion,
+      makeCacheableSignalKeyStore,
+    } = require('@whiskeysockets/baileys')
     const pino = require('pino')
 
     fs.mkdirSync(SESSION_PATH, { recursive: true })
@@ -141,7 +145,7 @@ async function start() {
         creds: authState.creds,
         keys: makeCacheableSignalKeyStore(authState.keys, pino({ level: 'silent' })),
       },
-      printQRInTerminal: false,
+      printQRInTerminal: true,
       logger: pino({ level: 'silent' }),
       generateHighQualityLinkPreview: false,
       browser: ['APS-EDU Sofi', 'Chrome', '120.0.0'],
@@ -163,6 +167,10 @@ async function start() {
           state.connected = false
           state.error = null
           emitState()
+          // Salva QR como PNG para acesso direto (http://IP:3000/uploads/qr.png)
+          const qrPngPath = path.join(process.cwd(), 'uploads', 'qr.png')
+          await QRCode.toFile(qrPngPath, qr, { width: 300, margin: 2 })
+          console.log('[WhatsApp] QR salvo em uploads/qr.png — acesse http://SEU_IP:3000/uploads/qr.png')
         } catch (err) {
           state.error = `Erro ao gerar QR: ${err.message}`
           emitState()
@@ -176,6 +184,7 @@ async function start() {
         state.connected = true
         state.error = null
         emitState()
+        console.log('[WhatsApp] ✅ Conectado com sucesso!')
       }
 
       if (connection === 'close') {
