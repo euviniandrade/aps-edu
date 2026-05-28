@@ -265,7 +265,7 @@ async function start() {
       logger: pino({ level: 'silent' }),
       generateHighQualityLinkPreview: false,
       browser: ['APS-EDU Sofi', 'Chrome', '120.0.0'],
-      syncFullHistory: false,
+      syncFullHistory: true,   // solicita lista completa de chats ao WhatsApp
       markOnlineOnConnect: false,
     })
 
@@ -291,6 +291,30 @@ async function start() {
       if (updated > 0) {
         console.log(`[WhatsApp] ${updated} chats sincronizados do WhatsApp.`)
         saveChatsStore()
+      }
+    })
+
+    // Histórico completo — só salva metadata de chat, ignora mensagens antigas para economizar memória
+    sock.ev.on('messaging-history.set', ({ chats: historyChats, isLatest }) => {
+      let updated = 0
+      for (const chat of (historyChats || [])) {
+        if (!chat.id || chat.id === 'status@broadcast') continue
+        const existing = chatsStore.get(chat.id) || {}
+        chatsStore.set(chat.id, {
+          ...existing,
+          id: chat.id,
+          name: chat.name || existing.name || normalizePhone(chat.id),
+          isGroup: chat.id.endsWith('@g.us'),
+          unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
+          timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
+          lastMessage: existing.lastMessage || '',
+        })
+        updated++
+      }
+      if (updated > 0) {
+        console.log(`[WhatsApp] ${updated} chats do histórico completo (isLatest=${isLatest}).`)
+        saveChatsStore()
+        emitter.emit('state', getState())
       }
     })
 
@@ -578,7 +602,7 @@ async function sendMessage({ phone, text }) {
 
 // ── Listagem ─────────────────────────────────────────────────────────────────
 
-async function listChats(limit = 30) {
+async function listChats(limit = 500) {
   return Array.from(chatsStore.values())
     .filter(c => c.id !== 'status@broadcast')
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))

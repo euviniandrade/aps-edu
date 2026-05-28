@@ -223,7 +223,7 @@ export default function WhatsAppCrmPage() {
       } catch {}
       if (data.length === 0) {
         try {
-          const res = await api.get('/whatsapp-live/chats?limit=50')
+          const res = await api.get('/whatsapp-live/chats?limit=500')
           if (Array.isArray(res.data)) data = res.data
         } catch {}
       }
