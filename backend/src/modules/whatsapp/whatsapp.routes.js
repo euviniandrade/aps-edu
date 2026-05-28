@@ -68,6 +68,21 @@ module.exports = async function (fastify) {
     }
   })
 
+  // CRM — lista todos os contatos com dados CRM
+  fastify.get('/contacts', { preHandler: [apiKeyAuth] }, async () => {
+    return whatsappService.listCrmContacts()
+  })
+
+  // CRM — busca dados de um contato específico
+  fastify.get('/crm/:chatId', { preHandler: [apiKeyAuth] }, async (request) => {
+    return whatsappService.getCrm(request.params.chatId)
+  })
+
+  // CRM — salva/atualiza dados de um contato (stage, tags, score, notes)
+  fastify.post('/crm/:chatId', { preHandler: [apiKeyAuth] }, async (request) => {
+    return whatsappService.saveCrm(request.params.chatId, request.body || {})
+  })
+
   // SSE — eventos em tempo real (estado + mensagens recebidas)
   fastify.get('/events', { preHandler: [apiKeyAuth] }, async (request, reply) => {
     const raw = reply.raw

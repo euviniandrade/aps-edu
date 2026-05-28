@@ -6,14 +6,91 @@ const { EventEmitter } = require('events')
 
 const SESSION_PATH = process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), '.whatsapp_session')
 const MEMORY_PATH = process.env.WHATSAPP_MEMORY_PATH || path.join(SESSION_PATH, 'sofi-whatsapp-memory.json')
+const CHATS_STORE_PATH = path.join(SESSION_PATH, 'chats-store.json')
+const MESSAGES_STORE_PATH = path.join(SESSION_PATH, 'messages-store.json')
+const CRM_STORE_PATH = path.join(SESSION_PATH, 'crm-store.json')
 
 const emitter = new EventEmitter()
 emitter.setMaxListeners(100)
 
-// Histórico de mensagens em memória (últimas 100 por chat)
+// Histórico de mensagens em memória + disco (últimas 200 por chat)
 const messageHistory = new Map()
-// Chats vistos (populado por mensagens recebidas)
+// Chats vistos — persistido em disco
 const chatsStore = new Map()
+// Dados CRM por contato (stage, tags, score, notes) — persistido em disco
+const crmStore = new Map()
+
+// ── Persistência ────────────────────────────────────────────────────────────
+
+function loadJsonFile(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+    }
+  } catch (_) {}
+  return null
+}
+
+function writeJsonFile(filePath, data) {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, JSON.stringify(data))
+  } catch (err) {
+    console.error('[WhatsApp] Erro ao salvar arquivo:', filePath, err.message)
+  }
+}
+
+// Carrega dados persistidos do disco ao iniciar
+function bootstrapPersistence() {
+  const chatsData = loadJsonFile(CHATS_STORE_PATH)
+  if (chatsData && typeof chatsData === 'object') {
+    for (const [k, v] of Object.entries(chatsData)) chatsStore.set(k, v)
+    console.log(`[WhatsApp] ${chatsStore.size} chats carregados do disco.`)
+  }
+
+  const messagesData = loadJsonFile(MESSAGES_STORE_PATH)
+  if (messagesData && typeof messagesData === 'object') {
+    for (const [k, v] of Object.entries(messagesData)) {
+      if (Array.isArray(v)) messageHistory.set(k, v)
+    }
+    console.log(`[WhatsApp] Histórico de ${messageHistory.size} chats carregado do disco.`)
+  }
+
+  const crmData = loadJsonFile(CRM_STORE_PATH)
+  if (crmData && typeof crmData === 'object') {
+    for (const [k, v] of Object.entries(crmData)) crmStore.set(k, v)
+  }
+}
+
+// Timers de debounce para salvar sem travar o loop de eventos
+let _saveChatsTimer = null
+function saveChatsStore() {
+  clearTimeout(_saveChatsTimer)
+  _saveChatsTimer = setTimeout(() => {
+    writeJsonFile(CHATS_STORE_PATH, Object.fromEntries(chatsStore))
+  }, 1500)
+}
+
+let _saveMessagesTimer = null
+function saveMessagesStore() {
+  clearTimeout(_saveMessagesTimer)
+  _saveMessagesTimer = setTimeout(() => {
+    writeJsonFile(MESSAGES_STORE_PATH, Object.fromEntries(messageHistory))
+  }, 1500)
+}
+
+let _saveCrmTimer = null
+function saveCrmStore() {
+  clearTimeout(_saveCrmTimer)
+  _saveCrmTimer = setTimeout(() => {
+    writeJsonFile(CRM_STORE_PATH, Object.fromEntries(crmStore))
+  }, 1500)
+}
+
+// Carrega dados na inicialização do módulo
+bootstrapPersistence()
+
+// ── Automação / estado ───────────────────────────────────────────────────────
 
 const defaultAutomation = {
   mode: process.env.WHATSAPP_AI_MODE || 'paused',
@@ -77,18 +154,55 @@ function emitState() {
   emitter.emit('state', getState())
 }
 
+// ── Mensagens ────────────────────────────────────────────────────────────────
+
 function storeMessage(chatId, message) {
   if (!messageHistory.has(chatId)) messageHistory.set(chatId, [])
   const msgs = messageHistory.get(chatId)
+  // Evita duplicatas por id
+  if (message.id && msgs.some(m => m.id === message.id)) return
   msgs.push(message)
-  if (msgs.length > 100) msgs.shift()
+  if (msgs.length > 200) msgs.shift()
+  saveMessagesStore()
 }
 
 function getMessages(chatId, limit = 50) {
   return (messageHistory.get(chatId) || []).slice(-limit)
 }
 
-// Extrai texto de qualquer tipo de mensagem Baileys
+// ── CRM ──────────────────────────────────────────────────────────────────────
+
+function normalizePhone(chatId) {
+  return String(chatId || '').replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
+}
+
+function getCrm(chatId) {
+  const phone = normalizePhone(chatId)
+  return crmStore.get(phone) || { phone, stage: 'novo', tags: ['whatsapp'], score: 50, notes: '' }
+}
+
+function saveCrm(chatId, data) {
+  const phone = normalizePhone(chatId)
+  const existing = crmStore.get(phone) || {}
+  crmStore.set(phone, { ...existing, ...data, phone })
+  saveCrmStore()
+  return crmStore.get(phone)
+}
+
+function listCrmContacts() {
+  // Junta chats conhecidos com dados CRM
+  const result = []
+  for (const [chatId, chat] of chatsStore) {
+    if (chat.isGroup) continue
+    const phone = normalizePhone(chatId)
+    const crm = crmStore.get(phone) || { stage: 'novo', tags: ['whatsapp'], score: 50 }
+    result.push({ ...chat, phone, ...crm })
+  }
+  return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+}
+
+// ── Extrai texto de qualquer tipo de mensagem Baileys ──────────────────────
+
 function extractText(msg) {
   const m = msg.message
   if (!m) return ''
@@ -105,6 +219,8 @@ function extractText(msg) {
   )
 }
 
+// ── Conexão Baileys ──────────────────────────────────────────────────────────
+
 async function start() {
   if (!state.enabled) {
     state.error = 'Ative WHATSAPP_ENABLED=true no .env para iniciar a sessão real.'
@@ -118,7 +234,6 @@ async function start() {
   emitState()
 
   try {
-    // Importação CJS — Baileys expõe exports nomeados diretamente
     const {
       default: makeWASocket,
       DisconnectReason,
@@ -132,7 +247,6 @@ async function start() {
 
     const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
 
-    // Obtém versão mais recente do WA Web (com fallback)
     let version = [2, 3000, 1017531287]
     try {
       const result = await fetchLatestBaileysVersion()
@@ -155,36 +269,44 @@ async function start() {
 
     sock.ev.on('creds.update', saveCreds)
 
-    // Popula chatsStore com o histórico existente ao conectar
+    // Popula chatsStore com histórico ao conectar
     sock.ev.on('chats.set', ({ chats }) => {
+      let updated = 0
       for (const chat of chats) {
-        if (!chat.id) continue
-        chatsStore.set(chat.id, {
-          id: chat.id,
-          name: chat.name || chat.id.replace('@s.whatsapp.net', '').replace('@g.us', ''),
-          isGroup: chat.id.endsWith('@g.us'),
-          unreadCount: chat.unreadCount || 0,
-          timestamp: chat.conversationTimestamp || Math.floor(Date.now() / 1000),
-          lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || '',
-        })
-      }
-      console.log(`[WhatsApp] ${chats.length} chats carregados do histórico.`)
-    })
-
-    sock.ev.on('chats.upsert', (chats) => {
-      for (const chat of chats) {
-        if (!chat.id) continue
+        if (!chat.id || chat.id === 'status@broadcast') continue
         const existing = chatsStore.get(chat.id) || {}
         chatsStore.set(chat.id, {
           ...existing,
           id: chat.id,
-          name: chat.name || existing.name || chat.id.replace('@s.whatsapp.net', '').replace('@g.us', ''),
+          name: chat.name || existing.name || normalizePhone(chat.id),
+          isGroup: chat.id.endsWith('@g.us'),
+          unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
+          timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
+          lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || existing.lastMessage || '',
+        })
+        updated++
+      }
+      if (updated > 0) {
+        console.log(`[WhatsApp] ${updated} chats sincronizados do WhatsApp.`)
+        saveChatsStore()
+      }
+    })
+
+    sock.ev.on('chats.upsert', (chats) => {
+      for (const chat of chats) {
+        if (!chat.id || chat.id === 'status@broadcast') continue
+        const existing = chatsStore.get(chat.id) || {}
+        chatsStore.set(chat.id, {
+          ...existing,
+          id: chat.id,
+          name: chat.name || existing.name || normalizePhone(chat.id),
           isGroup: chat.id.endsWith('@g.us'),
           unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
           timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
           lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || existing.lastMessage || '',
         })
       }
+      saveChatsStore()
     })
 
     sock.ev.on('connection.update', async (update) => {
@@ -199,10 +321,8 @@ async function start() {
           state.connected = false
           state.error = null
           emitState()
-          // Salva QR como PNG para acesso direto (http://IP:3000/uploads/qr.png)
           const qrPngPath = path.join(process.cwd(), 'uploads', 'qr.png')
           await QRCode.toFile(qrPngPath, qr, { width: 300, margin: 2 })
-          console.log('[WhatsApp] QR salvo em uploads/qr.png — acesse http://SEU_IP:3000/uploads/qr.png')
         } catch (err) {
           state.error = `Erro ao gerar QR: ${err.message}`
           emitState()
@@ -247,7 +367,7 @@ async function start() {
         if (message.key.fromMe) continue
 
         const chatId = message.key.remoteJid
-        if (!chatId) continue
+        if (!chatId || chatId === 'status@broadcast') continue
 
         const isGroup = chatId.endsWith('@g.us')
         if (isGroup && !automation.allowGroups) continue
@@ -268,15 +388,18 @@ async function start() {
           at,
         }
 
-        // Atualiza store de chats
+        // Atualiza store de chats e persiste
+        const existing = chatsStore.get(chatId) || {}
         chatsStore.set(chatId, {
+          ...existing,
           id: chatId,
-          name: pushName || chatId.replace('@s.whatsapp.net', '').replace('@g.us', ''),
+          name: pushName || existing.name || normalizePhone(chatId),
           isGroup,
-          unreadCount: (chatsStore.get(chatId)?.unreadCount || 0) + 1,
+          unreadCount: (existing.unreadCount || 0) + 1,
           timestamp: Math.floor(Date.now() / 1000),
           lastMessage: text,
         })
+        saveChatsStore()
 
         storeMessage(chatId, incomingMsg)
         emitter.emit('message', incomingMsg)
@@ -296,6 +419,8 @@ async function start() {
 
   return getState()
 }
+
+// ── Automação / Sofi ─────────────────────────────────────────────────────────
 
 async function handleAutomation({ chatId, text, pushName, at }) {
   const normalized = text.toLowerCase()
@@ -363,6 +488,8 @@ Responda em português do Brasil e termine com uma pergunta simples quando fizer
   return 'Olá! Sou a Sofi, do Departamento de Educação da Associação Paulista Sul. Recebi sua mensagem e estou aqui para ajudar. Pode me contar mais?'
 }
 
+// ── Envio de mensagens ───────────────────────────────────────────────────────
+
 async function sendMessage({ phone, text }) {
   if (!sock || !state.ready) {
     const error = new Error('WhatsApp ainda não está conectado.')
@@ -377,21 +504,45 @@ async function sendMessage({ phone, text }) {
     throw error
   }
 
-  // Baileys usa @s.whatsapp.net para chats individuais
   const jid = normalized.endsWith('@s.whatsapp.net') ? normalized : `${normalized}@s.whatsapp.net`
   const result = await sock.sendMessage(jid, { text: String(text) })
-  return {
-    id: result?.key?.id || null,
-    to: normalized,
+
+  // Registra mensagem enviada
+  const outMsg = {
+    id: result?.key?.id || `out_${Date.now()}`,
+    chatId: jid,
+    name: 'Agente',
+    text: String(text),
+    from: 'agent',
     at: new Date().toISOString(),
   }
+  storeMessage(jid, outMsg)
+
+  // Atualiza chat store
+  const existing = chatsStore.get(jid) || {}
+  chatsStore.set(jid, {
+    ...existing,
+    id: jid,
+    name: existing.name || normalized,
+    isGroup: false,
+    timestamp: Math.floor(Date.now() / 1000),
+    lastMessage: String(text),
+  })
+  saveChatsStore()
+
+  return { id: result?.key?.id || null, to: normalized, at: outMsg.at }
 }
+
+// ── Listagem ─────────────────────────────────────────────────────────────────
 
 async function listChats(limit = 30) {
   return Array.from(chatsStore.values())
+    .filter(c => c.id !== 'status@broadcast')
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, Number(limit))
 }
+
+// ── Configurações ────────────────────────────────────────────────────────────
 
 function updateAutomation(payload = {}) {
   automation = {
@@ -434,6 +585,9 @@ module.exports = {
   sendMessage,
   listChats,
   getMessages,
+  getCrm,
+  saveCrm,
+  listCrmContacts,
   updateAutomation,
   addTraining,
   handoff,
