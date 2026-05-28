@@ -212,35 +212,63 @@ export default function WhatsAppCrmPage() {
     } catch {}
   }, [connected, contacts, messages, campaigns, selectedId])
 
-  // Carrega chats reais do WhatsApp quando conectado
+  // Carrega chats reais do WhatsApp quando conectado — SEMPRE aditivo, nunca remove contatos existentes
   const loadRealChats = useCallback(async () => {
     try {
-      const { data } = await api.get('/whatsapp-live/chats?limit=50')
-      if (!Array.isArray(data) || data.length === 0) return
+      // Tenta /contacts primeiro (dados CRM completos), fallback para /chats
+      let data: any[] = []
+      try {
+        const res = await api.get('/whatsapp-live/contacts')
+        if (Array.isArray(res.data) && res.data.length > 0) data = res.data
+      } catch {}
+      if (data.length === 0) {
+        try {
+          const res = await api.get('/whatsapp-live/chats?limit=50')
+          if (Array.isArray(res.data)) data = res.data
+        } catch {}
+      }
+      if (data.length === 0) return
+
       setContacts(prev => {
-        const existing = new Map(prev.map(c => [c.phone, c]))
-        const merged: WaContact[] = data
-          .filter((chat: any) => !chat.isGroup)
-          .map((chat: any) => {
-            const phone = (chat.id || '').replace('@c.us', '')
-            const ex = existing.get(phone)
-            return ex
-              ? { ...ex, id: phone, unread: chat.unreadCount ?? ex.unread, lastAt: chat.timestamp ? new Date(chat.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ex.lastAt }
-              : {
-                  id: phone,
-                  name: chat.name || phone,
-                  phone,
-                  unit: 'WhatsApp',
-                  tags: ['whatsapp'],
-                  stage: 'novo' as StageId,
-                  score: 50,
-                  lastMessage: '',
-                  lastAt: chat.timestamp ? new Date(chat.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
-                  unread: chat.unreadCount ?? 0,
-                  consent: true,
-                }
+        // Mapa de contatos existentes indexado por phone
+        const byPhone = new Map(prev.map(c => [c.phone, c]))
+
+        for (const chat of data) {
+          if (chat.isGroup) continue
+          // Baileys usa @s.whatsapp.net — normaliza para número puro
+          const phone = chat.phone ||
+            (chat.id || '').replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace('@lid', '')
+          if (!phone || phone.length < 8) continue
+
+          const ex = byPhone.get(phone)
+          const lastAt = chat.timestamp
+            ? new Date(chat.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            : ex?.lastAt || ''
+
+          byPhone.set(phone, {
+            id: phone,
+            name: chat.name || ex?.name || phone,
+            phone,
+            unit: ex?.unit || 'WhatsApp',
+            tags: (chat.tags && chat.tags.length > 0) ? chat.tags : (ex?.tags || ['whatsapp']),
+            stage: (chat.stage as StageId) || ex?.stage || 'novo',
+            score: chat.score ?? ex?.score ?? 50,
+            lastMessage: chat.lastMessage || ex?.lastMessage || '',
+            lastAt,
+            unread: chat.unreadCount ?? ex?.unread ?? 0,
+            consent: ex?.consent ?? true,
           })
-        return merged.length > 0 ? merged : prev
+        }
+
+        // Remove seed contacts (id começa com 'c' e é curto) se já temos dados reais
+        const hasReal = Array.from(byPhone.keys()).some(k => k.length > 5)
+        if (hasReal) {
+          for (const [key, c] of byPhone) {
+            if (/^c\d+$/.test(key)) byPhone.delete(key)
+          }
+        }
+
+        return Array.from(byPhone.values())
       })
     } catch {}
   }, [])
@@ -248,7 +276,7 @@ export default function WhatsAppCrmPage() {
   // Carrega mensagens reais de um chat específico
   const loadChatMessages = useCallback(async (chatId: string, phone: string) => {
     try {
-      const { data } = await api.get(`/whatsapp-live/messages?chatId=${phone}@c.us&limit=50`)
+      const { data } = await api.get(`/whatsapp-live/messages?chatId=${phone}@s.whatsapp.net&limit=50`)
       if (!Array.isArray(data) || data.length === 0) return
       setMessages(prev => {
         const realMsgs: WaMessage[] = data.map((m: any) => ({
@@ -308,9 +336,13 @@ export default function WhatsAppCrmPage() {
                 if (payload.ready) loadRealChats()
               } else if (currentEvent === 'message') {
                 // Mensagem chegou em tempo real
+                const rawPhone = (payload.chatId || '')
+                  .replace('@s.whatsapp.net', '')
+                  .replace('@c.us', '')
+                  .replace('@g.us', '')
                 const incoming: WaMessage = {
                   id: payload.id || crypto.randomUUID(),
-                  contactId: payload.chatId?.replace('@c.us', '') || payload.chatId,
+                  contactId: rawPhone || payload.chatId,
                   from: payload.from as WaMessage['from'],
                   text: payload.text,
                   at: payload.at ? new Date(payload.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : timeNow(),

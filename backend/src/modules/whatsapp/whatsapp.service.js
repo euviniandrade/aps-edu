@@ -121,6 +121,8 @@ let sock = null
 let automation = loadMemory()
 const manualChats = new Set()
 const suggestions = []
+// Rate limiting: armazena timestamp da última resposta da Sofi por chat
+const lastReplyAt = new Map()
 
 function loadMemory() {
   try {
@@ -435,7 +437,21 @@ async function handleAutomation({ chatId, text, pushName, at }) {
 
   if (manualChats.has(chatId) || automation.mode === 'paused') return
 
-  const replyText = await generateSofiReply({ text, from: chatId, pushName })
+  // Rate limiting: no máximo 1 resposta da Sofi por chat a cada 30 segundos
+  const now = Date.now()
+  const lastReply = lastReplyAt.get(chatId) || 0
+  if (now - lastReply < 30000) {
+    console.log(`[Sofi] Rate limit — aguardando cooldown para ${chatId} (${Math.round((now - lastReply) / 1000)}s atrás)`)
+    return
+  }
+
+  // Historico das últimas 10 mensagens para contexto
+  const history = getMessages(chatId, 10)
+
+  const replyText = await generateSofiReply({ text, from: chatId, pushName, history })
+
+  // Registra o momento da resposta antes de enviar
+  lastReplyAt.set(chatId, now)
 
   if (automation.mode === 'assist') {
     suggestions.push({ chatId, text: replyText, at })
@@ -460,9 +476,27 @@ async function handleAutomation({ chatId, text, pushName, at }) {
   emitState()
 }
 
-async function generateSofiReply({ text, from, pushName }) {
-  const prompt = `Você é a Sofi, agente de WhatsApp da Associação Paulista Sul.
-Responda como uma atendente humana, rápida, educada e objetiva.
+async function generateSofiReply({ text, from, pushName, history = [] }) {
+  // Monta contexto do histórico para o Gemini
+  const historyText = history.length > 1
+    ? '\n\nHistórico recente da conversa (para contexto — NÃO repita o que já foi dito):\n' +
+      history.slice(-10).map(m => {
+        const sender = m.from === 'lead' ? (pushName || 'Lead') : 'Sofi'
+        return `${sender}: ${m.text}`
+      }).join('\n')
+    : ''
+
+  const isFirstMessage = history.filter(m => m.from === 'sofi').length === 0
+
+  const prompt = `Você é a Sofi, assistente humana de WhatsApp do Departamento de Educação da Associação Paulista Sul.
+Responda como uma atendente real: natural, calorosa, rápida e objetiva.
+
+REGRAS IMPORTANTES:
+- ${isFirstMessage ? 'Esta é a PRIMEIRA mensagem deste contato — se apresente brevemente.' : 'NUNCA repita a saudação inicial, você já conversou com esta pessoa.'}
+- NUNCA envie respostas genéricas ou idênticas a mensagens anteriores.
+- Seja dinâmica: cada resposta deve ser única e adaptada ao contexto.
+- Só faça UMA pergunta por mensagem, e apenas se fizer sentido natural.
+- Se a pergunta do usuário foi respondida, não peça mais informações.
 
 Regras de treinamento:
 ${automation.training.map((item, index) => `${index + 1}. ${item}`).join('\n')}
@@ -470,22 +504,31 @@ ${automation.training.map((item, index) => `${index + 1}. ${item}`).join('\n')}
 Tom: ${automation.tone}
 Limite: ${automation.maxChars} caracteres
 Contato: ${pushName || from}
-Mensagem recebida: ${text}
+${historyText}
 
-Responda em português do Brasil e termine com uma pergunta simples quando fizer sentido.`
+Mensagem atual do lead: "${text}"
+
+Responda em português do Brasil. Seja concisa e humana.`
 
   if (process.env.GEMINI_API_KEY) {
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-      const model = genAI.getGenerativeModel({ model: process.env.WHATSAPP_GEMINI_MODEL || 'gemini-1.5-flash' })
+      const model = genAI.getGenerativeModel({ model: process.env.WHATSAPP_GEMINI_MODEL || 'gemini-2.0-flash-lite' })
       const result = await model.generateContent(prompt)
-      return result.response.text().slice(0, automation.maxChars)
+      const reply = result.response.text().trim()
+      if (reply) return reply.slice(0, automation.maxChars)
     } catch (err) {
       console.error('[Sofi] Erro Gemini:', err.message)
     }
   }
 
-  return 'Olá! Sou a Sofi, do Departamento de Educação da Associação Paulista Sul. Recebi sua mensagem e estou aqui para ajudar. Pode me contar mais?'
+  // Fallbacks variados — sem pergunta que incentive loop infinito
+  const fallbacks = [
+    'Olá! Recebi sua mensagem e já anoto aqui. Nossa equipe vai verificar e te retorna em breve! 😊',
+    'Oi, tudo bem! Mensagem recebida. Vou verificar e te respondo logo!',
+    'Olá! Obrigada pelo contato. Em breve nossa equipe retorna para você. 🙏',
+  ]
+  return fallbacks[Math.floor(Date.now() / 1000) % fallbacks.length]
 }
 
 // ── Envio de mensagens ───────────────────────────────────────────────────────
