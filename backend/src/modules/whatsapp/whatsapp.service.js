@@ -4,7 +4,7 @@ const QRCode = require('qrcode')
 const { GoogleGenerativeAI } = require('@google/generative-ai')
 const { EventEmitter } = require('events')
 
-const SESSION_PATH = process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), '.wwebjs_auth')
+const SESSION_PATH = process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), '.whatsapp_session')
 const MEMORY_PATH = process.env.WHATSAPP_MEMORY_PATH || path.join(SESSION_PATH, 'sofi-whatsapp-memory.json')
 
 const emitter = new EventEmitter()
@@ -12,6 +12,8 @@ emitter.setMaxListeners(100)
 
 // Histórico de mensagens em memória (últimas 100 por chat)
 const messageHistory = new Map()
+// Chats vistos (populado por mensagens recebidas)
+const chatsStore = new Map()
 
 const defaultAutomation = {
   mode: process.env.WHATSAPP_AI_MODE || 'paused',
@@ -38,7 +40,7 @@ const state = {
   lastMessageAt: null,
 }
 
-let client = null
+let sock = null
 let automation = loadMemory()
 const manualChats = new Set()
 const suggestions = []
@@ -51,7 +53,7 @@ function loadMemory() {
   } catch (error) {
     state.error = error.message
   }
-  return defaultAutomation
+  return { ...defaultAutomation }
 }
 
 function saveMemory() {
@@ -59,20 +61,11 @@ function saveMemory() {
   fs.writeFileSync(MEMORY_PATH, JSON.stringify(automation, null, 2))
 }
 
-function loadWwebjs() {
-  try {
-    return require('whatsapp-web.js')
-  } catch (error) {
-    state.error = 'whatsapp-web.js não está instalado no backend.'
-    return null
-  }
-}
-
 function getState() {
   return {
     ...state,
     mode: state.enabled ? 'live' : 'preview',
-    provider: 'whatsapp-web.js',
+    provider: 'baileys',
     needsRuntime: !state.enabled,
     automation,
     manualChats: Array.from(manualChats),
@@ -95,116 +88,208 @@ function getMessages(chatId, limit = 50) {
   return (messageHistory.get(chatId) || []).slice(-limit)
 }
 
+// Extrai texto de qualquer tipo de mensagem Baileys
+function extractText(msg) {
+  const m = msg.message
+  if (!m) return ''
+  return (
+    m.conversation ||
+    m.extendedTextMessage?.text ||
+    m.imageMessage?.caption ||
+    m.videoMessage?.caption ||
+    m.documentMessage?.caption ||
+    m.buttonsResponseMessage?.selectedDisplayText ||
+    m.listResponseMessage?.title ||
+    m.templateButtonReplyMessage?.selectedDisplayText ||
+    ''
+  )
+}
+
 async function start() {
   if (!state.enabled) {
-    state.error = 'Ative WHATSAPP_ENABLED=true no Fly para iniciar a sessão real.'
+    state.error = 'Ative WHATSAPP_ENABLED=true no .env para iniciar a sessão real.'
     return getState()
   }
 
-  if (client) return getState()
+  if (sock) return getState()
 
-  const wwebjs = loadWwebjs()
-  if (!wwebjs) return getState()
+  state.error = null
+  state.lastEventAt = new Date().toISOString()
+  emitState()
 
-  const { Client, LocalAuth } = wwebjs
-  client = new Client({
-    authStrategy: new LocalAuth({
-      clientId: process.env.WHATSAPP_CLIENT_ID || 'aps-edu',
-      dataPath: SESSION_PATH,
-    }),
-    puppeteer: {
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    },
-    takeoverOnConflict: true,
-  })
+  try {
+    // Importação dinâmica compatível com CJS e ESM
+    const baileys = await import('@whiskeysockets/baileys')
+    const makeWASocket = baileys.default
+    const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = baileys
+    const pino = require('pino')
 
-  client.on('qr', async qr => {
-    state.qr = qr
-    state.qrDataUrl = await QRCode.toDataURL(qr)
-    state.ready = false
-    state.connected = false
-    state.lastEventAt = new Date().toISOString()
+    fs.mkdirSync(SESSION_PATH, { recursive: true })
+
+    const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_PATH)
+
+    // Obtém versão mais recente do WA Web (com fallback)
+    let version = [2, 3000, 1017531287]
+    try {
+      const result = await fetchLatestBaileysVersion()
+      version = result.version
+    } catch (_) {}
+
+    sock = makeWASocket({
+      version,
+      auth: {
+        creds: authState.creds,
+        keys: makeCacheableSignalKeyStore(authState.keys, pino({ level: 'silent' })),
+      },
+      printQRInTerminal: false,
+      logger: pino({ level: 'silent' }),
+      generateHighQualityLinkPreview: false,
+      browser: ['APS-EDU Sofi', 'Chrome', '120.0.0'],
+      syncFullHistory: false,
+      markOnlineOnConnect: false,
+    })
+
+    sock.ev.on('creds.update', saveCreds)
+
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update
+      state.lastEventAt = new Date().toISOString()
+
+      if (qr) {
+        try {
+          state.qr = qr
+          state.qrDataUrl = await QRCode.toDataURL(qr)
+          state.ready = false
+          state.connected = false
+          state.error = null
+          emitState()
+        } catch (err) {
+          state.error = `Erro ao gerar QR: ${err.message}`
+          emitState()
+        }
+      }
+
+      if (connection === 'open') {
+        state.qr = null
+        state.qrDataUrl = null
+        state.ready = true
+        state.connected = true
+        state.error = null
+        emitState()
+      }
+
+      if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode
+        const loggedOut = statusCode === DisconnectReason.loggedOut
+
+        state.ready = false
+        state.connected = false
+        state.qr = null
+        state.qrDataUrl = null
+        state.error = loggedOut
+          ? 'Sessão encerrada — faça login novamente.'
+          : (lastDisconnect?.error?.message || 'WhatsApp desconectado.')
+        sock = null
+        emitState()
+
+        if (!loggedOut) {
+          console.log('[WhatsApp] Reconectando em 8s...')
+          setTimeout(() => start(), 8000)
+        }
+      }
+    })
+
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+      if (type !== 'notify') return
+
+      for (const message of messages) {
+        if (message.key.fromMe) continue
+
+        const chatId = message.key.remoteJid
+        if (!chatId) continue
+
+        const isGroup = chatId.endsWith('@g.us')
+        if (isGroup && !automation.allowGroups) continue
+
+        const text = extractText(message)
+        if (!text) continue
+
+        state.lastMessageAt = new Date().toISOString()
+        const pushName = message.pushName || ''
+        const at = new Date().toISOString()
+
+        const incomingMsg = {
+          id: message.key.id || `${Date.now()}`,
+          chatId,
+          name: pushName,
+          text,
+          from: 'lead',
+          at,
+        }
+
+        // Atualiza store de chats
+        chatsStore.set(chatId, {
+          id: chatId,
+          name: pushName || chatId.replace('@s.whatsapp.net', '').replace('@g.us', ''),
+          isGroup,
+          unreadCount: (chatsStore.get(chatId)?.unreadCount || 0) + 1,
+          timestamp: Math.floor(Date.now() / 1000),
+          lastMessage: text,
+        })
+
+        storeMessage(chatId, incomingMsg)
+        emitter.emit('message', incomingMsg)
+
+        await handleAutomation({ chatId, text, pushName, at }).catch(err => {
+          console.error('[WhatsApp] Erro na automação:', err.message)
+        })
+      }
+    })
+
+  } catch (error) {
+    state.error = `Erro ao iniciar Baileys: ${error.message}`
+    sock = null
     emitState()
-  })
+    console.error('[WhatsApp] Falha ao iniciar:', error)
+  }
 
-  client.on('ready', () => {
-    state.qr = null
-    state.qrDataUrl = null
-    state.ready = true
-    state.connected = true
-    state.error = null
-    state.lastEventAt = new Date().toISOString()
-    emitState()
-  })
-
-  client.on('message', handleIncomingMessage)
-
-  client.on('auth_failure', message => {
-    state.ready = false
-    state.connected = false
-    state.error = message || 'Falha de autenticação no WhatsApp.'
-    state.lastEventAt = new Date().toISOString()
-    emitState()
-  })
-
-  client.on('disconnected', reason => {
-    state.ready = false
-    state.connected = false
-    state.error = reason || 'WhatsApp desconectado.'
-    state.lastEventAt = new Date().toISOString()
-    client = null
-    emitState()
-  })
-
-  await client.initialize()
   return getState()
 }
 
-async function handleIncomingMessage(message) {
-  if (message.fromMe || !message.body) return
-  if (message.from.endsWith('@g.us') && !automation.allowGroups) return
-
-  state.lastMessageAt = new Date().toISOString()
-  const text = String(message.body || '')
+async function handleAutomation({ chatId, text, pushName, at }) {
   const normalized = text.toLowerCase()
-  const pushName = message._data?.notifyName || ''
-  const at = new Date().toISOString()
 
-  const incomingMsg = {
-    id: message.id?._serialized || message.id || crypto.randomUUID?.() || Date.now().toString(),
-    chatId: message.from,
-    name: pushName,
-    text,
-    from: 'lead',
-    at,
-  }
-  storeMessage(message.from, incomingMsg)
-  emitter.emit('message', incomingMsg)
-
-  const shouldHandoff = automation.handoffKeywords.some(keyword => normalized.includes(keyword.toLowerCase()))
+  const shouldHandoff = automation.handoffKeywords.some(k => normalized.includes(k.toLowerCase()))
   if (shouldHandoff) {
-    manualChats.add(message.from)
+    manualChats.add(chatId)
     state.handoffs += 1
     emitState()
     return
   }
 
-  if (manualChats.has(message.from) || automation.mode === 'paused') return
+  if (manualChats.has(chatId) || automation.mode === 'paused') return
 
-  const replyText = await generateSofiReply({ text, from: message.from, pushName })
+  const replyText = await generateSofiReply({ text, from: chatId, pushName })
 
   if (automation.mode === 'assist') {
-    suggestions.push({ chatId: message.from, text: replyText, at })
+    suggestions.push({ chatId, text: replyText, at })
+    emitState()
     return
   }
 
-  await client.sendMessage(message.from, replyText)
+  // mode === 'auto': envia resposta
+  await sock.sendMessage(chatId, { text: replyText })
   state.autoReplies += 1
 
-  const outMsg = { id: `out_${Date.now()}`, chatId: message.from, name: 'Sofi', text: replyText, from: 'sofi', at: new Date().toISOString() }
-  storeMessage(message.from, outMsg)
+  const outMsg = {
+    id: `out_${Date.now()}`,
+    chatId,
+    name: 'Sofi',
+    text: replyText,
+    from: 'sofi',
+    at: new Date().toISOString(),
+  }
+  storeMessage(chatId, outMsg)
   emitter.emit('message', outMsg)
   emitState()
 }
@@ -224,17 +309,21 @@ Mensagem recebida: ${text}
 Responda em português do Brasil e termine com uma pergunta simples quando fizer sentido.`
 
   if (process.env.GEMINI_API_KEY) {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: process.env.WHATSAPP_GEMINI_MODEL || 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
-    return result.response.text().slice(0, automation.maxChars)
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      const model = genAI.getGenerativeModel({ model: process.env.WHATSAPP_GEMINI_MODEL || 'gemini-1.5-flash' })
+      const result = await model.generateContent(prompt)
+      return result.response.text().slice(0, automation.maxChars)
+    } catch (err) {
+      console.error('[Sofi] Erro Gemini:', err.message)
+    }
   }
 
-  return 'Olá! Sou a Sofi, do Departamento de Educação da Associação Paulista Sul. Recebi sua mensagem e vou te ajudar com o próximo passo. Pode me contar um pouco mais?'
+  return 'Olá! Sou a Sofi, do Departamento de Educação da Associação Paulista Sul. Recebi sua mensagem e estou aqui para ajudar. Pode me contar mais?'
 }
 
 async function sendMessage({ phone, text }) {
-  if (!client || !state.ready) {
+  if (!sock || !state.ready) {
     const error = new Error('WhatsApp ainda não está conectado.')
     error.statusCode = 409
     throw error
@@ -247,25 +336,20 @@ async function sendMessage({ phone, text }) {
     throw error
   }
 
-  const chatId = `${normalized}@c.us`
-  const result = await client.sendMessage(chatId, String(text))
+  // Baileys usa @s.whatsapp.net para chats individuais
+  const jid = normalized.endsWith('@s.whatsapp.net') ? normalized : `${normalized}@s.whatsapp.net`
+  const result = await sock.sendMessage(jid, { text: String(text) })
   return {
-    id: result.id?._serialized || result.id || null,
+    id: result?.key?.id || null,
     to: normalized,
     at: new Date().toISOString(),
   }
 }
 
 async function listChats(limit = 30) {
-  if (!client || !state.ready) return []
-  const chats = await client.getChats()
-  return chats.slice(0, Number(limit)).map(chat => ({
-    id: chat.id?._serialized,
-    name: chat.name,
-    isGroup: chat.isGroup,
-    unreadCount: chat.unreadCount,
-    timestamp: chat.timestamp,
-  }))
+  return Array.from(chatsStore.values())
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    .slice(0, Number(limit))
 }
 
 function updateAutomation(payload = {}) {
