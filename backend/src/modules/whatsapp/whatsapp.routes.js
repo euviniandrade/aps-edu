@@ -1,12 +1,14 @@
 const whatsappService = require('./whatsapp.service')
 
-// Autenticação leve: verifica apenas assinatura JWT, sem acesso ao banco.
-// Necessário porque o banco de dados pode não estar disponível nesta VM.
-async function jwtOnly(request, reply) {
-  try {
-    await request.jwtVerify()
-  } catch (err) {
-    reply.code(401).send({ error: 'Token inválido ou expirado' })
+// Autenticação via API Key compartilhada (Vercel → Oracle VM).
+// Não depende de JWT nem de banco de dados.
+const WA_KEY = process.env.WHATSAPP_API_KEY
+
+async function apiKeyAuth(request, reply) {
+  if (!WA_KEY) return // Se não configurado, permite (modo dev)
+  const key = request.headers['x-wa-key']
+  if (key !== WA_KEY) {
+    return reply.code(401).send({ error: 'Não autorizado' })
   }
 }
 
@@ -26,38 +28,38 @@ module.exports = async function (fastify) {
       .send(buffer)
   })
 
-  fastify.get('/status', { preHandler: [jwtOnly] }, async () => whatsappService.getState())
+  fastify.get('/status', { preHandler: [apiKeyAuth] }, async () => whatsappService.getState())
 
-  fastify.post('/start', { preHandler: [jwtOnly] }, async () => whatsappService.start())
+  fastify.post('/start', { preHandler: [apiKeyAuth] }, async () => whatsappService.start())
 
-  fastify.post('/automation', { preHandler: [jwtOnly] }, async (request) => {
+  fastify.post('/automation', { preHandler: [apiKeyAuth] }, async (request) => {
     return whatsappService.updateAutomation(request.body || {})
   })
 
-  fastify.post('/training', { preHandler: [jwtOnly] }, async (request) => {
+  fastify.post('/training', { preHandler: [apiKeyAuth] }, async (request) => {
     return whatsappService.addTraining(request.body?.text)
   })
 
-  fastify.post('/handoff', { preHandler: [jwtOnly] }, async (request) => {
+  fastify.post('/handoff', { preHandler: [apiKeyAuth] }, async (request) => {
     return whatsappService.handoff(request.body?.chatId)
   })
 
-  fastify.post('/resume-auto', { preHandler: [jwtOnly] }, async () => {
+  fastify.post('/resume-auto', { preHandler: [apiKeyAuth] }, async () => {
     return whatsappService.resumeAuto()
   })
 
-  fastify.get('/chats', { preHandler: [jwtOnly] }, async (request) => {
+  fastify.get('/chats', { preHandler: [apiKeyAuth] }, async (request) => {
     const { limit = 30 } = request.query
     return whatsappService.listChats(limit)
   })
 
-  fastify.get('/messages', { preHandler: [jwtOnly] }, async (request) => {
+  fastify.get('/messages', { preHandler: [apiKeyAuth] }, async (request) => {
     const { chatId, limit = 50 } = request.query
     if (!chatId) return []
     return whatsappService.getMessages(chatId, Number(limit))
   })
 
-  fastify.post('/send', { preHandler: [jwtOnly] }, async (request, reply) => {
+  fastify.post('/send', { preHandler: [apiKeyAuth] }, async (request, reply) => {
     try {
       const result = await whatsappService.sendMessage(request.body || {})
       return reply.send(result)
@@ -67,7 +69,7 @@ module.exports = async function (fastify) {
   })
 
   // SSE — eventos em tempo real (estado + mensagens recebidas)
-  fastify.get('/events', { preHandler: [jwtOnly] }, async (request, reply) => {
+  fastify.get('/events', { preHandler: [apiKeyAuth] }, async (request, reply) => {
     const raw = reply.raw
     raw.writeHead(200, {
       'Content-Type': 'text/event-stream',

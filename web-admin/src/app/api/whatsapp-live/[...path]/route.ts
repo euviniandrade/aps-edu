@@ -15,7 +15,11 @@ function buildTarget(path: string[], search: string) {
 
 function authHeader(req: NextRequest): Record<string, string> {
   const auth = req.headers.get('authorization')
-  return auth ? { Authorization: auth } : {}
+  const waKey = process.env.WHATSAPP_API_KEY
+  return {
+    ...(auth ? { Authorization: auth } : {}),
+    ...(waKey ? { 'X-WA-Key': waKey } : {}),
+  }
 }
 
 async function proxy(req: NextRequest, path: string[], method: string) {
