@@ -73,6 +73,11 @@ module.exports = async function (fastify) {
     return whatsappService.listCrmContacts()
   })
 
+  // Catálogo completo — todos os contatos do celular + quem conversou
+  fastify.get('/phonebook', { preHandler: [apiKeyAuth] }, async () => {
+    return whatsappService.listPhonebook()
+  })
+
   // CRM — busca dados de um contato específico
   fastify.get('/crm/:chatId', { preHandler: [apiKeyAuth] }, async (request) => {
     return whatsappService.getCrm(request.params.chatId)

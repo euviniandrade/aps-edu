@@ -123,6 +123,8 @@ const manualChats = new Set()
 const suggestions = []
 // Rate limiting: armazena timestamp da última resposta da Sofi por chat
 const lastReplyAt = new Map()
+// Catálogo de contatos do celular (contacts.set / contacts.upsert)
+const phonebookStore = new Map()
 
 function loadMemory() {
   try {
@@ -194,13 +196,57 @@ function saveCrm(chatId, data) {
 function listCrmContacts() {
   // Junta chats conhecidos com dados CRM
   const result = []
+  const seen = new Set()
   for (const [chatId, chat] of chatsStore) {
     if (chat.isGroup) continue
     const phone = normalizePhone(chatId)
+    if (seen.has(phone)) continue
+    seen.add(phone)
     const crm = crmStore.get(phone) || { stage: 'novo', tags: ['whatsapp'], score: 50 }
-    result.push({ ...chat, phone, ...crm })
+    // Tenta pegar nome do catálogo se o chat não tem nome
+    const phonebook = phonebookStore.get(phone)
+    const name = chat.name || phonebook?.name || phone
+    result.push({ ...chat, name, phone, ...crm })
   }
   return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+}
+
+// Lista todo o catálogo de contatos do celular
+function listPhonebook() {
+  const result = []
+  const seen = new Set()
+  // Inclui contatos do catálogo
+  for (const [phone, contact] of phonebookStore) {
+    if (seen.has(phone)) continue
+    seen.add(phone)
+    const crm = crmStore.get(phone) || { stage: 'novo', tags: ['catálogo'], score: 50 }
+    const chat = chatsStore.get(contact.chatId) || {}
+    result.push({
+      phone,
+      name: contact.name || phone,
+      chatId: contact.chatId,
+      lastMessage: chat.lastMessage || '',
+      timestamp: chat.timestamp || 0,
+      ...crm,
+    })
+  }
+  // Também inclui quem só conversou (pode não estar no catálogo)
+  for (const [chatId, chat] of chatsStore) {
+    if (chat.isGroup) continue
+    const phone = normalizePhone(chatId)
+    if (seen.has(phone)) continue
+    seen.add(phone)
+    const crm = crmStore.get(phone) || { stage: 'novo', tags: ['whatsapp'], score: 50 }
+    result.push({
+      phone,
+      name: chat.name || phone,
+      chatId,
+      lastMessage: chat.lastMessage || '',
+      timestamp: chat.timestamp || 0,
+      ...crm,
+    })
+  }
+  return result.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
 }
 
 // ── Extrai texto de qualquer tipo de mensagem Baileys ──────────────────────
@@ -270,6 +316,38 @@ async function start() {
     })
 
     sock.ev.on('creds.update', saveCreds)
+
+    // Catálogo de contatos do celular
+    sock.ev.on('contacts.set', ({ contacts }) => {
+      for (const contact of (contacts || [])) {
+        if (!contact.id || contact.id === 'status@broadcast') continue
+        const phone = normalizePhone(contact.id)
+        if (phone.length < 8) continue
+        const existing = phonebookStore.get(phone) || {}
+        phonebookStore.set(phone, {
+          ...existing,
+          phone,
+          name: contact.name || contact.notify || existing.name || phone,
+          chatId: contact.id,
+        })
+      }
+      console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados.`)
+    })
+
+    sock.ev.on('contacts.upsert', (contacts) => {
+      for (const contact of (contacts || [])) {
+        if (!contact.id || contact.id === 'status@broadcast') continue
+        const phone = normalizePhone(contact.id)
+        if (phone.length < 8) continue
+        const existing = phonebookStore.get(phone) || {}
+        phonebookStore.set(phone, {
+          ...existing,
+          phone,
+          name: contact.name || contact.notify || existing.name || phone,
+          chatId: contact.id,
+        })
+      }
+    })
 
     // Popula chatsStore com histórico ao conectar
     sock.ev.on('chats.set', ({ chats }) => {
@@ -655,6 +733,7 @@ module.exports = {
   getCrm,
   saveCrm,
   listCrmContacts,
+  listPhonebook,
   updateAutomation,
   addTraining,
   handoff,

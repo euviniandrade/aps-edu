@@ -176,10 +176,10 @@ function statusStyle(status: Campaign['status']) {
 export default function WhatsAppCrmPage() {
   const [tab, setTab] = useState<TabId>('inbox')
   const [connected, setConnected] = useState(false)
-  const [contacts, setContacts] = useState<WaContact[]>(seedContacts)
-  const [messages, setMessages] = useState<WaMessage[]>(seedMessages)
+  const [contacts, setContacts] = useState<WaContact[]>([])
+  const [messages, setMessages] = useState<WaMessage[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>(seedCampaigns)
-  const [selectedId, setSelectedId] = useState('c1')
+  const [selectedId, setSelectedId] = useState('')
   const [search, setSearch] = useState('')
   const [tagFilter, setTagFilter] = useState('Todos')
   const [composer, setComposer] = useState('')
@@ -199,10 +199,14 @@ export default function WhatsAppCrmPage() {
       if (!stored) return
       const parsed = JSON.parse(stored)
       setConnected(!!parsed.connected)
-      setContacts(parsed.contacts || seedContacts)
-      setMessages(parsed.messages || seedMessages)
+      // Só carrega do localStorage se tiver contatos reais (id longo, não seed 'c1','c2'...)
+      const realContacts = (parsed.contacts || []).filter((c: WaContact) => c.phone && c.phone.length > 8)
+      if (realContacts.length > 0) {
+        setContacts(realContacts)
+        setMessages(parsed.messages || [])
+        setSelectedId(parsed.selectedId || '')
+      }
       setCampaigns(parsed.campaigns || seedCampaigns)
-      setSelectedId(parsed.selectedId || 'c1')
     } catch {}
   }, [])
 
@@ -434,22 +438,53 @@ export default function WhatsAppCrmPage() {
     setContacts(prev => prev.map(contact => contact.id === contactId ? { ...contact, stage } : contact))
   }
 
-  const extractContacts = (mode: 'geral' | 'segmentado' | 'grupos' | 'selo') => {
-    const newContact: WaContact = {
-      id: crypto.randomUUID(),
-      name: mode === 'grupos' ? 'Grupo Pais Interessados' : mode === 'selo' ? 'Lead com selo Tour' : 'Novo contato extraído',
-      phone: `55${Math.floor(11000000000 + Math.random() * 89999999999)}`,
-      unit: mode === 'segmentado' ? 'Segmento APS' : 'Importação WhatsApp',
-      tags: [mode, 'importado'],
-      stage: 'novo',
-      score: 60 + Math.floor(Math.random() * 30),
-      lastMessage: 'Contato importado para qualificação.',
-      lastAt: timeNow(),
-      unread: 0,
-      consent: mode !== 'grupos',
+  const [extractBusy, setExtractBusy] = useState(false)
+  const [extractMsg, setExtractMsg] = useState('')
+
+  const extractContacts = async (mode: 'geral' | 'segmentado' | 'grupos' | 'selo') => {
+    setExtractBusy(true)
+    setExtractMsg('Buscando contatos do WhatsApp...')
+    try {
+      // Usa /phonebook para catálogo completo ou /contacts para quem já conversou
+      const endpoint = mode === 'geral' || mode === 'catálogo'
+        ? '/whatsapp-live/phonebook'
+        : '/whatsapp-live/contacts'
+      const { data } = await api.get(endpoint)
+      if (!Array.isArray(data) || data.length === 0) {
+        setExtractMsg('Nenhum contato encontrado. Aguarde a sincronização do WhatsApp.')
+        return
+      }
+      let added = 0
+      setContacts(prev => {
+        const byPhone = new Map(prev.map(c => [c.phone, c]))
+        for (const contact of data) {
+          const phone = contact.phone || ''
+          if (!phone || phone.length < 8) continue
+          if (!byPhone.has(phone)) {
+            added++
+            byPhone.set(phone, {
+              id: phone,
+              name: contact.name || phone,
+              phone,
+              unit: mode === 'segmentado' ? 'Segmento APS' : mode === 'grupos' ? 'Grupos' : 'Catálogo WhatsApp',
+              tags: contact.tags || [mode, 'importado'],
+              stage: (contact.stage as StageId) || 'novo',
+              score: contact.score ?? 60,
+              lastMessage: contact.lastMessage || '',
+              lastAt: contact.timestamp ? new Date(contact.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+              unread: 0,
+              consent: mode !== 'grupos',
+            })
+          }
+        }
+        return Array.from(byPhone.values())
+      })
+      setExtractMsg(`✅ ${added} novos contatos importados (${data.length} total encontrados).`)
+    } catch {
+      setExtractMsg('Erro ao buscar contatos. Verifique a conexão com o WhatsApp.')
+    } finally {
+      setExtractBusy(false)
     }
-    setContacts(prev => [newContact, ...prev])
-    setSelectedId(newContact.id)
   }
 
   const generateAiDraft = async () => {
@@ -886,18 +921,22 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               <p className="text-xs text-white/35 mt-1">Organize contatos gerais, segmentados, por grupos e por selos.</p>
               <div className="space-y-2 mt-4">
                 {[
-                  { id: 'geral', label: 'Extração geral', desc: 'Importa contatos conversados e qualifica duplicados.' },
-                  { id: 'segmentado', label: 'Segmentada', desc: 'Extrai por unidade, campanha, origem ou interesse.' },
-                  { id: 'grupos', label: 'Grupos', desc: 'Mapeia grupos e identifica possíveis responsáveis.' },
-                  { id: 'selo', label: 'Com selo', desc: 'Importa contatos marcados por tags/selo de atendimento.' },
+                  { id: 'geral', label: 'Catálogo completo', desc: 'Importa TODOS os contatos salvos no celular.' },
+                  { id: 'segmentado', label: 'Quem já conversou', desc: 'Importa contatos que já enviaram mensagem.' },
+                  { id: 'grupos', label: 'Grupos', desc: 'Importa membros de grupos do WhatsApp.' },
+                  { id: 'selo', label: 'Com histórico CRM', desc: 'Importa contatos com dados de CRM registrados.' },
                 ].map(item => (
                   <button key={item.id} onClick={() => extractContacts(item.id as any)}
-                    className="w-full text-left rounded-2xl p-3"
+                    disabled={extractBusy || !liveStatus?.ready}
+                    className="w-full text-left rounded-2xl p-3 disabled:opacity-50"
                     style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <p className="text-sm font-bold text-white">{item.label}</p>
                     <p className="text-xs text-white/35 mt-1">{item.desc}</p>
                   </button>
                 ))}
+                {extractBusy && <p className="text-xs text-amber-400 mt-2 flex items-center gap-2"><ArrowPathIcon className="w-4 h-4 animate-spin" />{extractMsg}</p>}
+                {!extractBusy && extractMsg && <p className="text-xs mt-2" style={{ color: extractMsg.startsWith('✅') ? '#0ABD78' : '#F8A303' }}>{extractMsg}</p>}
+                {!liveStatus?.ready && <p className="text-xs text-white/30 mt-2">⚠ Conecte o WhatsApp primeiro para extrair contatos reais.</p>}
               </div>
             </div>
 
