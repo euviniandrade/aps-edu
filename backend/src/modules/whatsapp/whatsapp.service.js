@@ -155,6 +155,38 @@ async function start() {
 
     sock.ev.on('creds.update', saveCreds)
 
+    // Popula chatsStore com o histórico existente ao conectar
+    sock.ev.on('chats.set', ({ chats }) => {
+      for (const chat of chats) {
+        if (!chat.id) continue
+        chatsStore.set(chat.id, {
+          id: chat.id,
+          name: chat.name || chat.id.replace('@s.whatsapp.net', '').replace('@g.us', ''),
+          isGroup: chat.id.endsWith('@g.us'),
+          unreadCount: chat.unreadCount || 0,
+          timestamp: chat.conversationTimestamp || Math.floor(Date.now() / 1000),
+          lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || '',
+        })
+      }
+      console.log(`[WhatsApp] ${chats.length} chats carregados do histórico.`)
+    })
+
+    sock.ev.on('chats.upsert', (chats) => {
+      for (const chat of chats) {
+        if (!chat.id) continue
+        const existing = chatsStore.get(chat.id) || {}
+        chatsStore.set(chat.id, {
+          ...existing,
+          id: chat.id,
+          name: chat.name || existing.name || chat.id.replace('@s.whatsapp.net', '').replace('@g.us', ''),
+          isGroup: chat.id.endsWith('@g.us'),
+          unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
+          timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
+          lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || existing.lastMessage || '',
+        })
+      }
+    })
+
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
       state.lastEventAt = new Date().toISOString()
