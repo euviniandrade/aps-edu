@@ -171,7 +171,18 @@ function storeMessage(chatId, message) {
 }
 
 function getMessages(chatId, limit = 50) {
-  return (messageHistory.get(chatId) || []).slice(-limit)
+  // Tenta chatId direto primeiro
+  let msgs = messageHistory.get(chatId)
+  if (!msgs || msgs.length === 0) {
+    // Tenta formatos alternativos (@s.whatsapp.net, @lid, número puro)
+    const phone = normalizePhone(chatId)
+    for (const tryId of [`${phone}@s.whatsapp.net`, `${phone}@lid`, phone]) {
+      if (tryId === chatId) continue
+      const m = messageHistory.get(tryId)
+      if (m && m.length > 0) { msgs = m; break }
+    }
+  }
+  return (msgs || []).slice(-limit)
 }
 
 // ── CRM ──────────────────────────────────────────────────────────────────────
@@ -635,21 +646,32 @@ Responda em português do Brasil. Seja concisa e humana.`
 
 // ── Envio de mensagens ───────────────────────────────────────────────────────
 
-async function sendMessage({ phone, text }) {
+async function sendMessage({ phone, chatId, text }) {
   if (!sock || !state.ready) {
     const error = new Error('WhatsApp ainda não está conectado.')
     error.statusCode = 409
     throw error
   }
 
-  const normalized = String(phone || '').replace(/\D/g, '')
-  if (!normalized || !text) {
-    const error = new Error('Informe telefone e mensagem.')
+  if (!text) {
+    const error = new Error('Informe a mensagem.')
     error.statusCode = 400
     throw error
   }
 
-  const jid = normalized.endsWith('@s.whatsapp.net') ? normalized : `${normalized}@s.whatsapp.net`
+  // Se chatId com @ foi fornecido, usa diretamente (suporta @lid, @s.whatsapp.net, @g.us)
+  let jid
+  if (chatId && chatId.includes('@')) {
+    jid = chatId
+  } else {
+    const normalized = String(phone || chatId || '').replace(/\D/g, '')
+    if (!normalized) {
+      const error = new Error('Informe telefone ou chatId.')
+      error.statusCode = 400
+      throw error
+    }
+    jid = `${normalized}@s.whatsapp.net`
+  }
   const result = await sock.sendMessage(jid, { text: String(text) })
 
   // Registra mensagem enviada

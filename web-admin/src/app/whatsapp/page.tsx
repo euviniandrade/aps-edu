@@ -26,6 +26,7 @@ type TabId = 'inbox' | 'kanban' | 'campanhas' | 'contatos' | 'agente'
 
 interface WaContact {
   id: string
+  chatId: string      // JID original do Baileys (pode ser @lid, @s.whatsapp.net, etc.)
   name: string
   phone: string
   unit: string
@@ -86,6 +87,7 @@ const stages: { id: StageId; label: string; color: string }[] = [
 const seedContacts: WaContact[] = [
   {
     id: 'c1',
+    chatId: '5511979861056@s.whatsapp.net',
     name: 'Tatiane Alvarenga',
     phone: '5511979861056',
     unit: 'Call Center',
@@ -99,6 +101,7 @@ const seedContacts: WaContact[] = [
   },
   {
     id: 'c2',
+    chatId: '551121281010@s.whatsapp.net',
     name: 'Pamela Souza',
     phone: '551121281010',
     unit: 'Educação Infantil',
@@ -112,6 +115,7 @@ const seedContacts: WaContact[] = [
   },
   {
     id: 'c3',
+    chatId: '551195875657@s.whatsapp.net',
     name: 'Joelma Martins',
     phone: '551195875657',
     unit: 'Ensino Fundamental',
@@ -125,6 +129,7 @@ const seedContacts: WaContact[] = [
   },
   {
     id: 'c4',
+    chatId: '551198606197@s.whatsapp.net',
     name: 'Michele Sena',
     phone: '551198606197',
     unit: 'Rematrícula',
@@ -236,7 +241,10 @@ export default function WhatsAppCrmPage() {
         c.phone && c.phone.length >= 8 && /^\d+$/.test(c.phone) &&
         c.name !== 'Novo contato extraído' &&
         !['Tatiane Alvarenga', 'Pamela Souza', 'Joelma Martins', 'Michele Sena'].includes(c.name)
-      )
+      ).map((c: WaContact) => ({
+        ...c,
+        chatId: c.chatId || `${c.phone}@s.whatsapp.net`,  // garante chatId mesmo para entradas antigas
+      }))
       if (realContacts.length > 0) {
         setContacts(realContacts)
         setMessages((parsed.messages || []).filter((m: WaMessage) =>
@@ -295,6 +303,7 @@ export default function WhatsAppCrmPage() {
 
           byPhone.set(phone, {
             id: phone,
+            chatId: chat.id || chat.chatId || ex?.chatId || `${phone}@s.whatsapp.net`,
             name,
             phone,
             unit: ex?.unit || 'WhatsApp',
@@ -329,12 +338,22 @@ export default function WhatsAppCrmPage() {
   // Carrega mensagens reais de um chat específico
   const loadChatMessages = useCallback(async (chatId: string, phone: string) => {
     try {
-      // Tenta @s.whatsapp.net primeiro, depois sem sufixo
+      // Usa o chatId original (pode ser @lid, @s.whatsapp.net, etc.)
       let data: any[] = []
-      try {
-        const res = await api.get(`/whatsapp-live/messages?chatId=${phone}@s.whatsapp.net&limit=50`)
-        if (Array.isArray(res.data) && res.data.length > 0) data = res.data
-      } catch {}
+      if (chatId && chatId.includes('@')) {
+        try {
+          const res = await api.get(`/whatsapp-live/messages?chatId=${encodeURIComponent(chatId)}&limit=50`)
+          if (Array.isArray(res.data) && res.data.length > 0) data = res.data
+        } catch {}
+      }
+      // Fallback com @s.whatsapp.net
+      if (data.length === 0) {
+        try {
+          const res = await api.get(`/whatsapp-live/messages?chatId=${phone}@s.whatsapp.net&limit=50`)
+          if (Array.isArray(res.data) && res.data.length > 0) data = res.data
+        } catch {}
+      }
+      // Fallback sem sufixo
       if (data.length === 0) {
         try {
           const res = await api.get(`/whatsapp-live/messages?chatId=${phone}&limit=50`)
@@ -419,7 +438,8 @@ export default function WhatsAppCrmPage() {
                     updated[idx] = { ...updated[idx], lastMessage: payload.text, lastAt: incoming.at, unread: updated[idx].unread + (incoming.from === 'lead' ? 1 : 0) }
                     return updated
                   }
-                  return [{ id: phone, name: payload.name || phone, phone, unit: 'WhatsApp', tags: ['whatsapp'], stage: 'novo', score: 50, lastMessage: payload.text, lastAt: incoming.at, unread: 1, consent: true }, ...prev]
+                  const rawChatId = payload.chatId || `${phone}@s.whatsapp.net`
+                  return [{ id: phone, chatId: rawChatId, name: payload.name || phone, phone, unit: 'WhatsApp', tags: ['whatsapp'], stage: 'novo', score: 50, lastMessage: payload.text, lastAt: incoming.at, unread: 1, consent: true }, ...prev]
                 })
                 setMessages(prev => [...prev, incoming])
               }
@@ -470,7 +490,7 @@ export default function WhatsAppCrmPage() {
   // Auto-carrega mensagens quando muda o contato selecionado e WhatsApp conectado
   useEffect(() => {
     if (selected && liveStatus?.ready) {
-      loadChatMessages(selected.id, selected.phone)
+      loadChatMessages(selected.chatId || selected.id, selected.phone)
     }
   }, [selectedId, liveStatus?.ready]) // eslint-disable-line react-hooks/exhaustive-deps
   const allTags = useMemo(() => ['Todos', ...Array.from(new Set(contacts.flatMap(c => c.tags)))], [contacts])
@@ -490,7 +510,12 @@ export default function WhatsAppCrmPage() {
     const msg: WaMessage = { id: crypto.randomUUID(), contactId: selected.id, from, text: text.trim(), at: timeNow() }
     if (liveStatus?.ready && from !== 'lead') {
       try {
-        await api.post('/whatsapp-live/send', { phone: selected.phone, text: text.trim() })
+        // Passa chatId original (suporta @lid, @s.whatsapp.net) e phone como fallback
+        await api.post('/whatsapp-live/send', {
+          chatId: selected.chatId || `${selected.phone}@s.whatsapp.net`,
+          phone: selected.phone,
+          text: text.trim(),
+        })
       } catch {}
     }
     setMessages(prev => [...prev, msg])
@@ -531,6 +556,7 @@ export default function WhatsAppCrmPage() {
             added++
             byPhone.set(phone, {
               id: phone,
+              chatId: contact.id || contact.chatId || `${phone}@s.whatsapp.net`,
               name: contact.name || phone,
               phone,
               unit: mode === 'segmentado' ? 'Segmento APS' : mode === 'grupos' ? 'Grupos' : 'Catálogo WhatsApp',
@@ -772,7 +798,7 @@ Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres
               </div>
               <div className="max-h-[650px] overflow-y-auto">
                 {filteredContacts.map(contact => (
-                  <button key={contact.id} onClick={() => { setSelectedId(contact.id); if (liveStatus?.ready) loadChatMessages(contact.id, contact.phone) }}
+                  <button key={contact.id} onClick={() => { setSelectedId(contact.id); if (liveStatus?.ready) loadChatMessages(contact.chatId || contact.id, contact.phone) }}
                     className="w-full text-left p-4 border-b transition"
                     style={{
                       background: selected?.id === contact.id ? 'rgba(10,189,120,0.09)' : 'transparent',
