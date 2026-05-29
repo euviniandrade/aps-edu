@@ -1,474 +1,272 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AdminLayout from '@/components/layout/AdminLayout'
-import api from '@/lib/api'
 import Cookies from 'js-cookie'
 import {
   ArrowPathIcon,
-  BoltIcon,
-  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
-  ClipboardDocumentCheckIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
-  MegaphoneIcon,
   PaperAirplaneIcon,
-  PlusIcon,
   QrCodeIcon,
-  SparklesIcon,
-  TagIcon,
-  UserGroupIcon,
+  TrashIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline'
 
-type StageId = 'novo' | 'contato' | 'interessado' | 'agendado' | 'convertido'
-type TabId = 'inbox' | 'kanban' | 'campanhas' | 'contatos' | 'agente'
+// ── Tipos ────────────────────────────────────────────────────────────────────
 
-interface WaContact {
-  id: string
-  chatId: string      // JID original do Baileys (pode ser @lid, @s.whatsapp.net, etc.)
+interface Contact {
+  chatId: string      // JID original do Baileys (ex: 5511...@s.whatsapp.net ou @lid)
+  phone: string       // número normalizado (só dígitos)
   name: string
-  phone: string
-  unit: string
-  tags: string[]
-  stage: StageId
-  score: number
   lastMessage: string
-  lastAt: string
+  lastAt: string      // timestamp formatado
   unread: number
-  consent: boolean
+  timestamp: number   // unix seconds
 }
 
-interface WaMessage {
+interface Message {
   id: string
-  contactId: string
   from: 'lead' | 'agent' | 'sofi'
   text: string
   at: string
 }
 
-interface Campaign {
-  id: string
-  name: string
-  segment: string
-  status: 'rascunho' | 'programada' | 'ativa'
-  recipients: number
-  template: string
-}
-
-interface WhatsAppStatus {
+interface WaState {
   connected: boolean
   ready: boolean
   qrDataUrl?: string | null
   error?: string | null
-  mode?: 'live' | 'preview'
-  autoReplies?: number
-  handoffs?: number
-  automation?: {
-    mode: 'paused' | 'assist' | 'auto'
-    tone: string
-    maxChars: number
-    allowGroups: boolean
-    handoffKeywords: string[]
-    training: string[]
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildHeaders() {
+  const token = Cookies.get('accessToken')
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
 }
 
-const STORAGE_KEY = 'aps_edu_whatsapp_crm_v1'
+async function apiFetch(path: string, opts?: RequestInit) {
+  const res = await fetch(`/api/whatsapp-live/${path}`, {
+    ...opts,
+    headers: { ...buildHeaders(), ...(opts?.headers || {}) },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
 
-const stages: { id: StageId; label: string; color: string }[] = [
-  { id: 'novo', label: 'Novo', color: '#4A9EFF' },
-  { id: 'contato', label: 'Tentativa', color: '#F8A303' },
-  { id: 'interessado', label: 'Interessado', color: '#A78BFA' },
-  { id: 'agendado', label: 'Agendado', color: '#0ABD78' },
-  { id: 'convertido', label: 'Convertido', color: '#34D399' },
-]
+function normalizePhone(raw: string): string {
+  return (raw || '')
+    .replace('@s.whatsapp.net', '')
+    .replace('@c.us', '')
+    .replace('@g.us', '')
+    .replace(/@lid$/, '')
+    .replace(/\D+@lid$/, '')
+}
 
-const seedContacts: WaContact[] = [
-  {
-    id: 'c1',
-    chatId: '5511979861056@s.whatsapp.net',
-    name: 'Tatiane Alvarenga',
-    phone: '5511979861056',
-    unit: 'Call Center',
-    tags: ['retorno', 'matrícula', 'família'],
-    stage: 'interessado',
-    score: 92,
-    lastMessage: 'Ele está se adaptando bem. Obrigada pelo retorno.',
-    lastAt: '10:42',
-    unread: 2,
-    consent: true,
-  },
-  {
-    id: 'c2',
-    chatId: '551121281010@s.whatsapp.net',
-    name: 'Pamela Souza',
-    phone: '551121281010',
-    unit: 'Educação Infantil',
-    tags: ['potencial', 'tour 360'],
-    stage: 'contato',
-    score: 74,
-    lastMessage: 'Gostaria de receber valores e horários.',
-    lastAt: '09:18',
-    unread: 0,
-    consent: true,
-  },
-  {
-    id: 'c3',
-    chatId: '551195875657@s.whatsapp.net',
-    name: 'Joelma Martins',
-    phone: '551195875657',
-    unit: 'Ensino Fundamental',
-    tags: ['bolsa', 'agendamento'],
-    stage: 'agendado',
-    score: 86,
-    lastMessage: 'Pode ser amanhã Ã s 15h.',
-    lastAt: 'Ontem',
-    unread: 1,
-    consent: true,
-  },
-  {
-    id: 'c4',
-    chatId: '551198606197@s.whatsapp.net',
-    name: 'Michele Sena',
-    phone: '551198606197',
-    unit: 'Rematrícula',
-    tags: ['perdido', 'reativação'],
-    stage: 'novo',
-    score: 51,
-    lastMessage: 'Vou conversar com meu esposo e retorno.',
-    lastAt: '2 dias',
-    unread: 0,
-    consent: false,
-  },
-]
-
-const seedMessages: WaMessage[] = [
-  { id: 'm1', contactId: 'c1', from: 'lead', text: 'Olá, bom dia! Tudo bem com você?', at: '10:40' },
-  { id: 'm2', contactId: 'c1', from: 'agent', text: 'Bom dia, Tatiane! Tudo bem. Como está a adaptação?', at: '10:41' },
-  { id: 'm3', contactId: 'c1', from: 'lead', text: 'Ele está se adaptando bem. Obrigada pelo retorno.', at: '10:42' },
-]
-
-const seedCampaigns: Campaign[] = [
-  {
-    id: 'cp1',
-    name: 'Tour 360 das unidades',
-    segment: 'Interessados com opt-in',
-    status: 'programada',
-    recipients: 128,
-    template: 'Olá, {{nome}}! Temos um tour virtual da unidade {{unidade}} para você conhecer melhor nossa proposta.',
-  },
-  {
-    id: 'cp2',
-    name: 'Reativação de visitas',
-    segment: 'Leads sem retorno há 30 dias',
-    status: 'rascunho',
-    recipients: 74,
-    template: 'Olá, {{nome}}. Posso te ajudar a retomar o agendamento da visita?',
-  },
-]
+function formatTs(ts: any): string {
+  const n = Number(ts)
+  if (!n || n <= 0) return ''
+  const ms = n < 1e10 ? n * 1000 : n
+  const d = new Date(ms)
+  if (isNaN(d.getTime())) return ''
+  const today = new Date()
+  if (d.toDateString() === today.toDateString())
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return 'Ontem'
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
 
 function timeNow() {
   return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Converte timestamp Unix (segundos ou ms) para string legível
-function formatTs(ts: any): string {
-  const n = Number(ts)
-  if (!n || n <= 0) return ''
-  const ms = n < 1e10 ? n * 1000 : n // segundos → ms
-  const d = new Date(ms)
-  if (isNaN(d.getTime())) return ''
-  const today = new Date()
-  if (d.toDateString() === today.toDateString()) {
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  }
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return 'Ontem'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+function isRealContact(c: any): boolean {
+  const id = String(c.id || c.chatId || '')
+  if (!id || id === 'status@broadcast') return false
+  if (id.endsWith('@g.us')) return false          // grupos — fora
+  const phone = c.phone || normalizePhone(id)
+  return /^\d{7,}$/.test(phone)                  // só números com 7+ dígitos
 }
 
-// Normaliza phone/id do Baileys para número puro
-function normalizePhone(raw: string): string {
-  return (raw || '').replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace('@lid', '').replace(/\D.*@lid/, '')
-}
+// ── Componente principal ──────────────────────────────────────────────────────
 
-// Verifica se é um contato real (não @lid sem número claro)
-function isRealContact(chat: any): boolean {
-  if (chat.isGroup) return false
-  const id = chat.id || chat.chatId || ''
-  if (id.endsWith('@g.us')) return false
-  // @lid sem número de telefone real — ignora
-  if (id.endsWith('@lid') && !/^\d{7,}@lid/.test(id)) return false
-  const phone = chat.phone || normalizePhone(id)
-  return phone.length >= 8 && /^\d+$/.test(phone)
-}
+export default function WhatsAppPage() {
+  const [waState, setWaState]         = useState<WaState | null>(null)
+  const [contacts, setContacts]       = useState<Contact[]>([])
+  const [messages, setMessages]       = useState<Message[]>([])
+  const [selectedId, setSelectedId]   = useState<string>('')
+  const [search, setSearch]           = useState('')
+  const [composer, setComposer]       = useState('')
+  const [sending, setSending]         = useState(false)
+  const [loadingMsgs, setLoadingMsgs] = useState(false)
+  const [sseStatus, setSseStatus]     = useState<'offline' | 'connecting' | 'live'>('offline')
+  const [initBusy, setInitBusy]       = useState(false)
 
-function statusStyle(status: Campaign['status']) {
-  if (status === 'ativa') return { label: 'Ativa', color: '#0ABD78' }
-  if (status === 'programada') return { label: 'Programada', color: '#F8A303' }
-  return { label: 'Rascunho', color: '#A78BFA' }
-}
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const sseAbort       = useRef<AbortController | null>(null)
 
-export default function WhatsAppCrmPage() {
-  const [tab, setTab] = useState<TabId>('inbox')
-  const [connected, setConnected] = useState(false)
-  const [contacts, setContacts] = useState<WaContact[]>([])
-  const [messages, setMessages] = useState<WaMessage[]>([])
-  const [campaigns, setCampaigns] = useState<Campaign[]>(seedCampaigns)
-  const [selectedId, setSelectedId] = useState('')
-  const [search, setSearch] = useState('')
-  const [tagFilter, setTagFilter] = useState('Todos')
-  const [composer, setComposer] = useState('')
-  const [aiDraft, setAiDraft] = useState('')
-  const [aiBusy, setAiBusy] = useState(false)
-  const [bulkText, setBulkText] = useState(seedCampaigns[0].template)
-  const [liveStatus, setLiveStatus] = useState<WhatsAppStatus | null>(null)
-  const [liveBusy, setLiveBusy] = useState(false)
-  const [trainingInput, setTrainingInput] = useState('')
-  const [toneInput, setToneInput] = useState('humano, acolhedor, objetivo e profissional')
-  const [sseStatus, setSseStatus] = useState<'connecting' | 'connected' | 'offline'>('offline')
-  const sseAbortRef = useRef<AbortController | null>(null)
+  const selected = contacts.find(c => c.chatId === selectedId) ?? contacts[0] ?? null
 
-  useEffect(() => {
+  // ── SSE ──────────────────────────────────────────────────────────────────
+
+  const loadContacts = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) return
-      const parsed = JSON.parse(stored)
-      setConnected(!!parsed.connected)
-      // Só restaura contatos reais (número válido, sem seed/fake)
-      const realContacts = (parsed.contacts || []).filter((c: WaContact) =>
-        c.phone && c.phone.length >= 8 && /^\d+$/.test(c.phone) &&
-        c.name !== 'Novo contato extraído' &&
-        !['Tatiane Alvarenga', 'Pamela Souza', 'Joelma Martins', 'Michele Sena'].includes(c.name)
-      ).map((c: WaContact) => ({
-        ...c,
-        chatId: c.chatId || `${c.phone}@s.whatsapp.net`,  // garante chatId mesmo para entradas antigas
-      }))
-      if (realContacts.length > 0) {
-        setContacts(realContacts)
-        setMessages((parsed.messages || []).filter((m: WaMessage) =>
-          realContacts.some((c: WaContact) => c.id === m.contactId)
-        ))
-        setSelectedId(parsed.selectedId || realContacts[0]?.id || '')
-      }
-      setCampaigns(parsed.campaigns || seedCampaigns)
-    } catch {
-      // localStorage corrompido — limpa
-      localStorage.removeItem(STORAGE_KEY)
+      const data: any[] = await apiFetch('contacts')
+      if (!Array.isArray(data)) return
+      setContacts(
+        data
+          .filter(isRealContact)
+          .map(c => ({
+            chatId:      c.id || c.chatId || '',
+            phone:       c.phone || normalizePhone(c.id || c.chatId || ''),
+            name:        (c.name && c.name !== c.phone) ? c.name : (c.phone || normalizePhone(c.id || '')),
+            lastMessage: c.lastMessage || '',
+            lastAt:      formatTs(c.timestamp),
+            unread:      c.unreadCount ?? 0,
+            timestamp:   c.timestamp ?? 0,
+          }))
+          .sort((a, b) => b.timestamp - a.timestamp)
+      )
+    } catch (e) {
+      console.error('[WA] loadContacts error', e)
     }
   }, [])
 
-  useEffect(() => {
+  const loadMessages = useCallback(async (chatId: string) => {
+    if (!chatId) return
+    setLoadingMsgs(true)
+    setMessages([])
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ connected, contacts, messages, campaigns, selectedId }))
-    } catch {}
-  }, [connected, contacts, messages, campaigns, selectedId])
-
-  // Carrega chats reais do WhatsApp — aditivo, nunca remove, corrige timestamps e nomes
-  const loadRealChats = useCallback(async () => {
-    try {
-      let data: any[] = []
-      // 1. Tenta /contacts (CRM completo)
-      try {
-        const res = await api.get('/whatsapp-live/contacts')
-        if (Array.isArray(res.data) && res.data.length > 0) data = res.data
-      } catch {}
-      // 2. Fallback /chats
-      if (data.length === 0) {
-        try {
-          const res = await api.get('/whatsapp-live/chats?limit=500')
-          if (Array.isArray(res.data)) data = res.data
-        } catch {}
-      }
-      if (data.length === 0) return
-
-      setContacts(prev => {
-        // Remove contatos falsos ("Novo contato extraído") e seed data do localStorage
-        const realPrev = prev.filter(c =>
-          c.phone && c.phone.length >= 8 && /^\d+$/.test(c.phone) &&
-          c.name !== 'Novo contato extraído' &&
-          !['Tatiane Alvarenga', 'Pamela Souza', 'Joelma Martins', 'Michele Sena'].includes(c.name)
-        )
-        const byPhone = new Map(realPrev.map(c => [c.phone, c]))
-
-        for (const chat of data) {
-          if (!isRealContact(chat)) continue
-          const phone = chat.phone || normalizePhone(chat.id || '')
-          if (!phone || phone.length < 8) continue
-
-          const ex = byPhone.get(phone)
-          const lastAt = formatTs(chat.timestamp)
-          const name = chat.name && chat.name !== phone ? chat.name : (ex?.name && ex.name !== phone ? ex.name : phone)
-
-          byPhone.set(phone, {
-            id: phone,
-            chatId: chat.id || chat.chatId || ex?.chatId || `${phone}@s.whatsapp.net`,
-            name,
-            phone,
-            unit: ex?.unit || 'WhatsApp',
-            tags: (chat.tags && chat.tags.length > 0) ? chat.tags : (ex?.tags || ['whatsapp']),
-            stage: (chat.stage as StageId) || ex?.stage || 'novo',
-            score: chat.score ?? ex?.score ?? 50,
-            lastMessage: chat.lastMessage || ex?.lastMessage || '',
-            lastAt: lastAt || ex?.lastAt || '',
-            unread: chat.unreadCount ?? ex?.unread ?? 0,
-            consent: ex?.consent ?? true,
-          })
-        }
-
-        const result = Array.from(byPhone.values())
-          .sort((a, b) => {
-            // Ordena: com lastAt primeiro, depois por nome
-            if (a.lastAt && !b.lastAt) return -1
-            if (!a.lastAt && b.lastAt) return 1
-            return (a.name || '').localeCompare(b.name || '', 'pt-BR')
-          })
-
-        // Auto-seleciona o primeiro contato real se nenhum selecionado
-        if (result.length > 0) {
-          setSelectedId(sid => sid && result.some(c => c.id === sid) ? sid : result[0].id)
-        }
-
-        return result
-      })
-    } catch {}
-  }, [])
-
-  // Carrega mensagens reais de um chat específico
-  const loadChatMessages = useCallback(async (chatId: string, phone: string) => {
-    try {
-      // Usa o chatId original (pode ser @lid, @s.whatsapp.net, etc.)
-      let data: any[] = []
-      if (chatId && chatId.includes('@')) {
-        try {
-          const res = await api.get(`/whatsapp-live/messages?chatId=${encodeURIComponent(chatId)}&limit=50`)
-          if (Array.isArray(res.data) && res.data.length > 0) data = res.data
-        } catch {}
-      }
-      // Fallback com @s.whatsapp.net
-      if (data.length === 0) {
-        try {
-          const res = await api.get(`/whatsapp-live/messages?chatId=${phone}@s.whatsapp.net&limit=50`)
-          if (Array.isArray(res.data) && res.data.length > 0) data = res.data
-        } catch {}
-      }
-      // Fallback sem sufixo
-      if (data.length === 0) {
-        try {
-          const res = await api.get(`/whatsapp-live/messages?chatId=${phone}&limit=50`)
-          if (Array.isArray(res.data)) data = res.data
-        } catch {}
-      }
-      if (!Array.isArray(data) || data.length === 0) return
-      setMessages(prev => {
-        const realMsgs: WaMessage[] = data.map((m: any) => ({
-          id: m.id || `${chatId}_${m.at}`,
-          contactId: chatId,
-          from: m.from as WaMessage['from'],
+      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}&limit=60`)
+      if (Array.isArray(data)) {
+        setMessages(data.map(m => ({
+          id:   m.id || crypto.randomUUID(),
+          from: (m.from === 'agent' || m.from === 'sofi') ? m.from : 'lead',
           text: m.text || '',
-          at: m.at ? formatTs(new Date(m.at).getTime()) || new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : timeNow(),
-        }))
-        const otherMsgs = prev.filter(m => m.contactId !== chatId)
-        return [...otherMsgs, ...realMsgs]
-      })
-    } catch {}
+          at:   m.at
+            ? (new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+            : timeNow(),
+        })))
+      }
+    } catch {
+      setMessages([])
+    } finally {
+      setLoadingMsgs(false)
+    }
   }, [])
 
-  // SSE — tempo real de verdade
+  // SSE — eventos em tempo real
   const connectSSE = useCallback(async (signal: AbortSignal) => {
-    const token = Cookies.get('accessToken')
-    if (!token) return
-
     setSseStatus('connecting')
     try {
-      const response = await fetch('/api/whatsapp-live/events', {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream', 'Cache-Control': 'no-cache' },
+      const token = Cookies.get('accessToken')
+      const res = await fetch('/api/whatsapp-live/events', {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          Accept: 'text/event-stream',
+        },
         signal,
         cache: 'no-store',
       })
+      if (!res.ok || !res.body) { setSseStatus('offline'); return }
+      setSseStatus('live')
 
-      if (!response.ok || !response.body) {
-        setSseStatus('offline')
-        return
-      }
-
-      setSseStatus('connected')
-      const reader = response.body.getReader()
+      const reader  = res.body.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
-      let currentEvent = ''
+      let buf = ''
+      let evt = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() || ''
 
         for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            currentEvent = line.slice(7).trim()
-          } else if (line.startsWith('data: ')) {
-            try {
-              const payload = JSON.parse(line.slice(6))
-              if (currentEvent === 'state') {
-                setLiveStatus(payload)
-                setConnected(!!payload.connected)
-                if (payload.automation?.tone) setToneInput(payload.automation.tone)
-                if (payload.ready) loadRealChats()
-              } else if (currentEvent === 'message') {
-                // Mensagem chegou em tempo real
-                const rawPhone = normalizePhone(payload.chatId || '')
-                const incoming: WaMessage = {
-                  id: payload.id || crypto.randomUUID(),
-                  contactId: rawPhone || payload.chatId,
-                  from: payload.from as WaMessage['from'],
-                  text: payload.text,
-                  at: payload.at ? new Date(payload.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : timeNow(),
-                }
-                const phone = incoming.contactId
-                setContacts(prev => {
-                  const idx = prev.findIndex(c => c.phone === phone || c.id === phone)
-                  if (idx >= 0) {
-                    const updated = [...prev]
-                    updated[idx] = { ...updated[idx], lastMessage: payload.text, lastAt: incoming.at, unread: updated[idx].unread + (incoming.from === 'lead' ? 1 : 0) }
-                    return updated
-                  }
-                  const rawChatId = payload.chatId || `${phone}@s.whatsapp.net`
-                  return [{ id: phone, chatId: rawChatId, name: payload.name || phone, phone, unit: 'WhatsApp', tags: ['whatsapp'], stage: 'novo', score: 50, lastMessage: payload.text, lastAt: incoming.at, unread: 1, consent: true }, ...prev]
-                })
-                setMessages(prev => [...prev, incoming])
+          if (line.startsWith('event: ')) { evt = line.slice(7).trim(); continue }
+          if (!line.startsWith('data: ')) { evt = ''; continue }
+          try {
+            const payload = JSON.parse(line.slice(6))
+            if (evt === 'state') {
+              setWaState(payload)
+              if (payload.ready) loadContacts()
+            } else if (evt === 'message') {
+              const phone     = normalizePhone(payload.chatId || '')
+              const incoming: Message = {
+                id:   payload.id || crypto.randomUUID(),
+                from: payload.from === 'agent' ? 'agent' : payload.from === 'sofi' ? 'sofi' : 'lead',
+                text: payload.text || '',
+                at:   payload.at
+                  ? new Date(payload.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  : timeNow(),
               }
-            } catch {}
-            currentEvent = ''
-          }
+              // Adiciona mensagem ao chat aberto
+              setSelectedId(prev => {
+                const rawPrev = normalizePhone(prev)
+                if (rawPrev === phone || prev === payload.chatId) {
+                  setMessages(m => [...m, incoming])
+                }
+                return prev
+              })
+              // Atualiza lista de contatos
+              setContacts(prev => {
+                const idx = prev.findIndex(c => c.phone === phone || c.chatId === payload.chatId)
+                if (idx >= 0) {
+                  const updated = [...prev]
+                  updated[idx] = {
+                    ...updated[idx],
+                    lastMessage: payload.text,
+                    lastAt: incoming.at,
+                    unread: updated[idx].unread + (payload.from !== 'agent' && payload.from !== 'sofi' ? 1 : 0),
+                  }
+                  return updated
+                }
+                return [{
+                  chatId:      payload.chatId || `${phone}@s.whatsapp.net`,
+                  phone,
+                  name:        payload.name || phone,
+                  lastMessage: payload.text,
+                  lastAt:      incoming.at,
+                  unread:      1,
+                  timestamp:   Math.floor(Date.now() / 1000),
+                }, ...prev]
+              })
+            }
+          } catch {}
+          evt = ''
         }
       }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') setSseStatus('offline')
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setSseStatus('offline')
     }
-  }, [loadRealChats])
+  }, [loadContacts])
 
-  // Gerencia ciclo de vida do SSE com reconexão automática
+  // Inicia SSE + carrega estado inicial
   useEffect(() => {
-    let aborted = false
-    const controller = new AbortController()
-    sseAbortRef.current = controller
+    let dead = false
+    const ctrl = new AbortController()
+    sseAbort.current = ctrl
 
     const run = async () => {
-      // Busca estado inicial via REST primeiro
+      // Estado inicial via REST
       try {
-        const { data } = await api.get('/whatsapp-live/status')
-        setLiveStatus(data)
-        setConnected(!!data.connected)
-        if (data.automation?.tone) setToneInput(data.automation.tone)
-        if (data.ready) loadRealChats()
+        const st: WaState = await apiFetch('status')
+        setWaState(st)
+        if (st.ready) loadContacts()
       } catch {}
 
-      while (!aborted) {
-        await connectSSE(controller.signal)
-        if (!aborted) {
+      // Loop SSE com reconexão
+      while (!dead) {
+        await connectSSE(ctrl.signal)
+        if (!dead) {
           setSseStatus('offline')
           await new Promise(r => setTimeout(r, 5000))
         }
@@ -476,676 +274,319 @@ export default function WhatsAppCrmPage() {
     }
 
     run()
-    return () => {
-      aborted = true
-      controller.abort()
-    }
-  }, [connectSSE, loadRealChats])
+    return () => { dead = true; ctrl.abort() }
+  }, [connectSSE, loadContacts])
 
-  const selected = contacts.find(c => c.id === selectedId) || contacts[0]
-
-  // Auto-carrega mensagens quando muda o contato selecionado e WhatsApp conectado
+  // Auto-carrega mensagens quando troca de contato
   useEffect(() => {
-    if (selected && liveStatus?.ready) {
-      loadChatMessages(selected.chatId || selected.id, selected.phone)
-    }
-  }, [selectedId, liveStatus?.ready]) // eslint-disable-line react-hooks/exhaustive-deps
-  const allTags = useMemo(() => ['Todos', ...Array.from(new Set(contacts.flatMap(c => c.tags)))], [contacts])
-  const filteredContacts = contacts.filter(contact => {
-    const haystack = `${contact.name} ${contact.phone} ${contact.unit} ${contact.tags.join(' ')}`.toLowerCase()
-    const matchesSearch = haystack.includes(search.toLowerCase())
-    const matchesTag = tagFilter === 'Todos' || contact.tags.includes(tagFilter)
-    return matchesSearch && matchesTag
-  })
-  const selectedMessages = messages.filter(m => m.contactId === selected?.id)
-  const optedIn = contacts.filter(c => c.consent).length
-  const unread = contacts.reduce((sum, c) => sum + c.unread, 0)
-  const avgScore = Math.round(contacts.reduce((sum, c) => sum + c.score, 0) / contacts.length)
+    if (selectedId && waState?.ready) loadMessages(selectedId)
+  }, [selectedId, waState?.ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sendMessage = async (text = composer, from: WaMessage['from'] = 'agent') => {
-    if (!selected || !text.trim()) return
-    const msg: WaMessage = { id: crypto.randomUUID(), contactId: selected.id, from, text: text.trim(), at: timeNow() }
-    if (liveStatus?.ready && from !== 'lead') {
-      try {
-        // Passa chatId original (suporta @lid, @s.whatsapp.net) e phone como fallback
-        await api.post('/whatsapp-live/send', {
-          chatId: selected.chatId || `${selected.phone}@s.whatsapp.net`,
-          phone: selected.phone,
-          text: text.trim(),
-        })
-      } catch {}
-    }
+  // Auto-scroll para o final das mensagens
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // ── Ações ─────────────────────────────────────────────────────────────────
+
+  const connectWhatsApp = async () => {
+    setInitBusy(true)
+    try {
+      const st: WaState = await apiFetch('start', { method: 'POST', body: '{}' })
+      setWaState(st)
+    } catch {}
+    finally { setInitBusy(false) }
+  }
+
+  const sendMessage = async () => {
+    const text = composer.trim()
+    if (!text || !selected || !waState?.ready) return
+    setSending(true)
+
+    const msg: Message = { id: crypto.randomUUID(), from: 'agent', text, at: timeNow() }
     setMessages(prev => [...prev, msg])
-    setContacts(prev => prev.map(contact => contact.id === selected.id
-      ? { ...contact, lastMessage: text.trim(), lastAt: msg.at, unread: from === 'lead' ? contact.unread + 1 : 0 }
-      : contact
-    ))
     setComposer('')
-  }
 
-  const moveContact = (contactId: string, stage: StageId) => {
-    setContacts(prev => prev.map(contact => contact.id === contactId ? { ...contact, stage } : contact))
-  }
-
-  const [extractBusy, setExtractBusy] = useState(false)
-  const [extractMsg, setExtractMsg] = useState('')
-
-  const extractContacts = async (mode: 'geral' | 'segmentado' | 'grupos' | 'selo') => {
-    setExtractBusy(true)
-    setExtractMsg('Buscando contatos do WhatsApp...')
     try {
-      // Usa /phonebook para catálogo completo ou /contacts para quem já conversou
-      const endpoint = mode === 'geral' || mode === 'catálogo'
-        ? '/whatsapp-live/phonebook'
-        : '/whatsapp-live/contacts'
-      const { data } = await api.get(endpoint)
-      if (!Array.isArray(data) || data.length === 0) {
-        setExtractMsg('Nenhum contato encontrado. Aguarde a sincronização do WhatsApp.')
-        return
-      }
-      let added = 0
-      setContacts(prev => {
-        const byPhone = new Map(prev.map(c => [c.phone, c]))
-        for (const contact of data) {
-          const phone = contact.phone || ''
-          if (!phone || phone.length < 8) continue
-          if (!byPhone.has(phone)) {
-            added++
-            byPhone.set(phone, {
-              id: phone,
-              chatId: contact.id || contact.chatId || `${phone}@s.whatsapp.net`,
-              name: contact.name || phone,
-              phone,
-              unit: mode === 'segmentado' ? 'Segmento APS' : mode === 'grupos' ? 'Grupos' : 'Catálogo WhatsApp',
-              tags: contact.tags || [mode, 'importado'],
-              stage: (contact.stage as StageId) || 'novo',
-              score: contact.score ?? 60,
-              lastMessage: contact.lastMessage || '',
-              lastAt: contact.timestamp ? new Date(contact.timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
-              unread: 0,
-              consent: mode !== 'grupos',
-            })
-          }
-        }
-        return Array.from(byPhone.values())
-      })
-      setExtractMsg(`✅ ${added} novos contatos importados (${data.length} total encontrados).`)
-    } catch {
-      setExtractMsg('Erro ao buscar contatos. Verifique a conexão com o WhatsApp.')
-    } finally {
-      setExtractBusy(false)
-    }
-  }
-
-  const generateAiDraft = async () => {
-    if (!selected) return
-    setAiBusy(true)
-    const prompt = `Você é a Sofi, agente humanizada de WhatsApp da Associação Paulista Sul.
-Crie uma resposta curta, calorosa e objetiva para este lead.
-
-Contato: ${selected.name}
-Telefone: ${selected.phone}
-Unidade/segmento: ${selected.unit}
-Tags: ${selected.tags.join(', ')}
-Última mensagem: ${selected.lastMessage}
-
-Regras: português do Brasil, tom humano, sem parecer robô, até 450 caracteres, terminar com uma pergunta simples.`
-    try {
-      const res = await fetch('/api/gemini', {
+      await apiFetch('send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ chatId: selected.chatId, phone: selected.phone, text }),
       })
-      const data = await res.json()
-      setAiDraft(data.content || 'Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
-    } catch {
-      setAiDraft('Oi! Posso te ajudar com as informações e o melhor próximo passo para sua família?')
+    } catch (e) {
+      console.error('[WA] send error', e)
     } finally {
-      setAiBusy(false)
+      setSending(false)
     }
   }
 
-  const createCampaign = () => {
-    const campaign: Campaign = {
-      id: crypto.randomUUID(),
-      name: `Campanha ${campaigns.length + 1}`,
-      segment: `${optedIn} contatos com opt-in`,
-      status: 'rascunho',
-      recipients: optedIn,
-      template: bulkText,
-    }
-    setCampaigns(prev => [campaign, ...prev])
+  const clearAll = () => {
+    try { localStorage.clear() } catch {}
+    location.reload()
   }
 
-  const connectLiveWhatsApp = async () => {
-    setLiveBusy(true)
-    try {
-      const { data } = await api.post('/whatsapp-live/start', {})
-      setLiveStatus(data)
-      setConnected(!!data.connected)
-    } finally {
-      setLiveBusy(false)
-    }
-  }
+  // ── Filtros ───────────────────────────────────────────────────────────────
 
-  const setAutomationMode = async (mode: 'paused' | 'assist' | 'auto') => {
-    setLiveBusy(true)
-    try {
-      const { data } = await api.post('/whatsapp-live/automation', { mode, tone: toneInput })
-      setLiveStatus(data)
-    } finally {
-      setLiveBusy(false)
-    }
-  }
+  const filtered = contacts.filter(c => {
+    const hay = `${c.name} ${c.phone}`.toLowerCase()
+    return hay.includes(search.toLowerCase())
+  })
 
-  const addTraining = async () => {
-    if (!trainingInput.trim()) return
-    setLiveBusy(true)
-    try {
-      const { data } = await api.post('/whatsapp-live/training', { text: trainingInput.trim() })
-      setLiveStatus(data)
-      setTrainingInput('')
-    } finally {
-      setLiveBusy(false)
-    }
-  }
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  const pauseAndAssume = async () => {
-    setLiveBusy(true)
-    try {
-      const { data } = await api.post('/whatsapp-live/handoff', {})
-      setLiveStatus(data)
-      setComposer('')
-    } finally {
-      setLiveBusy(false)
-    }
-  }
+  const statusColor = sseStatus === 'live' ? '#0ABD78' : sseStatus === 'connecting' ? '#F8A303' : '#666'
+  const statusLabel = sseStatus === 'live' ? '● ao vivo' : sseStatus === 'connecting' ? '○ conectando' : '○ offline'
 
   return (
     <AdminLayout>
-      <div className="space-y-5">
-        <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)', boxShadow: '0 16px 36px rgba(10,189,120,0.22)' }}>
-                <ChatBubbleLeftRightIcon className="w-6 h-6 text-black" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-extrabold text-white">WhatsApp CRM APS</h1>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    style={{
-                      background: sseStatus === 'connected' ? 'rgba(10,189,120,0.18)' : sseStatus === 'connecting' ? 'rgba(248,163,3,0.16)' : 'rgba(255,255,255,0.07)',
-                      color: sseStatus === 'connected' ? '#0ABD78' : sseStatus === 'connecting' ? '#F8A303' : 'rgba(255,255,255,0.3)',
-                    }}>
-                    {sseStatus === 'connected' ? '● ao vivo' : sseStatus === 'connecting' ? '○ conectando' : '○ offline'}
-                  </span>
-                </div>
-                <p className="text-sm text-white/40">Atendimento, campanhas, extração, Kanban e agente Sofi em um cockpit único.</p>
-              </div>
+      <div className="flex flex-col h-[calc(100vh-80px)] gap-3">
+
+        {/* Header */}
+        <header className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-black font-extrabold text-lg"
+              style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+              W
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-white leading-tight">WhatsApp CRM</h1>
+              <span className="text-xs font-bold" style={{ color: statusColor }}>{statusLabel}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={connectLiveWhatsApp} disabled={liveBusy}
-              className="px-4 py-2.5 rounded-2xl text-sm font-extrabold flex items-center gap-2"
+
+          <div className="flex items-center gap-2">
+            {/* Status WhatsApp */}
+            <div className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2"
               style={{
-                background: liveStatus?.ready ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.16)',
-                color: liveStatus?.ready ? '#0ABD78' : '#F8A303',
-                border: `1px solid ${liveStatus?.ready ? 'rgba(10,189,120,0.28)' : 'rgba(248,163,3,0.28)'}`,
+                background: waState?.ready ? 'rgba(10,189,120,0.12)' : 'rgba(248,163,3,0.12)',
+                color:      waState?.ready ? '#0ABD78' : '#F8A303',
+                border:     `1px solid ${waState?.ready ? 'rgba(10,189,120,0.25)' : 'rgba(248,163,3,0.25)'}`,
               }}>
-              {liveBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : liveStatus?.ready ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
-              {liveStatus?.ready ? 'WhatsApp real conectado' : 'Conectar WhatsApp real'}
+              {waState?.ready ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
+              {waState?.ready ? 'WhatsApp conectado' : 'Desconectado'}
+            </div>
+
+            {/* Conectar */}
+            {!waState?.ready && (
+              <button onClick={connectWhatsApp} disabled={initBusy}
+                className="px-3 py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                style={{ background: '#F8A303' }}>
+                {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : 'Conectar'}
+              </button>
+            )}
+
+            {/* Recarregar contatos */}
+            <button onClick={loadContacts} title="Recarregar contatos"
+              className="p-2 rounded-xl text-white/50 hover:text-white"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <ArrowPathIcon className="w-4 h-4" />
             </button>
-            <button onClick={() => setAutomationMode('auto')} disabled={liveBusy}
-              className="px-4 py-2.5 rounded-2xl text-sm font-extrabold flex items-center gap-2"
-              style={{ background: liveStatus?.automation?.mode === 'auto' ? 'rgba(10,189,120,0.16)' : 'rgba(255,255,255,0.055)', color: liveStatus?.automation?.mode === 'auto' ? '#0ABD78' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <BoltIcon className="w-4 h-4" />
-              IA responde por mim
-            </button>
-            <button onClick={pauseAndAssume} disabled={liveBusy}
-              className="px-4 py-2.5 rounded-2xl text-sm font-extrabold"
-              style={{ background: liveStatus?.automation?.mode === 'paused' ? 'rgba(255,71,87,0.16)' : 'rgba(255,255,255,0.055)', color: liveStatus?.automation?.mode === 'paused' ? '#FF4757' : 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              Pausar e assumir
+
+            {/* Limpar dados */}
+            <button onClick={clearAll} title="Limpar cache e recarregar"
+              className="p-2 rounded-xl text-red-400/60 hover:text-red-400"
+              style={{ background: 'rgba(255,71,87,0.06)', border: '1px solid rgba(255,71,87,0.12)' }}>
+              <TrashIcon className="w-4 h-4" />
             </button>
           </div>
         </header>
 
-        {(liveStatus?.qrDataUrl || liveStatus?.error) && (
-          <section className="rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center"
+        {/* QR Code */}
+        {waState?.qrDataUrl && (
+          <div className="rounded-2xl p-4 flex items-center gap-4"
             style={{ background: 'rgba(248,163,3,0.07)', border: '1px solid rgba(248,163,3,0.18)' }}>
-            {liveStatus?.qrDataUrl && <img src={liveStatus.qrDataUrl} alt="QR Code do WhatsApp" className="w-32 h-32 rounded-xl bg-white p-2" />}
+            <img src={waState.qrDataUrl} alt="QR Code" className="w-28 h-28 rounded-xl bg-white p-1" />
             <div>
-              <p className="text-sm font-extrabold text-white">{liveStatus?.qrDataUrl ? 'Escaneie o QR Code para conectar' : 'Status da conexão real'}</p>
-              <p className="text-sm text-white/55 leading-6 mt-1">
-                {liveStatus?.qrDataUrl ? 'Abra o WhatsApp no celular, vá em aparelhos conectados e leia este código. Depois a sessão fica salva no backend.' : liveStatus?.error}
-              </p>
+              <p className="text-sm font-extrabold text-white">Escaneie o QR Code</p>
+              <p className="text-xs text-white/50 mt-1">Abra o WhatsApp → Aparelhos conectados → Conectar aparelho</p>
             </div>
-          </section>
+          </div>
         )}
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            { label: 'Conversas', value: contacts.length, icon: ChatBubbleLeftRightIcon, color: '#4A9EFF' },
-            { label: 'Não lidas', value: unread, icon: MegaphoneIcon, color: '#F8A303' },
-            { label: 'Opt-in válido', value: optedIn, icon: CheckCircleIcon, color: '#0ABD78' },
-            { label: 'Score médio', value: `${avgScore}%`, icon: SparklesIcon, color: '#A78BFA' },
-          ].map(item => {
-            const Icon = item.icon
-            return (
-            <div key={item.label} className="rounded-2xl p-4"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-2xl font-extrabold" style={{ color: item.color }}>{item.value}</p>
-                  <p className="text-xs text-white/40 mt-1">{item.label}</p>
-                </div>
-                <Icon className="w-6 h-6" style={{ color: item.color }} />
-              </div>
-            </div>
-            )
-          })}
-        </section>
+        {/* Erro de conexão */}
+        {waState?.error && !waState.qrDataUrl && (
+          <div className="rounded-2xl p-3 flex items-center gap-3"
+            style={{ background: 'rgba(255,71,87,0.07)', border: '1px solid rgba(255,71,87,0.18)' }}>
+            <XCircleIcon className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-xs text-red-300">{waState.error}</p>
+          </div>
+        )}
 
-        <nav className="flex items-center gap-2 overflow-x-auto pb-1">
-          {[
-            { id: 'inbox', label: 'Atendimento', icon: ChatBubbleLeftRightIcon },
-            { id: 'kanban', label: 'CRM Kanban', icon: ClipboardDocumentCheckIcon },
-            { id: 'campanhas', label: 'Envio em massa', icon: MegaphoneIcon },
-            { id: 'contatos', label: 'Extração', icon: UserGroupIcon },
-            { id: 'agente', label: 'Agente IA', icon: BoltIcon },
-          ].map(item => {
-            const Icon = item.icon
-            return (
-            <button key={item.id} onClick={() => setTab(item.id as TabId)}
-              className="px-4 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"
-              style={{
-                background: tab === item.id ? 'rgba(248,163,3,0.16)' : 'rgba(255,255,255,0.045)',
-                color: tab === item.id ? '#F8A303' : 'rgba(255,255,255,0.48)',
-                border: `1px solid ${tab === item.id ? 'rgba(248,163,3,0.28)' : 'rgba(255,255,255,0.07)'}`,
-              }}>
-              <Icon className="w-4 h-4" />
-              {item.label}
-            </button>
-            )
-          })}
-        </nav>
+        {/* Corpo principal: lista + chat */}
+        <div className="flex flex-1 gap-3 overflow-hidden min-h-0">
 
-        {tab === 'inbox' && (
-          <section className="grid grid-cols-1 xl:grid-cols-[360px_minmax(420px,1fr)_330px] gap-4">
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar lead, telefone, selo..."
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
-                </div>
-                <div className="flex gap-1.5 flex-wrap mt-3">
-                  {allTags.slice(0, 8).map(tag => (
-                    <button key={tag} onClick={() => setTagFilter(tag)}
-                      className="px-2.5 py-1 rounded-full text-[11px] font-bold"
-                      style={{
-                        background: tagFilter === tag ? 'rgba(10,189,120,0.16)' : 'rgba(255,255,255,0.045)',
-                        color: tagFilter === tag ? '#0ABD78' : 'rgba(255,255,255,0.42)',
-                        border: `1px solid ${tagFilter === tag ? 'rgba(10,189,120,0.28)' : 'rgba(255,255,255,0.07)'}`,
-                      }}>{tag}</button>
-                  ))}
-                </div>
+          {/* Lista de contatos */}
+          <aside className="w-72 flex flex-col shrink-0 rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+
+            {/* Busca */}
+            <div className="p-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar contato..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                />
               </div>
-              <div className="max-h-[650px] overflow-y-auto">
-                {filteredContacts.map(contact => (
-                  <button key={contact.id} onClick={() => { setSelectedId(contact.id); if (liveStatus?.ready) loadChatMessages(contact.chatId || contact.id, contact.phone) }}
-                    className="w-full text-left p-4 border-b transition"
-                    style={{
-                      background: selected?.id === contact.id ? 'rgba(10,189,120,0.09)' : 'transparent',
-                      borderColor: 'rgba(255,255,255,0.06)',
-                    }}>
-                    <div className="flex items-start gap-3">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-black font-extrabold"
-                        style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
-                        {contact.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-extrabold text-white truncate">{contact.name}</p>
-                          <span className="text-[10px] text-white/30">{contact.lastAt}</span>
-                        </div>
-                        <p className="text-xs text-white/35">{contact.phone} · {contact.unit}</p>
-                        <p className="text-xs text-white/50 truncate mt-1">{contact.lastMessage}</p>
-                        <div className="flex gap-1.5 mt-2 flex-wrap">
-                          {contact.tags.slice(0, 3).map(tag => (
-                            <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                              style={{ background: 'rgba(248,163,3,0.11)', color: '#F8A303' }}>{tag}</span>
-                          ))}
-                          {contact.unread > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-bold text-black" style={{ background: '#F8A303' }}>{contact.unread}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <p className="text-[10px] text-white/30 mt-2 px-1">{filtered.length} contatos</p>
             </div>
 
-            <div className="rounded-2xl overflow-hidden flex flex-col min-h-[680px]"
-              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="p-4 flex items-center justify-between border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                <div>
-                  <p className="text-lg font-extrabold text-white">{selected?.name}</p>
-                  <p className="text-xs text-white/35">{selected?.phone} · {selected?.unit}</p>
-                </div>
-                <select value={selected?.stage} onChange={e => selected && moveContact(selected.id, e.target.value as StageId)}
-                  className="px-3 py-2 rounded-xl text-xs font-bold outline-none"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: '#F8A303', border: '1px solid rgba(255,255,255,0.1)', colorScheme: 'dark' }}>
-                  {stages.map(stage => <option key={stage.id} value={stage.id}>{stage.label}</option>)}
-                </select>
-              </div>
-
-              <div className="flex-1 p-5 space-y-3 overflow-y-auto">
-                {selectedMessages.map(message => (
-                  <div key={message.id} className={`flex ${message.from === 'lead' ? 'justify-start' : 'justify-end'}`}>
-                    <div className="max-w-[78%] rounded-2xl px-4 py-3"
-                      style={{
-                        background: message.from === 'lead' ? 'rgba(255,255,255,0.07)' : message.from === 'sofi' ? 'rgba(248,163,3,0.14)' : 'rgba(10,189,120,0.16)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                      }}>
-                      <p className="text-sm leading-6 text-white/82">{message.text}</p>
-                      <p className="text-[10px] text-white/28 mt-1">{message.at}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {aiDraft && (
-                <div className="mx-4 mb-3 rounded-2xl p-3" style={{ background: 'rgba(248,163,3,0.08)', border: '1px solid rgba(248,163,3,0.18)' }}>
-                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-1">Sugestão da Sofi</p>
-                  <p className="text-sm text-white/75 leading-6">{aiDraft}</p>
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={() => setComposer(aiDraft)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-black" style={{ background: '#F8A303' }}>Usar</button>
-                    <button onClick={() => { sendMessage(aiDraft, 'sofi'); setAiDraft('') }} className="px-3 py-1.5 rounded-xl text-xs font-bold text-white/70" style={{ background: 'rgba(255,255,255,0.07)' }}>Enviar</button>
-                  </div>
+            {/* Lista */}
+            <div className="flex-1 overflow-y-auto">
+              {contacts.length === 0 && (
+                <div className="p-6 text-center">
+                  {waState?.ready
+                    ? <p className="text-xs text-white/30">Carregando contatos…</p>
+                    : <p className="text-xs text-white/30">Conecte o WhatsApp para ver os contatos</p>
+                  }
                 </div>
               )}
 
-              <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                <div className="flex gap-2">
-                  <button onClick={generateAiDraft} disabled={aiBusy}
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-black disabled:opacity-50"
-                    style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-                    {aiBusy ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <SparklesIcon className="w-5 h-5" />}
-                  </button>
-                  <input value={composer} onChange={e => setComposer(e.target.value)} placeholder="Digite uma mensagem..."
-                    className="flex-1 px-4 rounded-2xl text-sm text-white outline-none"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.09)' }} />
-                  <button onClick={() => sendMessage()} className="w-11 h-11 rounded-2xl flex items-center justify-center text-black"
-                    style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
-                    <PaperAirplaneIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <aside className="space-y-3">
-              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-sm font-extrabold text-white">Ficha CRM</p>
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
-                    <p className="text-[10px] text-white/30">Score</p>
-                    <p className="text-xl font-extrabold" style={{ color: '#F8A303' }}>{selected?.score}%</p>
-                  </div>
-                  <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
-                    <p className="text-[10px] text-white/30">Opt-in</p>
-                    <p className="text-xl font-extrabold" style={{ color: selected?.consent ? '#0ABD78' : '#FF4757' }}>{selected?.consent ? 'Sim' : 'Não'}</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {selected?.tags.map(tag => (
-                    <span key={tag} className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303' }}>
-                      <TagIcon className="inline w-3 h-3 mr-1" />{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-sm font-extrabold text-white">Ações rápidas</p>
-                <div className="space-y-2 mt-3">
-                  {stages.map(stage => (
-                    <button key={stage.id} onClick={() => selected && moveContact(selected.id, stage.id)}
-                      className="w-full px-3 py-2 rounded-xl text-xs font-bold text-left"
-                      style={{ background: `${stage.color}14`, color: stage.color, border: `1px solid ${stage.color}28` }}>
-                      Mover para {stage.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          </section>
-        )}
-
-        {tab === 'kanban' && (
-          <section className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            {stages.map(stage => {
-              const stageContacts = contacts.filter(c => c.stage === stage.id)
-              return (
-                <div key={stage.id} className="rounded-2xl p-3 min-h-[560px]"
-                  style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-extrabold" style={{ color: stage.color }}>{stage.label}</p>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `${stage.color}18`, color: stage.color }}>{stageContacts.length}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {stageContacts.map(contact => (
-                      <div key={contact.id} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p className="text-sm font-bold text-white">{contact.name}</p>
-                        <p className="text-xs text-white/35">{contact.phone}</p>
-                        <p className="text-xs text-white/50 mt-2 line-clamp-2">{contact.lastMessage}</p>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="text-[10px] font-bold" style={{ color: stage.color }}>{contact.score}% fit</span>
-                          <button onClick={() => { setSelectedId(contact.id); setTab('inbox') }} className="text-[10px] px-2 py-1 rounded-lg text-black" style={{ background: '#F8A303' }}>Abrir</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </section>
-        )}
-
-        {tab === 'campanhas' && (
-          <section className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4">
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-lg font-extrabold text-white">Campanhas WhatsApp</p>
-                  <p className="text-xs text-white/35">Envio em massa apenas para contatos com opt-in e segmentação.</p>
-                </div>
-                <button onClick={createCampaign} className="px-4 py-2 rounded-xl text-sm font-bold text-black" style={{ background: '#F8A303' }}>
-                  <PlusIcon className="w-4 h-4 inline mr-1" />Nova campanha
-                </button>
-              </div>
-              <div className="space-y-3">
-                {campaigns.map(campaign => {
-                  const st = statusStyle(campaign.status)
-                  return (
-                    <div key={campaign.id} className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-extrabold text-white">{campaign.name}</p>
-                          <p className="text-xs text-white/35">{campaign.segment} · {campaign.recipients} contatos</p>
-                        </div>
-                        <span className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: `${st.color}18`, color: st.color }}>{st.label}</span>
-                      </div>
-                      <p className="text-sm text-white/60 mt-3">{campaign.template}</p>
+              {filtered.map(contact => (
+                <button
+                  key={contact.chatId}
+                  onClick={() => {
+                    setSelectedId(contact.chatId)
+                    // Zera não-lidas
+                    setContacts(prev => prev.map(c =>
+                      c.chatId === contact.chatId ? { ...c, unread: 0 } : c
+                    ))
+                  }}
+                  className="w-full text-left p-3 border-b transition-colors hover:bg-white/[0.03]"
+                  style={{
+                    background:   selected?.chatId === contact.chatId ? 'rgba(10,189,120,0.09)' : undefined,
+                    borderColor:  'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-extrabold shrink-0"
+                      style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                      {(contact.name || '?').charAt(0).toUpperCase()}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
 
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-sm font-extrabold text-white">Composer de campanha</p>
-              <p className="text-xs text-white/35 mt-1">{'Use variáveis como {{nome}}, {{unidade}} e respeite opt-in.'}</p>
-              <textarea value={bulkText} onChange={e => setBulkText(e.target.value)}
-                className="w-full h-44 mt-4 rounded-2xl p-4 text-sm text-white outline-none resize-none"
-                style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }} />
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <div className="rounded-xl p-3" style={{ background: 'rgba(10,189,120,0.1)' }}>
-                  <p className="text-[10px] text-white/35">Elegíveis</p>
-                  <p className="text-xl font-extrabold" style={{ color: '#0ABD78' }}>{optedIn}</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: 'rgba(255,71,87,0.08)' }}>
-                  <p className="text-[10px] text-white/35">Sem opt-in</p>
-                  <p className="text-xl font-extrabold" style={{ color: '#FF4757' }}>{contacts.length - optedIn}</p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {tab === 'contatos' && (
-          <section className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
-            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-lg font-extrabold text-white">Extração de contatos</p>
-              <p className="text-xs text-white/35 mt-1">Organize contatos gerais, segmentados, por grupos e por selos.</p>
-              <div className="space-y-2 mt-4">
-                {[
-                  { id: 'geral', label: 'Catálogo completo', desc: 'Importa TODOS os contatos salvos no celular.' },
-                  { id: 'segmentado', label: 'Quem já conversou', desc: 'Importa contatos que já enviaram mensagem.' },
-                  { id: 'grupos', label: 'Grupos', desc: 'Importa membros de grupos do WhatsApp.' },
-                  { id: 'selo', label: 'Com histórico CRM', desc: 'Importa contatos com dados de CRM registrados.' },
-                ].map(item => (
-                  <button key={item.id} onClick={() => extractContacts(item.id as any)}
-                    disabled={extractBusy || !liveStatus?.ready}
-                    className="w-full text-left rounded-2xl p-3 disabled:opacity-50"
-                    style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <p className="text-sm font-bold text-white">{item.label}</p>
-                    <p className="text-xs text-white/35 mt-1">{item.desc}</p>
-                  </button>
-                ))}
-                {extractBusy && <p className="text-xs text-amber-400 mt-2 flex items-center gap-2"><ArrowPathIcon className="w-4 h-4 animate-spin" />{extractMsg}</p>}
-                {!extractBusy && extractMsg && <p className="text-xs mt-2" style={{ color: extractMsg.startsWith('✅') ? '#0ABD78' : '#F8A303' }}>{extractMsg}</p>}
-                {!liveStatus?.ready && <p className="text-xs text-white/30 mt-2">⚠ Conecte o WhatsApp primeiro para extrair contatos reais.</p>}
-              </div>
-            </div>
-
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-3 p-3 text-[10px] uppercase tracking-widest text-white/30 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                <span>Contato</span><span>Segmento</span><span>Selos</span><span>Status</span>
-              </div>
-              {contacts.map(contact => (
-                <div key={contact.id} className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-3 p-3 border-b items-center" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                  <div>
-                    <p className="text-sm font-bold text-white">{contact.name}</p>
-                    <p className="text-xs text-white/35">{contact.phone}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-sm font-bold text-white truncate">{contact.name}</p>
+                        <span className="text-[10px] text-white/30 shrink-0">{contact.lastAt}</span>
+                      </div>
+                      <p className="text-xs text-white/40 truncate mt-0.5">{contact.lastMessage || contact.phone}</p>
+                      {contact.unread > 0 && (
+                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold text-black"
+                          style={{ background: '#0ABD78' }}>{contact.unread}</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-white/55">{contact.unit}</p>
-                  <div className="flex gap-1 flex-wrap">{contact.tags.slice(0, 2).map(tag => <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(248,163,3,0.11)', color: '#F8A303' }}>{tag}</span>)}</div>
-                  <p className="text-xs font-bold" style={{ color: contact.consent ? '#0ABD78' : '#FF4757' }}>{contact.consent ? 'Opt-in' : 'Revisar'}</p>
-                </div>
+                </button>
               ))}
             </div>
-          </section>
-        )}
+          </aside>
 
-        {tab === 'agente' && (
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <div className="xl:col-span-3 rounded-2xl p-5"
-              style={{ background: 'rgba(10,189,120,0.07)', border: '1px solid rgba(10,189,120,0.18)' }}>
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <p className="text-lg font-extrabold text-white">Central de comando da Sofi no WhatsApp</p>
-                  <p className="text-sm text-white/50 mt-1">Escolha se ela responde sozinha, só sugere respostas ou pausa para você assumir.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setAutomationMode('auto')} disabled={liveBusy}
-                    className="px-4 py-2 rounded-xl text-sm font-extrabold text-black"
-                    style={{ background: liveStatus?.automation?.mode === 'auto' ? '#0ABD78' : '#F8A303' }}>
-                    IA responde tudo
-                  </button>
-                  <button onClick={() => setAutomationMode('assist')} disabled={liveBusy}
-                    className="px-4 py-2 rounded-xl text-sm font-bold text-white/70"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    Só sugerir
-                  </button>
-                  <button onClick={pauseAndAssume} disabled={liveBusy}
-                    className="px-4 py-2 rounded-xl text-sm font-extrabold"
-                    style={{ background: 'rgba(255,71,87,0.13)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.25)' }}>
-                    Pausar e eu assumo
-                  </button>
-                </div>
+          {/* Área do chat */}
+          <div className="flex-1 flex flex-col min-w-0 rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+
+            {!selected ? (
+              /* Estado vazio */
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-sm text-white/25">Selecione um contato para ver a conversa</p>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_220px] gap-3 mt-5">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-2">Tom da Sofi</p>
-                  <input value={toneInput} onChange={e => setToneInput(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl text-sm text-white outline-none"
-                    style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.09)' }} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-white/35 mb-2">Corrigir ou treinar</p>
-                  <input value={trainingInput} onChange={e => setTrainingInput(e.target.value)}
-                    placeholder="Ex.: quando perguntarem preço, ofereça visita antes..."
-                    className="w-full px-4 py-3 rounded-2xl text-sm text-white outline-none"
-                    style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.09)' }} />
-                </div>
-                <button onClick={addTraining} disabled={liveBusy || !trainingInput.trim()}
-                  className="self-end px-4 py-3 rounded-2xl text-sm font-extrabold text-black disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-                  Salvar treino
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-                {[
-                  { label: 'Modo', value: liveStatus?.automation?.mode || 'pausado' },
-                  { label: 'Respostas IA', value: liveStatus?.autoReplies || 0 },
-                  { label: 'Handoffs', value: liveStatus?.handoffs || 0 },
-                  { label: 'Status', value: liveStatus?.ready ? 'conectado' : 'aguardando' },
-                ].map(item => (
-                  <div key={item.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.045)' }}>
-                    <p className="text-[10px] uppercase tracking-widest text-white/30">{item.label}</p>
-                    <p className="text-sm font-extrabold text-white mt-1">{item.value}</p>
+            ) : (
+              <>
+                {/* Header do chat */}
+                <div className="px-4 py-3 border-b flex items-center gap-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-black font-extrabold shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                    {(selected.name || '?').charAt(0).toUpperCase()}
                   </div>
-                ))}
-              </div>
-              <div className="mt-4 rounded-2xl p-4" style={{ background: 'rgba(0,0,0,0.14)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-xs font-extrabold text-white/70 mb-2">Memória ativa de treinamento</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {(liveStatus?.automation?.training || []).slice(0, 8).map((item, index) => (
-                    <p key={`${item}-${index}`} className="text-xs text-white/50 leading-5">• {item}</p>
-                  ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-extrabold text-white truncate">{selected.name}</p>
+                    <p className="text-[11px] text-white/35">{selected.phone}</p>
+                  </div>
+                  <button
+                    onClick={() => loadMessages(selected.chatId)}
+                    title="Recarregar mensagens"
+                    className="p-2 rounded-xl text-white/40 hover:text-white/70 transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <ArrowPathIcon className={`w-4 h-4 ${loadingMsgs ? 'animate-spin' : ''}`} />
+                  </button>
                 </div>
-              </div>
-            </div>
-            {[
-              { title: 'Agente humanizado', text: 'Responde rápido, reconhece intenção, pede dados faltantes e transfere para humano quando necessário.', icon: SparklesIcon, color: '#F8A303' },
-              { title: 'Governança e handoff', text: 'Define quando a Sofi pode responder, quando precisa aprovação e para qual etapa do Kanban mover.', icon: FunnelIcon, color: '#4A9EFF' },
-              { title: 'Memória de atendimento', text: 'Resume histórico, destaca objeções, sentiment, próximos passos e tarefas do atendimento.', icon: ClipboardDocumentCheckIcon, color: '#0ABD78' },
-            ].map(item => {
-              const Icon = item.icon
-              return (
-              <div key={item.title} className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <Icon className="w-7 h-7 mb-4" style={{ color: item.color }} />
-                <p className="text-base font-extrabold text-white">{item.title}</p>
-                <p className="text-sm text-white/45 leading-6 mt-2">{item.text}</p>
-              </div>
-              )
-            })}
-            <div className="xl:col-span-3 rounded-2xl p-5" style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.16)' }}>
-              <p className="text-base font-extrabold text-white">Integração técnica whatsapp-web.js</p>
-              <p className="text-sm text-white/55 leading-6 mt-2">
-                O cockpit já está pronto para operar. A conexão real com WhatsApp Web deve rodar no backend/Fly com sessão persistente, LocalAuth ou RemoteAuth,
-                eventos de QR/ready/message e fila de envio. No Vercel a interface consome esse serviço via API.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
-                {['QR + sessão', 'Eventos em tempo real', 'Fila anti-spam', 'Webhooks para CRM'].map(step => (
-                  <div key={step} className="rounded-xl p-3 text-xs font-bold text-white/65" style={{ background: 'rgba(255,255,255,0.045)' }}>{step}</div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+
+                {/* Mensagens */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  {loadingMsgs && (
+                    <div className="text-center py-8">
+                      <ArrowPathIcon className="w-5 h-5 animate-spin text-white/30 mx-auto" />
+                    </div>
+                  )}
+
+                  {!loadingMsgs && messages.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-xs text-white/25">Sem histórico armazenado</p>
+                      <p className="text-[10px] text-white/15 mt-1">Novas mensagens aparecerão aqui em tempo real</p>
+                    </div>
+                  )}
+
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.from === 'lead' ? 'justify-start' : 'justify-end'}`}>
+                      <div
+                        className="max-w-[75%] rounded-2xl px-4 py-2.5"
+                        style={{
+                          background:
+                            msg.from === 'lead'  ? 'rgba(255,255,255,0.08)' :
+                            msg.from === 'sofi'  ? 'rgba(248,163,3,0.15)'  :
+                                                   'rgba(10,189,120,0.18)',
+                          border: '1px solid rgba(255,255,255,0.07)',
+                        }}
+                      >
+                        {msg.from === 'sofi' && (
+                          <p className="text-[9px] font-extrabold text-amber-400 uppercase tracking-widest mb-1">Sofi IA</p>
+                        )}
+                        <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        <p className="text-[10px] text-white/25 mt-1 text-right">{msg.at}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Composer */}
+                <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                  {!waState?.ready && (
+                    <p className="text-xs text-amber-400/70 mb-2 text-center">
+                      WhatsApp desconectado — mensagem não será enviada
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      value={composer}
+                      onChange={e => setComposer(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+                      placeholder="Digite uma mensagem…"
+                      className="flex-1 px-4 py-2.5 rounded-2xl text-sm text-white outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.09)' }}
+                      disabled={sending}
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={!composer.trim() || sending}
+                      className="w-11 h-11 rounded-2xl flex items-center justify-center text-black disabled:opacity-40"
+                      style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                      {sending
+                        ? <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                        : <PaperAirplaneIcon className="w-5 h-5" />
+                      }
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   )
