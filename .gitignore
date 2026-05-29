@@ -45,6 +45,11 @@ mobile/*.lock
 backend/prisma/migrations/
 !backend/prisma/migrations/.gitkeep
 
+# WhatsApp — sessão e dados locais (nunca commitar)
+backend/session-local/
+backend/.wwebjs_auth/
+backend/cloudflared.exe
+
 # Build
 dist/
 
