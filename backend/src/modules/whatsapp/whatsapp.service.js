@@ -311,7 +311,7 @@ async function start() {
       logger: pino({ level: 'silent' }),
       generateHighQualityLinkPreview: false,
       browser: ['APS-EDU Sofi', 'Chrome', '120.0.0'],
-      syncFullHistory: true,   // solicita lista completa de chats ao WhatsApp
+      syncFullHistory: false,  // chats já persistidos em disco — não recarregar tudo na memória
       markOnlineOnConnect: false,
     })
 
