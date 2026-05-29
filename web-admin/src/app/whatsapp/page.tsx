@@ -419,10 +419,7 @@ export default function WhatsAppCrmPage() {
                 if (payload.ready) loadRealChats()
               } else if (currentEvent === 'message') {
                 // Mensagem chegou em tempo real
-                const rawPhone = (payload.chatId || '')
-                  .replace('@s.whatsapp.net', '')
-                  .replace('@c.us', '')
-                  .replace('@g.us', '')
+                const rawPhone = normalizePhone(payload.chatId || '')
                 const incoming: WaMessage = {
                   id: payload.id || crypto.randomUUID(),
                   contactId: rawPhone || payload.chatId,
