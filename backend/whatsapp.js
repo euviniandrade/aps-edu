@@ -61,6 +61,115 @@ function pusherPublish(eventName, data) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const PORT = 8081
+const INSTAGRAM_MEMORY_PATH = path.join(__dirname, 'instagram-memory.json')
+
+const DEFAULT_INSTAGRAM = {
+  connected: false,
+  businessId: process.env.INSTAGRAM_BUSINESS_ID || '',
+  verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN || '',
+  hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
+  automationEnabled: true,
+  requireFollowGate: false,
+  autoReplyTemplate: 'Oi {name}, vi seu comentário. Vou te enviar o material no Direct.',
+  followGateTemplate: 'Oi {name}, para liberar o material, siga o perfil e responda "LIBERAR" no Direct.',
+  rules: [
+    { id: 'material', keyword: 'material', action: 'dm_material', enabled: true, targetStage: 'Acompanhar' },
+    { id: 'orcamento', keyword: 'orcamento', action: 'lead_sales', enabled: true, targetStage: 'Hoje' },
+    { id: 'suporte', keyword: 'suporte', action: 'lead_support', enabled: true, targetStage: 'Acompanhar' },
+  ],
+  events: [],
+  conversations: {},
+}
+
+function loadInstagramState() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(INSTAGRAM_MEMORY_PATH, 'utf8'))
+    return {
+      ...DEFAULT_INSTAGRAM,
+      ...raw,
+      rules: Array.isArray(raw.rules) ? raw.rules : DEFAULT_INSTAGRAM.rules,
+      events: Array.isArray(raw.events) ? raw.events.slice(-200) : [],
+      conversations: raw.conversations && typeof raw.conversations === 'object' ? raw.conversations : {},
+    }
+  } catch {
+    return { ...DEFAULT_INSTAGRAM }
+  }
+}
+
+let instagramState = loadInstagramState()
+
+function saveInstagramState() {
+  try { fs.writeFileSync(INSTAGRAM_MEMORY_PATH, JSON.stringify(instagramState, null, 2)) } catch (e) {
+    console.error('[IG] Erro ao salvar estado:', e.message)
+  }
+}
+
+function addInstagramEvent(event) {
+  instagramState.events = [...instagramState.events, { id: crypto.randomUUID(), at: new Date().toISOString(), ...event }].slice(-200)
+  saveInstagramState()
+  pusherPublish('instagram_event', event)
+}
+
+async function instagramGraph(pathname, method = 'GET', body = null) {
+  const token = process.env.INSTAGRAM_PAGE_TOKEN || ''
+  if (!token) throw new Error('INSTAGRAM_PAGE_TOKEN ausente')
+  const version = process.env.INSTAGRAM_GRAPH_VERSION || 'v23.0'
+  const baseUrl = `https://graph.facebook.com/${version}/${pathname}`
+  const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}`
+  const reqInit = { method, headers: {} }
+  if (body && method !== 'GET') {
+    reqInit.headers['Content-Type'] = 'application/json'
+    reqInit.body = JSON.stringify(body)
+  }
+  const res = await fetch(url, reqInit)
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(data)}`)
+  return data
+}
+
+function findInstagramRule(text) {
+  const normalized = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  return (instagramState.rules || []).find(rule => {
+    if (!rule?.enabled || !rule.keyword) return false
+    const key = String(rule.keyword).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    return normalized.includes(key)
+  }) || null
+}
+
+async function sendInstagramDm(igUserId, text) {
+  const businessId = process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId
+  if (!businessId) throw new Error('INSTAGRAM_BUSINESS_ID ausente')
+  return instagramGraph(`${businessId}/messages`, 'POST', {
+    recipient: { id: String(igUserId) },
+    message: { text: String(text || '') },
+    messaging_type: 'RESPONSE',
+  })
+}
+
+async function sendInstagramPrivateReply(commentId, text) {
+  return instagramGraph(`${commentId}/private_replies`, 'POST', { message: String(text || '') })
+}
+
+function addInstagramConversation(igUserId, payload) {
+  const id = String(igUserId || '')
+  if (!id) return
+  const current = instagramState.conversations[id] || { userId: id, name: payload.name || '', tags: [], stage: 'Inbox', messages: [] }
+  const next = {
+    ...current,
+    name: payload.name || current.name || '',
+    stage: payload.stage || current.stage || 'Inbox',
+    tags: payload.tags || current.tags || [],
+    updatedAt: new Date().toISOString(),
+    messages: [...(current.messages || []), {
+      at: new Date().toISOString(),
+      direction: payload.direction || 'in',
+      text: payload.text || '',
+      source: payload.source || 'instagram',
+    }].slice(-100),
+  }
+  instagramState.conversations[id] = next
+  saveInstagramState()
+}
 
 function normPhone(jid) {
   return String(jid || '').replace(/@[^@]*$/, '').replace(/\D/g, '')
@@ -677,13 +786,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 
   const url = req.url || '/'
+  const parsedUrl = new URL(url, 'http://localhost:8081')
+  const pathname = parsedUrl.pathname
   const json = d => { res.writeHead(200); res.end(JSON.stringify(d)) }
   const params = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '')
 
   try {
 
     // ── Estado de conexão ───────────────────────────────────────────────────
-    if (url.includes('/instance/connectionState') || url === '/status') {
+    if (url.includes('/instance/connectionState') || pathname === '/status') {
       json({ instance: { state: isReady ? 'open' : qrBase64 ? 'qr' : 'close' } })
       return
     }
@@ -983,7 +1094,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ── Estatísticas do banco (debug) ──────────────────────────────────────
-    if (url === '/db/stats') {
+    if (pathname === '/db/stats') {
       const [chats, messages] = await Promise.all([
         prisma.waChat.count(),
         prisma.waMessage.count(),
@@ -1005,6 +1116,146 @@ const server = http.createServer(async (req, res) => {
           admin: p.isAdmin || false,
         })),
       }))))
+      return
+    }
+
+    if (pathname === '/instagram/webhook' && req.method === 'GET') {
+      const mode = parsedUrl.searchParams.get('hub.mode') || ''
+      const token = parsedUrl.searchParams.get('hub.verify_token') || ''
+      const challenge = parsedUrl.searchParams.get('hub.challenge') || ''
+      const expected = process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken || ''
+      if (mode === 'subscribe' && token && token === expected) {
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end(challenge)
+      } else {
+        res.writeHead(403, { 'Content-Type': 'text/plain' })
+        res.end('forbidden')
+      }
+      return
+    }
+
+    if (pathname === '/instagram/webhook' && req.method === 'POST') {
+      const bodyRaw = await readBody(req)
+      let payload = {}
+      try { payload = JSON.parse(bodyRaw || '{}') } catch {}
+      addInstagramEvent({ type: 'webhook_received', payload: { object: payload.object || '', entries: (payload.entry || []).length } })
+      const entries = Array.isArray(payload.entry) ? payload.entry : []
+      for (const entry of entries) {
+        const changes = Array.isArray(entry.changes) ? entry.changes : []
+        for (const change of changes) {
+          const field = change?.field || ''
+          const value = change?.value || {}
+          if (field === 'comments') {
+            const text = String(value.text || '')
+            const fromId = String(value.from?.id || value.from?.user_id || '')
+            const fromName = String(value.from?.username || value.from?.name || '')
+            const commentId = String(value.id || value.comment_id || '')
+            const rule = findInstagramRule(text)
+            addInstagramConversation(fromId, { direction: 'in', source: 'instagram_comment', text, name: fromName, stage: rule?.targetStage || 'Inbox' })
+            addInstagramEvent({ type: 'comment', fromId, fromName, text, commentId, ruleId: rule?.id || null })
+            if (instagramState.automationEnabled && rule) {
+              const personalized = String(instagramState.autoReplyTemplate || '').replace('{name}', fromName || 'amigo(a)')
+              try {
+                if (instagramState.requireFollowGate) {
+                  const gateMsg = String(instagramState.followGateTemplate || '').replace('{name}', fromName || 'amigo(a)')
+                  if (commentId) await sendInstagramPrivateReply(commentId, gateMsg)
+                  addInstagramEvent({ type: 'follow_gate_sent', fromId, ruleId: rule.id })
+                } else {
+                  if (commentId) await sendInstagramPrivateReply(commentId, personalized)
+                  if (fromId) await sendInstagramDm(fromId, personalized)
+                  addInstagramEvent({ type: 'automation_sent', fromId, ruleId: rule.id })
+                }
+              } catch (e) {
+                addInstagramEvent({ type: 'automation_error', fromId, ruleId: rule.id, error: e.message })
+              }
+            }
+          }
+          if (field === 'messages') {
+            const message = value.message || {}
+            const text = String(message.text || value.text || '')
+            const fromId = String(value.from?.id || '')
+            const fromName = String(value.from?.username || value.from?.name || '')
+            const rule = findInstagramRule(text)
+            addInstagramConversation(fromId, { direction: 'in', source: 'instagram_dm', text, name: fromName, stage: rule?.targetStage || 'Inbox' })
+            addInstagramEvent({ type: 'dm_received', fromId, fromName, text, ruleId: rule?.id || null })
+          }
+        }
+      }
+      json({ ok: true })
+      return
+    }
+
+    if (pathname === '/instagram/state' && req.method === 'GET') {
+      json({
+        ok: true,
+        connected: !!instagramState.connected,
+        businessId: process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
+        hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
+        hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
+        automationEnabled: !!instagramState.automationEnabled,
+        requireFollowGate: !!instagramState.requireFollowGate,
+        rules: instagramState.rules || [],
+      })
+      return
+    }
+
+    if (pathname === '/instagram/rules' && req.method === 'GET') {
+      json({ ok: true, rules: instagramState.rules || [] })
+      return
+    }
+
+    if (pathname === '/instagram/rules' && req.method === 'POST') {
+      const body = await readBody(req)
+      let reqBody = {}
+      try { reqBody = JSON.parse(body || '{}') } catch {}
+      const rules = Array.isArray(reqBody.rules) ? reqBody.rules : []
+      instagramState.rules = rules.slice(0, 50).map((rule, idx) => ({
+        id: String(rule.id || `rule_${idx + 1}`),
+        keyword: String(rule.keyword || '').trim(),
+        action: String(rule.action || 'dm_material').trim(),
+        enabled: rule.enabled !== false,
+        targetStage: String(rule.targetStage || 'Acompanhar'),
+      })).filter(r => r.keyword)
+      saveInstagramState()
+      json({ ok: true, rules: instagramState.rules })
+      return
+    }
+
+    if (pathname === '/instagram/control' && req.method === 'POST') {
+      const body = await readBody(req)
+      let reqBody = {}
+      try { reqBody = JSON.parse(body || '{}') } catch {}
+      if (typeof reqBody.automationEnabled === 'boolean') instagramState.automationEnabled = reqBody.automationEnabled
+      if (typeof reqBody.requireFollowGate === 'boolean') instagramState.requireFollowGate = reqBody.requireFollowGate
+      if (typeof reqBody.autoReplyTemplate === 'string') instagramState.autoReplyTemplate = reqBody.autoReplyTemplate.slice(0, 500)
+      if (typeof reqBody.followGateTemplate === 'string') instagramState.followGateTemplate = reqBody.followGateTemplate.slice(0, 500)
+      saveInstagramState()
+      json({ ok: true, automationEnabled: instagramState.automationEnabled, requireFollowGate: instagramState.requireFollowGate })
+      return
+    }
+
+    if (pathname === '/instagram/events' && req.method === 'GET') {
+      json({ ok: true, events: (instagramState.events || []).slice(-100).reverse() })
+      return
+    }
+
+    if (pathname === '/instagram/conversations' && req.method === 'GET') {
+      const list = Object.values(instagramState.conversations || {}).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+      json({ ok: true, conversations: list.slice(0, 500) })
+      return
+    }
+
+    if (pathname === '/instagram/send-dm' && req.method === 'POST') {
+      const body = await readBody(req)
+      let reqBody = {}
+      try { reqBody = JSON.parse(body || '{}') } catch {}
+      const userId = String(reqBody.userId || '').trim()
+      const text = String(reqBody.text || '').trim()
+      if (!userId || !text) { res.writeHead(400); res.end(JSON.stringify({ error: 'userId e text obrigatorios' })); return }
+      const result = await sendInstagramDm(userId, text)
+      addInstagramConversation(userId, { direction: 'out', source: 'instagram_dm', text })
+      addInstagramEvent({ type: 'dm_sent', userId, text })
+      json({ ok: true, result })
       return
     }
 

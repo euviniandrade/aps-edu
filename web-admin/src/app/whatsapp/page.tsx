@@ -10,11 +10,11 @@ import {
   UserGroupIcon, ChatBubbleLeftRightIcon, FunnelIcon,
   ArrowUpTrayIcon, PlayIcon, StopIcon, ClipboardDocumentIcon,
   ArrowDownTrayIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon,
-  SparklesIcon,
+  SparklesIcon, CommandLineIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
+type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai' | 'instagram'
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -52,6 +52,36 @@ interface AiState {
   playbooks?: Record<'vendas' | 'suporte' | 'pessoal', string>
   training: string[]
   hasGeminiKey?: boolean
+}
+
+interface InstagramRule {
+  id: string
+  keyword: string
+  action: string
+  enabled: boolean
+  targetStage: string
+}
+
+interface InstagramState {
+  connected: boolean
+  businessId: string
+  hasPageToken: boolean
+  hasVerifyToken: boolean
+  automationEnabled: boolean
+  requireFollowGate: boolean
+  rules: InstagramRule[]
+}
+
+interface InstagramEvent {
+  id?: string
+  at?: string
+  type: string
+  fromId?: string
+  fromName?: string
+  text?: string
+  ruleId?: string | null
+  userId?: string
+  error?: string
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -214,6 +244,12 @@ export default function WhatsAppPage() {
   const [aiSuggesting, setAiSuggesting] = useState(false)
   const [aiTrainingText, setAiTrainingText] = useState('')
   const [playbookKey, setPlaybookKey] = useState<'vendas' | 'suporte' | 'pessoal'>('suporte')
+  const [instagramState, setInstagramState] = useState<InstagramState | null>(null)
+  const [instagramEvents, setInstagramEvents] = useState<InstagramEvent[]>([])
+  const [instagramRules, setInstagramRules] = useState<InstagramRule[]>([])
+  const [instagramBusy, setInstagramBusy] = useState(false)
+  const [igDmUserId, setIgDmUserId] = useState('')
+  const [igDmText, setIgDmText] = useState('Olá! Obrigado pelo comentário. Vou te enviar o material por aqui.')
 
   const messagesEndRef      = useRef<HTMLDivElement>(null)
   const sseAbort            = useRef<AbortController | null>(null)
@@ -662,6 +698,64 @@ export default function WhatsAppPage() {
 
   useEffect(() => { loadAiState() }, [])
 
+  const loadInstagram = async () => {
+    try {
+      const [stateData, rulesData, eventsData] = await Promise.all([
+        apiFetch('instagram-state'),
+        apiFetch('instagram-rules'),
+        apiFetch('instagram-events'),
+      ])
+      setInstagramState({
+        connected: !!stateData.connected,
+        businessId: stateData.businessId || '',
+        hasPageToken: !!stateData.hasPageToken,
+        hasVerifyToken: !!stateData.hasVerifyToken,
+        automationEnabled: !!stateData.automationEnabled,
+        requireFollowGate: !!stateData.requireFollowGate,
+        rules: Array.isArray(stateData.rules) ? stateData.rules : [],
+      })
+      setInstagramRules(Array.isArray(rulesData.rules) ? rulesData.rules : [])
+      setInstagramEvents(Array.isArray(eventsData.events) ? eventsData.events : [])
+    } catch {}
+  }
+
+  const saveInstagramRules = async () => {
+    setInstagramBusy(true)
+    try {
+      const data = await apiFetch('instagram-rules', { method: 'POST', body: JSON.stringify({ rules: instagramRules }) })
+      setInstagramRules(Array.isArray(data.rules) ? data.rules : instagramRules)
+    } finally { setInstagramBusy(false) }
+  }
+
+  const updateInstagramControl = async (next: Partial<InstagramState>) => {
+    if (!instagramState) return
+    const merged = { ...instagramState, ...next }
+    setInstagramState(merged)
+    setInstagramBusy(true)
+    try {
+      await apiFetch('instagram-control', {
+        method: 'POST',
+        body: JSON.stringify({
+          automationEnabled: merged.automationEnabled,
+          requireFollowGate: merged.requireFollowGate,
+        }),
+      })
+    } finally { setInstagramBusy(false) }
+  }
+
+  const sendInstagramDmTest = async () => {
+    if (!igDmUserId.trim() || !igDmText.trim()) return
+    setInstagramBusy(true)
+    try {
+      await apiFetch('instagram-send-dm', {
+        method: 'POST',
+        body: JSON.stringify({ userId: igDmUserId.trim(), text: igDmText.trim() }),
+      })
+      await loadInstagram()
+      setIgDmText('')
+    } finally { setInstagramBusy(false) }
+  }
+
   // ── Envio em massa ──────────────────────────────────────────────────────────
   const addMassFromPaste = () => {
     const lines = massPasteText.trim().split(/\r?\n/).filter(Boolean)
@@ -760,8 +854,12 @@ export default function WhatsAppPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Tabs */}
-            {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
-              <button key={id} onClick={() => { setTab(id); if (id === 'groups' && groups.length === 0) loadGroups() }}
+            {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon],['instagram','Instagram',CommandLineIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
+              <button key={id} onClick={() => {
+                setTab(id)
+                if (id === 'groups' && groups.length === 0) loadGroups()
+                if (id === 'instagram') loadInstagram()
+              }}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
                 style={{
                   background: tab === id ? 'rgba(10,189,120,0.18)' : 'rgba(255,255,255,0.06)',
@@ -1422,6 +1520,103 @@ export default function WhatsAppPage() {
                   <div key={`${item}-${i}`} className="rounded-2xl p-3"
                     style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <p className="text-xs text-white/75 leading-relaxed">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'instagram' && (
+          <div className="flex-1 grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-3 overflow-hidden min-h-0">
+            <div className="rounded-2xl p-4 overflow-y-auto"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <h3 className="text-base font-extrabold text-white mb-2">Instagram Automação</h3>
+              <p className="text-xs text-white/45 mb-3">Comentários por palavra-chave, DM automática e gate de seguir perfil.</p>
+              <div className="space-y-3">
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-xs text-white/70">Business ID: <span className="text-white">{instagramState?.businessId || '(não configurado)'}</span></p>
+                  <p className="text-xs mt-1" style={{ color: instagramState?.hasPageToken ? '#0ABD78' : '#F8A303' }}>
+                    Token de página: {instagramState?.hasPageToken ? 'ativo' : 'pendente'}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: instagramState?.hasVerifyToken ? '#0ABD78' : '#F8A303' }}>
+                    Verify token: {instagramState?.hasVerifyToken ? 'ativo' : 'pendente'}
+                  </p>
+                </div>
+                <label className="flex items-center justify-between text-xs text-white/80">
+                  <span>Automação ativa</span>
+                  <input type="checkbox" checked={!!instagramState?.automationEnabled}
+                    onChange={e => updateInstagramControl({ automationEnabled: e.target.checked })} />
+                </label>
+                <label className="flex items-center justify-between text-xs text-white/80">
+                  <span>Exigir follow antes do material</span>
+                  <input type="checkbox" checked={!!instagramState?.requireFollowGate}
+                    onChange={e => updateInstagramControl({ requireFollowGate: e.target.checked })} />
+                </label>
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-white">Regras por palavra-chave</p>
+                  {instagramRules.map((rule, idx) => (
+                    <div key={rule.id || idx} className="grid grid-cols-[1fr_110px_70px] gap-2">
+                      <input value={rule.keyword}
+                        onChange={e => setInstagramRules(prev => prev.map((r, i) => i === idx ? { ...r, keyword: e.target.value } : r))}
+                        className="px-2 py-2 rounded-lg text-xs text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                      <input value={rule.targetStage || 'Acompanhar'}
+                        onChange={e => setInstagramRules(prev => prev.map((r, i) => i === idx ? { ...r, targetStage: e.target.value } : r))}
+                        className="px-2 py-2 rounded-lg text-xs text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                      <label className="text-[11px] text-white/70 flex items-center justify-center gap-1">
+                        <input type="checkbox" checked={rule.enabled !== false}
+                          onChange={e => setInstagramRules(prev => prev.map((r, i) => i === idx ? { ...r, enabled: e.target.checked } : r))} />
+                        on
+                      </label>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <button onClick={() => setInstagramRules(prev => [...prev, { id: crypto.randomUUID(), keyword: '', action: 'dm_material', enabled: true, targetStage: 'Acompanhar' }])}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-white"
+                      style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      + regra
+                    </button>
+                    <button onClick={saveInstagramRules} disabled={instagramBusy}
+                      className="px-3 py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                      style={{ background: '#F8A303' }}>
+                      Salvar regras
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4 overflow-y-auto"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <h3 className="text-base font-extrabold text-white mb-3">Direct e eventos</h3>
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-3">
+                <input value={igDmUserId} onChange={e => setIgDmUserId(e.target.value)} placeholder="ID do usuário Instagram"
+                  className="px-3 py-2 rounded-xl text-xs text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <input value={igDmText} onChange={e => setIgDmText(e.target.value)} placeholder="Mensagem"
+                  className="px-3 py-2 rounded-xl text-xs text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <button onClick={sendInstagramDmTest} disabled={instagramBusy || !igDmUserId.trim() || !igDmText.trim()}
+                  className="px-3 py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                  Enviar DM
+                </button>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-white/80">Últimos eventos</p>
+                <button onClick={loadInstagram} className="text-xs text-amber-300">Atualizar</button>
+              </div>
+              <div className="space-y-2">
+                {instagramEvents.length === 0 && <p className="text-xs text-white/35">Sem eventos ainda.</p>}
+                {instagramEvents.map((ev, i) => (
+                  <div key={`${ev.id || i}-${ev.type}`} className="rounded-xl p-2"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <p className="text-[11px] text-white font-bold">{ev.type}</p>
+                    <p className="text-[11px] text-white/50">{ev.fromName || ev.fromId || ev.userId || ''}</p>
+                    {!!ev.text && <p className="text-[11px] text-white/70 mt-1 line-clamp-2">{ev.text}</p>}
+                    {!!ev.error && <p className="text-[11px] text-red-300 mt-1">{ev.error}</p>}
                   </div>
                 ))}
               </div>

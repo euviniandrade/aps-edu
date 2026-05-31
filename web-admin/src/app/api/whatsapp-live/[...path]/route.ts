@@ -286,6 +286,34 @@ async function getSegments() {
   return evoGet('/crm/segments')
 }
 
+async function getInstagramState() {
+  return evoGet('/instagram/state')
+}
+
+async function getInstagramRules() {
+  return evoGet('/instagram/rules')
+}
+
+async function getInstagramEvents() {
+  return evoGet('/instagram/events')
+}
+
+async function getInstagramConversations() {
+  return evoGet('/instagram/conversations')
+}
+
+async function updateInstagramRules(rules: any[]) {
+  return evoPost('/instagram/rules', { rules })
+}
+
+async function updateInstagramControl(body: any) {
+  return evoPost('/instagram/control', body)
+}
+
+async function sendInstagramDm(userId: string, text: string) {
+  return evoPost('/instagram/send-dm', { userId, text })
+}
+
 async function deleteMessage(chatId: string, msgId: string, fromMe: boolean) {
   try {
     const r = await fetch(`${BACKEND_URL}/chat/deleteMessage/${INSTANCE}`, {
@@ -424,6 +452,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
     if (p0 === 'contacts-all') return NextResponse.json(await getAllContacts())
     if (p0 === 'ai-state') return NextResponse.json(await getAiState())
     if (p0 === 'segments') return NextResponse.json(await getSegments())
+    if (p0 === 'instagram-state') return NextResponse.json(await getInstagramState())
+    if (p0 === 'instagram-rules') return NextResponse.json(await getInstagramRules())
+    if (p0 === 'instagram-events') return NextResponse.json(await getInstagramEvents())
+    if (p0 === 'instagram-conversations') return NextResponse.json(await getInstagramConversations())
     if (p0 === 'messages') {
       const chatId = req.nextUrl.searchParams.get('chatId') || ''
       const limit  = Number(req.nextUrl.searchParams.get('limit') || '60')
@@ -504,6 +536,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ path: stri
     if (p0 === 'delete-message') {
       const b = await req.json()
       return NextResponse.json(await deleteMessage(b.chatId || '', b.msgId || '', b.fromMe !== false))
+    }
+    if (p0 === 'instagram-rules') {
+      const b = await req.json()
+      return NextResponse.json(await updateInstagramRules(Array.isArray(b.rules) ? b.rules : []))
+    }
+    if (p0 === 'instagram-control') {
+      const b = await req.json()
+      return NextResponse.json(await updateInstagramControl(b))
+    }
+    if (p0 === 'instagram-send-dm') {
+      const b = await req.json()
+      return NextResponse.json(await sendInstagramDm(b.userId || '', b.text || ''))
     }
     return NextResponse.json({ error: `Endpoint desconhecido: ${p0}` }, { status: 404 })
   } catch (e: any) {
