@@ -278,6 +278,10 @@ async function setAiHandoff(chatId: string, paused: boolean) {
   return evoPost('/ai/handoff', { chatId, paused })
 }
 
+async function suggestAiReply(chatId: string, text: string) {
+  return evoPost('/ai/suggest', { chatId, text })
+}
+
 async function getSegments() {
   return evoGet('/crm/segments')
 }
@@ -492,6 +496,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ path: stri
     if (p0 === 'ai-handoff') {
       const b = await req.json()
       return NextResponse.json(await setAiHandoff(b.chatId || '', b.paused !== false))
+    }
+    if (p0 === 'ai-suggest') {
+      const b = await req.json()
+      return NextResponse.json(await suggestAiReply(b.chatId || '', b.text || ''))
     }
     if (p0 === 'delete-message') {
       const b = await req.json()

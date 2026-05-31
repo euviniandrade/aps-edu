@@ -48,6 +48,8 @@ interface AiState {
   tone: string
   maxChars: number
   allowGroups: boolean
+  activePlaybook?: string
+  playbooks?: Record<'vendas' | 'suporte' | 'pessoal', string>
   training: string[]
   hasGeminiKey?: boolean
 }
@@ -209,7 +211,9 @@ export default function WhatsAppPage() {
   // Sofi IA no WhatsApp
   const [aiState, setAiState] = useState<AiState | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
+  const [aiSuggesting, setAiSuggesting] = useState(false)
   const [aiTrainingText, setAiTrainingText] = useState('')
+  const [playbookKey, setPlaybookKey] = useState<'vendas' | 'suporte' | 'pessoal'>('suporte')
 
   const messagesEndRef      = useRef<HTMLDivElement>(null)
   const sseAbort            = useRef<AbortController | null>(null)
@@ -374,6 +378,19 @@ export default function WhatsAppPage() {
           return [{ chatId, phone, name: pushName || phone, lastMessage: text, lastAt: at, unread: fromMe ? 0 : 1, timestamp: Number(ts) || nowTs }, ...prev]
         })
       }
+    })
+
+    channel.bind('crm_stage_updated', (payload: any) => {
+      const stage = payload?.stage as Stage
+      if (!STAGES.includes(stage)) return
+      const chatId = payload?.chatId || ''
+      const phone = payload?.phone || normPhone(chatId)
+      setStages(prev => {
+        const next = { ...prev, [phone]: stage }
+        saveStages(next)
+        return next
+      })
+      setContacts(prev => prev.map(c => (c.chatId === chatId || c.phone === phone) ? { ...c, stage } : c))
     })
 
     pusher.connection.bind('connected',    () => setSseStatus('live'))
@@ -578,14 +595,22 @@ export default function WhatsAppPage() {
   const loadAiState = async () => {
     try {
       const data = await apiFetch('ai-state')
+      const activePlaybook = (['vendas','suporte','pessoal'].includes(data.activePlaybook) ? data.activePlaybook : 'suporte') as 'vendas' | 'suporte' | 'pessoal'
       setAiState({
         mode: data.mode || 'assist',
         tone: data.tone || 'humana, educada e objetiva',
         maxChars: data.maxChars || 700,
         allowGroups: !!data.allowGroups,
+        activePlaybook,
+        playbooks: {
+          vendas: data.playbooks?.vendas || '',
+          suporte: data.playbooks?.suporte || '',
+          pessoal: data.playbooks?.pessoal || '',
+        },
         training: Array.isArray(data.training) ? data.training : [],
         hasGeminiKey: !!data.hasGeminiKey,
       })
+      setPlaybookKey(activePlaybook)
     } catch {}
   }
 
@@ -623,6 +648,16 @@ export default function WhatsAppPage() {
   const setChatHandoff = async (paused: boolean) => {
     if (!selected) return
     await apiFetch('ai-handoff', { method: 'POST', body: JSON.stringify({ chatId: selected.chatId, paused }) }).catch(() => {})
+  }
+
+  const suggestAiReply = async (baseText?: string) => {
+    if (!selected || aiSuggesting) return
+    setAiSuggesting(true)
+    try {
+      const text = baseText || [...messages].reverse().find(m => m.from === 'lead')?.text || selected.lastMessage || ''
+      const data = await apiFetch('ai-suggest', { method: 'POST', body: JSON.stringify({ chatId: selected.chatId, text }) })
+      if (data?.reply) setComposer(data.reply)
+    } finally { setAiSuggesting(false) }
   }
 
   useEffect(() => { loadAiState() }, [])
@@ -957,13 +992,22 @@ export default function WhatsAppPage() {
                         </div>
                         {/* Botão deletar — lado direito para mensagens do lead */}
                         {msg.from === 'lead' && (
-                          <button
-                            onClick={() => deleteMsg(msg.id, false)}
-                            title="Deletar mensagem"
-                            className="opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-lg shrink-0"
-                            style={{ color: 'rgba(239,68,68,0.5)' }}>
-                            <TrashIcon className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity shrink-0">
+                            <button
+                              onClick={() => suggestAiReply(msg.text)}
+                              title="Responder com IA"
+                              className="p-1 rounded-lg"
+                              style={{ color: '#F8A303', background: 'rgba(248,163,3,0.10)' }}>
+                              <SparklesIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteMsg(msg.id, false)}
+                              title="Deletar mensagem"
+                              className="p-1 rounded-lg"
+                              style={{ color: 'rgba(239,68,68,0.5)' }}>
+                              <TrashIcon className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -974,6 +1018,12 @@ export default function WhatsAppPage() {
                   <div className="p-3 border-t shrink-0" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
                     {!waState?.ready && <p className="text-xs text-amber-400/70 mb-2 text-center">WhatsApp desconectado</p>}
                     <div className="flex gap-2">
+                      <button onClick={() => suggestAiReply()} disabled={!selected || aiSuggesting}
+                        title="Gerar resposta com Sofi"
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center disabled:opacity-40 shrink-0"
+                        style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.25)' }}>
+                        {aiSuggesting ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <SparklesIcon className="w-5 h-5" />}
+                      </button>
                       <input value={composer} onChange={e => setComposer(e.target.value)}
                         onKeyDown={e => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -1305,14 +1355,56 @@ export default function WhatsAppPage() {
               style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-base font-extrabold text-white">Treinamento rapido</h3>
-                  <p className="text-xs text-white/40">Adicione regras, respostas, contexto da APS e padroes de atendimento.</p>
+                  <h3 className="text-base font-extrabold text-white">Playbooks e treinamento</h3>
+                  <p className="text-xs text-white/40">Defina como a Sofi age em vendas, suporte e conversas pessoais.</p>
                 </div>
                 <span className="px-2 py-1 rounded-lg text-[10px] font-extrabold"
                   style={{ background: aiState?.hasGeminiKey ? 'rgba(10,189,120,0.12)' : 'rgba(239,68,68,0.12)', color: aiState?.hasGeminiKey ? '#0ABD78' : '#EF4444' }}>
                   {aiState?.hasGeminiKey ? 'Gemini ativo' : 'Sem chave Gemini'}
                 </span>
               </div>
+
+              <div className="rounded-2xl p-3 mb-4"
+                style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.18)' }}>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {(['vendas','suporte','pessoal'] as const).map(key => (
+                    <button key={key}
+                      onClick={() => {
+                        setPlaybookKey(key)
+                        setAiState(prev => prev ? { ...prev, activePlaybook: key } : prev)
+                      }}
+                      className="rounded-xl py-2 text-xs font-extrabold capitalize"
+                      style={{
+                        background: playbookKey === key ? 'rgba(248,163,3,0.18)' : 'rgba(255,255,255,0.05)',
+                        color: playbookKey === key ? '#F8A303' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${playbookKey === key ? 'rgba(248,163,3,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                      }}>
+                      {key}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={aiState?.playbooks?.[playbookKey] || ''}
+                  onChange={e => setAiState(prev => prev ? {
+                    ...prev,
+                    playbooks: { ...(prev.playbooks || { vendas: '', suporte: '', pessoal: '' }), [playbookKey]: e.target.value },
+                  } : prev)}
+                  rows={7}
+                  placeholder="Escreva regras, frases, limites, objeções e passos que a Sofi deve seguir neste cenário."
+                  className="w-full rounded-2xl px-3 py-2 text-sm text-white outline-none resize-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-[10px] text-white/35">
+                    Playbook ativo: <span className="font-bold text-amber-300">{aiState?.activePlaybook || 'suporte'}</span>
+                  </p>
+                  <button onClick={updateAiSettings} disabled={aiBusy || !aiState}
+                    className="px-4 py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#F8A303,#FCD34D)' }}>
+                    Salvar playbook
+                  </button>
+                </div>
+              </div>
+
               <div className="flex gap-2 mb-4">
                 <input value={aiTrainingText} onChange={e => setAiTrainingText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') addAiTraining() }}

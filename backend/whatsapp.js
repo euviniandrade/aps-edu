@@ -132,6 +132,24 @@ const DEFAULT_AI_CONFIG = {
   maxChars: 700,
   allowGroups: false,
   cooldownMs: 15000,
+  activePlaybook: 'suporte',
+  playbooks: {
+    vendas: [
+      'Objetivo: entender a necessidade, qualificar interesse e conduzir para o proximo passo.',
+      'Sempre confirme nome, unidade/interesse e melhor horario antes de prometer retorno.',
+      'Use perguntas curtas, linguagem calorosa e finalize com uma chamada clara para acao.',
+    ].join('\n'),
+    suporte: [
+      'Objetivo: resolver duvidas com rapidez, reduzir atrito e acionar humano quando necessario.',
+      'Peça dados essenciais sem expor informacoes sensiveis. Se houver risco, encaminhe ao responsavel.',
+      'Quando nao souber, diga que vai verificar e mantenha o contato informado.',
+    ].join('\n'),
+    pessoal: [
+      'Objetivo: ajudar Vinicius a organizar conversas, compromissos e follow-ups pessoais.',
+      'Se identificar prazo, pendencia, reuniao ou promessa, sugira uma acao objetiva.',
+      'Mantenha tom natural, discreto e direto, sem parecer robo.',
+    ].join('\n'),
+  },
   training: [
     'A Sofi representa o Departamento de Educacao da Associacao Paulista Sul.',
     'Responda em portugues do Brasil, com clareza e naturalidade.',
@@ -142,7 +160,12 @@ const DEFAULT_AI_CONFIG = {
 function loadAiConfig() {
   try {
     const saved = JSON.parse(fs.readFileSync(AI_MEMORY_PATH, 'utf8'))
-    return { ...DEFAULT_AI_CONFIG, ...saved, training: Array.isArray(saved.training) ? saved.training : DEFAULT_AI_CONFIG.training }
+    return {
+      ...DEFAULT_AI_CONFIG,
+      ...saved,
+      playbooks: { ...DEFAULT_AI_CONFIG.playbooks, ...(saved.playbooks || {}) },
+      training: Array.isArray(saved.training) ? saved.training : DEFAULT_AI_CONFIG.training,
+    }
   } catch {
     return { ...DEFAULT_AI_CONFIG }
   }
@@ -162,7 +185,137 @@ function getGeminiModel() {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!key) return null
   const genAI = new GoogleGenerativeAI(key)
-  return genAI.getGenerativeModel({ model: process.env.WHATSAPP_AI_MODEL || 'gemini-1.5-flash' })
+  return genAI.getGenerativeModel({ model: process.env.WHATSAPP_AI_MODEL || 'gemini-2.0-flash' })
+}
+
+async function postJson(url, headers, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
+  return r.json()
+}
+
+async function generateTextWithProviders(prompt) {
+  const maxTokens = Math.min(900, Math.max(120, Number(aiConfig.maxChars || 700)))
+
+  const gemini = getGeminiModel()
+  if (gemini) {
+    try {
+      const result = await gemini.generateContent(prompt)
+      const text = (result.response.text() || '').trim()
+      if (text) return { provider: 'gemini', text }
+    } catch (e) {
+      console.warn('[AI] Gemini indisponivel, tentando fallback:', e.message)
+    }
+  }
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (anthropicKey) {
+    try {
+      const data = await postJson('https://api.anthropic.com/v1/messages', {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      }, {
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      })
+      const text = (data.content || []).map(part => part.text || '').join('\n').trim()
+      if (text) return { provider: 'anthropic', text }
+    } catch (e) {
+      console.warn('[AI] Anthropic indisponivel, tentando fallback:', e.message)
+    }
+  }
+
+  const mistralKey = process.env.MISTRAL_API_KEY
+  if (mistralKey) {
+    try {
+      const data = await postJson('https://api.mistral.ai/v1/chat/completions', {
+        Authorization: `Bearer ${mistralKey}`,
+      }, {
+        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+      })
+      const text = data.choices?.[0]?.message?.content?.trim()
+      if (text) return { provider: 'mistral', text }
+    } catch (e) {
+      console.warn('[AI] Mistral indisponivel, tentando fallback:', e.message)
+    }
+  }
+
+  const deepseekKey = process.env.DEEPSEEK_API_KEY
+  if (deepseekKey) {
+    try {
+      const data = await postJson('https://api.deepseek.com/chat/completions', {
+        Authorization: `Bearer ${deepseekKey}`,
+      }, {
+        model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+      })
+      const text = data.choices?.[0]?.message?.content?.trim()
+      if (text) return { provider: 'deepseek', text }
+    } catch (e) {
+      console.warn('[AI] DeepSeek indisponivel, tentando fallback:', e.message)
+    }
+  }
+
+  const openRouterKey = process.env.OPENROUTER_API_KEY
+  if (openRouterKey) {
+    try {
+      const data = await postJson('https://openrouter.ai/api/v1/chat/completions', {
+        Authorization: `Bearer ${openRouterKey}`,
+        'HTTP-Referer': process.env.PUBLIC_APP_URL || 'https://aps-edu.vercel.app',
+        'X-Title': 'APS-EDU Sofi',
+      }, {
+        model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+      })
+      const text = data.choices?.[0]?.message?.content?.trim()
+      if (text) return { provider: 'openrouter', text }
+    } catch (e) {
+      console.warn('[AI] OpenRouter indisponivel, tentando fallback:', e.message)
+    }
+  }
+
+  const xaiKey = process.env.XAI_API_KEY
+  if (xaiKey) {
+    try {
+      const data = await postJson('https://api.x.ai/v1/chat/completions', {
+        Authorization: `Bearer ${xaiKey}`,
+      }, {
+        model: process.env.XAI_MODEL || 'grok-2-latest',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+      })
+      const text = data.choices?.[0]?.message?.content?.trim()
+      if (text) return { provider: 'xai', text }
+    } catch (e) {
+      console.warn('[AI] xAI indisponivel:', e.message)
+    }
+  }
+
+  return { provider: 'none', text: '' }
+}
+
+function buildLocalFallbackReply(incomingText, pushName) {
+  const text = String(incomingText || '').toLowerCase()
+  const name = pushName ? `, ${pushName}` : ''
+  if (/\b(urgente|hoje|prazo|agora|pendencia|pendência)\b/i.test(text)) {
+    return `Bom dia${name}! Recebi sua mensagem e vou priorizar isso agora. Pode me confirmar, por favor, qual é o ponto principal e o prazo que precisamos considerar?`
+  }
+  if (/\b(reuniao|reunião|agenda|horario|horário)\b/i.test(text)) {
+    return `Claro${name}! Vamos organizar. Pode me enviar o melhor horário e os pontos que precisam entrar na pauta?`
+  }
+  if (/\b(obrigado|obrigada|valeu|ok|resolvido)\b/i.test(text)) {
+    return `Perfeito${name}! Fico à disposição. Se surgir mais algum ponto, pode me chamar por aqui.`
+  }
+  return `Oi${name}! Recebi sua mensagem. Vou verificar com atenção e já te retorno com o próximo passo.`
 }
 
 function shouldHandoff(text) {
@@ -179,9 +332,9 @@ async function buildConversationContext(chatId) {
 }
 
 async function generateSofiReply({ chatId, incomingText, pushName }) {
-  const model = getGeminiModel()
-  if (!model) return ''
   const context = await buildConversationContext(chatId)
+  const activePlaybook = aiConfig.activePlaybook || 'suporte'
+  const playbook = aiConfig.playbooks?.[activePlaybook] || aiConfig.playbooks?.suporte || ''
   const prompt = [
     'Voce e a Sofi, agente de atendimento do APS-EDU no WhatsApp.',
     `Tom: ${aiConfig.tone}.`,
@@ -192,6 +345,9 @@ async function generateSofiReply({ chatId, incomingText, pushName }) {
     'Treinamento ativo:',
     ...aiConfig.training.map(item => `- ${item}`),
     '',
+    `Playbook ativo (${activePlaybook}):`,
+    playbook || '(sem playbook especifico)',
+    '',
     `Contato: ${pushName || 'sem nome'}`,
     'Historico recente:',
     context || '(sem historico)',
@@ -201,8 +357,79 @@ async function generateSofiReply({ chatId, incomingText, pushName }) {
     'Responda somente com a mensagem final para enviar no WhatsApp.',
   ].join('\n')
 
-  const result = await model.generateContent(prompt)
-  return (result.response.text() || '').trim().slice(0, Number(aiConfig.maxChars || 700))
+  const result = await generateTextWithProviders(prompt)
+  if (result.provider !== 'none') pusherPublish('ai_provider_used', { provider: result.provider, chatId })
+  const text = result.text || buildLocalFallbackReply(incomingText, pushName)
+  return text.trim().slice(0, Number(aiConfig.maxChars || 700))
+}
+
+async function transcribeWhatsAppAudio(msg) {
+  const key = process.env.GROQ_API_KEY
+  if (!key || !msg.hasMedia) return ''
+  try {
+    const media = await msg.downloadMedia()
+    const mimetype = media?.mimetype || ''
+    if (!media?.data || !/audio|ogg|mpeg|mp4|webm/i.test(mimetype)) return ''
+    const buffer = Buffer.from(media.data, 'base64')
+    if (buffer.length > 25 * 1024 * 1024) return '[Audio recebido, mas acima do limite de transcricao]'
+
+    const ext = mimetype.includes('ogg') ? 'ogg'
+      : mimetype.includes('mpeg') ? 'mp3'
+      : mimetype.includes('webm') ? 'webm'
+      : 'm4a'
+    const form = new FormData()
+    form.append('file', new Blob([buffer], { type: mimetype || 'audio/ogg' }), `audio.${ext}`)
+    form.append('model', process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3')
+    form.append('language', 'pt')
+    form.append('response_format', 'json')
+
+    const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+    })
+    if (!r.ok) throw new Error(`${r.status}`)
+    const data = await r.json()
+    return String(data.text || '').trim()
+  } catch (e) {
+    console.error('[AI] Erro ao transcrever audio:', e.message)
+    return ''
+  }
+}
+
+async function extractIncomingText(msg) {
+  const body = String(msg.body || '').trim()
+  if (body) return body
+  if (msg.hasMedia && /audio|ptt/i.test(String(msg.type || ''))) {
+    const transcript = await transcribeWhatsAppAudio(msg)
+    return transcript ? `[Audio transcrito]\n${transcript}` : '[Audio recebido]'
+  }
+  if (msg.hasMedia) return `[Midia recebida: ${msg.type || 'arquivo'}]`
+  return ''
+}
+
+function inferStageByIntent(text) {
+  const t = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (/\b(urgente|agora|hoje|prazo|vence|atrasad|em cima da hora)\b/.test(t)) return 'Hoje'
+  if (/\b(retorno|acompanhar|follow|follow-up|amanha|depois|cobrar|lembrar|pendente)\b/.test(t)) return 'Acompanhar'
+  if (/\b(familia|pessoal|casa|privado|particular)\b/.test(t)) return 'Pessoal'
+  if (/\b(concluido|resolvido|feito|finalizado|obrigado|obrigada|valeu|ok)\b/.test(t)) return 'Concluido'
+  if (/\b(pausar|parar|cancelar|sem retorno|nao quero|deixa quieto)\b/.test(t)) return 'Pausado'
+  return null
+}
+
+async function routeChatByIntent(chatId, phone, text) {
+  const stage = inferStageByIntent(text)
+  if (!stage || !chatId) return
+  try {
+    const chat = await prisma.waChat.findUnique({ where: { id: chatId }, select: { stage: true } })
+    const current = chat?.stage || 'Inbox'
+    if (current !== 'Inbox' && current !== 'Novo' && stage !== 'Hoje') return
+    await prisma.waChat.updateMany({ where: { id: chatId }, data: { stage, updatedAt: new Date() } })
+    pusherPublish('crm_stage_updated', { chatId, phone, stage, reason: 'intent' })
+  } catch (e) {
+    console.error('[CRM] Erro no roteamento por intencao:', e.message)
+  }
 }
 
 async function maybeAutoReply(msg, text) {
@@ -337,10 +564,11 @@ client.on('disconnected', reason => {
 // ── Mensagem RECEBIDA ─────────────────────────────────────────────────────────
 client.on('message', async msg => {
   if (msg.isStatus || msg.from === 'status@broadcast') return
-  const text = msg.body || ''
+  const text = await extractIncomingText(msg)
   if (!text) return
 
   await saveMessage(msg.from, msg.id.id, false, text, msg._data?.notifyName || '', msg.timestamp)
+  await routeChatByIntent(msg.from, normPhone(msg.from), text)
 
   // Publica no Pusher (payload enxuto)
   pusherPublish('messages_upsert', {
@@ -659,9 +887,19 @@ const server = http.createServer(async (req, res) => {
         tone: aiConfig.tone,
         maxChars: aiConfig.maxChars,
         allowGroups: aiConfig.allowGroups,
+        activePlaybook: aiConfig.activePlaybook,
+        playbooks: aiConfig.playbooks,
         training: aiConfig.training,
         handoffChats: [...handoffChats],
         hasGeminiKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+        providers: {
+          gemini: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+          anthropic: !!process.env.ANTHROPIC_API_KEY,
+          mistral: !!process.env.MISTRAL_API_KEY,
+          deepseek: !!process.env.DEEPSEEK_API_KEY,
+          openrouter: !!process.env.OPENROUTER_API_KEY,
+          xai: !!process.env.XAI_API_KEY,
+        },
       })
       return
     }
@@ -675,9 +913,35 @@ const server = http.createServer(async (req, res) => {
       if (typeof reqBody.tone === 'string') aiConfig.tone = reqBody.tone.slice(0, 300)
       if (Number(reqBody.maxChars) > 120) aiConfig.maxChars = Math.min(1200, Number(reqBody.maxChars))
       if (typeof reqBody.allowGroups === 'boolean') aiConfig.allowGroups = reqBody.allowGroups
+      if (typeof reqBody.activePlaybook === 'string') aiConfig.activePlaybook = reqBody.activePlaybook.slice(0, 40)
+      if (reqBody.playbooks && typeof reqBody.playbooks === 'object') {
+        aiConfig.playbooks = {
+          ...aiConfig.playbooks,
+          vendas: String(reqBody.playbooks.vendas || aiConfig.playbooks.vendas || '').slice(0, 4000),
+          suporte: String(reqBody.playbooks.suporte || aiConfig.playbooks.suporte || '').slice(0, 4000),
+          pessoal: String(reqBody.playbooks.pessoal || aiConfig.playbooks.pessoal || '').slice(0, 4000),
+        }
+      }
       saveAiConfig()
-      pusherPublish('ai_state', { mode: aiConfig.mode, tone: aiConfig.tone, allowGroups: aiConfig.allowGroups })
+      pusherPublish('ai_state', { mode: aiConfig.mode, tone: aiConfig.tone, allowGroups: aiConfig.allowGroups, activePlaybook: aiConfig.activePlaybook })
       json({ ok: true, ...aiConfig })
+      return
+    }
+
+    if (url.includes('/ai/suggest') && req.method === 'POST') {
+      const body = await readBody(req)
+      let reqBody = {}
+      try { reqBody = JSON.parse(body || '{}') } catch {}
+      const chatId = reqBody.chatId || ''
+      const text = String(reqBody.text || '').trim()
+      if (!chatId) { res.writeHead(400); res.end(JSON.stringify({ error: 'chatId obrigatorio' })); return }
+      const chat = await prisma.waChat.findUnique({ where: { id: chatId }, select: { contactName: true } }).catch(() => null)
+      const reply = await generateSofiReply({
+        chatId,
+        incomingText: text || 'Sugira uma resposta para a ultima mensagem desta conversa.',
+        pushName: chat?.contactName || '',
+      })
+      json({ ok: true, reply })
       return
     }
 
