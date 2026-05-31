@@ -188,48 +188,70 @@ async function readBody(req) {
 
 async function syncAllContactNames() {
   if (!isReady) return { synced: 0, skipped: 0, total: 0 }
-  const chats = await client.getChats()
-  const valid = chats.filter(c => !c.isGroup && c.id?._serialized && c.id._serialized !== 'status@broadcast')
+  const [contacts, chats] = await Promise.all([
+    client.getContacts().catch(() => []),
+    client.getChats().catch(() => []),
+  ])
+  const chatMap = new Map(chats.map(chat => [chat.id?._serialized, chat]))
+  const seenPhones = new Set()
+  const valid = contacts.filter(contact => {
+    const chatId = contact.id?._serialized || ''
+    const phone = normPhone(contact.number || chatId)
+    if (!chatId || chatId === 'status@broadcast' || chatId.endsWith('@g.us')) return false
+    if (!phone || phone.length < 8 || seenPhones.has(phone)) return false
+    seenPhones.add(phone)
+    return contact.isWAContact !== false
+  })
   let synced = 0
   let skipped = 0
-  for (const chat of valid) {
-    const chatId = chat.id._serialized
-    const phone = normPhone(chatId)
-    let contactName = chat.name || ''
-    let profilePicUrl = ''
+  const total = valid.length
+  for (const contact of valid) {
+    const chatId = contact.id._serialized
+    const phone = normPhone(contact.number || chatId)
+    const chat = chatMap.get(chatId)
+    const contactName =
+      contact.name ||
+      contact.pushname ||
+      contact.shortName ||
+      chat?.name ||
+      phone
     try {
-      const contact = await chat.getContact()
-      contactName = contact?.name || contact?.pushname || contact?.shortName || contactName || ''
-    } catch {}
-    try {
-      profilePicUrl = (await client.getProfilePicUrl(chatId)) || ''
-    } catch {}
-    if (!phone) { skipped += 1; continue }
-    await prisma.waChat.upsert({
-      where: { id: chatId },
-      update: {
+      const updateData = {
+        phone,
         contactName: contactName || null,
-        lastMessage: chat.lastMessage?.body || undefined,
+        lastMessage: chat?.lastMessage?.body || undefined,
+        lastAt: chat?.timestamp ? new Date(chat.timestamp * 1000) : undefined,
         isGroup: false,
         syncedAt: new Date(),
         updatedAt: new Date(),
-      },
-      create: {
-        id: chatId,
-        phone,
-        contactName: contactName || null,
-        lastMessage: chat.lastMessage?.body || null,
-        lastAt: chat.timestamp ? new Date(chat.timestamp * 1000) : null,
-        isGroup: false,
-        unreadCount: chat.unreadCount || 0,
-        syncedAt: new Date(),
-      },
-    })
-    // sem coluna dedicada no banco para foto: mantemos em evento para a UI.
-    if (profilePicUrl) pusherPublish('contact_avatar', { chatId, phone, profilePicUrl })
-    synced += 1
+      }
+      const existingByPhone = await prisma.waChat.findUnique({ where: { phone }, select: { id: true } }).catch(() => null)
+      if (existingByPhone && existingByPhone.id !== chatId) {
+        await prisma.waChat.update({ where: { phone }, data: updateData })
+      } else {
+        await prisma.waChat.upsert({
+          where: { id: chatId },
+          update: updateData,
+          create: {
+            id: chatId,
+            phone,
+            contactName: contactName || null,
+            lastMessage: chat?.lastMessage?.body || null,
+            lastAt: chat?.timestamp ? new Date(chat.timestamp * 1000) : null,
+            isGroup: false,
+            unreadCount: chat?.unreadCount || 0,
+            syncedAt: new Date(),
+          },
+        })
+      }
+      synced += 1
+      if (synced % 250 === 0) pusherPublish('contacts_sync_progress', { synced, skipped, total })
+    } catch (e) {
+      skipped += 1
+    }
   }
-  return { synced, skipped, total: valid.length }
+  pusherPublish('contacts_sync_progress', { synced, skipped, total, done: true })
+  return { synced, skipped, total, source: 'contacts+chats' }
 }
 
 // Sofi IA - atendimento automatico, supervisionado e treinavel.
