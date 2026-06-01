@@ -219,18 +219,20 @@ async function getContacts() {
   return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
 }
 
-async function getMessages(chatId: string, limit = 60) {
+async function getMessages(chatId: string, limit = 0) {
   const chatPhone = normPhone(chatId)
+  const hasLimit = Number(limit) > 0
+  const requestLimit = hasLimit ? Number(limit) + 40 : undefined
 
   // Tenta dois formatos de query que o Evolution API aceita
   const [d1, d2] = await Promise.all([
     evoPost(`/chat/findMessages/${INSTANCE}`, {
       where: { key: { remoteJid: chatId } },
-      limit: limit + 40,
+      ...(hasLimit ? { limit: requestLimit } : {}),
     }),
     evoPost(`/chat/findMessages/${INSTANCE}`, {
       where: { remoteJid: chatId },
-      limit: limit + 40,
+      ...(hasLimit ? { limit: requestLimit } : {}),
     }),
   ])
 
@@ -260,7 +262,7 @@ async function getMessages(chatId: string, limit = 60) {
   )
 
   // Pega os últimos `limit` mensagens
-  if (msgs.length > limit) msgs = msgs.slice(-limit)
+  if (hasLimit && msgs.length > limit) msgs = msgs.slice(-limit)
 
   return msgs
     .map((m: any) => ({
@@ -499,7 +501,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
     if (p0 === 'instagram-conversations') return NextResponse.json(await getInstagramConversations())
     if (p0 === 'messages') {
       const chatId = req.nextUrl.searchParams.get('chatId') || ''
-      const limit  = Number(req.nextUrl.searchParams.get('limit') || '60')
+      const limit  = Number(req.nextUrl.searchParams.get('limit') || '0')
       return NextResponse.json(await getMessages(chatId, limit))
     }
     if (p0 === 'events') {

@@ -15,7 +15,6 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
-const CHAT_MESSAGE_LIMIT = 500
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -334,7 +333,7 @@ export default function WhatsAppPage() {
     if (!chatId) return
     setLoadingMsgs(true); setMessages([])
     try {
-      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}&limit=${CHAT_MESSAGE_LIMIT}`)
+      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}`)
       if (Array.isArray(data)) {
         setMessages(data.map(m => ({
           id:   m.id || crypto.randomUUID(),
@@ -473,7 +472,7 @@ export default function WhatsAppPage() {
     const poll = async () => {
       if (!running || !selectedIdRef.current) return
       try {
-        const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedIdRef.current)}&limit=${CHAT_MESSAGE_LIMIT}`)
+        const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedIdRef.current)}`)
         if (!Array.isArray(data) || !running) return
         const fetched = data
           .map(m => ({
@@ -539,7 +538,7 @@ export default function WhatsAppPage() {
       // Marcar todas mensagens não lidas como lidas (usamos IDs das mensagens após carregar)
       setTimeout(async () => {
         try {
-          const msgs: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedId)}&limit=120`)
+          const msgs: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedId)}`)
           const unread = (Array.isArray(msgs) ? msgs : [])
             .filter((m: any) => m.from !== 'agent' && m.from !== 'sofi')
             .map((m: any) => ({ id: m.id, fromMe: false }))
