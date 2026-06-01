@@ -7,7 +7,7 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================
-echo   Tunel Cloudflare - Expondo porta 3000
+echo   Tunel Cloudflare - Expondo porta 8081
 echo  ============================================
 echo.
 
@@ -23,6 +23,6 @@ echo  Aguarde a URL aparecer abaixo e copie para o Vercel.
 echo.
 
 :: Roda cloudflared e salva log
-cloudflared.exe tunnel --url http://localhost:3000 --logfile "%~dp0cf-tunnel.log" 2>&1
+cloudflared.exe tunnel --url http://localhost:8081 --logfile "%~dp0cf-tunnel.log" 2>&1
 
 pause
