@@ -150,13 +150,31 @@ async function sendInstagramPrivateReply(commentId, text) {
   return instagramGraph(`${commentId}/private_replies`, 'POST', { message: String(text || '') })
 }
 
+async function tryResolveInstagramBusinessId() {
+  const current = process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || ''
+  if (current) return current
+  const pageId = process.env.INSTAGRAM_PAGE_ID || ''
+  if (!pageId) return ''
+  try {
+    const data = await instagramGraph(`${pageId}?fields=instagram_business_account`)
+    const found = String(data?.instagram_business_account?.id || '').trim()
+    if (found) {
+      instagramState.businessId = found
+      instagramState.connected = true
+      saveInstagramState()
+      return found
+    }
+  } catch {}
+  return ''
+}
+
 function addInstagramConversation(igUserId, payload) {
   const id = String(igUserId || '')
   if (!id) return
   const current = instagramState.conversations[id] || { userId: id, name: payload.name || '', tags: [], stage: 'Inbox', messages: [] }
   const next = {
     ...current,
-    name: payload.name || current.name || '',
+    name: cleanDisplayName(payload.name || current.name || '', ''),
     stage: payload.stage || current.stage || 'Inbox',
     tags: payload.tags || current.tags || [],
     updatedAt: new Date().toISOString(),
@@ -180,6 +198,23 @@ function normJid(num) {
   if (raw.includes('@g.us') || raw.includes('@c.us') || raw.includes('@s.whatsapp.net')) return raw
   const phone = normPhone(raw)
   return `${phone}@s.whatsapp.net`
+}
+
+function fixMojibake(text) {
+  const value = String(text || '')
+  if (!value) return ''
+  if (!/[ÃÂâ]/.test(value)) return value
+  try {
+    const fixed = Buffer.from(value, 'latin1').toString('utf8')
+    if (fixed && fixed !== value) return fixed
+  } catch {}
+  return value
+}
+
+function cleanDisplayName(name, fallback) {
+  const fixed = fixMojibake(name)
+  const trimmed = String(fixed || '').trim()
+  return trimmed || String(fallback || '').trim()
 }
 
 async function readBody(req) {
@@ -212,12 +247,14 @@ async function syncAllContactNames() {
     const chatId = contact.id._serialized
     const phone = normPhone(contact.number || chatId)
     const chat = chatMap.get(chatId)
-    const contactName =
+    const contactName = cleanDisplayName(
       contact.name ||
       contact.pushname ||
       contact.shortName ||
       chat?.name ||
-      phone
+      phone,
+      phone,
+    )
     try {
       const updateData = {
         phone,
@@ -948,8 +985,8 @@ const server = http.createServer(async (req, res) => {
       })
       json(contacts.map(c => ({
         id: c.id,
-        pushName: c.contactName || '',
-        name: c.contactName || '',
+        pushName: cleanDisplayName(c.contactName, c.phone),
+        name: cleanDisplayName(c.contactName, c.phone),
         phone: c.phone,
         isGroup: c.isGroup,
         stage: c.stage || 'Inbox',
@@ -975,7 +1012,7 @@ const server = http.createServer(async (req, res) => {
       json(contacts.map(c => ({
         chatId: c.id,
         phone: c.phone,
-        name: c.contactName || c.phone,
+        name: cleanDisplayName(c.contactName, c.phone),
         stage: c.stage || 'Inbox',
       })))
       return
@@ -1233,10 +1270,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/instagram/state' && req.method === 'GET') {
+      const businessId = await tryResolveInstagramBusinessId()
       json({
         ok: true,
-        connected: !!instagramState.connected,
-        businessId: process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
+        connected: !!(instagramState.connected || businessId),
+        businessId: businessId || process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
         hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
         hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
         automationEnabled: !!instagramState.automationEnabled,
