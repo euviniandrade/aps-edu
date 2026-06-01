@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai' | 'instagram'
+type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -34,6 +34,7 @@ type ContactLabel = typeof LABELS[number]
 interface Contact {
   chatId: string; phone: string; name: string
   lastMessage: string; lastAt: string; unread: number; timestamp: number
+  avatarUrl?: string
   isGroup?: boolean
   stage?: Stage
 }
@@ -42,7 +43,7 @@ interface Message {
 }
 interface WaState { connected: boolean; ready: boolean; qrDataUrl?: string | null; error?: string | null }
 interface Group   { id: string; name: string; description: string; participants: number; members: { id: string; phone: string; admin: boolean }[] }
-interface MassRecipient { phone: string; nome?: string; empresa?: string; [key: string]: string | undefined }
+interface MassRecipient { phone: string; nome?: string; empresa?: string; avatarUrl?: string; [key: string]: string | undefined }
 interface AiState {
   mode: 'paused' | 'assist' | 'auto'
   tone: string
@@ -64,6 +65,7 @@ interface InstagramRule {
 
 interface InstagramState {
   connected: boolean
+  pageId?: string
   businessId: string
   hasPageToken: boolean
   hasVerifyToken: boolean
@@ -82,6 +84,14 @@ interface InstagramEvent {
   ruleId?: string | null
   userId?: string
   error?: string
+}
+
+function extractProxyMessage(payload: any, fallback: string): string {
+  if (!payload) return fallback
+  if (typeof payload === 'string') return payload
+  if (payload?.message) return String(payload.message)
+  if (payload?.error) return String(payload.error)
+  return fallback
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -195,6 +205,7 @@ function applyTemplate(template: string, recipient: MassRecipient): string {
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function WhatsAppPage() {
+  const [platform, setPlatform] = useState<'whatsapp' | 'instagram'>('whatsapp')
   const [tab, setTab]               = useState<Tab>('chats')
   const [waState, setWaState]       = useState<WaState | null>(null)
   const [contacts, setContacts]     = useState<Contact[]>([])
@@ -248,6 +259,7 @@ export default function WhatsAppPage() {
   const [instagramEvents, setInstagramEvents] = useState<InstagramEvent[]>([])
   const [instagramRules, setInstagramRules] = useState<InstagramRule[]>([])
   const [instagramBusy, setInstagramBusy] = useState(false)
+  const [instagramError, setInstagramError] = useState('')
   const [igDmUserId, setIgDmUserId] = useState('')
   const [igDmText, setIgDmText] = useState('Olá! Obrigado pelo comentário. Vou te enviar o material por aqui.')
 
@@ -293,6 +305,7 @@ export default function WhatsAppPage() {
             chatId:      id,
             phone,
             name:        c.name || phone,
+            avatarUrl:   c.avatarUrl || '',
             lastMessage: c.lastMessage || '',
             lastAt:      fmtTs(c.timestamp),
             unread:      c.unreadCount ?? 0,
@@ -623,7 +636,7 @@ export default function WhatsAppPage() {
       if (Array.isArray(data)) {
         setMassRecipients(data
           .filter(c => c.phone && !String(c.phone).includes('@g.us'))
-          .map(c => ({ phone: c.phone, nome: c.name || '' })))
+          .map(c => ({ phone: c.phone, nome: c.name || '', avatarUrl: c.avatarUrl || '' })))
       }
     } finally { setSyncingContacts(false) }
   }
@@ -699,14 +712,20 @@ export default function WhatsAppPage() {
   useEffect(() => { loadAiState() }, [])
 
   const loadInstagram = async () => {
+    setInstagramError('')
     try {
       const [stateData, rulesData, eventsData] = await Promise.all([
         apiFetch('instagram-state'),
         apiFetch('instagram-rules'),
         apiFetch('instagram-events'),
       ])
+      if (stateData?.ok === false) {
+        setInstagramError(extractProxyMessage(stateData, 'Falha ao carregar integração do Instagram'))
+        return
+      }
       setInstagramState({
         connected: !!stateData.connected,
+        pageId: stateData.pageId || '',
         businessId: stateData.businessId || '',
         hasPageToken: !!stateData.hasPageToken,
         hasVerifyToken: !!stateData.hasVerifyToken,
@@ -714,16 +733,30 @@ export default function WhatsAppPage() {
         requireFollowGate: !!stateData.requireFollowGate,
         rules: Array.isArray(stateData.rules) ? stateData.rules : [],
       })
-      setInstagramRules(Array.isArray(rulesData.rules) ? rulesData.rules : [])
-      setInstagramEvents(Array.isArray(eventsData.events) ? eventsData.events : [])
-    } catch {}
+      if (rulesData?.ok === false) {
+        setInstagramError(extractProxyMessage(rulesData, 'Falha ao carregar regras do Instagram'))
+      } else {
+        setInstagramRules(Array.isArray(rulesData.rules) ? rulesData.rules : [])
+      }
+      if (eventsData?.ok === false) {
+        setInstagramError(extractProxyMessage(eventsData, 'Falha ao carregar eventos do Instagram'))
+      } else {
+        setInstagramEvents(Array.isArray(eventsData.events) ? eventsData.events : [])
+      }
+    } catch (err: any) {
+      setInstagramError(err?.message || 'Falha ao carregar integração do Instagram')
+    }
   }
 
   const saveInstagramRules = async () => {
     setInstagramBusy(true)
     try {
       const data = await apiFetch('instagram-rules', { method: 'POST', body: JSON.stringify({ rules: instagramRules }) })
+      if (data?.ok === false) throw new Error(extractProxyMessage(data, 'Falha ao salvar regras do Instagram'))
       setInstagramRules(Array.isArray(data.rules) ? data.rules : instagramRules)
+      setInstagramError('')
+    } catch (err: any) {
+      setInstagramError(err?.message || 'Falha ao salvar regras do Instagram')
     } finally { setInstagramBusy(false) }
   }
 
@@ -733,13 +766,19 @@ export default function WhatsAppPage() {
     setInstagramState(merged)
     setInstagramBusy(true)
     try {
-      await apiFetch('instagram-control', {
+      const data = await apiFetch('instagram-control', {
         method: 'POST',
         body: JSON.stringify({
+          pageId: merged.pageId || undefined,
+          businessId: merged.businessId || undefined,
           automationEnabled: merged.automationEnabled,
           requireFollowGate: merged.requireFollowGate,
         }),
       })
+      if (data?.ok === false) throw new Error(extractProxyMessage(data, 'Falha ao atualizar controle do Instagram'))
+      setInstagramError('')
+    } catch (err: any) {
+      setInstagramError(err?.message || 'Falha ao atualizar controle do Instagram')
     } finally { setInstagramBusy(false) }
   }
 
@@ -747,12 +786,36 @@ export default function WhatsAppPage() {
     if (!igDmUserId.trim() || !igDmText.trim()) return
     setInstagramBusy(true)
     try {
-      await apiFetch('instagram-send-dm', {
+      const data = await apiFetch('instagram-send-dm', {
         method: 'POST',
         body: JSON.stringify({ userId: igDmUserId.trim(), text: igDmText.trim() }),
       })
+      if (data?.ok === false) throw new Error(extractProxyMessage(data, 'Falha ao enviar DM no Instagram'))
       await loadInstagram()
       setIgDmText('')
+      setInstagramError('')
+    } catch (err: any) {
+      setInstagramError(err?.message || 'Falha ao enviar DM no Instagram')
+    } finally { setInstagramBusy(false) }
+  }
+
+  const connectInstagram = async () => {
+    setInstagramBusy(true)
+    setInstagramError('')
+    try {
+      const data = await apiFetch('instagram-control', {
+        method: 'POST',
+        body: JSON.stringify({
+          pageId: instagramState?.pageId || undefined,
+          businessId: instagramState?.businessId || undefined,
+          automationEnabled: instagramState?.automationEnabled ?? true,
+          requireFollowGate: instagramState?.requireFollowGate ?? false,
+        }),
+      })
+      if (data?.ok === false) throw new Error(extractProxyMessage(data, 'Falha ao conectar Instagram'))
+      await loadInstagram()
+    } catch (err: any) {
+      setInstagramError(err?.message || 'Falha ao conectar Instagram')
     } finally { setInstagramBusy(false) }
   }
 
@@ -853,37 +916,81 @@ export default function WhatsAppPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Tabs */}
-            {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon],['instagram','Instagram',CommandLineIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
-              <button key={id} onClick={() => {
-                setTab(id)
-                if (id === 'groups' && groups.length === 0) loadGroups()
-                if (id === 'instagram') loadInstagram()
-              }}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-                style={{
-                  background: tab === id ? 'rgba(10,189,120,0.18)' : 'rgba(255,255,255,0.06)',
-                  color:      tab === id ? '#0ABD78' : 'rgba(255,255,255,0.5)',
-                  border:     `1px solid ${tab === id ? 'rgba(10,189,120,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                }}>
-                <Icon className="w-3.5 h-3.5" />{label}
+            <div className="px-1 py-1 rounded-xl flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <button
+                onClick={() => setPlatform('whatsapp')}
+                className="px-3 py-1.5 rounded-lg text-xs font-extrabold"
+                style={{ background: platform === 'whatsapp' ? 'rgba(10,189,120,0.18)' : 'transparent', color: platform === 'whatsapp' ? '#0ABD78' : 'rgba(255,255,255,0.65)' }}
+              >
+                WhatsApp
               </button>
-            ))}
-
-            {/* Status / Conectar */}
-            <div className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
-              style={{ background: waState?.ready ? 'rgba(10,189,120,0.12)' : 'rgba(248,163,3,0.12)', color: waState?.ready ? '#0ABD78' : '#F8A303', border: `1px solid ${waState?.ready ? 'rgba(10,189,120,0.25)' : 'rgba(248,163,3,0.25)'}` }}>
-              {waState?.ready ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />}
-              {waState?.ready ? 'WhatsApp conectado' : 'Desconectado'}
+              <button
+                onClick={() => { setPlatform('instagram'); loadInstagram() }}
+                className="px-3 py-1.5 rounded-lg text-xs font-extrabold"
+                style={{ background: platform === 'instagram' ? 'rgba(10,189,120,0.18)' : 'transparent', color: platform === 'instagram' ? '#0ABD78' : 'rgba(255,255,255,0.65)' }}
+              >
+                Instagram
+              </button>
             </div>
-            {!waState?.ready && (
-              <button onClick={connectWA} disabled={initBusy}
+
+            {platform === 'whatsapp' && (
+              <>
+                {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
+                  <button key={id} onClick={() => {
+                    setTab(id)
+                    if (id === 'groups' && groups.length === 0) loadGroups()
+                  }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                    style={{
+                      background: tab === id ? 'rgba(10,189,120,0.18)' : 'rgba(255,255,255,0.06)',
+                      color:      tab === id ? '#0ABD78' : 'rgba(255,255,255,0.5)',
+                      border:     `1px solid ${tab === id ? 'rgba(10,189,120,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                    }}>
+                    <Icon className="w-3.5 h-3.5" />{label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            <div className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
+              style={{
+                background: platform === 'whatsapp'
+                  ? (waState?.ready ? 'rgba(10,189,120,0.12)' : 'rgba(248,163,3,0.12)')
+                  : (instagramState?.connected ? 'rgba(10,189,120,0.12)' : 'rgba(248,163,3,0.12)'),
+                color: platform === 'whatsapp'
+                  ? (waState?.ready ? '#0ABD78' : '#F8A303')
+                  : (instagramState?.connected ? '#0ABD78' : '#F8A303'),
+                border: `1px solid ${platform === 'whatsapp'
+                  ? (waState?.ready ? 'rgba(10,189,120,0.25)' : 'rgba(248,163,3,0.25)')
+                  : (instagramState?.connected ? 'rgba(10,189,120,0.25)' : 'rgba(248,163,3,0.25)')}`,
+              }}>
+              {platform === 'whatsapp'
+                ? (waState?.ready ? <CheckCircleIcon className="w-4 h-4" /> : <QrCodeIcon className="w-4 h-4" />)
+                : (instagramState?.connected ? <CheckCircleIcon className="w-4 h-4" /> : <CommandLineIcon className="w-4 h-4" />)}
+              {platform === 'whatsapp'
+                ? (waState?.ready ? 'WhatsApp conectado' : 'WhatsApp desconectado')
+                : (instagramState?.connected ? 'Instagram conectado' : 'Instagram desconectado')}
+            </div>
+
+            {platform === 'whatsapp' ? (
+              !waState?.ready && (
+                <button onClick={connectWA} disabled={initBusy}
+                  className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                  style={{ background: '#F8A303' }}>
+                  {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : 'Conectar'}
+                </button>
+              )
+            ) : (
+              <button
+                onClick={connectInstagram}
+                disabled={instagramBusy}
                 className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
-                style={{ background: '#F8A303' }}>
-                {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : 'Conectar'}
+                style={{ background: '#F8A303' }}
+              >
+                {instagramBusy ? 'Conectando...' : 'Conectar Instagram'}
               </button>
             )}
-            <button onClick={loadContacts} className="p-2 rounded-xl text-white/40 hover:text-white transition-colors"
+            <button onClick={platform === 'whatsapp' ? loadContacts : loadInstagram} className="p-2 rounded-xl text-white/40 hover:text-white transition-colors"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <ArrowPathIcon className="w-4 h-4" />
             </button>
@@ -907,8 +1014,15 @@ export default function WhatsAppPage() {
           </div>
         )}
 
+        {!!instagramError && platform === 'instagram' && (
+          <div className="rounded-2xl px-4 py-3 text-xs font-bold text-red-200"
+            style={{ background: 'rgba(239,68,68,0.13)', border: '1px solid rgba(239,68,68,0.35)' }}>
+            {instagramError}
+          </div>
+        )}
+
         {/* ══ TAB: CONVERSAS ══════════════════════════════════════════════════ */}
-        {tab === 'chats' && (
+        {platform === 'whatsapp' && tab === 'chats' && (
           <div className="flex flex-1 gap-3 overflow-hidden min-h-0">
 
             {/* Lista contatos */}
@@ -965,10 +1079,19 @@ export default function WhatsAppPage() {
                     className="w-full text-left p-3 border-b transition-colors hover:bg-white/[0.03]"
                     style={{ background: selected?.chatId === c.chatId ? 'rgba(10,189,120,0.09)' : undefined, borderColor: 'rgba(255,255,255,0.06)' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-extrabold shrink-0 text-sm"
-                        style={{ background: `${STAGE_COLORS[stages[c.phone] || 'Inbox']}30`, border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}>
-                        {(c.name || '?').charAt(0).toUpperCase()}
-                      </div>
+                      {c.avatarUrl ? (
+                        <img
+                          src={c.avatarUrl}
+                          alt={c.name}
+                          className="w-10 h-10 rounded-full object-cover shrink-0"
+                          style={{ border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-extrabold shrink-0 text-sm"
+                          style={{ background: `${STAGE_COLORS[stages[c.phone] || 'Inbox']}30`, border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}>
+                          {(c.name || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
                           <p className="text-sm font-bold text-white truncate">{c.name}</p>
@@ -997,10 +1120,14 @@ export default function WhatsAppPage() {
                   {/* Header chat */}
                   <div className="px-4 py-3 border-b flex items-center gap-3 shrink-0"
                     style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-black font-extrabold shrink-0"
-                      style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
-                      {(selected.name || '?').charAt(0).toUpperCase()}
-                    </div>
+                    {selected.avatarUrl ? (
+                      <img src={selected.avatarUrl} alt={selected.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-black font-extrabold shrink-0"
+                        style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                        {(selected.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-extrabold text-white truncate">{selected.name}</p>
                       <p className="text-[11px] text-white/35">{selected.phone}</p>
@@ -1147,7 +1274,7 @@ export default function WhatsAppPage() {
         )}
 
         {/* ══ TAB: KANBAN ═════════════════════════════════════════════════════ */}
-        {tab === 'kanban' && (
+        {platform === 'whatsapp' && tab === 'kanban' && (
           <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
             <div className="flex gap-3 h-full" style={{ minWidth: `${STAGES.length * 220}px` }}>
               {STAGES.map(stage => {
@@ -1203,7 +1330,7 @@ export default function WhatsAppPage() {
         )}
 
         {/* ══ TAB: ENVIO EM MASSA ═════════════════════════════════════════════ */}
-        {tab === 'mass' && (
+        {platform === 'whatsapp' && tab === 'mass' && (
           <div className="flex-1 flex gap-3 overflow-hidden min-h-0">
 
             {/* Coluna esquerda: destinatários */}
@@ -1244,7 +1371,7 @@ export default function WhatsAppPage() {
                     style={{ background: 'linear-gradient(135deg,#F8A303,#FCD34D)' }}>
                     {syncingContacts ? 'Sincronizando nomes...' : 'Adicionar todos com nomes'}
                   </button>
-                  <button onClick={() => setMassRecipients(contacts.map(c => ({ phone: c.phone, nome: c.name !== c.phone ? c.name : '' })))}
+                  <button onClick={() => setMassRecipients(contacts.map(c => ({ phone: c.phone, nome: c.name !== c.phone ? c.name : '', avatarUrl: c.avatarUrl || '' })))}
                     className="w-full py-1.5 rounded-xl text-xs font-bold text-white/70 hover:text-white transition-colors"
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     Todos os contatos ({contacts.length})
@@ -1254,7 +1381,7 @@ export default function WhatsAppPage() {
                     return filtered.length > 0 ? (
                       <button key={s} onClick={() => setMassRecipients(prev => {
                         const phones = new Set(prev.map(r => r.phone))
-                        return [...prev, ...filtered.filter(c => !phones.has(c.phone)).map(c => ({ phone: c.phone, nome: c.name !== c.phone ? c.name : '' }))]
+                        return [...prev, ...filtered.filter(c => !phones.has(c.phone)).map(c => ({ phone: c.phone, nome: c.name !== c.phone ? c.name : '', avatarUrl: c.avatarUrl || '' }))]
                       })}
                         className="w-full py-1.5 rounded-xl text-xs font-bold hover:opacity-80 transition-opacity"
                         style={{ background: `${STAGE_COLORS[s]}15`, color: STAGE_COLORS[s], border: `1px solid ${STAGE_COLORS[s]}30` }}>
@@ -1276,10 +1403,20 @@ export default function WhatsAppPage() {
                   </div>
                   <div className="max-h-48 overflow-y-auto space-y-1">
                     {massRecipients.slice(0, 100).map((r, i) => (
-                      <div key={i} className="flex items-center justify-between py-1 px-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                        <div>
-                          <p className="text-[11px] text-white/70">{r.nome || r.name || '—'}</p>
-                          <p className="text-[10px] text-white/40">{r.phone}</p>
+                      <div key={i} className="flex items-center justify-between py-1 px-2 rounded-lg gap-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {r.avatarUrl ? (
+                            <img src={r.avatarUrl} alt={r.nome || r.phone} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-extrabold text-black shrink-0"
+                              style={{ background: 'linear-gradient(135deg,#6366F1,#818CF8)' }}>
+                              {(r.nome || r.phone || '?').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-white/70">{r.nome || r.name || '—'}</p>
+                            <p className="text-[10px] text-white/40">{r.phone}</p>
+                          </div>
                         </div>
                         <button onClick={() => setMassRecipients(prev => prev.filter((_, j) => j !== i))} className="text-red-400/40 hover:text-red-400 ml-2">
                           <XCircleIcon className="w-4 h-4" />
@@ -1389,7 +1526,7 @@ export default function WhatsAppPage() {
         )}
 
         {/* ══ TAB: GRUPOS ═════════════════════════════════════════════════════ */}
-        {tab === 'ai' && (
+        {platform === 'whatsapp' && tab === 'ai' && (
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-3 overflow-hidden min-h-0">
             <div className="rounded-2xl p-4 overflow-y-auto"
               style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -1527,7 +1664,7 @@ export default function WhatsAppPage() {
           </div>
         )}
 
-        {tab === 'instagram' && (
+        {platform === 'instagram' && (
           <div className="flex-1 grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-3 overflow-hidden min-h-0">
             <div className="rounded-2xl p-4 overflow-y-auto"
               style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -1535,6 +1672,7 @@ export default function WhatsAppPage() {
               <p className="text-xs text-white/45 mb-3">Comentários por palavra-chave, DM automática e gate de seguir perfil.</p>
               <div className="space-y-3">
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-xs text-white/70">Page ID: <span className="text-white">{instagramState?.pageId || '(não configurado)'}</span></p>
                   <p className="text-xs text-white/70">Business ID: <span className="text-white">{instagramState?.businessId || '(não configurado)'}</span></p>
                   <p className="text-xs mt-1" style={{ color: instagramState?.hasPageToken ? '#0ABD78' : '#F8A303' }}>
                     Token de página: {instagramState?.hasPageToken ? 'ativo' : 'pendente'}
@@ -1624,7 +1762,7 @@ export default function WhatsAppPage() {
           </div>
         )}
 
-        {tab === 'groups' && (
+        {platform === 'whatsapp' && tab === 'groups' && (
           <div className="flex-1 flex gap-3 overflow-hidden min-h-0">
 
             {/* Lista de grupos */}

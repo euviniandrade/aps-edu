@@ -67,6 +67,7 @@ const DEFAULT_INSTAGRAM = {
   connected: false,
   businessId: process.env.INSTAGRAM_BUSINESS_ID || '',
   pageId: process.env.INSTAGRAM_PAGE_ID || '',
+  pageToken: process.env.INSTAGRAM_PAGE_TOKEN || '',
   verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN || '',
   hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
   automationEnabled: true,
@@ -98,6 +99,7 @@ function loadInstagramState() {
 }
 
 let instagramState = loadInstagramState()
+const avatarCache = new Map()
 
 function saveInstagramState() {
   try { fs.writeFileSync(INSTAGRAM_MEMORY_PATH, JSON.stringify(instagramState, null, 2)) } catch (e) {
@@ -112,7 +114,7 @@ function addInstagramEvent(event) {
 }
 
 async function instagramGraph(pathname, method = 'GET', body = null) {
-  const token = process.env.INSTAGRAM_PAGE_TOKEN || ''
+  const token = process.env.INSTAGRAM_PAGE_TOKEN || instagramState.pageToken || ''
   if (!token) throw new Error('INSTAGRAM_PAGE_TOKEN ausente')
   const version = process.env.INSTAGRAM_GRAPH_VERSION || 'v23.0'
   const baseUrl = `https://graph.facebook.com/${version}/${pathname}`
@@ -126,6 +128,19 @@ async function instagramGraph(pathname, method = 'GET', body = null) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(data)}`)
   return data
+}
+
+async function getAvatarUrlBestEffort(chatId) {
+  const id = String(chatId || '').trim()
+  if (!id || avatarCache.has(id) || !isReady) return avatarCache.get(id) || ''
+  try {
+    const url = await client.getProfilePicUrl(id).catch(() => '')
+    const normalized = String(url || '')
+    avatarCache.set(id, normalized)
+    return normalized
+  } catch {
+    return ''
+  }
 }
 
 function findInstagramRule(text) {
@@ -994,11 +1009,14 @@ const server = http.createServer(async (req, res) => {
         select: { id: true, contactName: true, phone: true, isGroup: true, stage: true, lastMessage: true, lastAt: true, unreadCount: true },
         take: 5000,
       })
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 40)
+      Promise.all(toResolve.map(c => getAvatarUrlBestEffort(c.id))).catch(() => {})
       json(contacts.map(c => ({
         id: c.id,
         pushName: cleanDisplayName(c.contactName, c.phone),
         name: cleanDisplayName(c.contactName, c.phone),
         phone: c.phone,
+        avatarUrl: avatarCache.get(c.id) || '',
         isGroup: c.isGroup,
         stage: c.stage || 'Inbox',
         lastMessage: c.lastMessage || '',
@@ -1020,10 +1038,13 @@ const server = http.createServer(async (req, res) => {
         orderBy: { contactName: 'asc' },
         take: 5000,
       })
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 80)
+      Promise.all(toResolve.map(c => getAvatarUrlBestEffort(c.id))).catch(() => {})
       json(contacts.map(c => ({
         chatId: c.id,
         phone: c.phone,
         name: cleanDisplayName(c.contactName, c.phone),
+        avatarUrl: avatarCache.get(c.id) || '',
         stage: c.stage || 'Inbox',
       })))
       return
@@ -1287,7 +1308,7 @@ const server = http.createServer(async (req, res) => {
         connected: !!(instagramState.connected || businessId),
         pageId: process.env.INSTAGRAM_PAGE_ID || instagramState.pageId || '',
         businessId: businessId || process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
-        hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
+        hasPageToken: !!(process.env.INSTAGRAM_PAGE_TOKEN || instagramState.pageToken),
         hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
         automationEnabled: !!instagramState.automationEnabled,
         requireFollowGate: !!instagramState.requireFollowGate,
@@ -1323,6 +1344,10 @@ const server = http.createServer(async (req, res) => {
       let reqBody = {}
       try { reqBody = JSON.parse(body || '{}') } catch {}
       if (typeof reqBody.pageId === 'string' && reqBody.pageId.trim()) instagramState.pageId = reqBody.pageId.trim()
+      if (typeof reqBody.pageToken === 'string' && reqBody.pageToken.trim()) {
+        instagramState.pageToken = reqBody.pageToken.trim()
+        instagramState.hasPageToken = true
+      }
       if (typeof reqBody.businessId === 'string' && reqBody.businessId.trim()) {
         instagramState.businessId = reqBody.businessId.trim()
         instagramState.connected = true

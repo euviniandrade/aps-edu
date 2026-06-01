@@ -53,6 +53,7 @@ backend/cloudflared.exe
 backend/sessions/
 backend/.wwebjs_cache/
 backend/whatsapp.db
+backend/instagram-memory.json
 backend/node_modules_node/
 backend/node.exe
 backend/npm.cmd

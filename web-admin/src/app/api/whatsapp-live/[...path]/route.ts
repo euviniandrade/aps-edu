@@ -7,8 +7,8 @@ export const dynamic    = 'force-dynamic'
 const BACKEND_URL = (
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'https://prankster-scored-giver.ngrok-free.dev'
-).trim().replace(/\/api\/?$/, '').replace(/\/$/, '')
+  ''
+).trim().replace(/\s+/g, '').replace(/\/api\/?$/, '').replace(/\/$/, '')
 
 const INSTANCE = 'sofi'
 const EVO_KEY  = process.env.WHATSAPP_API_KEY || ''
@@ -24,6 +24,9 @@ function evoHeaders(): Record<string, string> {
 }
 
 async function evoGet(path: string): Promise<any> {
+  if (!BACKEND_URL) {
+    return { ok: false, proxyError: true, path, message: 'BACKEND_URL não configurado no Vercel' }
+  }
   try {
     const r = await fetch(`${BACKEND_URL}${path}`, { headers: evoHeaders(), cache: 'no-store' })
     if (!r.ok) {
@@ -37,6 +40,9 @@ async function evoGet(path: string): Promise<any> {
 }
 
 async function evoPost(path: string, body: any): Promise<any> {
+  if (!BACKEND_URL) {
+    return { ok: false, proxyError: true, path, message: 'BACKEND_URL não configurado no Vercel' }
+  }
   try {
     const r = await fetch(`${BACKEND_URL}${path}`, {
       method: 'POST', headers: evoHeaders(), body: JSON.stringify(body), cache: 'no-store',
