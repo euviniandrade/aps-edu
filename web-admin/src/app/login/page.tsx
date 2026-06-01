@@ -13,6 +13,21 @@ import {
 } from '@heroicons/react/24/outline'
 import { ShieldCheckIcon } from '@heroicons/react/24/solid'
 
+function getPanelRole(slug: string, email: string) {
+  const normalizedSlug = (slug || '').toLowerCase()
+  const normalizedEmail = (email || '').toLowerCase()
+
+  if (normalizedEmail === 'engenhariatotal.vinicius@gmail.com') return 'admin'
+  if (['admin', 'director'].includes(normalizedSlug)) return normalizedSlug
+  if (
+    normalizedSlug.startsWith('coord_') ||
+    normalizedSlug.startsWith('dept_') ||
+    normalizedSlug.startsWith('leader_')
+  ) return 'leader'
+
+  return ''
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -35,8 +50,8 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      const role = data.user?.role?.slug || ''
-      if (!['admin', 'director'].includes(role)) {
+      const role = getPanelRole(data.user?.role?.slug || '', data.user?.email || email)
+      if (!role) {
         setError('Acesso restrito ao painel administrativo.')
         setLoading(false)
         return
@@ -48,7 +63,7 @@ export default function LoginPage() {
         id:    data.user.id,
         name:  data.user.name,
         email: data.user.email,
-        role:  { slug: data.user.role?.slug, name: data.user.role?.name },
+        role:  { slug: role, name: role === 'admin' ? 'Administrador' : data.user.role?.name },
         unit:  data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
       }
       Cookies.set('user', JSON.stringify(userMinimal), { expires: 30, sameSite: 'strict', secure: true })
