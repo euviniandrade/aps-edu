@@ -26,9 +26,14 @@ function evoHeaders(): Record<string, string> {
 async function evoGet(path: string): Promise<any> {
   try {
     const r = await fetch(`${BACKEND_URL}${path}`, { headers: evoHeaders(), cache: 'no-store' })
-    if (!r.ok) return {}
+    if (!r.ok) {
+      const text = await r.text().catch(() => '')
+      return { ok: false, proxyError: true, status: r.status, path, message: text.slice(0, 500) }
+    }
     return await r.json()
-  } catch { return {} }
+  } catch (e: any) {
+    return { ok: false, proxyError: true, path, message: e?.message || 'fetch_failed' }
+  }
 }
 
 async function evoPost(path: string, body: any): Promise<any> {
@@ -36,9 +41,14 @@ async function evoPost(path: string, body: any): Promise<any> {
     const r = await fetch(`${BACKEND_URL}${path}`, {
       method: 'POST', headers: evoHeaders(), body: JSON.stringify(body), cache: 'no-store',
     })
-    if (!r.ok) return {}
+    if (!r.ok) {
+      const text = await r.text().catch(() => '')
+      return { ok: false, proxyError: true, status: r.status, path, message: text.slice(0, 500) }
+    }
     return await r.json()
-  } catch { return {} }
+  } catch (e: any) {
+    return { ok: false, proxyError: true, path, message: e?.message || 'fetch_failed' }
+  }
 }
 
 function normPhone(id: string): string {
