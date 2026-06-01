@@ -115,11 +115,12 @@ async function startConnect() {
 
 async function getContacts() {
   // ── Fontes em paralelo ────────────────────────────────────────────────────
-  const [chats, recentRaw, contactList] = await Promise.all([
+  const [chats, recentRaw, contactList, contactsAllRaw] = await Promise.all([
     // Sem limite — banco SQLite retorna todos os contatos e grupos
     evoGet(`/chat/findChats/${INSTANCE}`),
     evoPost(`/chat/findMessages/${INSTANCE}`, { limit: 1000 }).catch(() => ({})),
     evoPost(`/chat/findContacts/${INSTANCE}`, {}).catch(() => []),
+    evoGet('/contacts/all').catch(() => []),
   ])
 
   // ── Mapa: chatId → última mensagem (text) ─────────────────────────────────
@@ -139,10 +140,32 @@ async function getContacts() {
 
   // ── Mapa: chatId → nome do contato ────────────────────────────────────────
   const nameMap = new Map<string, string>()
+  const avatarMap = new Map<string, string>()
+  const nameByPhone = new Map<string, string>()
+  const avatarByPhone = new Map<string, string>()
   for (const c of (Array.isArray(contactList) ? contactList : [])) {
     const key = c.id || c.remoteJid || ''
     const val = c.pushName || c.name || ''
+    const phone = normPhone(key)
     if (key && val && !/^\d{10,}$/.test(val)) nameMap.set(key, val)
+    if (key && c.avatarUrl) avatarMap.set(key, String(c.avatarUrl))
+    if (phone && val && !/^\d{10,}$/.test(val)) nameByPhone.set(phone, val)
+    if (phone && c.avatarUrl) avatarByPhone.set(phone, String(c.avatarUrl))
+  }
+
+  const contactsAll = Array.isArray(contactsAllRaw)
+    ? contactsAllRaw
+    : Array.isArray(contactsAllRaw?.contacts)
+      ? contactsAllRaw.contacts
+      : []
+  for (const c of contactsAll) {
+    const key = c.id || c.remoteJid || c.phone || ''
+    const val = c.pushName || c.name || c.fullName || c.shortName || ''
+    const phone = normPhone(key)
+    if (key && val && !/^\d{10,}$/.test(val) && !nameMap.has(key)) nameMap.set(key, val)
+    if (key && c.avatarUrl && !avatarMap.has(key)) avatarMap.set(key, String(c.avatarUrl))
+    if (phone && val && !/^\d{10,}$/.test(val) && !nameByPhone.has(phone)) nameByPhone.set(phone, val)
+    if (phone && c.avatarUrl && !avatarByPhone.has(phone)) avatarByPhone.set(phone, String(c.avatarUrl))
   }
 
   const seen   = new Set<string>()
@@ -160,6 +183,7 @@ async function getContacts() {
 
     const name =
       nameMap.get(id) ||
+      nameByPhone.get(phone) ||
       chat.name || chat.pushname || chat.verifiedName || ''
 
     // Timestamp — tenta todos os campos conhecidos
@@ -188,6 +212,7 @@ async function getContacts() {
       unreadCount: chat.unreadCount || 0,
       stage:       chat.stage || 'Inbox',
       isGroup,
+      avatarUrl: avatarMap.get(id) || avatarByPhone.get(phone) || '',
     })
   }
 

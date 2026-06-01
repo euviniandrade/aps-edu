@@ -15,7 +15,7 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
-const CHAT_MESSAGE_LIMIT = 180
+const CHAT_MESSAGE_LIMIT = 500
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -992,12 +992,12 @@ export default function WhatsAppPage() {
               )
             ) : (
               <button
-                onClick={connectInstagram}
+                onClick={instagramState?.connected ? loadInstagram : connectInstagram}
                 disabled={instagramBusy}
                 className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
                 style={{ background: '#F8A303' }}
               >
-                {instagramBusy ? 'Conectando...' : (instagramState?.connected ? 'Atualizar Instagram' : 'Conectar Instagram')}
+                {instagramBusy ? 'Processando...' : (instagramState?.connected ? 'Sincronizar Instagram' : 'Conectar Instagram')}
               </button>
             )}
             <button onClick={platform === 'whatsapp' ? loadContacts : loadInstagram} className="p-2 rounded-xl text-white/40 hover:text-white transition-colors"
