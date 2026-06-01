@@ -8,7 +8,7 @@ const BACKEND_URL = (
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   'https://prankster-scored-giver.ngrok-free.dev'
-).replace(/\/api\/?$/, '').replace(/\/$/, '')
+).trim().replace(/\/api\/?$/, '').replace(/\/$/, '')
 
 const INSTANCE = 'sofi'
 const EVO_KEY  = process.env.WHATSAPP_API_KEY || ''
