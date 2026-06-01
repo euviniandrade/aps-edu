@@ -9,6 +9,7 @@ const MEMORY_PATH = process.env.WHATSAPP_MEMORY_PATH || path.join(SESSION_PATH, 
 const CHATS_STORE_PATH = path.join(SESSION_PATH, 'chats-store.json')
 const MESSAGES_STORE_PATH = path.join(SESSION_PATH, 'messages-store.json')
 const CRM_STORE_PATH = path.join(SESSION_PATH, 'crm-store.json')
+const PHONEBOOK_STORE_PATH = path.join(SESSION_PATH, 'phonebook-store.json')
 
 const emitter = new EventEmitter()
 emitter.setMaxListeners(100)
@@ -19,6 +20,8 @@ const messageHistory = new Map()
 const chatsStore = new Map()
 // Dados CRM por contato (stage, tags, score, notes) — persistido em disco
 const crmStore = new Map()
+// Catálogo de contatos do celular (contacts.set / contacts.upsert) — persistido em disco
+const phonebookStore = new Map()
 
 // ── Persistência ────────────────────────────────────────────────────────────
 
@@ -60,6 +63,12 @@ function bootstrapPersistence() {
   if (crmData && typeof crmData === 'object') {
     for (const [k, v] of Object.entries(crmData)) crmStore.set(k, v)
   }
+
+  const phonebookData = loadJsonFile(PHONEBOOK_STORE_PATH)
+  if (phonebookData && typeof phonebookData === 'object') {
+    for (const [k, v] of Object.entries(phonebookData)) phonebookStore.set(k, v)
+    console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados do disco.`)
+  }
 }
 
 // Timers de debounce para salvar sem travar o loop de eventos
@@ -84,6 +93,14 @@ function saveCrmStore() {
   clearTimeout(_saveCrmTimer)
   _saveCrmTimer = setTimeout(() => {
     writeJsonFile(CRM_STORE_PATH, Object.fromEntries(crmStore))
+  }, 1500)
+}
+
+let _savePhonebookTimer = null
+function savePhonebookStore() {
+  clearTimeout(_savePhonebookTimer)
+  _savePhonebookTimer = setTimeout(() => {
+    writeJsonFile(PHONEBOOK_STORE_PATH, Object.fromEntries(phonebookStore))
   }, 1500)
 }
 
@@ -123,8 +140,6 @@ const manualChats = new Set()
 const suggestions = []
 // Rate limiting: armazena timestamp da última resposta da Sofi por chat
 const lastReplyAt = new Map()
-// Catálogo de contatos do celular (contacts.set / contacts.upsert)
-const phonebookStore = new Map()
 
 function loadMemory() {
   try {
@@ -205,21 +220,44 @@ function saveCrm(chatId, data) {
 }
 
 function listCrmContacts() {
-  // Junta chats conhecidos com dados CRM
+  // Junta chats conhecidos + catálogo com dados CRM
   const result = []
   const seen = new Set()
+
+  // Primeiro: chats com histórico (têm timestamp de conversa)
   for (const [chatId, chat] of chatsStore) {
     if (chat.isGroup) continue
     const phone = normalizePhone(chatId)
     if (seen.has(phone)) continue
     seen.add(phone)
     const crm = crmStore.get(phone) || { stage: 'novo', tags: ['whatsapp'], score: 50 }
-    // Tenta pegar nome do catálogo se o chat não tem nome
     const phonebook = phonebookStore.get(phone)
     const name = chat.name || phonebook?.name || phone
-    result.push({ ...chat, name, phone, ...crm })
+    result.push({ ...chat, id: chatId, name, phone, ...crm })
   }
-  return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+
+  // Segundo: contatos do catálogo que ainda não têm chat
+  for (const [phone, contact] of phonebookStore) {
+    if (seen.has(phone)) continue
+    seen.add(phone)
+    const crm = crmStore.get(phone) || { stage: 'novo', tags: ['catálogo'], score: 50 }
+    result.push({
+      id: contact.chatId,
+      chatId: contact.chatId,
+      name: contact.name || phone,
+      phone,
+      isGroup: false,
+      timestamp: 0,
+      lastMessage: '',
+      ...crm,
+    })
+  }
+
+  // Ordena: quem conversou mais recente primeiro, depois catálogo por nome
+  return result.sort((a, b) => {
+    if ((b.timestamp || 0) !== (a.timestamp || 0)) return (b.timestamp || 0) - (a.timestamp || 0)
+    return (a.name || '').localeCompare(b.name || '', 'pt-BR')
+  })
 }
 
 // Lista todo o catálogo de contatos do celular
@@ -322,7 +360,7 @@ async function start() {
       logger: pino({ level: 'silent' }),
       generateHighQualityLinkPreview: false,
       browser: ['APS-EDU Sofi', 'Chrome', '120.0.0'],
-      syncFullHistory: false,  // chats já persistidos em disco — não recarregar tudo na memória
+      syncFullHistory: process.env.WHATSAPP_SYNC_FULL !== 'false',  // true localmente (RAM ok), false na Oracle VM
       markOnlineOnConnect: false,
     })
 
@@ -343,6 +381,7 @@ async function start() {
         })
       }
       console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados.`)
+      savePhonebookStore()
     })
 
     sock.ev.on('contacts.upsert', (contacts) => {
@@ -358,6 +397,7 @@ async function start() {
           chatId: contact.id,
         })
       }
+      savePhonebookStore()
     })
 
     // Popula chatsStore com histórico ao conectar

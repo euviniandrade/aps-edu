@@ -476,7 +476,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl
+          className="fixed bottom-24 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl
                      shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group"
           style={{
             background: 'linear-gradient(135deg, #F8A303, #FDC347)',
@@ -502,7 +502,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/* ── PANEL ───────────────────────────────────────────── */}
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-50 flex flex-col"
+          className="fixed bottom-24 right-6 z-50 flex flex-col"
           style={{
             width: 400,
             height: 600,

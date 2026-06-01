@@ -1,0 +1,51 @@
+// whatsapp.prisma — banco separado, SQLite local
+// Armazena todos os dados do WhatsApp CRM
+// Não precisa de PostgreSQL — é um arquivo local (whatsapp.db)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/whatsapp-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../whatsapp.db"
+}
+
+/// Contato/conversa individual do WhatsApp
+model WaChat {
+  id          String    @id                       // chatId: "5511...@s.whatsapp.net"
+  phone       String    @unique                   // somente dígitos: "5511999999999"
+  contactName String?   @map("contact_name")      // nome no WhatsApp
+  lastMessage String?   @map("last_message")      // preview da última mensagem
+  lastAt      DateTime? @map("last_at")            // timestamp da última mensagem
+  isGroup     Boolean   @default(false) @map("is_group")  // true = grupo
+  unreadCount Int       @default(0) @map("unread_count")
+  stage       String    @default("Novo")           // etapa do CRM (Kanban)
+  archived    Boolean   @default(false)
+  syncedAt    DateTime? @map("synced_at")          // quando foi sincronizado do WA
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  messages WaMessage[]
+
+  @@index([lastAt])
+  @@map("wa_chats")
+}
+
+/// Mensagem individual de uma conversa
+model WaMessage {
+  id        String   @id                          // ID da mensagem no WhatsApp
+  chatId    String   @map("chat_id")
+  phone     String                               // número do contato
+  fromMe    Boolean  @map("from_me")             // true = enviada por nós
+  text      String                              // conteúdo da mensagem
+  pushName  String?  @map("push_name")           // nome de exibição do remetente
+  ts        DateTime                             // timestamp real da mensagem
+  createdAt DateTime @default(now()) @map("created_at")
+
+  chat WaChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, ts])
+  @@map("wa_messages")
+}
