@@ -186,6 +186,9 @@ async function readBody(req) {
   return new Promise(r => { let b = ''; req.on('data', d => b += d); req.on('end', () => r(b)) })
 }
 
+let contactsSyncRunning = false
+let contactsSyncLastResult = null
+
 async function syncAllContactNames() {
   if (!isReady) return { synced: 0, skipped: 0, total: 0 }
   const [contacts, chats] = await Promise.all([
@@ -252,6 +255,28 @@ async function syncAllContactNames() {
   }
   pusherPublish('contacts_sync_progress', { synced, skipped, total, done: true })
   return { synced, skipped, total, source: 'contacts+chats' }
+}
+
+function startContactsSyncInBackground() {
+  if (contactsSyncRunning) {
+    return { started: false, running: true, lastResult: contactsSyncLastResult }
+  }
+
+  contactsSyncRunning = true
+  pusherPublish('contacts_sync_progress', { synced: 0, skipped: 0, total: 0, started: true })
+  syncAllContactNames()
+    .then(result => {
+      contactsSyncLastResult = { ...result, finishedAt: new Date().toISOString() }
+      pusherPublish('contacts_sync_progress', { ...result, done: true })
+    })
+    .catch(e => {
+      contactsSyncLastResult = { error: e.message, finishedAt: new Date().toISOString() }
+      pusherPublish('contacts_sync_progress', { error: e.message, done: true })
+      console.error('[Contacts] Erro na sincronizacao:', e.message)
+    })
+    .finally(() => { contactsSyncRunning = false })
+
+  return { started: true, running: true, lastResult: contactsSyncLastResult }
 }
 
 // Sofi IA - atendimento automatico, supervisionado e treinavel.
@@ -936,8 +961,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.includes('/contacts/sync') && req.method === 'POST') {
-      const result = await syncAllContactNames()
-      json({ ok: true, ...result })
+      const result = startContactsSyncInBackground()
+      json({ ok: true, mode: 'background', ...result })
       return
     }
 
