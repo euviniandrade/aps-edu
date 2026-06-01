@@ -961,16 +961,17 @@ const server = http.createServer(async (req, res) => {
       try { reqBody = JSON.parse(body || '{}') } catch {}
 
       const chatId = reqBody?.where?.key?.remoteJid || reqBody?.where?.remoteJid || reqBody?.chatId || ''
-      const limit  = reqBody.limit || 60
+      const limit  = Math.min(Number(reqBody.limit || 120), 500)
 
       if (!chatId) { json({ messages: { records: [] } }); return }
 
       // Busca do banco primeiro
-      const dbMsgs = await prisma.waMessage.findMany({
+      const dbMsgsDesc = await prisma.waMessage.findMany({
         where:   { chatId },
-        orderBy: { ts: 'asc' },
+        orderBy: { ts: 'desc' },
         take:    limit,
       })
+      const dbMsgs = [...dbMsgsDesc].reverse()
 
       // Se não tiver no banco, busca do WhatsApp e salva
       if (dbMsgs.length === 0 && isReady) {
@@ -981,9 +982,10 @@ const server = http.createServer(async (req, res) => {
             if (m.body) await saveMessage(chatId, m.id.id, m.fromMe, m.body, m._data?.notifyName || '', m.timestamp)
           }
           // Retorna do banco agora
-          const fresh = await prisma.waMessage.findMany({
-            where: { chatId }, orderBy: { ts: 'asc' }, take: limit,
+          const freshDesc = await prisma.waMessage.findMany({
+            where: { chatId }, orderBy: { ts: 'desc' }, take: limit,
           })
+          const fresh = [...freshDesc].reverse()
           json({ messages: { records: fresh.map(m => ({
             key:              { remoteJid: chatId, fromMe: m.fromMe, id: m.id },
             pushName:         m.pushName || '',
@@ -1009,8 +1011,8 @@ const server = http.createServer(async (req, res) => {
         select: { id: true, contactName: true, phone: true, isGroup: true, stage: true, lastMessage: true, lastAt: true, unreadCount: true },
         take: 5000,
       })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 40)
-      Promise.all(toResolve.map(c => getAvatarUrlBestEffort(c.id))).catch(() => {})
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 140)
+      await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
       json(contacts.map(c => ({
         id: c.id,
         pushName: cleanDisplayName(c.contactName, c.phone),
@@ -1038,8 +1040,8 @@ const server = http.createServer(async (req, res) => {
         orderBy: { contactName: 'asc' },
         take: 5000,
       })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 80)
-      Promise.all(toResolve.map(c => getAvatarUrlBestEffort(c.id))).catch(() => {})
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 220)
+      await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
       json(contacts.map(c => ({
         chatId: c.id,
         phone: c.phone,

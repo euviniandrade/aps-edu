@@ -15,6 +15,7 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
+const CHAT_MESSAGE_LIMIT = 180
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -269,6 +270,10 @@ export default function WhatsAppPage() {
   const contactsLoaded      = useRef<boolean>(false)
   const disconnectTimer     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selected = contacts.find(c => c.chatId === selectedId) ?? null
+  const filteredInstagramEvents = instagramEvents.filter(ev => {
+    if (ev.type !== 'automation_error' || !ev.error) return true
+    return !/session has expired|error validating access token/i.test(ev.error)
+  })
 
   // ── Carrega stages e arquivados do localStorage ────────────────────────────
   useEffect(() => {
@@ -329,7 +334,7 @@ export default function WhatsAppPage() {
     if (!chatId) return
     setLoadingMsgs(true); setMessages([])
     try {
-      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}&limit=60`)
+      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}&limit=${CHAT_MESSAGE_LIMIT}`)
       if (Array.isArray(data)) {
         setMessages(data.map(m => ({
           id:   m.id || crypto.randomUUID(),
@@ -468,7 +473,7 @@ export default function WhatsAppPage() {
     const poll = async () => {
       if (!running || !selectedIdRef.current) return
       try {
-        const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedIdRef.current)}&limit=60`)
+        const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedIdRef.current)}&limit=${CHAT_MESSAGE_LIMIT}`)
         if (!Array.isArray(data) || !running) return
         const fetched = data
           .map(m => ({
@@ -516,6 +521,11 @@ export default function WhatsAppPage() {
     apiFetch('status').then(st => {
       if (!st) return
       setWaState(st)
+      if (st.state === 'qr' && !st.qrDataUrl) {
+        apiFetch('start', { method: 'POST', body: '{}' }).then(next => {
+          if (next?.qrDataUrl) setQrDataUrl(next.qrDataUrl)
+        }).catch(() => {})
+      }
       if (st.ready) { prevWaReady.current = true; loadContacts() }
     }).catch(() => {})
   }, [loadContacts])
@@ -529,7 +539,7 @@ export default function WhatsAppPage() {
       // Marcar todas mensagens não lidas como lidas (usamos IDs das mensagens após carregar)
       setTimeout(async () => {
         try {
-          const msgs: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedId)}&limit=20`)
+          const msgs: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedId)}&limit=120`)
           const unread = (Array.isArray(msgs) ? msgs : [])
             .filter((m: any) => m.from !== 'agent' && m.from !== 'sofi')
             .map((m: any) => ({ id: m.id, fromMe: false }))
@@ -987,7 +997,7 @@ export default function WhatsAppPage() {
                 className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
                 style={{ background: '#F8A303' }}
               >
-                {instagramBusy ? 'Conectando...' : 'Conectar Instagram'}
+                {instagramBusy ? 'Conectando...' : (instagramState?.connected ? 'Atualizar Instagram' : 'Conectar Instagram')}
               </button>
             )}
             <button onClick={platform === 'whatsapp' ? loadContacts : loadInstagram} className="p-2 rounded-xl text-white/40 hover:text-white transition-colors"
@@ -1747,8 +1757,8 @@ export default function WhatsAppPage() {
                 <button onClick={loadInstagram} className="text-xs text-amber-300">Atualizar</button>
               </div>
               <div className="space-y-2">
-                {instagramEvents.length === 0 && <p className="text-xs text-white/35">Sem eventos ainda.</p>}
-                {instagramEvents.map((ev, i) => (
+                {filteredInstagramEvents.length === 0 && <p className="text-xs text-white/35">Sem eventos recentes.</p>}
+                {filteredInstagramEvents.map((ev, i) => (
                   <div key={`${ev.id || i}-${ev.type}`} className="rounded-xl p-2"
                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <p className="text-[11px] text-white font-bold">{ev.type}</p>
