@@ -59,6 +59,7 @@ backend/npm.cmd
 backend/ngrok.exe
 backend/uploads/
 backend/sofi-ai-memory.json
+evolution-api/
 
 # Build
 dist/

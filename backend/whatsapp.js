@@ -66,6 +66,7 @@ const INSTAGRAM_MEMORY_PATH = path.join(__dirname, 'instagram-memory.json')
 const DEFAULT_INSTAGRAM = {
   connected: false,
   businessId: process.env.INSTAGRAM_BUSINESS_ID || '',
+  pageId: process.env.INSTAGRAM_PAGE_ID || '',
   verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN || '',
   hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
   automationEnabled: true,
@@ -153,7 +154,17 @@ async function sendInstagramPrivateReply(commentId, text) {
 async function tryResolveInstagramBusinessId() {
   const current = process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || ''
   if (current) return current
-  const pageId = process.env.INSTAGRAM_PAGE_ID || ''
+  let pageId = process.env.INSTAGRAM_PAGE_ID || instagramState.pageId || ''
+  if (!pageId) {
+    try {
+      const me = await instagramGraph('me?fields=id')
+      pageId = String(me?.id || '').trim()
+      if (pageId) {
+        instagramState.pageId = pageId
+        saveInstagramState()
+      }
+    } catch {}
+  }
   if (!pageId) return ''
   try {
     const data = await instagramGraph(`${pageId}?fields=instagram_business_account`)
@@ -1274,6 +1285,7 @@ const server = http.createServer(async (req, res) => {
       json({
         ok: true,
         connected: !!(instagramState.connected || businessId),
+        pageId: process.env.INSTAGRAM_PAGE_ID || instagramState.pageId || '',
         businessId: businessId || process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
         hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
         hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
@@ -1310,12 +1322,23 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req)
       let reqBody = {}
       try { reqBody = JSON.parse(body || '{}') } catch {}
+      if (typeof reqBody.pageId === 'string' && reqBody.pageId.trim()) instagramState.pageId = reqBody.pageId.trim()
+      if (typeof reqBody.businessId === 'string' && reqBody.businessId.trim()) {
+        instagramState.businessId = reqBody.businessId.trim()
+        instagramState.connected = true
+      }
       if (typeof reqBody.automationEnabled === 'boolean') instagramState.automationEnabled = reqBody.automationEnabled
       if (typeof reqBody.requireFollowGate === 'boolean') instagramState.requireFollowGate = reqBody.requireFollowGate
       if (typeof reqBody.autoReplyTemplate === 'string') instagramState.autoReplyTemplate = reqBody.autoReplyTemplate.slice(0, 500)
       if (typeof reqBody.followGateTemplate === 'string') instagramState.followGateTemplate = reqBody.followGateTemplate.slice(0, 500)
       saveInstagramState()
-      json({ ok: true, automationEnabled: instagramState.automationEnabled, requireFollowGate: instagramState.requireFollowGate })
+      json({
+        ok: true,
+        pageId: instagramState.pageId || '',
+        businessId: instagramState.businessId || '',
+        automationEnabled: instagramState.automationEnabled,
+        requireFollowGate: instagramState.requireFollowGate,
+      })
       return
     }
 
