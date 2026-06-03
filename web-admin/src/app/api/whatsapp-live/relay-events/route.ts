@@ -9,7 +9,10 @@
 
 export const runtime = 'edge'
 
-const FALLBACK_TUNNEL = 'https://travelling-poly-clinics-persons.trycloudflare.com'
+const FALLBACK_TUNNELS = [
+  'https://cincinnati-amanda-bulk-cycling.trycloudflare.com',
+  'https://travelling-poly-clinics-persons.trycloudflare.com',
+]
 
 function normalizeBackendUrl(input: string): string {
   return String(input || '')
@@ -23,7 +26,7 @@ const BACKEND_URLS = Array.from(
   new Set([
     normalizeBackendUrl(process.env.BACKEND_URL || ''),
     normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL || ''),
-    normalizeBackendUrl(FALLBACK_TUNNEL),
+    ...FALLBACK_TUNNELS.map(normalizeBackendUrl),
   ].filter(Boolean)),
 )
 
