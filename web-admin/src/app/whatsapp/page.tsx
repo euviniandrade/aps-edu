@@ -39,7 +39,7 @@ interface Contact {
   stage?: Stage
 }
 interface Message {
-  id: string; from: 'lead' | 'agent' | 'sofi'; text: string; at: string; name?: string
+  id: string; from: 'lead' | 'agent' | 'sofi'; text: string; at: string; name?: string; ts?: number
 }
 interface WaState { connected: boolean; ready: boolean; qrDataUrl?: string | null; error?: string | null }
 interface Group   { id: string; name: string; description: string; participants: number; members: { id: string; phone: string; admin: boolean }[] }
@@ -119,6 +119,34 @@ function fmtTs(ts: any) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 const now2 = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+function msgTimestamp(msg: Partial<Message> & { ts?: number }) {
+  if (typeof msg.ts === 'number' && Number.isFinite(msg.ts)) return msg.ts
+  const fromAt = msg.at ? new Date(msg.at).getTime() : 0
+  return Number.isFinite(fromAt) ? fromAt : 0
+}
+
+function sortMessagesChronologically(list: Message[]) {
+  return [...list].sort((a, b) => msgTimestamp(a) - msgTimestamp(b))
+}
+
+function mapMessageItem(m: any): Message {
+  const ts = m?.ts
+    ? Number(m.ts)
+    : m?.at
+      ? new Date(m.at).getTime()
+      : 0
+  return {
+    id:   m.id || crypto.randomUUID(),
+    from: (m.from === 'agent' || m.from === 'sofi') ? m.from : 'lead',
+    text: m.text || '',
+    name: m.name || '',
+    at:   m.at
+      ? (typeof m.at === 'string' && /^\d{2}:\d{2}$/.test(m.at) ? m.at : new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+      : now2(),
+    ts:   Number.isFinite(ts) ? ts : Date.now(),
+  }
+}
 
 // ── localStorage CRM ──────────────────────────────────────────────────────────
 const CRM_KEY      = 'sofi_crm_stages'
@@ -335,15 +363,14 @@ export default function WhatsAppPage() {
     try {
       const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}`)
       if (Array.isArray(data)) {
-        setMessages(data.map(m => ({
-          id:   m.id || crypto.randomUUID(),
-          from: (m.from === 'agent' || m.from === 'sofi') ? m.from : 'lead',
-          text: m.text || '',
-          name: m.name || '',
-          at:   m.at ? new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : now2(),
-        })))
+        setMessages(sortMessagesChronologically(data.map(mapMessageItem)))
       }
-    } catch {} finally { setLoadingMsgs(false) }
+    } catch {} finally {
+      setLoadingMsgs(false)
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+      })
+    }
   }, [])
 
   // ── Pusher — WebSocket real-time ──────────────────────────────────────────────
@@ -414,10 +441,11 @@ export default function WhatsAppPage() {
         const at = ts
           ? new Date(Number(ts) * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           : now2()
-        const msg: Message = { id: msgId, from: fromMe ? 'agent' : 'lead', text, name: pushName, at }
+        const tsMs = ts ? Number(ts) * 1000 : Date.now()
+        const msg: Message = { id: msgId, from: fromMe ? 'agent' : 'lead', text, name: pushName, at, ts: tsMs }
         setSelectedId(prev => {
           if (prev === chatId || normPhone(prev) === phone)
-            setMessages(m => m.some(x => x.id === msgId) ? m : [...m, msg])
+            setMessages(m => sortMessagesChronologically(m.some(x => x.id === msgId) ? m : [...m, msg]))
           return prev
         })
         setContacts(prev => {
@@ -475,19 +503,16 @@ export default function WhatsAppPage() {
         const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(selectedIdRef.current)}`)
         if (!Array.isArray(data) || !running) return
         const fetched = data
-          .map(m => ({
-            id:   m.id || '',
-            from: (m.from === 'agent' || m.from === 'sofi') ? m.from as Message['from'] : 'lead' as const,
-            text: m.text || '',
-            name: m.name || '',
-            at:   m.at ? new Date(m.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : now2(),
-          }))
+          .map(mapMessageItem)
           .filter(m => m.text && m.id)
         setMessages(prev => {
           const existingIds = new Set(prev.map(m => m.id))
           const added = fetched.filter(m => !existingIds.has(m.id))
           if (added.length === 0) return prev
-          return [...prev, ...added].sort((a, b) => 0) // mantém ordem original
+          return sortMessagesChronologically([...prev, ...added])
+        })
+        requestAnimationFrame(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
         })
       } catch {}
     }
@@ -549,7 +574,12 @@ export default function WhatsAppPage() {
     }
   }, [selectedId]) // eslint-disable-line
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    if (!selectedId) return
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    })
+  }, [messages, selectedId])
 
   // ── Ações Chat ──────────────────────────────────────────────────────────────
   const connectWA = async () => {
@@ -572,8 +602,8 @@ export default function WhatsAppPage() {
     if (!text || !selected || !waState?.ready) return
     setSending(true)
     const msgId = crypto.randomUUID()
-    const msg: Message = { id: msgId, from: 'agent', text, at: now2() }
-    setMessages(prev => [...prev, msg])
+    const msg: Message = { id: msgId, from: 'agent', text, at: now2(), ts: Date.now() }
+    setMessages(prev => sortMessagesChronologically([...prev, msg]))
     setComposer('')
     try {
       await apiFetch('send', { method: 'POST', body: JSON.stringify({ chatId: selected.chatId, phone: selected.phone, text }) })
