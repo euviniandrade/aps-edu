@@ -620,8 +620,8 @@ export default function WhatsAppPage() {
         setWaConnectNote('WhatsApp conectado.')
         return
       }
-      setWaConnectError('Não consegui gerar um QR novo agora. Verifique se o backend/túnel está online e tente novamente.')
-      setWaConnectNote('Ainda tentando localizar um QR válido...')
+      setWaConnectError('Nao consegui gerar um QR novo agora. O backend/tunel parece indisponivel ou nao respondeu a tempo.')
+      setWaConnectNote('Backend/tunel offline: o QR nao consegue nascer do lado do front.')
     } catch {} finally { setInitBusy(false) }
   }
 
