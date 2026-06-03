@@ -118,7 +118,7 @@ async function getContacts() {
   const [chats, recentRaw, contactList, contactsAllRaw] = await Promise.all([
     // Sem limite — banco SQLite retorna todos os contatos e grupos
     evoGet(`/chat/findChats/${INSTANCE}`),
-    evoPost(`/chat/findMessages/${INSTANCE}`, { limit: 1000 }).catch(() => ({})),
+    evoPost(`/chat/findMessages/${INSTANCE}`, {}).catch(() => ({})),
     evoPost(`/chat/findContacts/${INSTANCE}`, {}).catch(() => []),
     evoGet('/contacts/all').catch(() => []),
   ])
@@ -260,9 +260,6 @@ async function getMessages(chatId: string, limit = 0) {
   msgs.sort((a: any, b: any) =>
     Number(a.messageTimestamp || 0) - Number(b.messageTimestamp || 0)
   )
-
-  // Pega os últimos `limit` mensagens
-  if (hasLimit && msgs.length > limit) msgs = msgs.slice(-limit)
 
   return msgs
     .map((m: any) => ({

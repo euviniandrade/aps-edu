@@ -90,7 +90,7 @@ function loadInstagramState() {
       ...DEFAULT_INSTAGRAM,
       ...raw,
       rules: Array.isArray(raw.rules) ? raw.rules : DEFAULT_INSTAGRAM.rules,
-      events: Array.isArray(raw.events) ? raw.events.slice(-200) : [],
+      events: Array.isArray(raw.events) ? raw.events : [],
       conversations: raw.conversations && typeof raw.conversations === 'object' ? raw.conversations : {},
     }
   } catch {
@@ -108,13 +108,13 @@ function saveInstagramState() {
 }
 
 function addInstagramEvent(event) {
-  instagramState.events = [...instagramState.events, { id: crypto.randomUUID(), at: new Date().toISOString(), ...event }].slice(-200)
+  instagramState.events = [...instagramState.events, { id: crypto.randomUUID(), at: new Date().toISOString(), ...event }]
   saveInstagramState()
   pusherPublish('instagram_event', event)
 }
 
 async function instagramGraph(pathname, method = 'GET', body = null) {
-  const token = process.env.INSTAGRAM_PAGE_TOKEN || instagramState.pageToken || ''
+  const token = instagramState.pageToken || process.env.INSTAGRAM_PAGE_TOKEN || ''
   if (!token) throw new Error('INSTAGRAM_PAGE_TOKEN ausente')
   const version = process.env.INSTAGRAM_GRAPH_VERSION || 'v23.0'
   const baseUrl = `https://graph.facebook.com/${version}/${pathname}`
@@ -153,7 +153,7 @@ function findInstagramRule(text) {
 }
 
 async function sendInstagramDm(igUserId, text) {
-  const businessId = process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId
+  const businessId = instagramState.businessId || process.env.INSTAGRAM_BUSINESS_ID || ''
   if (!businessId) throw new Error('INSTAGRAM_BUSINESS_ID ausente')
   return instagramGraph(`${businessId}/messages`, 'POST', {
     recipient: { id: String(igUserId) },
@@ -167,22 +167,15 @@ async function sendInstagramPrivateReply(commentId, text) {
 }
 
 async function tryResolveInstagramBusinessId() {
-  const current = process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || ''
-  if (current) return current
-  let pageId = process.env.INSTAGRAM_PAGE_ID || instagramState.pageId || ''
+  const pageId = instagramState.pageId || process.env.INSTAGRAM_PAGE_ID || ''
   if (!pageId) {
-    try {
-      const me = await instagramGraph('me?fields=id')
-      pageId = String(me?.id || '').trim()
-      if (pageId) {
-        instagramState.pageId = pageId
-        saveInstagramState()
-      }
-    } catch {}
+    instagramState.connected = false
+    saveInstagramState()
+    return ''
   }
-  if (!pageId) return ''
+
   try {
-    const data = await instagramGraph(`${pageId}?fields=instagram_business_account`)
+    const data = await instagramGraph(`${pageId}?fields=instagram_business_account,name`)
     const found = String(data?.instagram_business_account?.id || '').trim()
     if (found) {
       instagramState.businessId = found
@@ -191,6 +184,9 @@ async function tryResolveInstagramBusinessId() {
       return found
     }
   } catch {}
+
+  instagramState.connected = false
+  saveInstagramState()
   return ''
 }
 
@@ -209,7 +205,7 @@ function addInstagramConversation(igUserId, payload) {
       direction: payload.direction || 'in',
       text: payload.text || '',
       source: payload.source || 'instagram',
-    }].slice(-100),
+    }],
   }
   instagramState.conversations[id] = next
   saveInstagramState()
@@ -961,7 +957,9 @@ const server = http.createServer(async (req, res) => {
       try { reqBody = JSON.parse(body || '{}') } catch {}
 
       const chatId = reqBody?.where?.key?.remoteJid || reqBody?.where?.remoteJid || reqBody?.chatId || ''
-      const limit  = Math.min(Number(reqBody.limit || 120), 500)
+      const requestedLimit = Number(reqBody.limit || 0)
+      const hasLimit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      const limit = hasLimit ? Math.max(1, requestedLimit) : 0
 
       if (!chatId) { json({ messages: { records: [] } }); return }
 
@@ -969,7 +967,7 @@ const server = http.createServer(async (req, res) => {
       const dbMsgsDesc = await prisma.waMessage.findMany({
         where:   { chatId },
         orderBy: { ts: 'desc' },
-        take:    limit,
+        ...(hasLimit ? { take: limit } : {}),
       })
       const dbMsgs = [...dbMsgsDesc].reverse()
 
@@ -977,13 +975,15 @@ const server = http.createServer(async (req, res) => {
       if (dbMsgs.length === 0 && isReady) {
         try {
           const chat = await client.getChatById(chatId)
-          const msgs = await chat.fetchMessages({ limit })
+          const msgs = await chat.fetchMessages({ limit: hasLimit ? limit : Infinity })
           for (const m of msgs) {
             if (m.body) await saveMessage(chatId, m.id.id, m.fromMe, m.body, m._data?.notifyName || '', m.timestamp)
           }
           // Retorna do banco agora
           const freshDesc = await prisma.waMessage.findMany({
-            where: { chatId }, orderBy: { ts: 'desc' }, take: limit,
+            where: { chatId },
+            orderBy: { ts: 'desc' },
+            ...(hasLimit ? { take: limit } : {}),
           })
           const fresh = [...freshDesc].reverse()
           json({ messages: { records: fresh.map(m => ({
@@ -1009,9 +1009,8 @@ const server = http.createServer(async (req, res) => {
     if (url.includes('/chat/findContacts')) {
       const contacts = await prisma.waChat.findMany({
         select: { id: true, contactName: true, phone: true, isGroup: true, stage: true, lastMessage: true, lastAt: true, unreadCount: true },
-        take: 5000,
       })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 140)
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id))
       await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
       json(contacts.map(c => ({
         id: c.id,
@@ -1038,9 +1037,8 @@ const server = http.createServer(async (req, res) => {
       const contacts = await prisma.waChat.findMany({
         where: { archived: false, isGroup: false },
         orderBy: { contactName: 'asc' },
-        take: 5000,
       })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id)).slice(0, 220)
+      const toResolve = contacts.filter(c => !avatarCache.has(c.id))
       await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
       json(contacts.map(c => ({
         chatId: c.id,
@@ -1307,8 +1305,8 @@ const server = http.createServer(async (req, res) => {
       const businessId = await tryResolveInstagramBusinessId()
       json({
         ok: true,
-        connected: !!(instagramState.connected || businessId),
-        pageId: process.env.INSTAGRAM_PAGE_ID || instagramState.pageId || '',
+        connected: !!businessId,
+        pageId: instagramState.pageId || process.env.INSTAGRAM_PAGE_ID || '',
         businessId: businessId || process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
         hasPageToken: !!(process.env.INSTAGRAM_PAGE_TOKEN || instagramState.pageToken),
         hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
@@ -1352,12 +1350,14 @@ const server = http.createServer(async (req, res) => {
       }
       if (typeof reqBody.businessId === 'string' && reqBody.businessId.trim()) {
         instagramState.businessId = reqBody.businessId.trim()
-        instagramState.connected = true
+        instagramState.connected = false
       }
       if (typeof reqBody.automationEnabled === 'boolean') instagramState.automationEnabled = reqBody.automationEnabled
       if (typeof reqBody.requireFollowGate === 'boolean') instagramState.requireFollowGate = reqBody.requireFollowGate
       if (typeof reqBody.autoReplyTemplate === 'string') instagramState.autoReplyTemplate = reqBody.autoReplyTemplate.slice(0, 500)
       if (typeof reqBody.followGateTemplate === 'string') instagramState.followGateTemplate = reqBody.followGateTemplate.slice(0, 500)
+      const resolvedBusinessId = await tryResolveInstagramBusinessId()
+      instagramState.connected = !!resolvedBusinessId
       saveInstagramState()
       json({
         ok: true,
@@ -1370,13 +1370,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/instagram/events' && req.method === 'GET') {
-      json({ ok: true, events: (instagramState.events || []).slice(-100).reverse() })
+      json({ ok: true, events: [...(instagramState.events || [])].reverse() })
       return
     }
 
     if (pathname === '/instagram/conversations' && req.method === 'GET') {
       const list = Object.values(instagramState.conversations || {}).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
-      json({ ok: true, conversations: list.slice(0, 500) })
+      json({ ok: true, conversations: list })
       return
     }
 

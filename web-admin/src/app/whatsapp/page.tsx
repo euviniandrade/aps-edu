@@ -1411,7 +1411,7 @@ export default function WhatsAppPage() {
                     </button>
                   </div>
                   <div className="max-h-48 overflow-y-auto space-y-1">
-                    {massRecipients.slice(0, 100).map((r, i) => (
+                    {massRecipients.map((r, i) => (
                       <div key={i} className="flex items-center justify-between py-1 px-2 rounded-lg gap-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
                         <div className="flex items-center gap-2 min-w-0">
                           {r.avatarUrl ? (
@@ -1432,7 +1432,6 @@ export default function WhatsAppPage() {
                         </button>
                       </div>
                     ))}
-                    {massRecipients.length > 100 && <p className="text-[10px] text-white/30 text-center py-2">+ {massRecipients.length - 100} mais</p>}
                   </div>
                 </div>
               )}
