@@ -9,31 +9,59 @@
 
 export const runtime = 'edge'
 
-const BACKEND_URL = (
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://prankster-scored-giver.ngrok-free.dev'
-).replace(/\/api\/?$/, '').replace(/\/$/, '')
+const FALLBACK_TUNNEL = 'https://travelling-poly-clinics-persons.trycloudflare.com'
 
-export async function GET() {
-  const relayUrl = `${BACKEND_URL}/relay/events`
+function normalizeBackendUrl(input: string): string {
+  return String(input || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/$/, '')
+}
 
-  try {
-    const upstream = await fetch(relayUrl, {
-      headers: {
-        Accept:                        'text/event-stream',
-        'Cache-Control':               'no-cache',
-        'ngrok-skip-browser-warning':  'true',
-        'User-Agent':                  'APS-EDU-Edge/1.0',
-      },
-      // Edge runtime suporta streaming de response sem flags extras
-    })
+const BACKEND_URLS = Array.from(
+  new Set([
+    normalizeBackendUrl(process.env.BACKEND_URL || ''),
+    normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL || ''),
+    normalizeBackendUrl(FALLBACK_TUNNEL),
+  ].filter(Boolean)),
+)
 
-    if (!upstream.ok || !upstream.body) {
-      return errorStream('relay indisponível')
+async function fetchRelayFromBackend() {
+  let lastError = ''
+
+  for (const baseUrl of BACKEND_URLS) {
+    try {
+      const upstream = await fetch(`${baseUrl}/relay/events`, {
+        headers: {
+          Accept:                        'text/event-stream',
+          'Cache-Control':               'no-cache',
+          'ngrok-skip-browser-warning':  'true',
+          'User-Agent':                  'APS-EDU-Edge/1.0',
+        },
+      })
+
+      if (upstream.ok && upstream.body) {
+        return upstream
+      }
+
+      const text = await upstream.text().catch(() => '')
+      lastError = text || `http_${upstream.status}`
+      if (upstream.status < 500 && !/bad gateway|unable to reach the origin service|cloudflared|origin service/i.test(text || '')) {
+        break
+      }
+    } catch (e: any) {
+      lastError = e?.message || 'fetch_failed'
     }
+  }
 
-    // Faz pipe direto do body upstream para o response — streaming puro
+  throw new Error(lastError || 'relay indisponivel')
+}
+export async function GET() {
+  try {
+    const upstream = await fetchRelayFromBackend()
+
+    // Faz pipe direto do body upstream para o response ??? streaming puro
     return new Response(upstream.body, {
       status: 200,
       headers: {
@@ -47,7 +75,6 @@ export async function GET() {
     return errorStream(e?.message || 'erro desconhecido')
   }
 }
-
 function errorStream(msg: string) {
   const body = `event: error\ndata: ${JSON.stringify({ msg })}\n\n`
   return new Response(body, {

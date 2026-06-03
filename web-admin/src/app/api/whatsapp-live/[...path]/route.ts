@@ -3,15 +3,24 @@ import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 60
 export const dynamic    = 'force-dynamic'
 
-// ── Config ───────────────────────────────────────────────────────────────────
-const BACKEND_URL = (
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  ''
-).trim().replace(/\s+/g, '').replace(/\/api\/?$/, '').replace(/\/$/, '')
+// ?????? Config ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+const FALLBACK_TUNNEL = 'https://travelling-poly-clinics-persons.trycloudflare.com'
 
-const INSTANCE = 'sofi'
-const EVO_KEY  = process.env.WHATSAPP_API_KEY || ''
+function normalizeBackendUrl(input: string): string {
+  return String(input || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/$/, '')
+}
+
+const BACKEND_URLS = Array.from(
+  new Set([
+    normalizeBackendUrl(process.env.BACKEND_URL || ''),
+    normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL || ''),
+    normalizeBackendUrl(FALLBACK_TUNNEL),
+  ].filter(Boolean)),
+)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function evoHeaders(): Record<string, string> {
@@ -23,40 +32,59 @@ function evoHeaders(): Record<string, string> {
   }
 }
 
-async function evoGet(path: string): Promise<any> {
-  if (!BACKEND_URL) {
-    return { ok: false, proxyError: true, path, message: 'BACKEND_URL não configurado no Vercel' }
-  }
-  try {
-    const r = await fetch(`${BACKEND_URL}${path}`, { headers: evoHeaders(), cache: 'no-store' })
-    if (!r.ok) {
-      const text = await r.text().catch(() => '')
-      return { ok: false, proxyError: true, status: r.status, path, message: text.slice(0, 500) }
+function shouldRetryWithFallback(status: number, text: string): boolean {
+  if (status >= 500) return true
+  return /fetch failed|bad gateway|unable to reach the origin service|cloudflared|origin service/i.test(text || '')
+}
+
+async function fetchFromBackendCandidates(path: string, init: RequestInit) {
+  let lastError = ''
+
+  for (const baseUrl of BACKEND_URLS) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, { ...init, cache: 'no-store' })
+
+      if (response.ok) {
+        const data = await response.json().catch(async () => {
+          const text = await response.text().catch(() => '')
+          throw new Error(text || 'invalid_json')
+        })
+        return { ok: true, data }
+      }
+
+      const text = await response.text().catch(() => '')
+      lastError = text || `http_${response.status}`
+
+      if (!shouldRetryWithFallback(response.status, text)) {
+        return { ok: false, status: response.status, text }
+      }
+    } catch (e: any) {
+      lastError = e?.message || 'fetch_failed'
     }
-    return await r.json()
-  } catch (e: any) {
-    return { ok: false, proxyError: true, path, message: e?.message || 'fetch_failed' }
   }
+
+  return {
+    ok: false,
+    status: 502,
+    text: lastError || 'fetch_failed',
+  }
+}
+
+async function evoGet(path: string): Promise<any> {
+  const result = await fetchFromBackendCandidates(path, { headers: evoHeaders() })
+  if (result.ok) return result.data
+  return { ok: false, proxyError: true, status: result.status, path, message: String(result.text || '').slice(0, 500) }
 }
 
 async function evoPost(path: string, body: any): Promise<any> {
-  if (!BACKEND_URL) {
-    return { ok: false, proxyError: true, path, message: 'BACKEND_URL não configurado no Vercel' }
-  }
-  try {
-    const r = await fetch(`${BACKEND_URL}${path}`, {
-      method: 'POST', headers: evoHeaders(), body: JSON.stringify(body), cache: 'no-store',
-    })
-    if (!r.ok) {
-      const text = await r.text().catch(() => '')
-      return { ok: false, proxyError: true, status: r.status, path, message: text.slice(0, 500) }
-    }
-    return await r.json()
-  } catch (e: any) {
-    return { ok: false, proxyError: true, path, message: e?.message || 'fetch_failed' }
-  }
+  const result = await fetchFromBackendCandidates(path, {
+    method: 'POST',
+    headers: evoHeaders(),
+    body: JSON.stringify(body),
+  })
+  if (result.ok) return result.data
+  return { ok: false, proxyError: true, status: result.status, path, message: String(result.text || '').slice(0, 500) }
 }
-
 function normPhone(id: string): string {
   return String(id || '').replace(/@[^@]*$/, '').replace(/\D/g, '')
 }
