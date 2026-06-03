@@ -22,6 +22,9 @@ const BACKEND_URLS = Array.from(
   ].filter(Boolean)),
 )
 
+const EVO_KEY  = process.env.WHATSAPP_API_KEY || ''
+const INSTANCE = 'sofi'
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function evoHeaders(): Record<string, string> {
   return {
@@ -384,12 +387,24 @@ async function sendInstagramDm(userId: string, text: string) {
 
 async function deleteMessage(chatId: string, msgId: string, fromMe: boolean) {
   try {
-    const r = await fetch(`${BACKEND_URL}/chat/deleteMessage/${INSTANCE}`, {
-      method: 'DELETE', headers: evoHeaders(),
-      body: JSON.stringify({ id: msgId, remoteJid: chatId, fromMe }),
-      cache: 'no-store',
-    })
-    return await r.json()
+    for (const baseUrl of BACKEND_URLS) {
+      try {
+        const r = await fetch(`${baseUrl}/chat/deleteMessage/${INSTANCE}`, {
+          method: 'DELETE',
+          headers: evoHeaders(),
+          body: JSON.stringify({ id: msgId, remoteJid: chatId, fromMe }),
+          cache: 'no-store',
+        })
+
+        if (r.ok) return await r.json()
+
+        const text = await r.text().catch(() => '')
+        if (!shouldRetryWithFallback(r.status, text)) {
+          return { ok: false, status: r.status, text }
+        }
+      } catch {}
+    }
+    return { ok: false, status: 502, text: 'fetch_failed' }
   } catch { return {} }
 }
 
@@ -422,7 +437,6 @@ async function getAllContacts() {
 // para o browser. Isso permite push em tempo real de webhooks do Evolution API.
 async function makeRelaySSEStream(): Promise<ReadableStream<Uint8Array>> {
   const enc = new TextEncoder()
-  const relayUrl = `${BACKEND_URL}/relay/events`
 
   return new ReadableStream({
     async start(controller) {
@@ -432,18 +446,34 @@ async function makeRelaySSEStream(): Promise<ReadableStream<Uint8Array>> {
       }
 
       try {
-        const upstream = await fetch(relayUrl, {
-          headers: {
-            Accept: 'text/event-stream',
-            'ngrok-skip-browser-warning': 'true',
-            'Cache-Control': 'no-cache',
-          },
-          cache: 'no-store',
-          // @ts-ignore — Node 18+ fetch suporta duplex stream
-          duplex: 'half',
-        })
+        let upstream: Response | null = null
 
-        if (!upstream.ok || !upstream.body) {
+        for (const baseUrl of BACKEND_URLS) {
+          try {
+            const response = await fetch(`${baseUrl}/relay/events`, {
+              headers: {
+                Accept: 'text/event-stream',
+                'ngrok-skip-browser-warning': 'true',
+                'Cache-Control': 'no-cache',
+              },
+              cache: 'no-store',
+              // @ts-ignore ? Node 18+ fetch suporta duplex stream
+              duplex: 'half',
+            })
+
+            if (response.ok && response.body) {
+              upstream = response
+              break
+            }
+
+            const text = await response.text().catch(() => '')
+            if (!shouldRetryWithFallback(response.status, text)) {
+              upstream = response
+              break
+            }
+          } catch {}
+        }
+        if (!upstream || !upstream.ok || !upstream.body) {
           controller.enqueue(enc.encode('event: error\ndata: {"msg":"relay unavailable"}\n\n'))
           close()
           return
@@ -623,3 +653,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ path: stri
     return NextResponse.json({ error: e.message }, { status: 503 })
   }
 }
+
