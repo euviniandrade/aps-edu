@@ -723,6 +723,20 @@ let qrBase64  = null
 let phoneInfo = null
 let syncDone  = false
 
+async function isClientActuallyConnected() {
+  try {
+    const state = await client.getState()
+    const connected = state === 'CONNECTED'
+    if (!connected) {
+      isReady = false
+    }
+    return connected
+  } catch {
+    isReady = false
+    return false
+  }
+}
+
 // ── Cliente WhatsApp Web ──────────────────────────────────────────────────────
 const client = new Client({
   authStrategy: new LocalAuth({
@@ -757,26 +771,46 @@ client.on('authenticated', () => {
 client.on('ready', async () => {
   qrBase64  = null
   phoneInfo = { wuid: client.info.wid.user, name: client.info.pushname }
-  console.log(`[WA] ✅ Conectado! ${phoneInfo.name} (${phoneInfo.wuid})`)
+  console.log(`[WA] Conectado! ${phoneInfo.name} (${phoneInfo.wuid})`)
 
   // Aguarda 5s antes de liberar a API (WhatsApp precisa sincronizar)
   setTimeout(async () => {
+    const connected = await isClientActuallyConnected()
+    if (!connected) {
+      console.log('[WA] ready disparou, mas o estado real ainda nao esta CONNECTED')
+      pusherPublish('state', { connected: false, ready: false, state: 'close', provider: 'whatsapp-web.js', mode: 'live' })
+      return
+    }
+
     isReady = true
     pusherPublish('state', { connected: true, ready: true, state: 'open', provider: 'whatsapp-web.js', mode: 'live' })
     console.log('[WA] API pronta')
 
-    // Sincroniza chats em background (não bloqueia)
+    // Sincroniza chats em background (nao bloqueia)
     if (!syncDone) syncChatsBackground()
   }, 5000)
 })
 
+client.on('change_state', async state => {
+  const connected = state === 'CONNECTED'
+  isReady = connected
+
+  if (!connected) {
+    if (phoneInfo) console.log('[WA] Estado mudou para', state)
+    pusherPublish('state', { connected: false, ready: false, state: 'close', provider: 'whatsapp-web.js', mode: 'live' })
+    return
+  }
+
+  pusherPublish('state', { connected: true, ready: true, state: 'open', provider: 'whatsapp-web.js', mode: 'live' })
+})
+
 client.on('disconnected', reason => {
   isReady = false
+  phoneInfo = null
   console.log('[WA] Desconectado:', reason)
   pusherPublish('state', { connected: false, ready: false, state: 'close' })
 })
 
-// ── Mensagem RECEBIDA ─────────────────────────────────────────────────────────
 client.on('message', async msg => {
   if (msg.isStatus || msg.from === 'status@broadcast') return
   const text = await extractIncomingText(msg)
@@ -901,19 +935,20 @@ const server = http.createServer(async (req, res) => {
 
     // ── Estado de conexão ───────────────────────────────────────────────────
     if (url.includes('/instance/connectionState') || pathname === '/status') {
-      json({ instance: { state: isReady ? 'open' : qrBase64 ? 'qr' : 'close' } })
+      const connected = await isClientActuallyConnected()
+      json({ instance: { state: connected ? 'open' : qrBase64 ? 'qr' : 'close' } })
       return
     }
 
-    // ── QR Code ─────────────────────────────────────────────────────────────
+    // QR Code
     if (url.includes('/instance/connect')) {
-      if (isReady) { json({ connected: true, ready: true, qrDataUrl: null, error: null }); return }
+      const connected = await isClientActuallyConnected()
+      if (connected) { json({ connected: true, ready: true, qrDataUrl: null, error: null }); return }
       if (qrBase64) { json({ base64: qrBase64 }); return }
       json({ base64: null, error: 'Aguarde o QR Code...' })
       return
     }
 
-    // ── Lista de chats (DO BANCO — sem limite, inclui grupos) ───────────────
     if (url.includes('/chat/findChats')) {
       const search   = params.get('q') || ''
       const onlyGrps = params.get('groups') === '1'
