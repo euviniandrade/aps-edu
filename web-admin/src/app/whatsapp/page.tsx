@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Pusher from 'pusher-js'
 import AdminLayout from '@/components/layout/AdminLayout'
 import Cookies from 'js-cookie'
@@ -297,6 +297,7 @@ export default function WhatsAppPage() {
   const [igDmUserId, setIgDmUserId] = useState('')
   const [igDmText, setIgDmText] = useState('Olá! Obrigado pelo comentário. Vou te enviar o material por aqui.')
 
+  const messagesScrollRef   = useRef<HTMLDivElement>(null)
   const messagesEndRef      = useRef<HTMLDivElement>(null)
   const sseAbort            = useRef<AbortController | null>(null)
   const prevWaReady         = useRef<boolean>(false)
@@ -374,9 +375,20 @@ export default function WhatsAppPage() {
     } catch {} finally {
       setLoadingMsgs(false)
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+        const el = messagesScrollRef.current
+        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'auto' })
       })
     }
+  }, [])
+
+  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const el = messagesScrollRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior })
+      })
+    })
   }, [])
 
   // ── Pusher — WebSocket real-time ──────────────────────────────────────────────
@@ -517,9 +529,7 @@ export default function WhatsAppPage() {
           if (added.length === 0) return prev
           return sortMessagesChronologically([...prev, ...added])
         })
-        requestAnimationFrame(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
-        })
+        scrollMessagesToBottom('auto')
       } catch {}
     }
 
@@ -578,14 +588,12 @@ export default function WhatsAppPage() {
         } catch {}
       }, 800)
     }
-  }, [selectedId]) // eslint-disable-line
+  }, [selectedId, scrollMessagesToBottom]) // eslint-disable-line
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedId) return
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
-    })
-  }, [messages, selectedId])
+    scrollMessagesToBottom('auto')
+  }, [messages, selectedId, scrollMessagesToBottom])
 
   // ── Ações Chat ──────────────────────────────────────────────────────────────
   const connectWA = async () => {
@@ -632,6 +640,7 @@ export default function WhatsAppPage() {
     const msgId = crypto.randomUUID()
     const msg: Message = { id: msgId, from: 'agent', text, at: now2(), ts: Date.now() }
     setMessages(prev => sortMessagesChronologically([...prev, msg]))
+    scrollMessagesToBottom('auto')
     setComposer('')
     try {
       await apiFetch('send', { method: 'POST', body: JSON.stringify({ chatId: selected.chatId, phone: selected.phone, text }) })
@@ -1190,7 +1199,7 @@ export default function WhatsAppPage() {
             </aside>
 
             {/* Chat */}
-            <div className="flex-1 flex flex-col min-w-0 rounded-2xl overflow-hidden"
+            <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-2xl overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
               {!selected ? (
                 <div className="flex-1 flex items-center justify-center">
@@ -1270,7 +1279,7 @@ export default function WhatsAppPage() {
                   </div>
 
                   {/* Mensagens */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  <div ref={messagesScrollRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
                     {loadingMsgs && <div className="text-center py-8"><ArrowPathIcon className="w-5 h-5 animate-spin text-white/30 mx-auto" /></div>}
                     {!loadingMsgs && messages.length === 0 && (
                       <div className="text-center py-12">
