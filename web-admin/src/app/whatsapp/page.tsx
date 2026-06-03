@@ -229,6 +229,10 @@ function applyTemplate(template: string, recipient: MassRecipient): string {
   })
 }
 
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
@@ -246,6 +250,8 @@ export default function WhatsAppPage() {
   const [sseStatus, setSseStatus]   = useState<'offline' | 'connecting' | 'live'>('offline')
   const [initBusy, setInitBusy]     = useState(false)
   const [qrDataUrl, setQrDataUrl]   = useState<string | null>(null) // separado do waState — persiste até scan
+  const [waConnectNote, setWaConnectNote] = useState('')
+  const [waConnectError, setWaConnectError] = useState('')
   const offlineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Kanban
@@ -584,16 +590,38 @@ export default function WhatsAppPage() {
   // ── Ações Chat ──────────────────────────────────────────────────────────────
   const connectWA = async () => {
     setInitBusy(true)
+    setWaConnectError('')
+    setWaConnectNote('Gerando novo QR Code...')
+    setQrDataUrl(null)
     try {
-      const st = await apiFetch('start', { method: 'POST', body: '{}' })
-      if (st?.qrDataUrl) {
-        // QR Code em estado independente — não vai sumir com eventos de conexão
-        setQrDataUrl(st.qrDataUrl)
-        setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
-      } else if (st?.connected) {
-        setQrDataUrl(null)
-        setWaState(st)
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        setWaConnectNote(`Gerando novo QR Code... tentativa ${attempt}/4`)
+        const st = await apiFetch('start', { method: 'POST', body: '{}' })
+        if (st?.connected || st?.ready) {
+          setQrDataUrl(null)
+          setWaState(st)
+          setWaConnectNote('WhatsApp conectado.')
+          return
+        }
+        if (st?.qrDataUrl) {
+          // QR Code em estado independente — não vai sumir com eventos de conexão
+          setQrDataUrl(st.qrDataUrl)
+          setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
+          setWaConnectNote('QR Code gerado. Abra o WhatsApp no celular e escaneie.')
+          return
+        }
+        await sleep(1200 + attempt * 400)
       }
+
+      const status = await apiFetch('status').catch(() => null)
+      if (status?.connected || status?.ready) {
+        setQrDataUrl(null)
+        setWaState(status)
+        setWaConnectNote('WhatsApp conectado.')
+        return
+      }
+      setWaConnectError('Não consegui gerar um QR novo agora. Verifique se o backend/túnel está online e tente novamente.')
+      setWaConnectNote('Ainda tentando localizar um QR válido...')
     } catch {} finally { setInitBusy(false) }
   }
 
@@ -1014,9 +1042,10 @@ export default function WhatsAppPage() {
             {platform === 'whatsapp' ? (
               !waState?.ready && (
                 <button onClick={connectWA} disabled={initBusy}
-                  className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50 flex items-center gap-1.5"
                   style={{ background: '#F8A303' }}>
-                  {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : 'Conectar'}
+                  {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : <QrCodeIcon className="w-4 h-4" />}
+                  {initBusy ? 'Gerando QR...' : 'Conectar'}
                 </button>
               )
             ) : (
@@ -1045,11 +1074,24 @@ export default function WhatsAppPage() {
               <p className="text-sm font-extrabold text-white">📱 Escaneie o QR Code</p>
               <p className="text-xs text-white/50 mt-1">WhatsApp → Aparelhos conectados → Conectar aparelho</p>
               <p className="text-xs text-amber-400/70 mt-2">O QR expira em ~60s — clique "Conectar" para gerar novo</p>
+              {!!waConnectNote && <p className="text-xs text-white/55 mt-2">{waConnectNote}</p>}
+              {!!waConnectError && <p className="text-xs text-red-300 mt-2">{waConnectError}</p>}
               <button onClick={connectWA} disabled={initBusy} className="mt-2 px-3 py-1 rounded-lg text-xs font-bold text-black"
                 style={{ background: '#F8A303' }}>
                 {initBusy ? '...' : '🔄 Novo QR Code'}
               </button>
             </div>
+          </div>
+        )}
+
+        {!waState?.ready && !qrDataUrl && (waConnectNote || waConnectError) && (
+          <div className="rounded-2xl px-4 py-3 shrink-0"
+            style={{
+              background: waConnectError ? 'rgba(239,68,68,0.12)' : 'rgba(248,163,3,0.08)',
+              border: `1px solid ${waConnectError ? 'rgba(239,68,68,0.25)' : 'rgba(248,163,3,0.18)'}`,
+            }}>
+            <p className="text-xs font-bold text-white/80">{waConnectNote || waConnectError}</p>
+            {waConnectError && <p className="text-[11px] text-white/45 mt-1">Se o backend/túnel estiver online, tente mais uma vez. Se não, o QR não consegue nascer do lado do front.</p>}
           </div>
         )}
 
