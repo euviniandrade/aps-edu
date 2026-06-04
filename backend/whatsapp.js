@@ -387,11 +387,23 @@ function createClient() {
       text,
       at:   new Date(msg.timestamp * 1000).toISOString(),
       name: 'Você',
+      ack:  1, // sent
     }
     pushMsg(chatId, msgObj)
     upsertChat(chatId, { lastMsg: text, lastAt: msgObj.at })
     pushSSE('message', { chatId, msg: msgObj })
   })
+
+  // Status de entrega/leitura: 1=sent 2=delivered 3=read
+  client.on('message_ack', (msg, ack) => {
+    const chatId = msg.fromMe ? msg.to : msg.from
+    pushSSE('message-ack', { chatId, msgId: msg.id.id, ack })
+  })
+
+  // Indicador de digitando
+  client.on('contact_changed', () => {})
+
+  client.on('group_update', () => {})
 
   let retryCount = 0
   const tryInit = () => {

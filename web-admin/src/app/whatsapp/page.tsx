@@ -58,7 +58,7 @@ interface Contact {
   stage?: Stage
 }
 interface Message {
-  id: string; from: 'lead' | 'agent' | 'sofi'; text: string; at: string; name?: string; ts?: number
+  id: string; from: 'lead' | 'agent' | 'sofi'; text: string; at: string; name?: string; ts?: number; ack?: number
 }
 interface WaState { connected: boolean; ready: boolean; qrDataUrl?: string | null; error?: string | null }
 interface Group   { id: string; name: string; description: string; participants: number; members: { id: string; phone: string; admin: boolean }[] }
@@ -437,6 +437,35 @@ export default function WhatsAppPage() {
     })
   }, [])
 
+  // ── Som de notificação ───────────────────────────────────────────────────────
+  const playNotifSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.connect(g); g.connect(ctx.destination)
+      o.frequency.setValueAtTime(880, ctx.currentTime)
+      o.frequency.setValueAtTime(1100, ctx.currentTime + 0.1)
+      g.gain.setValueAtTime(0.3, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+      o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.3)
+    } catch {}
+  }, [])
+
+  // ── Notificação do browser ────────────────────────────────────────────────
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  const showBrowserNotif = useCallback((name: string, text: string, chatId: string) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    if (document.visibilityState === 'visible') return // só quando minimizado
+    const n = new Notification(`💬 ${name}`, { body: text, icon: '/favicon.ico', tag: chatId })
+    n.onclick = () => { window.focus(); n.close() }
+  }, [])
+
   // ── SSE — eventos em tempo real do backend whatsapp-web.js ──────────────────
   useEffect(() => {
     let es: EventSource | null = null
@@ -491,22 +520,54 @@ export default function WhatsAppPage() {
         try {
           const { chatId, msg } = JSON.parse(e.data)
           if (!chatId || !msg) return
-          const phone = normPhone(chatId)
+          const phone  = normPhone(chatId)
           const mapped = mapMessageItem(msg)
+
           setSelectedId(prev => {
-            if (prev === chatId || normPhone(prev) === phone)
-              setMessages(m => sortMessagesChronologically(m.some(x => x.id === mapped.id) ? m : [...m, mapped]))
+            const isOpen = prev === chatId || normPhone(prev) === phone
+            if (isOpen) {
+              setMessages(m => {
+                if (m.some(x => x.id === mapped.id)) return m
+                const updated = sortMessagesChronologically([...m, mapped])
+                // Auto-scroll ao receber mensagem
+                requestAnimationFrame(() => {
+                  const el = messagesScrollRef.current
+                  if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+                })
+                return updated
+              })
+            }
             return prev
           })
+
           setContacts(prev => {
             const idx = prev.findIndex(c => c.chatId === chatId || c.phone === phone)
+            const isIncoming = mapped.from === 'lead'
             if (idx >= 0) {
               const u = [...prev]
-              u[idx] = { ...u[idx], lastMessage: mapped.text, lastAt: mapped.at, timestamp: mapped.ts || Date.now(), unread: mapped.from === 'agent' ? 0 : u[idx].unread + 1 }
+              u[idx] = { ...u[idx], lastMessage: mapped.text, lastAt: mapped.at, timestamp: mapped.ts || Date.now(), unread: isIncoming ? u[idx].unread + 1 : 0 }
               return u.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
             }
-            return [{ chatId, phone, name: msg.name || phone, lastMessage: mapped.text, lastAt: mapped.at, unread: mapped.from === 'agent' ? 0 : 1, timestamp: mapped.ts || Date.now() }, ...prev]
+            return [{ chatId, phone, name: msg.name || phone, lastMessage: mapped.text, lastAt: mapped.at, unread: isIncoming ? 1 : 0, timestamp: mapped.ts || Date.now() }, ...prev]
           })
+
+          // Som + notificação só para mensagens recebidas
+          if (mapped.from === 'lead') {
+            playNotifSound()
+            setContacts(prev => {
+              const contact = prev.find(c => c.chatId === chatId || c.phone === phone)
+              showBrowserNotif(contact?.name || phone, mapped.text, chatId)
+              return prev
+            })
+          }
+        } catch {}
+      })
+
+      // Status de entrega/leitura
+      es.addEventListener('message-ack', (e: any) => {
+        try {
+          const { msgId, ack } = JSON.parse(e.data)
+          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, ack } : m))
         } catch {}
       })
 
@@ -588,10 +649,10 @@ export default function WhatsAppPage() {
       } catch {}
     }
 
-    // Aguarda 3s antes de iniciar o polling (deixa o load inicial terminar)
+    // Aguarda 1s antes de iniciar o polling
     const first = setTimeout(() => {
       poll()
-      const iv = setInterval(poll, 3000)
+      const iv = setInterval(poll, 1500)
       if (!running) clearInterval(iv)
       // Salva o interval para limpar
       ;(poll as any).__iv = iv
@@ -1420,7 +1481,14 @@ export default function WhatsAppPage() {
                           style={{ background: msg.from === 'lead' ? 'rgba(255,255,255,0.08)' : msg.from === 'sofi' ? 'rgba(248,163,3,0.15)' : 'rgba(10,189,120,0.18)', border: '1px solid rgba(255,255,255,0.07)' }}>
                           {msg.from === 'sofi' && <p className="text-[9px] font-extrabold text-amber-400 uppercase tracking-widest mb-1">Sofi IA</p>}
                           <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                          <p className="text-[10px] text-white/25 mt-1 text-right">{msg.at}</p>
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            <span className="text-[10px] text-white/25">{msg.at}</span>
+                            {msg.from !== 'lead' && (
+                              <span className="text-[11px]" style={{ color: msg.ack === 3 ? '#34B7F1' : msg.ack === 2 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)' }}>
+                                {msg.ack === 1 ? '✓' : msg.ack === 2 ? '✓✓' : msg.ack === 3 ? '✓✓' : '🕐'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {/* Botão deletar — lado direito para mensagens do lead */}
                         {msg.from === 'lead' && (
