@@ -149,7 +149,6 @@ function upsertChat(chatId, update) {
 function pushMsg(chatId, msg) {
   const arr = msgsMap.get(chatId) || []
   arr.push(msg)
-  if (arr.length > 300) arr.splice(0, arr.length - 300)
   msgsMap.set(chatId, arr)
   saveMsgs()
 }
@@ -444,7 +443,7 @@ async function loadRecentChats() {
     const chats = await waClient.getChats()
     console.log(`[WA] ${chats.length} chats encontrados`)
 
-    for (const chat of chats.slice(0, 200)) {
+    for (const chat of chats) {
       const chatId = chat.id._serialized
       if (!chatId || chatId === 'status@broadcast') continue
 
@@ -580,9 +579,8 @@ app.get('/contacts-all', (req, res) => {
 app.get('/messages', (req, res) => {
   const { chatId, limit = 50 } = req.query
   if (!chatId) return res.status(400).json({ error: 'chatId obrigatório' })
-  const msgs  = msgsMap.get(chatId) || []
-  const slice = Number(limit) > 0 ? msgs.slice(-Number(limit)) : msgs
-  res.json(slice)
+  const msgs = msgsMap.get(chatId) || []
+  res.json(msgs)
 })
 
 // Enviar mensagem individual
