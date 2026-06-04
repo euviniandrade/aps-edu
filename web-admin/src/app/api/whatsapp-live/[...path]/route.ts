@@ -148,6 +148,24 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
   const p0 = path[0]
 
   try {
+    // Proxy de avatares (imagens de perfil)
+    if (p0 === 'wa-avatar') {
+      const filename = path[1] || ''
+      for (const base of BACKEND_CANDIDATES) {
+        try {
+          const res = await fetch(`${base}/wa-avatar/${filename}`, { cache: 'no-store' })
+          if (res.ok) {
+            const buf = await res.arrayBuffer()
+            return new NextResponse(buf, {
+              status: 200,
+              headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' },
+            })
+          }
+        } catch {}
+      }
+      return new NextResponse(null, { status: 404 })
+    }
+
     // SSE em tempo real
     if (p0 === 'events') {
       const stream = await proxySSE()

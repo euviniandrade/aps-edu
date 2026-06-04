@@ -412,7 +412,7 @@ export default function WhatsAppPage() {
 
       // 2. Se vazio, busca diretamente do WhatsApp (histórico real)
       if (!Array.isArray(data) || data.length === 0) {
-        data = await apiFetch(`messages-fetch?chatId=${encodeURIComponent(chatId)}&limit=50`)
+        data = await apiFetch(`messages-fetch?chatId=${encodeURIComponent(chatId)}&limit=100`)
       }
 
       if (Array.isArray(data) && data.length > 0) {
@@ -1386,15 +1386,16 @@ export default function WhatsAppPage() {
                     <div className="flex items-center gap-3">
                       {c.avatarUrl ? (
                         <img
-                          src={c.avatarUrl}
+                          src={c.avatarUrl.startsWith('/wa-avatar/') ? `/api/whatsapp-live${c.avatarUrl}` : c.avatarUrl}
                           alt={c.name}
                           className="w-10 h-10 rounded-full object-cover shrink-0"
                           style={{ border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-black font-extrabold shrink-0 text-sm"
-                          style={{ background: `${STAGE_COLORS[stages[c.phone] || 'Inbox']}30`, border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}>
-                          {(c.name || '?').charAt(0).toUpperCase()}
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold shrink-0 text-sm text-white"
+                          style={{ background: `linear-gradient(135deg, ${STAGE_COLORS[stages[c.phone] || 'Inbox']}aa, ${STAGE_COLORS[stages[c.phone] || 'Inbox']}55)`, border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}>
+                          {(c.name || c.phone || '?').charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">

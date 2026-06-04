@@ -261,6 +261,34 @@ async function processAI(chatId, incomingText) {
   }
 }
 
+// Busca fotos de perfil em background — processa em lotes para não sobrecarregar
+async function loadAvatarsInBackground() {
+  if (!waClient || !waReady) return
+  const chatIds = [...chatsMap.keys()].slice(0, 500) // fotos dos 500 mais recentes
+  console.log(`[WA] Buscando fotos de ${chatIds.length} contatos...`)
+  let fetched = 0
+  for (const chatId of chatIds) {
+    if (!waReady) break
+    const phone = chatId2Phone(chatId)
+    const pb = phonebook.get(phone) || {}
+    if (pb.avatarUrl) continue // já tem foto
+    try {
+      const url = await waClient.getProfilePicUrl(chatId).catch(() => null)
+      if (url) {
+        phonebook.set(phone, { ...pb, avatarUrl: url })
+        upsertChat(chatId, { avatarUrl: url })
+        pushSSE('avatar', { chatId, avatarUrl: url })
+        fetched++
+      }
+    } catch {}
+    // Pausa pequena para não sobrecarregar
+    await new Promise(r => setTimeout(r, 100))
+  }
+  savePhonebook()
+  saveChats()
+  console.log(`[WA] ${fetched} fotos carregadas.`)
+}
+
 // ── WhatsApp Client ───────────────────────────────────────────────────────────
 function createClient() {
   waQR    = null
@@ -319,6 +347,8 @@ function createClient() {
     await syncContacts()
     await loadRecentChats()
     pushSSE('contacts-loaded', { count: chatsMap.size })
+    // Busca fotos em background (sem travar)
+    loadAvatarsInBackground()
   })
 
   client.on('disconnected', reason => {
@@ -642,24 +672,40 @@ app.get('/messages', (req, res) => {
 
 // Busca mensagens históricas do WhatsApp para um chat
 app.get('/messages/fetch', async (req, res) => {
-  const { chatId, limit = 50 } = req.query
+  const { chatId, limit = 100 } = req.query
   if (!chatId) return res.status(400).json({ error: 'chatId obrigatório' })
   if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
   try {
     const chat = await waClient.getChatById(chatId).catch(() => null)
     if (!chat) return res.json([])
     const raw = await chat.fetchMessages({ limit: Number(limit) })
+
+    function extractText(m) {
+      if (m.body) return m.body
+      if (m.caption) return m.caption
+      if (m.type === 'audio' || m.type === 'ptt') return '🎤 Áudio'
+      if (m.type === 'image') return '📷 Foto'
+      if (m.type === 'video') return '🎥 Vídeo'
+      if (m.type === 'document') return '📄 Arquivo'
+      if (m.type === 'sticker') return '🎴 Sticker'
+      if (m.type === 'location') return '📍 Localização'
+      if (m.type === 'vcard' || m.type === 'multi_vcard') return '👤 Contato'
+      return ''
+    }
+
     const msgs = raw.map(m => ({
       id:   m.id.id || crypto.randomUUID(),
       from: m.fromMe ? 'agent' : 'lead',
-      text: m.body || m.caption || '',
+      text: extractText(m),
       at:   new Date(m.timestamp * 1000).toISOString(),
+      ts:   m.timestamp * 1000,
       name: m.notifyName || (m.fromMe ? 'Você' : ''),
+      ack:  m.ack || 0,
     })).filter(m => m.text)
 
     // Salva no cache local
     if (msgs.length) {
-      msgsMap.set(chatId, msgs)
+      msgsMap.set(String(chatId), msgs)
       saveMsgs()
     }
     res.json(msgs)
