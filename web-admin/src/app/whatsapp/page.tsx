@@ -669,9 +669,14 @@ export default function WhatsAppPage() {
         const st = await apiFetch('status')
         if (!st) return
         const isReady = !!(st.connected || st.ready)
-        // Sempre atualiza o estado para manter sincronizado
-        setWaState({ connected: isReady, ready: isReady, qrDataUrl: st.qrDataUrl || null, error: null })
-        if (isReady && !prevWaReady.current) loadContacts()
+        setWaState({ connected: isReady, ready: isReady, qrDataUrl: null, error: null })
+        // Se conectou: limpa QR e carrega contatos
+        if (isReady) {
+          setQrDataUrl(null)
+          setWaConnectNote('')
+          setWaConnectError('')
+          if (!prevWaReady.current) loadContacts()
+        }
         prevWaReady.current = isReady
       } catch {}
     }, 3000)
