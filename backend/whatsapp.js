@@ -447,11 +447,13 @@ async function syncContacts() {
   }
 }
 
-// Carrega chats recentes ao conectar — usa dados do próprio objeto chat (sem fetch extra)
+// Carrega TODOS os chats e contatos da agenda — sem limite
 async function loadRecentChats() {
   if (!waClient || !waReady) return
   try {
-    console.log('[WA] Carregando lista de chats...')
+    console.log('[WA] Carregando todos os chats e contatos...')
+
+    // 1) Carrega todos os chats (conversas abertas)
     const chats = await waClient.getChats()
     console.log(`[WA] ${chats.length} chats encontrados`)
 
@@ -459,12 +461,11 @@ async function loadRecentChats() {
       const chatId = chat.id._serialized
       if (!chatId || chatId === 'status@broadcast') continue
 
-      const phone  = chatId2Phone(chatId)
-      const pb     = phonebook.get(phone) || {}
-      const name   = chat.name || pb.name || phone
+      const phone = chatId2Phone(chatId)
+      const pb    = phonebook.get(phone) || {}
+      const name  = chat.name || pb.name || phone
 
-      // Usa lastMessage que já vem no objeto chat — sem fetch adicional
-      const lm    = chat.lastMessage
+      const lm      = chat.lastMessage
       const lastMsg = lm?.body || lm?.caption || ''
       const lastTs  = lm?.timestamp || chat.timestamp || 0
       const lastAt  = lastTs ? new Date(Number(lastTs) * 1000).toISOString() : ''
@@ -478,10 +479,54 @@ async function loadRecentChats() {
         isGroup:  chat.isGroup || false,
         avatarUrl: pb.avatarUrl || '',
       })
+
+      // Salva nome no phonebook
+      if (name && name !== phone) {
+        const existing = phonebook.get(phone) || {}
+        if (!existing.name) {
+          phonebook.set(phone, { ...existing, name })
+        }
+      }
+    }
+
+    // 2) Carrega TODOS os contatos da agenda do celular
+    // (inclui contatos que nunca tiveram conversa)
+    const contacts = await waClient.getContacts()
+    console.log(`[WA] ${contacts.length} contatos na agenda`)
+
+    let newContacts = 0
+    for (const c of contacts) {
+      const phone = normPhone(c.id._serialized || c.number || '')
+      if (!phone || phone.length < 7) continue
+      if (phone === 'status' || phone === 'broadcast') continue
+
+      const name = c.name || c.pushname || c.shortName || ''
+      const chatId = `${phone}@c.us`
+
+      // Atualiza phonebook com nome
+      const pb = phonebook.get(phone) || {}
+      if (name && name !== pb.name) {
+        phonebook.set(phone, { ...pb, name })
+      }
+
+      // Adiciona no chatsMap se ainda não existe (contato sem conversa)
+      if (!chatsMap.has(chatId) && name) {
+        upsertChat(chatId, {
+          phone,
+          name,
+          lastMsg:  '',
+          lastAt:   '',
+          unread:   0,
+          isGroup:  false,
+          avatarUrl: pb.avatarUrl || '',
+        })
+        newContacts++
+      }
     }
 
     saveChats()
-    console.log(`[WA] ${chatsMap.size} chats salvos.`)
+    savePhonebook()
+    console.log(`[WA] Total: ${chatsMap.size} chats + ${newContacts} contatos novos da agenda`)
     pushSSE('contacts-loaded', { count: chatsMap.size })
   } catch (e) {
     console.error('[WA] Erro ao carregar chats:', e.message)
