@@ -291,7 +291,7 @@ export default function WhatsAppPage() {
   // Arquivados
   const [archivedChats, setArchivedChats] = useState<Set<string>>(new Set())
   const [showArchived, setShowArchived]   = useState(false)
-  const [hideUnnamed, setHideUnnamed]     = useState(true)
+  const [hideUnnamed, setHideUnnamed]     = useState(false)
   const [labelsByPhone, setLabelsByPhone] = useState<Record<string, ContactLabel[]>>({})
   const [labelFilter, setLabelFilter] = useState<ContactLabel | 'all'>('all')
 
@@ -407,8 +407,15 @@ export default function WhatsAppPage() {
     if (!chatId) return
     setLoadingMsgs(true); setMessages([])
     try {
-      const data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}`)
-      if (Array.isArray(data)) {
+      // 1. Tenta cache local primeiro
+      let data: any[] = await apiFetch(`messages?chatId=${encodeURIComponent(chatId)}`)
+
+      // 2. Se vazio, busca diretamente do WhatsApp (histórico real)
+      if (!Array.isArray(data) || data.length === 0) {
+        data = await apiFetch(`messages-fetch?chatId=${encodeURIComponent(chatId)}&limit=50`)
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
         setMessages(sortMessagesChronologically(data.map(mapMessageItem)))
       }
     } catch {} finally {

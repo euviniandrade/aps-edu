@@ -177,6 +177,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
       const limit  = req.nextUrl.searchParams.get('limit') || '50'
       return NextResponse.json(await waGet(`/messages?chatId=${encodeURIComponent(chatId)}&limit=${limit}`))
     }
+    if (p0 === 'messages-fetch') {
+      const chatId = req.nextUrl.searchParams.get('chatId') || ''
+      const limit  = req.nextUrl.searchParams.get('limit') || '50'
+      return NextResponse.json(await waGet(`/messages/fetch?chatId=${encodeURIComponent(chatId)}&limit=${limit}`))
+    }
 
     if (routeMap[p0]) return NextResponse.json(await waGet(routeMap[p0]))
 

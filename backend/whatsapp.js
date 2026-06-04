@@ -583,6 +583,34 @@ app.get('/messages', (req, res) => {
   res.json(msgs)
 })
 
+// Busca mensagens históricas do WhatsApp para um chat
+app.get('/messages/fetch', async (req, res) => {
+  const { chatId, limit = 50 } = req.query
+  if (!chatId) return res.status(400).json({ error: 'chatId obrigatório' })
+  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
+  try {
+    const chat = await waClient.getChatById(chatId).catch(() => null)
+    if (!chat) return res.json([])
+    const raw = await chat.fetchMessages({ limit: Number(limit) })
+    const msgs = raw.map(m => ({
+      id:   m.id.id || crypto.randomUUID(),
+      from: m.fromMe ? 'agent' : 'lead',
+      text: m.body || m.caption || '',
+      at:   new Date(m.timestamp * 1000).toISOString(),
+      name: m.notifyName || (m.fromMe ? 'Você' : ''),
+    })).filter(m => m.text)
+
+    // Salva no cache local
+    if (msgs.length) {
+      msgsMap.set(chatId, msgs)
+      saveMsgs()
+    }
+    res.json(msgs)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Enviar mensagem individual
 app.post('/send', async (req, res) => {
   const { chatId, phone, text } = req.body
