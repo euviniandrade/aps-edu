@@ -1249,14 +1249,23 @@ export default function WhatsAppPage() {
                     ) : contacts.length === 0 ? (
                       <div className="flex flex-col items-center gap-3">
                         <p className="text-xs text-white/40">Nenhuma conversa carregada ainda.</p>
-                        <button onClick={async () => { setSyncingContacts(true); try { await apiFetch('contacts-sync', { method: 'POST', body: '{}' }); await loadContacts() } finally { setSyncingContacts(false) } }}
+                        <button onClick={async () => {
+                          setSyncingContacts(true)
+                          try {
+                            const r = await apiFetch('contacts-sync', { method: 'POST', body: '{}' })
+                            if (r?.error) { alert(`Erro: ${r.error}`); return }
+                            await loadContacts()
+                          } catch (e: any) {
+                            alert(`Falha ao sincronizar: ${e.message}`)
+                          } finally { setSyncingContacts(false) }
+                        }}
                           disabled={syncingContacts}
                           className="px-4 py-2 rounded-xl text-xs font-bold text-black flex items-center gap-2 disabled:opacity-50"
                           style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
                           {syncingContacts ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <ArrowPathIcon className="w-4 h-4" />}
-                          Sincronizar conversas
+                          {syncingContacts ? 'Sincronizando...' : 'Sincronizar conversas'}
                         </button>
-                        <p className="text-[10px] text-white/20">Isso carrega todos os chats do celular</p>
+                        <p className="text-[10px] text-white/20">Carrega todos os chats do celular</p>
                       </div>
                     ) : hideUnnamed ? (
                       <p className="text-xs text-white/30">{`Nenhum contato com nome (${unnamedCount} ocultos)`}</p>

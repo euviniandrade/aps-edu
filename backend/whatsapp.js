@@ -436,38 +436,42 @@ async function syncContacts() {
   }
 }
 
-// Carrega chats recentes ao conectar
+// Carrega chats recentes ao conectar — usa dados do próprio objeto chat (sem fetch extra)
 async function loadRecentChats() {
   if (!waClient || !waReady) return
   try {
+    console.log('[WA] Carregando lista de chats...')
     const chats = await waClient.getChats()
-    for (const chat of chats.slice(0, 100)) {
+    console.log(`[WA] ${chats.length} chats encontrados`)
+
+    for (const chat of chats.slice(0, 200)) {
       const chatId = chat.id._serialized
+      if (!chatId || chatId === 'status@broadcast') continue
+
       const phone  = chatId2Phone(chatId)
       const pb     = phonebook.get(phone) || {}
       const name   = chat.name || pb.name || phone
 
-      let lastMsg = ''
-      let lastAt  = ''
-      try {
-        const msgs = await chat.fetchMessages({ limit: 1 })
-        if (msgs.length) {
-          lastMsg = msgs[0].body || ''
-          lastAt  = new Date(msgs[0].timestamp * 1000).toISOString()
-        }
-      } catch {}
+      // Usa lastMessage que já vem no objeto chat — sem fetch adicional
+      const lm    = chat.lastMessage
+      const lastMsg = lm?.body || lm?.caption || ''
+      const lastTs  = lm?.timestamp || chat.timestamp || 0
+      const lastAt  = lastTs ? new Date(Number(lastTs) * 1000).toISOString() : ''
 
       upsertChat(chatId, {
         phone,
         name,
         lastMsg,
         lastAt,
-        unread:  chat.unreadCount || 0,
-        isGroup: chat.isGroup,
+        unread:   chat.unreadCount || 0,
+        isGroup:  chat.isGroup || false,
         avatarUrl: pb.avatarUrl || '',
       })
     }
-    pushSSE('contacts-loaded', { count: chats.length })
+
+    saveChats()
+    console.log(`[WA] ${chatsMap.size} chats salvos.`)
+    pushSSE('contacts-loaded', { count: chatsMap.size })
   } catch (e) {
     console.error('[WA] Erro ao carregar chats:', e.message)
   }
@@ -849,10 +853,14 @@ app.post('/ai/suggest', async (req, res) => {
 
 // ── Sync manual de contatos ────────────────────────────────────────────────────
 app.post('/contacts/sync', async (req, res) => {
-  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
-  await syncContacts()
-  await loadRecentChats()
-  res.json({ ok: true, contacts: phonebook.size, chats: chatsMap.size })
+  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado', ready: false })
+  try {
+    await syncContacts()
+    await loadRecentChats()
+    res.json({ ok: true, contacts: phonebook.size, chats: chatsMap.size })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 // ── SSE: stream de eventos em tempo real ──────────────────────────────────────
