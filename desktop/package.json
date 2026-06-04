@@ -1,0 +1,38 @@
+{
+  "name": "aps-edu-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "author": "APS-EDU",
+  "description": "Desktop wrapper for APS-EDU WhatsApp CRM",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.apsedu.desktop",
+    "productName": "APS-EDU Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "APS-EDU-Desktop-${version}.exe"
+    }
+  }
+}
