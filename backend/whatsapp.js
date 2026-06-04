@@ -1,1448 +1,867 @@
 /**
- * whatsapp.js — Servidor WhatsApp Web para o CRM Sofi
+ * whatsapp.js — Servidor WhatsApp Web para APS-EDU (Sofi CRM)
  *
- * Arquitetura:
- *   1. whatsapp-web.js (Puppeteer) conecta ao WhatsApp
- *   2. Cada mensagem recebida/enviada é salva no banco SQLite (Prisma)
- *   3. API HTTP (porta 8081) serve dados DO BANCO — rápido, paginado
- *   4. Eventos em tempo real publicados no Pusher (Vinicius recebe instantâneo)
- *   5. Sincronização de fundo: ao conectar, carrega todos os chats no banco
+ * Stack: whatsapp-web.js (Puppeteer) + Express + SSE + Google Gemini
+ * Porta: 8081
  *
- * Resultado: funciona com 3000+ contatos sem travar
+ * Funcionalidades:
+ *  - QR Code de autenticação (sessão persistida em disco)
+ *  - Contatos com nome e foto de perfil
+ *  - Chat em tempo real via SSE
+ *  - Envio em massa: segmentado, personalizado, por grupos
+ *  - Sofi IA (Gemini) nos modos paused / assist / auto
  */
 'use strict'
 
-const { Client, LocalAuth } = require('whatsapp-web.js')
-const QRCode  = require('qrcode')
-const http    = require('http')
-const https   = require('https')
-const crypto  = require('crypto')
-const path    = require('path')
-const fs      = require('fs')
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js')
+const QRCode   = require('qrcode')
+const express  = require('express')
+const cors     = require('cors')
+const crypto   = require('crypto')
+const path     = require('path')
+const fs       = require('fs')
+const https    = require('https')
+
 require('dotenv').config({ path: path.join(__dirname, '.env.local') })
 require('dotenv').config({ path: path.join(__dirname, '.env') })
+
 const { GoogleGenerativeAI } = require('@google/generative-ai')
 
-// ── Prisma (SQLite local) ─────────────────────────────────────────────────────
-const { PrismaClient } = require('./node_modules/.prisma/whatsapp-client/default.js')
-const prisma = new PrismaClient()
+// ── Config ────────────────────────────────────────────────────────────────────
+const PORT         = process.env.WHATSAPP_PORT  || 8081
+const DATA_DIR     = path.join(__dirname, '.whatsapp_data')
+const PHONEBOOK_F  = path.join(DATA_DIR, 'phonebook.json')
+const CHATS_F      = path.join(DATA_DIR, 'chats.json')
+const MSGS_F       = path.join(DATA_DIR, 'messages.json')
+const CRM_F        = path.join(DATA_DIR, 'crm.json')
+const AI_STATE_F   = path.join(DATA_DIR, 'ai-state.json')
+const AVATAR_DIR   = path.join(DATA_DIR, 'avatars')
+const BULK_LOG_F   = path.join(DATA_DIR, 'bulk-log.json')
 
-// ── Pusher ────────────────────────────────────────────────────────────────────
-const PUSHER = {
-  appId: process.env.PUSHER_APP_ID || '2161236',
-  key: process.env.PUSHER_KEY || 'e86cbcb6b0359bab789f',
-  secret: process.env.PUSHER_SECRET || '616cabdc538dcd018e80',
-  cluster: process.env.PUSHER_CLUSTER || 'sa1',
-  channel: process.env.PUSHER_CHANNEL || 'whatsapp-sofi',
+fs.mkdirSync(DATA_DIR, { recursive: true })
+fs.mkdirSync(AVATAR_DIR, { recursive: true })
+
+const GEMINI_KEY   = process.env.GEMINI_API_KEY || ''
+const GEMINI_MODEL = process.env.WHATSAPP_GEMINI_MODEL || 'gemini-2.0-flash-lite'
+
+// ── Estado em memória ─────────────────────────────────────────────────────────
+let waClient     = null
+let waReady      = false
+let waQR         = null          // base64 PNG do QR
+let waState      = 'DISCONNECTED'
+let sseClients   = []            // EventEmitter-like array de res SSE
+
+// Phonebook: phone (sem +, só dígitos) → { name, avatarUrl }
+const phonebook  = new Map()
+// Chats recentes: chatId → { chatId, phone, name, lastMsg, lastAt, unread, isGroup, avatarUrl }
+const chatsMap   = new Map()
+// Histórico de mensagens: chatId → Message[]  (últimas 300)
+const msgsMap    = new Map()
+// CRM: phone → { stage, tags, notes, score }
+const crmMap     = new Map()
+
+// ── Persistência ──────────────────────────────────────────────────────────────
+function readJson(f) {
+  try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch { return null }
+}
+function writeJson(f, data) {
+  try { fs.writeFileSync(f, JSON.stringify(data)) } catch {}
+}
+let _saveTimers = {}
+function debounceSave(key, f, data, ms = 1500) {
+  clearTimeout(_saveTimers[key])
+  _saveTimers[key] = setTimeout(() => writeJson(f, data), ms)
 }
 
-function pusherPublish(eventName, data) {
-  try {
-    const body    = JSON.stringify({ name: eventName, channel: PUSHER.channel, data: JSON.stringify(data) })
-    const bodyMd5 = crypto.createHash('md5').update(body).digest('hex')
-    const ts      = Math.floor(Date.now() / 1000)
-    const p       = `/apps/${PUSHER.appId}/events`
-    const params  = `auth_key=${PUSHER.key}&auth_timestamp=${ts}&auth_version=1.0&body_md5=${bodyMd5}`
-    const sig     = crypto.createHmac('sha256', PUSHER.secret).update(['POST', p, params].join('\n')).digest('hex')
-    const req = https.request({
-      hostname: `api-${PUSHER.cluster}.pusher.com`, port: 443,
-      path: `${p}?${params}&auth_signature=${sig}`, method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-    }, res => {
-      if (res.statusCode !== 200) {
-        let b = ''; res.on('data', d => b += d)
-        res.on('end', () => console.error(`[Pusher] Erro ${res.statusCode}: ${b.substring(0,100)}`))
-      }
-    })
-    req.on('error', e => console.error('[Pusher] Rede:', e.message))
-    req.write(body); req.end()
-  } catch (e) { console.error('[Pusher] Exception:', e.message) }
+function bootstrap() {
+  const pb = readJson(PHONEBOOK_F)
+  if (pb) for (const [k, v] of Object.entries(pb)) phonebook.set(k, v)
+
+  const ch = readJson(CHATS_F)
+  if (ch) for (const [k, v] of Object.entries(ch)) chatsMap.set(k, v)
+
+  const ms = readJson(MSGS_F)
+  if (ms) for (const [k, v] of Object.entries(ms)) if (Array.isArray(v)) msgsMap.set(k, v)
+
+  const cr = readJson(CRM_F)
+  if (cr) for (const [k, v] of Object.entries(cr)) crmMap.set(k, v)
 }
+bootstrap()
+
+function savePhonebook() { debounceSave('pb', PHONEBOOK_F, Object.fromEntries(phonebook)) }
+function saveChats()     { debounceSave('ch', CHATS_F,     Object.fromEntries(chatsMap)) }
+function saveMsgs()      { debounceSave('ms', MSGS_F,      Object.fromEntries(msgsMap)) }
+function saveCrm()       { debounceSave('cr', CRM_F,       Object.fromEntries(crmMap)) }
+
+// ── AI State ──────────────────────────────────────────────────────────────────
+const DEFAULT_AI = {
+  mode:       'paused',
+  tone:       'cordial e profissional',
+  maxChars:   400,
+  allowGroups: false,
+  training:   ['Sou a Sofi, assistente virtual do Departamento de Educação da APS (Associação Paulista Sul).'],
+  playbooks:  {
+    vendas:   'Foque em entender a necessidade do contato. Seja consultivo, destaque benefícios e proponha próximos passos.',
+    suporte:  'Seja empático, confirme o problema, ofereça solução e acompanhe a resolução.',
+    pessoal:  'Seja amigável e personalizado, mencione o nome da pessoa.',
+  },
+  activePlaybook: null,
+}
+let aiState = { ...DEFAULT_AI, ...(readJson(AI_STATE_F) || {}) }
+function saveAiState() { writeJson(AI_STATE_F, aiState) }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const PORT = 8081
-const INSTAGRAM_MEMORY_PATH = path.join(__dirname, 'instagram-memory.json')
-
-const DEFAULT_INSTAGRAM = {
-  connected: false,
-  businessId: process.env.INSTAGRAM_BUSINESS_ID || '',
-  pageId: process.env.INSTAGRAM_PAGE_ID || '',
-  pageToken: process.env.INSTAGRAM_PAGE_TOKEN || '',
-  verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN || '',
-  hasPageToken: !!process.env.INSTAGRAM_PAGE_TOKEN,
-  automationEnabled: true,
-  requireFollowGate: false,
-  autoReplyTemplate: 'Oi {name}, vi seu comentário. Vou te enviar o material no Direct.',
-  followGateTemplate: 'Oi {name}, para liberar o material, siga o perfil e responda "LIBERAR" no Direct.',
-  rules: [
-    { id: 'material', keyword: 'material', action: 'dm_material', enabled: true, targetStage: 'Acompanhar' },
-    { id: 'orcamento', keyword: 'orcamento', action: 'lead_sales', enabled: true, targetStage: 'Hoje' },
-    { id: 'suporte', keyword: 'suporte', action: 'lead_support', enabled: true, targetStage: 'Acompanhar' },
-  ],
-  events: [],
-  conversations: {},
+function normPhone(id) {
+  return String(id || '').replace(/@[^@]*$/, '').replace(/\D/g, '')
 }
 
-function loadInstagramState() {
-  try {
-    const raw = JSON.parse(fs.readFileSync(INSTAGRAM_MEMORY_PATH, 'utf8'))
-    return {
-      ...DEFAULT_INSTAGRAM,
-      ...raw,
-      rules: Array.isArray(raw.rules) ? raw.rules : DEFAULT_INSTAGRAM.rules,
-      events: Array.isArray(raw.events) ? raw.events : [],
-      conversations: raw.conversations && typeof raw.conversations === 'object' ? raw.conversations : {},
-    }
-  } catch {
-    return { ...DEFAULT_INSTAGRAM }
-  }
+function chatId2Phone(chatId) {
+  return normPhone(chatId)
 }
 
-let instagramState = loadInstagramState()
-const avatarCache = new Map()
-
-function saveInstagramState() {
-  try { fs.writeFileSync(INSTAGRAM_MEMORY_PATH, JSON.stringify(instagramState, null, 2)) } catch (e) {
-    console.error('[IG] Erro ao salvar estado:', e.message)
-  }
+function phone2JID(phone) {
+  const p = String(phone || '').replace(/\D/g, '')
+  return p.includes('@') ? p : `${p}@c.us`
 }
 
-function addInstagramEvent(event) {
-  instagramState.events = [...instagramState.events, { id: crypto.randomUUID(), at: new Date().toISOString(), ...event }]
-  saveInstagramState()
-  pusherPublish('instagram_event', event)
-}
-
-async function instagramGraph(pathname, method = 'GET', body = null) {
-  const token = instagramState.pageToken || process.env.INSTAGRAM_PAGE_TOKEN || ''
-  if (!token) throw new Error('INSTAGRAM_PAGE_TOKEN ausente')
-  const version = process.env.INSTAGRAM_GRAPH_VERSION || 'v23.0'
-  const baseUrl = `https://graph.facebook.com/${version}/${pathname}`
-  const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}`
-  const reqInit = { method, headers: {} }
-  if (body && method !== 'GET') {
-    reqInit.headers['Content-Type'] = 'application/json'
-    reqInit.body = JSON.stringify(body)
-  }
-  const res = await fetch(url, reqInit)
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(data)}`)
-  return data
-}
-
-async function getAvatarUrlBestEffort(chatId) {
-  const id = String(chatId || '').trim()
-  if (!id || avatarCache.has(id) || !isReady) return avatarCache.get(id) || ''
-  try {
-    const url = await client.getProfilePicUrl(id).catch(() => '')
-    const normalized = String(url || '')
-    avatarCache.set(id, normalized)
-    return normalized
-  } catch {
-    return ''
-  }
-}
-
-function findInstagramRule(text) {
-  const normalized = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  return (instagramState.rules || []).find(rule => {
-    if (!rule?.enabled || !rule.keyword) return false
-    const key = String(rule.keyword).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    return normalized.includes(key)
-  }) || null
-}
-
-async function sendInstagramDm(igUserId, text) {
-  const businessId = instagramState.businessId || process.env.INSTAGRAM_BUSINESS_ID || ''
-  if (!businessId) throw new Error('INSTAGRAM_BUSINESS_ID ausente')
-  return instagramGraph(`${businessId}/messages`, 'POST', {
-    recipient: { id: String(igUserId) },
-    message: { text: String(text || '') },
-    messaging_type: 'RESPONSE',
+function pushSSE(event, data) {
+  const line = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+  sseClients = sseClients.filter(res => {
+    try { res.write(line); return true }
+    catch { return false }
   })
 }
 
-async function sendInstagramPrivateReply(commentId, text) {
-  return instagramGraph(`${commentId}/private_replies`, 'POST', { message: String(text || '') })
+function getContactInfo(chatId, msg) {
+  const phone = chatId2Phone(chatId)
+  const pb    = phonebook.get(phone) || {}
+  const name  = pb.name || msg?.notifyName || msg?._data?.notifyName || phone
+  const avatarUrl = pb.avatarUrl || ''
+  return { phone, name, avatarUrl }
 }
 
-async function tryResolveInstagramBusinessId() {
-  const pageId = instagramState.pageId || process.env.INSTAGRAM_PAGE_ID || ''
-  if (!pageId) {
-    instagramState.connected = false
-    saveInstagramState()
-    return ''
-  }
+function upsertChat(chatId, update) {
+  const existing = chatsMap.get(chatId) || {}
+  chatsMap.set(chatId, { ...existing, chatId, ...update })
+  saveChats()
+}
+
+function pushMsg(chatId, msg) {
+  const arr = msgsMap.get(chatId) || []
+  arr.push(msg)
+  if (arr.length > 300) arr.splice(0, arr.length - 300)
+  msgsMap.set(chatId, arr)
+  saveMsgs()
+}
+
+// Baixa e salva avatar localmente (cache em disco)
+async function fetchAvatar(chatId) {
+  if (!waClient || !waReady) return null
+  const phone = chatId2Phone(chatId)
+  const cached = phonebook.get(phone)
+  if (cached?.avatarUrl && cached.avatarUrl.startsWith('/wa-avatar/')) return cached.avatarUrl
 
   try {
-    const data = await instagramGraph(`${pageId}?fields=instagram_business_account,name`)
-    const found = String(data?.instagram_business_account?.id || '').trim()
-    if (found) {
-      instagramState.businessId = found
-      instagramState.connected = true
-      saveInstagramState()
-      return found
-    }
-  } catch {}
-
-  instagramState.connected = false
-  saveInstagramState()
-  return ''
-}
-
-function addInstagramConversation(igUserId, payload) {
-  const id = String(igUserId || '')
-  if (!id) return
-  const current = instagramState.conversations[id] || { userId: id, name: payload.name || '', tags: [], stage: 'Inbox', messages: [] }
-  const next = {
-    ...current,
-    name: cleanDisplayName(payload.name || current.name || '', ''),
-    stage: payload.stage || current.stage || 'Inbox',
-    tags: payload.tags || current.tags || [],
-    updatedAt: new Date().toISOString(),
-    messages: [...(current.messages || []), {
-      at: new Date().toISOString(),
-      direction: payload.direction || 'in',
-      text: payload.text || '',
-      source: payload.source || 'instagram',
-    }],
+    const url = await waClient.getProfilePicUrl(chatId).catch(() => null)
+    if (!url) return null
+    const base64 = await new Promise((resolve, reject) => {
+      const mod = url.startsWith('https') ? https : require('http')
+      mod.get(url, res => {
+        const chunks = []
+        res.on('data', d => chunks.push(d))
+        res.on('end', () => resolve(Buffer.concat(chunks).toString('base64')))
+        res.on('error', reject)
+      }).on('error', reject)
+    })
+    const avatarPath = path.join(AVATAR_DIR, `${phone}.jpg`)
+    fs.writeFileSync(avatarPath, Buffer.from(base64, 'base64'))
+    const avatarUrl = `/wa-avatar/${phone}.jpg`
+    const pb = phonebook.get(phone) || {}
+    phonebook.set(phone, { ...pb, avatarUrl })
+    savePhonebook()
+    return avatarUrl
+  } catch {
+    return null
   }
-  instagramState.conversations[id] = next
-  saveInstagramState()
 }
 
-function normPhone(jid) {
-  return String(jid || '').replace(/@[^@]*$/, '').replace(/\D/g, '')
+// ── Sofi IA ───────────────────────────────────────────────────────────────────
+const genAI = GEMINI_KEY ? new GoogleGenerativeAI(GEMINI_KEY) : null
+const aiRateLimit = new Map() // phone → lastRepliedAt (ms)
+
+async function sofiBuildPrompt(chatId, incomingText) {
+  const pb   = phonebook.get(chatId2Phone(chatId)) || {}
+  const name = pb.name || chatId2Phone(chatId)
+  const msgs = msgsMap.get(chatId) || []
+  const last10 = msgs.slice(-10).map(m =>
+    `${m.from === 'agent' ? 'Sofi' : name}: ${m.text}`
+  ).join('\n')
+
+  const trainingBlock = (aiState.training || []).join('\n')
+  const playbook = aiState.activePlaybook ? (aiState.playbooks?.[aiState.activePlaybook] || '') : ''
+
+  return `${trainingBlock}
+${playbook ? `\nPlaybook ativo: ${playbook}` : ''}
+
+Tom: ${aiState.tone}. Máximo ${aiState.maxChars} caracteres. Responda SOMENTE a mensagem do usuário.
+
+Histórico recente:
+${last10}
+
+${name}: ${incomingText}
+Sofi:`
 }
 
-function normJid(num) {
-  const raw = String(num || '')
-  if (raw.includes('@g.us') || raw.includes('@c.us') || raw.includes('@s.whatsapp.net')) return raw
-  const phone = normPhone(raw)
-  return `${phone}@s.whatsapp.net`
-}
+const assistSuggestions = new Map() // chatId → suggested text
 
-function fixMojibake(text) {
-  const value = String(text || '')
-  if (!value) return ''
-  if (!/[ÃÂâ]/.test(value)) return value
+async function processAI(chatId, incomingText) {
+  if (!genAI || aiState.mode === 'paused') return null
+
+  const phone = chatId2Phone(chatId)
+  const now   = Date.now()
+  const last  = aiRateLimit.get(phone) || 0
+  if (now - last < 30_000) return null // máx 1 resposta / 30s
+
+  const isGroup = chatId.endsWith('@g.us')
+  if (isGroup && !aiState.allowGroups) return null
+
+  const handoff = crmMap.get(phone)?.handoff
+  if (handoff) return null
+
   try {
-    const fixed = Buffer.from(value, 'latin1').toString('utf8')
-    if (fixed && fixed !== value) return fixed
-  } catch {}
-  return value
-}
+    const prompt  = await sofiBuildPrompt(chatId, incomingText)
+    const model   = genAI.getGenerativeModel({ model: GEMINI_MODEL })
+    const result  = await model.generateContent(prompt)
+    const reply   = result.response.text().trim().slice(0, aiState.maxChars)
 
-function cleanDisplayName(name, fallback) {
-  const fixed = fixMojibake(name)
-  const trimmed = String(fixed || '').trim()
-  return trimmed || String(fallback || '').trim()
-}
+    aiRateLimit.set(phone, now)
 
-async function readBody(req) {
-  return new Promise(r => { let b = ''; req.on('data', d => b += d); req.on('end', () => r(b)) })
-}
-
-let contactsSyncRunning = false
-let contactsSyncLastResult = null
-
-async function syncAllContactNames() {
-  if (!isReady) return { synced: 0, skipped: 0, total: 0 }
-  const [contacts, chats] = await Promise.all([
-    client.getContacts().catch(() => []),
-    client.getChats().catch(() => []),
-  ])
-  const chatMap = new Map(chats.map(chat => [chat.id?._serialized, chat]))
-  const seenPhones = new Set()
-  const valid = contacts.filter(contact => {
-    const chatId = contact.id?._serialized || ''
-    const phone = normPhone(contact.number || chatId)
-    if (!chatId || chatId === 'status@broadcast' || chatId.endsWith('@g.us')) return false
-    if (!phone || phone.length < 8 || seenPhones.has(phone)) return false
-    seenPhones.add(phone)
-    return contact.isWAContact !== false
-  })
-  let synced = 0
-  let skipped = 0
-  const total = valid.length
-  for (const contact of valid) {
-    const chatId = contact.id._serialized
-    const phone = normPhone(contact.number || chatId)
-    const chat = chatMap.get(chatId)
-    const contactName = cleanDisplayName(
-      contact.name ||
-      contact.pushname ||
-      contact.shortName ||
-      chat?.name ||
-      phone,
-      phone,
-    )
-    try {
-      const updateData = {
-        phone,
-        contactName: contactName || null,
-        lastMessage: chat?.lastMessage?.body || undefined,
-        lastAt: chat?.timestamp ? new Date(chat.timestamp * 1000) : undefined,
-        isGroup: false,
-        syncedAt: new Date(),
-        updatedAt: new Date(),
+    if (aiState.mode === 'auto') {
+      const chat = await waClient.getChatById(chatId).catch(() => null)
+      if (chat) {
+        await chat.sendMessage(reply)
+        const replyMsg = {
+          id:   crypto.randomUUID(),
+          from: 'sofi',
+          text: reply,
+          at:   new Date().toISOString(),
+          name: 'Sofi',
+        }
+        pushMsg(chatId, replyMsg)
+        pushSSE('message', { chatId, msg: replyMsg })
       }
-      const existingByPhone = await prisma.waChat.findUnique({ where: { phone }, select: { id: true } }).catch(() => null)
-      if (existingByPhone && existingByPhone.id !== chatId) {
-        await prisma.waChat.update({ where: { phone }, data: updateData })
-      } else {
-        await prisma.waChat.upsert({
-          where: { id: chatId },
-          update: updateData,
-          create: {
-            id: chatId,
-            phone,
-            contactName: contactName || null,
-            lastMessage: chat?.lastMessage?.body || null,
-            lastAt: chat?.timestamp ? new Date(chat.timestamp * 1000) : null,
-            isGroup: false,
-            unreadCount: chat?.unreadCount || 0,
-            syncedAt: new Date(),
-          },
-        })
+    } else if (aiState.mode === 'assist') {
+      assistSuggestions.set(chatId, reply)
+      pushSSE('ai-suggestion', { chatId, suggestion: reply })
+    }
+
+    return reply
+  } catch (e) {
+    console.error('[Sofi IA] Erro:', e.message)
+    return null
+  }
+}
+
+// ── WhatsApp Client ───────────────────────────────────────────────────────────
+function createClient() {
+  waQR    = null
+  waReady = false
+  waState = 'CONNECTING'
+
+  const client = new Client({
+    authStrategy: new LocalAuth({ dataPath: DATA_DIR }),
+    puppeteer: {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+      ],
+    },
+  })
+
+  client.on('qr', async qr => {
+    console.log('[WA] QR gerado')
+    waQR    = await QRCode.toDataURL(qr)
+    waState = 'QR_READY'
+    pushSSE('qr', { qrDataUrl: waQR })
+  })
+
+  client.on('authenticated', () => {
+    console.log('[WA] Autenticado')
+    waState = 'AUTHENTICATED'
+    waQR    = null
+    pushSSE('state', { state: waState, connected: false, ready: false })
+  })
+
+  client.on('ready', async () => {
+    console.log('[WA] Pronto!')
+    waReady = true
+    waState = 'CONNECTED'
+    waQR    = null
+    pushSSE('state', { state: waState, connected: true, ready: true })
+    syncContacts()
+  })
+
+  client.on('disconnected', reason => {
+    console.log('[WA] Desconectado:', reason)
+    waReady = false
+    waState = 'DISCONNECTED'
+    pushSSE('state', { state: waState, connected: false, ready: false })
+  })
+
+  client.on('auth_failure', () => {
+    console.log('[WA] Falha de autenticação')
+    waReady = false
+    waState = 'AUTH_FAILURE'
+    pushSSE('state', { state: waState, connected: false, ready: false })
+  })
+
+  client.on('message', async msg => {
+    if (msg.from === 'status@broadcast') return
+    const chatId = msg.from
+    const phone  = chatId2Phone(chatId)
+    const { name, avatarUrl } = getContactInfo(chatId, msg)
+    const text = msg.body || ''
+
+    const msgObj = {
+      id:   msg.id.id || crypto.randomUUID(),
+      from: 'lead',
+      text,
+      at:   new Date(msg.timestamp * 1000).toISOString(),
+      name: msg.notifyName || name,
+    }
+    pushMsg(chatId, msgObj)
+
+    const chat = chatsMap.get(chatId) || {}
+    upsertChat(chatId, {
+      phone,
+      name:        chat.name || msg.notifyName || name,
+      lastMsg:     text,
+      lastAt:      msgObj.at,
+      unread:      (chat.unread || 0) + 1,
+      isGroup:     chatId.endsWith('@g.us'),
+      avatarUrl:   chat.avatarUrl || avatarUrl,
+    })
+
+    pushSSE('message', { chatId, msg: msgObj })
+    pushSSE('chat-update', { chatId, lastMsg: text, lastAt: msgObj.at, unread: (chat.unread || 0) + 1 })
+
+    // Atualiza foto do perfil em background
+    fetchAvatar(chatId).then(url => {
+      if (url && url !== chat.avatarUrl) {
+        upsertChat(chatId, { avatarUrl: url })
+        pushSSE('avatar', { chatId, avatarUrl: url })
       }
-      synced += 1
-      if (synced % 250 === 0) pusherPublish('contacts_sync_progress', { synced, skipped, total })
-    } catch (e) {
-      skipped += 1
-    }
-  }
-  pusherPublish('contacts_sync_progress', { synced, skipped, total, done: true })
-  return { synced, skipped, total, source: 'contacts+chats' }
-}
-
-function startContactsSyncInBackground() {
-  if (contactsSyncRunning) {
-    return { started: false, running: true, lastResult: contactsSyncLastResult }
-  }
-
-  contactsSyncRunning = true
-  pusherPublish('contacts_sync_progress', { synced: 0, skipped: 0, total: 0, started: true })
-  syncAllContactNames()
-    .then(result => {
-      contactsSyncLastResult = { ...result, finishedAt: new Date().toISOString() }
-      pusherPublish('contacts_sync_progress', { ...result, done: true })
-    })
-    .catch(e => {
-      contactsSyncLastResult = { error: e.message, finishedAt: new Date().toISOString() }
-      pusherPublish('contacts_sync_progress', { error: e.message, done: true })
-      console.error('[Contacts] Erro na sincronizacao:', e.message)
-    })
-    .finally(() => { contactsSyncRunning = false })
-
-  return { started: true, running: true, lastResult: contactsSyncLastResult }
-}
-
-// Sofi IA - atendimento automatico, supervisionado e treinavel.
-const AI_MEMORY_PATH = path.join(__dirname, 'sofi-ai-memory.json')
-const AI_MODES = new Set(['paused', 'assist', 'auto'])
-const DEFAULT_AI_CONFIG = {
-  mode: process.env.WHATSAPP_AI_MODE || 'assist',
-  tone: 'humana, educada, objetiva e acolhedora',
-  maxChars: 700,
-  allowGroups: false,
-  cooldownMs: 15000,
-  activePlaybook: 'suporte',
-  playbooks: {
-    vendas: [
-      'Objetivo: entender a necessidade, qualificar interesse e conduzir para o proximo passo.',
-      'Sempre confirme nome, unidade/interesse e melhor horario antes de prometer retorno.',
-      'Use perguntas curtas, linguagem calorosa e finalize com uma chamada clara para acao.',
-    ].join('\n'),
-    suporte: [
-      'Objetivo: resolver duvidas com rapidez, reduzir atrito e acionar humano quando necessario.',
-      'Peça dados essenciais sem expor informacoes sensiveis. Se houver risco, encaminhe ao responsavel.',
-      'Quando nao souber, diga que vai verificar e mantenha o contato informado.',
-    ].join('\n'),
-    pessoal: [
-      'Objetivo: ajudar Vinicius a organizar conversas, compromissos e follow-ups pessoais.',
-      'Se identificar prazo, pendencia, reuniao ou promessa, sugira uma acao objetiva.',
-      'Mantenha tom natural, discreto e direto, sem parecer robo.',
-    ].join('\n'),
-  },
-  training: [
-    'A Sofi representa o Departamento de Educacao da Associacao Paulista Sul.',
-    'Responda em portugues do Brasil, com clareza e naturalidade.',
-    'Quando nao tiver certeza, assuma compromisso de verificar e encaminhar para um humano.',
-  ],
-}
-
-function loadAiConfig() {
-  try {
-    const saved = JSON.parse(fs.readFileSync(AI_MEMORY_PATH, 'utf8'))
-    return {
-      ...DEFAULT_AI_CONFIG,
-      ...saved,
-      playbooks: { ...DEFAULT_AI_CONFIG.playbooks, ...(saved.playbooks || {}) },
-      training: Array.isArray(saved.training) ? saved.training : DEFAULT_AI_CONFIG.training,
-    }
-  } catch {
-    return { ...DEFAULT_AI_CONFIG }
-  }
-}
-
-let aiConfig = loadAiConfig()
-const lastAiReplyAt = new Map()
-const handoffChats = new Set()
-
-function saveAiConfig() {
-  try { fs.writeFileSync(AI_MEMORY_PATH, JSON.stringify(aiConfig, null, 2)) } catch (e) {
-    console.error('[AI] Erro ao salvar memoria:', e.message)
-  }
-}
-
-function getGeminiModel() {
-  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!key) return null
-  const genAI = new GoogleGenerativeAI(key)
-  return genAI.getGenerativeModel({ model: process.env.WHATSAPP_AI_MODEL || 'gemini-2.0-flash' })
-}
-
-async function postJson(url, headers, body) {
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-  })
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`)
-  return r.json()
-}
-
-async function generateTextWithProviders(prompt) {
-  const maxTokens = Math.min(900, Math.max(120, Number(aiConfig.maxChars || 700)))
-
-  const gemini = getGeminiModel()
-  if (gemini) {
-    try {
-      const result = await gemini.generateContent(prompt)
-      const text = (result.response.text() || '').trim()
-      if (text) return { provider: 'gemini', text }
-    } catch (e) {
-      console.warn('[AI] Gemini indisponivel, tentando fallback:', e.message)
-    }
-  }
-
-  const anthropicKey = process.env.ANTHROPIC_API_KEY
-  if (anthropicKey) {
-    try {
-      const data = await postJson('https://api.anthropic.com/v1/messages', {
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-      }, {
-        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      })
-      const text = (data.content || []).map(part => part.text || '').join('\n').trim()
-      if (text) return { provider: 'anthropic', text }
-    } catch (e) {
-      console.warn('[AI] Anthropic indisponivel, tentando fallback:', e.message)
-    }
-  }
-
-  const mistralKey = process.env.MISTRAL_API_KEY
-  if (mistralKey) {
-    try {
-      const data = await postJson('https://api.mistral.ai/v1/chat/completions', {
-        Authorization: `Bearer ${mistralKey}`,
-      }, {
-        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-      })
-      const text = data.choices?.[0]?.message?.content?.trim()
-      if (text) return { provider: 'mistral', text }
-    } catch (e) {
-      console.warn('[AI] Mistral indisponivel, tentando fallback:', e.message)
-    }
-  }
-
-  const deepseekKey = process.env.DEEPSEEK_API_KEY
-  if (deepseekKey) {
-    try {
-      const data = await postJson('https://api.deepseek.com/chat/completions', {
-        Authorization: `Bearer ${deepseekKey}`,
-      }, {
-        model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-      })
-      const text = data.choices?.[0]?.message?.content?.trim()
-      if (text) return { provider: 'deepseek', text }
-    } catch (e) {
-      console.warn('[AI] DeepSeek indisponivel, tentando fallback:', e.message)
-    }
-  }
-
-  const openRouterKey = process.env.OPENROUTER_API_KEY
-  if (openRouterKey) {
-    try {
-      const data = await postJson('https://openrouter.ai/api/v1/chat/completions', {
-        Authorization: `Bearer ${openRouterKey}`,
-        'HTTP-Referer': process.env.PUBLIC_APP_URL || 'https://aps-edu.vercel.app',
-        'X-Title': 'APS-EDU Sofi',
-      }, {
-        model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-      })
-      const text = data.choices?.[0]?.message?.content?.trim()
-      if (text) return { provider: 'openrouter', text }
-    } catch (e) {
-      console.warn('[AI] OpenRouter indisponivel, tentando fallback:', e.message)
-    }
-  }
-
-  const xaiKey = process.env.XAI_API_KEY
-  if (xaiKey) {
-    try {
-      const data = await postJson('https://api.x.ai/v1/chat/completions', {
-        Authorization: `Bearer ${xaiKey}`,
-      }, {
-        model: process.env.XAI_MODEL || 'grok-2-latest',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-      })
-      const text = data.choices?.[0]?.message?.content?.trim()
-      if (text) return { provider: 'xai', text }
-    } catch (e) {
-      console.warn('[AI] xAI indisponivel:', e.message)
-    }
-  }
-
-  return { provider: 'none', text: '' }
-}
-
-function buildLocalFallbackReply(incomingText, pushName) {
-  const text = String(incomingText || '').toLowerCase()
-  const name = pushName ? `, ${pushName}` : ''
-  if (/\b(urgente|hoje|prazo|agora|pendencia|pendência)\b/i.test(text)) {
-    return `Bom dia${name}! Recebi sua mensagem e vou priorizar isso agora. Pode me confirmar, por favor, qual é o ponto principal e o prazo que precisamos considerar?`
-  }
-  if (/\b(reuniao|reunião|agenda|horario|horário)\b/i.test(text)) {
-    return `Claro${name}! Vamos organizar. Pode me enviar o melhor horário e os pontos que precisam entrar na pauta?`
-  }
-  if (/\b(obrigado|obrigada|valeu|ok|resolvido)\b/i.test(text)) {
-    return `Perfeito${name}! Fico à disposição. Se surgir mais algum ponto, pode me chamar por aqui.`
-  }
-  return `Oi${name}! Recebi sua mensagem. Vou verificar com atenção e já te retorno com o próximo passo.`
-}
-
-function shouldHandoff(text) {
-  return /\b(humano|atendente|pessoa|vinicius|coordenador|ligar|telefone|reclamacao|reclamação|urgente)\b/i.test(text || '')
-}
-
-async function buildConversationContext(chatId) {
-  const history = await prisma.waMessage.findMany({
-    where: { chatId },
-    orderBy: { ts: 'desc' },
-    take: 12,
-  })
-  return history.reverse().map(m => `${m.fromMe ? 'APS/Sofi' : (m.pushName || 'Contato')}: ${m.text}`).join('\n')
-}
-
-async function generateSofiReply({ chatId, incomingText, pushName }) {
-  const context = await buildConversationContext(chatId)
-  const activePlaybook = aiConfig.activePlaybook || 'suporte'
-  const playbook = aiConfig.playbooks?.[activePlaybook] || aiConfig.playbooks?.suporte || ''
-  const prompt = [
-    'Voce e a Sofi, agente de atendimento do APS-EDU no WhatsApp.',
-    `Tom: ${aiConfig.tone}.`,
-    `Limite: ate ${aiConfig.maxChars} caracteres.`,
-    'Nao invente dados. Nao prometa prazos que nao conhece. Seja natural, rapida e util.',
-    'Se a mensagem exigir decisao sensivel, diga que vai encaminhar para um responsavel.',
-    '',
-    'Treinamento ativo:',
-    ...aiConfig.training.map(item => `- ${item}`),
-    '',
-    `Playbook ativo (${activePlaybook}):`,
-    playbook || '(sem playbook especifico)',
-    '',
-    `Contato: ${pushName || 'sem nome'}`,
-    'Historico recente:',
-    context || '(sem historico)',
-    '',
-    `Mensagem recebida: ${incomingText}`,
-    '',
-    'Responda somente com a mensagem final para enviar no WhatsApp.',
-  ].join('\n')
-
-  const result = await generateTextWithProviders(prompt)
-  if (result.provider !== 'none') pusherPublish('ai_provider_used', { provider: result.provider, chatId })
-  const text = result.text || buildLocalFallbackReply(incomingText, pushName)
-  return text.trim().slice(0, Number(aiConfig.maxChars || 700))
-}
-
-async function transcribeWhatsAppAudio(msg) {
-  const key = process.env.GROQ_API_KEY
-  if (!key || !msg.hasMedia) return ''
-  try {
-    const media = await msg.downloadMedia()
-    const mimetype = media?.mimetype || ''
-    if (!media?.data || !/audio|ogg|mpeg|mp4|webm/i.test(mimetype)) return ''
-    const buffer = Buffer.from(media.data, 'base64')
-    if (buffer.length > 25 * 1024 * 1024) return '[Audio recebido, mas acima do limite de transcricao]'
-
-    const ext = mimetype.includes('ogg') ? 'ogg'
-      : mimetype.includes('mpeg') ? 'mp3'
-      : mimetype.includes('webm') ? 'webm'
-      : 'm4a'
-    const form = new FormData()
-    form.append('file', new Blob([buffer], { type: mimetype || 'audio/ogg' }), `audio.${ext}`)
-    form.append('model', process.env.GROQ_TRANSCRIBE_MODEL || 'whisper-large-v3')
-    form.append('language', 'pt')
-    form.append('response_format', 'json')
-
-    const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}` },
-      body: form,
-    })
-    if (!r.ok) throw new Error(`${r.status}`)
-    const data = await r.json()
-    return String(data.text || '').trim()
-  } catch (e) {
-    console.error('[AI] Erro ao transcrever audio:', e.message)
-    return ''
-  }
-}
-
-async function extractIncomingText(msg) {
-  const body = String(msg.body || '').trim()
-  if (body) return body
-  if (msg.hasMedia && /audio|ptt/i.test(String(msg.type || ''))) {
-    const transcript = await transcribeWhatsAppAudio(msg)
-    return transcript ? `[Audio transcrito]\n${transcript}` : '[Audio recebido]'
-  }
-  if (msg.hasMedia) return `[Midia recebida: ${msg.type || 'arquivo'}]`
-  return ''
-}
-
-function inferStageByIntent(text) {
-  const t = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  if (/\b(urgente|agora|hoje|prazo|vence|atrasad|em cima da hora)\b/.test(t)) return 'Hoje'
-  if (/\b(retorno|acompanhar|follow|follow-up|amanha|depois|cobrar|lembrar|pendente)\b/.test(t)) return 'Acompanhar'
-  if (/\b(familia|pessoal|casa|privado|particular)\b/.test(t)) return 'Pessoal'
-  if (/\b(concluido|resolvido|feito|finalizado|obrigado|obrigada|valeu|ok)\b/.test(t)) return 'Concluido'
-  if (/\b(pausar|parar|cancelar|sem retorno|nao quero|deixa quieto)\b/.test(t)) return 'Pausado'
-  return null
-}
-
-async function routeChatByIntent(chatId, phone, text) {
-  const stage = inferStageByIntent(text)
-  if (!stage || !chatId) return
-  try {
-    const chat = await prisma.waChat.findUnique({ where: { id: chatId }, select: { stage: true } })
-    const current = chat?.stage || 'Inbox'
-    if (current !== 'Inbox' && current !== 'Novo' && stage !== 'Hoje') return
-    await prisma.waChat.updateMany({ where: { id: chatId }, data: { stage, updatedAt: new Date() } })
-    pusherPublish('crm_stage_updated', { chatId, phone, stage, reason: 'intent' })
-  } catch (e) {
-    console.error('[CRM] Erro no roteamento por intencao:', e.message)
-  }
-}
-
-async function maybeAutoReply(msg, text) {
-  if (aiConfig.mode !== 'auto') return
-  if (!isReady || !text || msg.fromMe || msg.isStatus) return
-  if (msg.from?.endsWith('@g.us') && !aiConfig.allowGroups) return
-  if (handoffChats.has(msg.from)) return
-  if (shouldHandoff(text)) {
-    handoffChats.add(msg.from)
-    pusherPublish('ai_state', { mode: aiConfig.mode, handoffChatId: msg.from, reason: 'handoff_keyword' })
-    return
-  }
-  const last = lastAiReplyAt.get(msg.from) || 0
-  if (Date.now() - last < Number(aiConfig.cooldownMs || 15000)) return
-
-  try {
-    lastAiReplyAt.set(msg.from, Date.now())
-    const reply = await generateSofiReply({ chatId: msg.from, incomingText: text, pushName: msg._data?.notifyName || '' })
-    if (!reply) return
-    const sent = await client.sendMessage(msg.from, reply)
-    await saveMessage(msg.from, sent.id.id, true, reply, 'Sofi IA', Math.floor(Date.now() / 1000))
-    pusherPublish('messages_upsert', {
-      event: 'messages.upsert', instance: 'sofi',
-      data: [{
-        key: { remoteJid: msg.from, fromMe: true, id: sent.id.id },
-        pushName: 'Sofi IA',
-        messageTimestamp: Math.floor(Date.now() / 1000),
-        message: { conversation: reply },
-      }],
-    })
-    pusherPublish('ai_replied', { chatId: msg.from, chars: reply.length })
-  } catch (e) {
-    console.error('[AI] Erro ao responder:', e.message)
-  }
-}
-
-// ── Salva mensagem no banco ───────────────────────────────────────────────────
-async function saveMessage(chatId, msgId, fromMe, text, pushName, timestamp) {
-  if (!text || !chatId || !msgId) return
-  const phone = normPhone(chatId)
-  const ts    = new Date(Number(timestamp) * 1000)
-
-  try {
-    // Salva mensagem (upsert evita duplicata)
-    await prisma.waMessage.upsert({
-      where:  { id: msgId },
-      update: {},
-      create: { id: msgId, chatId, phone, fromMe, text, pushName: pushName || '', ts },
     })
 
-    // Atualiza o chat (última mensagem, timestamp, badge de não lidos)
-    await prisma.waChat.upsert({
-      where:  { id: chatId },
-      update: {
-        lastMessage:  text,
-        lastAt:       ts,
-        updatedAt:    new Date(),
-        ...(fromMe ? {} : { unreadCount: { increment: 1 } }),
-      },
-      create: {
-        id: chatId, phone,
-        contactName:  pushName || null,
-        lastMessage:  text,
-        lastAt:       ts,
-        unreadCount:  fromMe ? 0 : 1,
-      },
-    })
-  } catch (e) {
-    console.error('[DB] Erro ao salvar mensagem:', e.message)
-  }
-}
-
-// ── Estado global ─────────────────────────────────────────────────────────────
-let isReady   = false
-let qrBase64  = null
-let phoneInfo = null
-let syncDone  = false
-
-async function isClientActuallyConnected() {
-  try {
-    const state = await client.getState()
-    const connected = state === 'CONNECTED'
-    if (!connected) {
-      isReady = false
-    }
-    return connected
-  } catch {
-    isReady = false
-    return false
-  }
-}
-
-// ── Cliente WhatsApp Web ──────────────────────────────────────────────────────
-const client = new Client({
-  authStrategy: new LocalAuth({
-    clientId: 'sofi',
-    dataPath: path.join(__dirname, 'sessions'),
-  }),
-  puppeteer: {
-    headless: true,
-    protocolTimeout: 120000, // 2 minutos — necessário para 3000+ contatos
-    args: [
-      '--no-sandbox', '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage', '--disable-gpu',
-      '--no-first-run', '--no-zygote',
-    ],
-  },
-})
-
-client.on('qr', async qr => {
-  console.log('[WA] QR Code gerado')
-  try {
-    qrBase64 = await QRCode.toDataURL(qr)
-    isReady  = false
-    pusherPublish('qrcode_updated', { instance: 'sofi' })
-  } catch (e) { console.error('[WA] QR error:', e.message) }
-})
-
-client.on('authenticated', () => {
-  console.log('[WA] Autenticado')
-  qrBase64 = null
-})
-
-client.on('ready', async () => {
-  qrBase64  = null
-  phoneInfo = { wuid: client.info.wid.user, name: client.info.pushname }
-  console.log(`[WA] Conectado! ${phoneInfo.name} (${phoneInfo.wuid})`)
-
-  // Aguarda 5s antes de liberar a API (WhatsApp precisa sincronizar)
-  setTimeout(async () => {
-    const connected = await isClientActuallyConnected()
-    if (!connected) {
-      console.log('[WA] ready disparou, mas o estado real ainda nao esta CONNECTED')
-      pusherPublish('state', { connected: false, ready: false, state: 'close', provider: 'whatsapp-web.js', mode: 'live' })
-      return
-    }
-
-    isReady = true
-    pusherPublish('state', { connected: true, ready: true, state: 'open', provider: 'whatsapp-web.js', mode: 'live' })
-    console.log('[WA] API pronta')
-
-    // Sincroniza chats em background (nao bloqueia)
-    if (!syncDone) syncChatsBackground()
-  }, 5000)
-})
-
-client.on('change_state', async state => {
-  const connected = state === 'CONNECTED'
-  isReady = connected
-
-  if (!connected) {
-    if (phoneInfo) console.log('[WA] Estado mudou para', state)
-    pusherPublish('state', { connected: false, ready: false, state: 'close', provider: 'whatsapp-web.js', mode: 'live' })
-    return
-  }
-
-  pusherPublish('state', { connected: true, ready: true, state: 'open', provider: 'whatsapp-web.js', mode: 'live' })
-})
-
-client.on('disconnected', reason => {
-  isReady = false
-  phoneInfo = null
-  console.log('[WA] Desconectado:', reason)
-  pusherPublish('state', { connected: false, ready: false, state: 'close' })
-})
-
-client.on('message', async msg => {
-  if (msg.isStatus || msg.from === 'status@broadcast') return
-  const text = await extractIncomingText(msg)
-  if (!text) return
-
-  await saveMessage(msg.from, msg.id.id, false, text, msg._data?.notifyName || '', msg.timestamp)
-  await routeChatByIntent(msg.from, normPhone(msg.from), text)
-
-  // Publica no Pusher (payload enxuto)
-  pusherPublish('messages_upsert', {
-    event: 'messages.upsert', instance: 'sofi',
-    data: [{
-      key: { remoteJid: msg.from, fromMe: false, id: msg.id.id },
-      pushName: msg._data?.notifyName || '',
-      messageTimestamp: msg.timestamp,
-      message: { conversation: text },
-    }],
+    // Sofi IA
+    processAI(chatId, text)
   })
 
-  maybeAutoReply(msg, text).catch(e => console.error('[AI] Auto reply:', e.message))
-
-  console.log(`[WA] ← ${normPhone(msg.from)}: ${text.substring(0, 60)}`)
-})
-
-// ── Mensagem ENVIADA (do próprio número) ──────────────────────────────────────
-client.on('message_create', async msg => {
-  if (!msg.fromMe) return
-  const text = msg.body || ''
-  if (!text) return
-
-  await saveMessage(msg.to, msg.id.id, true, text, '', msg.timestamp)
-
-  pusherPublish('messages_upsert', {
-    event: 'messages.upsert', instance: 'sofi',
-    data: [{
-      key: { remoteJid: msg.to, fromMe: true, id: msg.id.id },
-      pushName: phoneInfo?.name || '',
-      messageTimestamp: msg.timestamp,
-      message: { conversation: text },
-    }],
+  client.on('message_create', msg => {
+    if (!msg.fromMe) return
+    const chatId = msg.to
+    const text   = msg.body || ''
+    const msgObj = {
+      id:   msg.id.id || crypto.randomUUID(),
+      from: 'agent',
+      text,
+      at:   new Date(msg.timestamp * 1000).toISOString(),
+      name: 'Você',
+    }
+    pushMsg(chatId, msgObj)
+    upsertChat(chatId, { lastMsg: text, lastAt: msgObj.at })
+    pushSSE('message', { chatId, msg: msgObj })
   })
 
-  console.log(`[WA] → ${normPhone(msg.to)}: ${text.substring(0, 60)}`)
-})
+  client.initialize().catch(e => {
+    console.error('[WA] Erro ao inicializar:', e.message)
+    waState = 'ERROR'
+    pushSSE('state', { state: waState, connected: false, ready: false, error: e.message })
+  })
 
-client.initialize()
+  return client
+}
 
-// ── Sincronização em background ───────────────────────────────────────────────
-// Carrega TODOS os chats do WhatsApp e salva no banco (roda uma vez ao conectar)
-async function syncChatsBackground() {
-  console.log('[DB] Iniciando sincronização de chats...')
-  syncDone = true
-
+// Sincroniza contatos do celular após conectar
+async function syncContacts() {
+  if (!waClient || !waReady) return
   try {
-    const allChats = await client.getChats()
-    // Inclui TODOS: individuais + grupos (exclui só status@broadcast)
-    const validChats = allChats.filter(c => c.id._serialized !== 'status@broadcast')
-    console.log(`[DB] ${validChats.length} conversas para sincronizar (incluindo grupos)`)
+    const contacts = await waClient.getContacts()
+    let updated = 0
+    for (const c of contacts) {
+      const phone = normPhone(c.id._serialized || c.number || '')
+      if (!phone || phone.length < 7) continue
+      const pb = phonebook.get(phone) || {}
+      const name = c.name || c.pushname || pb.name || ''
+      if (name && name !== pb.name) {
+        phonebook.set(phone, { ...pb, name })
+        updated++
+      }
+    }
+    savePhonebook()
+    console.log(`[WA] ${updated} contatos sincronizados do celular.`)
+  } catch (e) {
+    console.error('[WA] Erro ao sincronizar contatos:', e.message)
+  }
+}
 
-    let count = 0
-    for (const chat of validChats) {
-      const chatId  = chat.id._serialized
-      const isGroup = chat.isGroup || false
-      // Para grupos: phone = o ID do grupo; para individuais: só dígitos
-      const phone   = isGroup ? chatId : normPhone(chatId)
-      const lastTs  = chat.timestamp ? new Date(chat.timestamp * 1000) : null
-      const lastTxt = chat.lastMessage?.body || null
-      const name    = chat.name || (isGroup ? chatId : null)
+// Carrega chats recentes ao conectar
+async function loadRecentChats() {
+  if (!waClient || !waReady) return
+  try {
+    const chats = await waClient.getChats()
+    for (const chat of chats.slice(0, 100)) {
+      const chatId = chat.id._serialized
+      const phone  = chatId2Phone(chatId)
+      const pb     = phonebook.get(phone) || {}
+      const name   = chat.name || pb.name || phone
 
+      let lastMsg = ''
+      let lastAt  = ''
       try {
-        await prisma.waChat.upsert({
-          where:  { id: chatId },
-          update: {
-            contactName: name,
-            lastMessage: lastTxt,
-            lastAt:      lastTs,
-            isGroup,
-            syncedAt:    new Date(),
-          },
-          create: {
-            id: chatId, phone,
-            contactName: name,
-            lastMessage: lastTxt,
-            lastAt:      lastTs,
-            isGroup,
-            unreadCount: chat.unreadCount || 0,
-            syncedAt:    new Date(),
-          },
-        })
-        count++
+        const msgs = await chat.fetchMessages({ limit: 1 })
+        if (msgs.length) {
+          lastMsg = msgs[0].body || ''
+          lastAt  = new Date(msgs[0].timestamp * 1000).toISOString()
+        }
       } catch {}
 
-      if (count % 100 === 0) {
-        console.log(`[DB] ${count}/${validChats.length} sincronizados...`)
-        await new Promise(r => setTimeout(r, 100))
-      }
+      upsertChat(chatId, {
+        phone,
+        name,
+        lastMsg,
+        lastAt,
+        unread:  chat.unreadCount || 0,
+        isGroup: chat.isGroup,
+        avatarUrl: pb.avatarUrl || '',
+      })
     }
-
-    console.log(`[DB] ✅ Sincronização concluída: ${count} conversas no banco`)
+    pushSSE('contacts-loaded', { count: chats.length })
   } catch (e) {
-    console.error('[DB] Erro na sincronização:', e.message)
-    syncDone = false // permite tentar novamente
+    console.error('[WA] Erro ao carregar chats:', e.message)
   }
 }
 
-// ── API HTTP (porta 8081) — serve dados DO BANCO ──────────────────────────────
-const server = http.createServer(async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'content-type, apikey, authorization')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Content-Type', 'application/json')
+// ── Express App ───────────────────────────────────────────────────────────────
+const app = express()
+app.use(cors())
+app.use(express.json())
 
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
+// Serve avatars
+app.use('/wa-avatar', express.static(AVATAR_DIR))
 
-  const url = req.url || '/'
-  const parsedUrl = new URL(url, 'http://localhost:8081')
-  const pathname = parsedUrl.pathname
-  const json = d => { res.writeHead(200); res.end(JSON.stringify(d)) }
-  const params = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '')
+// ── Middleware de autenticação simples ────────────────────────────────────────
+const API_KEY = process.env.WHATSAPP_API_KEY || 'aps-edu-whatsapp'
+app.use((req, res, next) => {
+  if (req.path === '/health') return next()
+  const key = req.headers['x-api-key'] || req.headers['apikey'] || req.query.apikey
+  if (key && key === API_KEY) return next()
+  // Permite localhost sem chave para desenvolvimento
+  const host = req.headers.host || ''
+  if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) return next()
+  return res.status(401).json({ error: 'Unauthorized' })
+})
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+// Health
+app.get('/health', (_, res) => res.json({ ok: true }))
+
+// Status da conexão
+app.get('/status', (req, res) => {
+  res.json({
+    connected:  waReady,
+    ready:      waReady,
+    state:      waState,
+    qrDataUrl:  waQR || null,
+    error:      null,
+  })
+})
+
+// Iniciar / reconectar
+app.post('/start', async (req, res) => {
+  if (waReady) return res.json({ connected: true, ready: true, qrDataUrl: null, error: null })
+  if (waState === 'CONNECTING' || waState === 'QR_READY') {
+    return res.json({ connected: false, ready: false, qrDataUrl: waQR || null, error: null })
+  }
+  // Destrói cliente antigo se existir
+  if (waClient) {
+    try { await waClient.destroy() } catch {}
+    waClient = null
+  }
+  waClient = createClient()
+  res.json({ connected: false, ready: false, qrDataUrl: null, error: null, starting: true })
+})
+
+// Desconectar
+app.post('/disconnect', async (req, res) => {
+  if (waClient) {
+    try { await waClient.logout() } catch {}
+    try { await waClient.destroy() } catch {}
+    waClient = null
+  }
+  waReady = false
+  waState = 'DISCONNECTED'
+  waQR    = null
+  res.json({ ok: true })
+})
+
+// Contatos (chats + phonebook)
+app.get('/contacts', (req, res) => {
+  const contacts = []
+  for (const [chatId, chat] of chatsMap) {
+    const phone = chat.phone || chatId2Phone(chatId)
+    const pb    = phonebook.get(phone) || {}
+    const crm   = crmMap.get(phone) || {}
+    contacts.push({
+      chatId,
+      phone,
+      name:        chat.name || pb.name || phone,
+      lastMessage: chat.lastMsg || '',
+      lastAt:      chat.lastAt || '',
+      timestamp:   chat.lastAt ? new Date(chat.lastAt).getTime() : 0,
+      unread:      chat.unread || 0,
+      isGroup:     chat.isGroup || false,
+      avatarUrl:   chat.avatarUrl || pb.avatarUrl || '',
+      stage:       crm.stage || 'Inbox',
+      tags:        crm.tags || [],
+    })
+  }
+  contacts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+  res.json(contacts)
+})
+
+// Todos os contatos do phonebook (para envio em massa)
+app.get('/contacts-all', (req, res) => {
+  const result = []
+  for (const [phone, pb] of phonebook) {
+    const crm = crmMap.get(phone) || {}
+    result.push({ phone, name: pb.name || phone, avatarUrl: pb.avatarUrl || '', stage: crm.stage || 'Inbox' })
+  }
+  res.json(result)
+})
+
+// Mensagens de um chat
+app.get('/messages', (req, res) => {
+  const { chatId, limit = 50 } = req.query
+  if (!chatId) return res.status(400).json({ error: 'chatId obrigatório' })
+  const msgs  = msgsMap.get(chatId) || []
+  const slice = Number(limit) > 0 ? msgs.slice(-Number(limit)) : msgs
+  res.json(slice)
+})
+
+// Enviar mensagem individual
+app.post('/send', async (req, res) => {
+  const { chatId, phone, text } = req.body
+  if (!text) return res.status(400).json({ error: 'text obrigatório' })
+  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
 
   try {
-
-    // ── Estado de conexão ───────────────────────────────────────────────────
-    if (url.includes('/instance/connectionState') || pathname === '/status') {
-      const connected = await isClientActuallyConnected()
-      json({ instance: { state: connected ? 'open' : qrBase64 ? 'qr' : 'close' } })
-      return
-    }
-
-    // QR Code
-    if (url.includes('/instance/connect')) {
-      const connected = await isClientActuallyConnected()
-      if (connected) { json({ connected: true, ready: true, qrDataUrl: null, error: null }); return }
-      if (qrBase64) { json({ base64: qrBase64 }); return }
-      json({ base64: null, error: 'Aguarde o QR Code...' })
-      return
-    }
-
-    if (url.includes('/chat/findChats')) {
-      const search   = params.get('q') || ''
-      const onlyGrps = params.get('groups') === '1'
-
-      const where = {
-        archived: false,
-        ...(onlyGrps ? { isGroup: true } : {}),
-        ...(search ? { OR: [
-          { contactName: { contains: search } },
-          { phone:       { contains: search } },
-          { lastMessage: { contains: search } },
-        ]} : {}),
-      }
-
-      // Sem limite — serve TODOS os contatos e grupos do banco
-      const chats = await prisma.waChat.findMany({
-        where,
-        orderBy: { lastAt: 'desc' },
-      })
-
-      json(chats.map(c => ({
-        id:               c.id,
-        name:             c.contactName || c.phone,
-        pushname:         c.contactName || '',
-        isGroup:          c.isGroup,
-        unreadCount:      c.unreadCount,
-        stage:            c.stage || 'Inbox',
-        lastMsgTimestamp: c.lastAt ? Math.floor(c.lastAt.getTime() / 1000) : 0,
-        lastMessage: c.lastMessage ? {
-          messageTimestamp: c.lastAt ? Math.floor(c.lastAt.getTime() / 1000) : 0,
-          message: { conversation: c.lastMessage },
-        } : null,
-      })))
-      return
-    }
-
-    // ── Mensagens de um chat (DO BANCO) ────────────────────────────────────
-    if (url.includes('/chat/findMessages')) {
-      const body    = await readBody(req)
-      let reqBody   = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-
-      const chatId = reqBody?.where?.key?.remoteJid || reqBody?.where?.remoteJid || reqBody?.chatId || ''
-      const requestedLimit = Number(reqBody.limit || 0)
-      const hasLimit = Number.isFinite(requestedLimit) && requestedLimit > 0
-      const limit = hasLimit ? Math.max(1, requestedLimit) : 0
-
-      if (!chatId) { json({ messages: { records: [] } }); return }
-
-      // Busca do banco primeiro
-      const dbMsgsDesc = await prisma.waMessage.findMany({
-        where:   { chatId },
-        orderBy: { ts: 'desc' },
-        ...(hasLimit ? { take: limit } : {}),
-      })
-      const dbMsgs = [...dbMsgsDesc].reverse()
-
-      // Se não tiver no banco, busca do WhatsApp e salva
-      if (dbMsgs.length === 0 && isReady) {
-        try {
-          const chat = await client.getChatById(chatId)
-          const msgs = await chat.fetchMessages({ limit: hasLimit ? limit : Infinity })
-          for (const m of msgs) {
-            if (m.body) await saveMessage(chatId, m.id.id, m.fromMe, m.body, m._data?.notifyName || '', m.timestamp)
-          }
-          // Retorna do banco agora
-          const freshDesc = await prisma.waMessage.findMany({
-            where: { chatId },
-            orderBy: { ts: 'desc' },
-            ...(hasLimit ? { take: limit } : {}),
-          })
-          const fresh = [...freshDesc].reverse()
-          json({ messages: { records: fresh.map(m => ({
-            key:              { remoteJid: chatId, fromMe: m.fromMe, id: m.id },
-            pushName:         m.pushName || '',
-            message:          { conversation: m.text },
-            messageTimestamp: Math.floor(m.ts.getTime() / 1000),
-          })) } })
-          return
-        } catch {}
-      }
-
-      json({ messages: { records: dbMsgs.map(m => ({
-        key:              { remoteJid: chatId, fromMe: m.fromMe, id: m.id },
-        pushName:         m.pushName || '',
-        message:          { conversation: m.text },
-        messageTimestamp: Math.floor(m.ts.getTime() / 1000),
-      })) } })
-      return
-    }
-
-    // ── Contatos (DO BANCO) ────────────────────────────────────────────────
-    if (url.includes('/chat/findContacts')) {
-      const contacts = await prisma.waChat.findMany({
-        select: { id: true, contactName: true, phone: true, isGroup: true, stage: true, lastMessage: true, lastAt: true, unreadCount: true },
-      })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id))
-      await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
-      json(contacts.map(c => ({
-        id: c.id,
-        pushName: cleanDisplayName(c.contactName, c.phone),
-        name: cleanDisplayName(c.contactName, c.phone),
-        phone: c.phone,
-        avatarUrl: avatarCache.get(c.id) || '',
-        isGroup: c.isGroup,
-        stage: c.stage || 'Inbox',
-        lastMessage: c.lastMessage || '',
-        lastMsgTimestamp: c.lastAt ? Math.floor(c.lastAt.getTime() / 1000) : 0,
-        unreadCount: c.unreadCount || 0,
-      })))
-      return
-    }
-
-    if (url.includes('/contacts/sync') && req.method === 'POST') {
-      const result = startContactsSyncInBackground()
-      json({ ok: true, mode: 'background', ...result })
-      return
-    }
-
-    if (url.includes('/contacts/all')) {
-      const contacts = await prisma.waChat.findMany({
-        where: { archived: false, isGroup: false },
-        orderBy: { contactName: 'asc' },
-      })
-      const toResolve = contacts.filter(c => !avatarCache.has(c.id))
-      await Promise.allSettled(toResolve.map(c => getAvatarUrlBestEffort(c.id)))
-      json(contacts.map(c => ({
-        chatId: c.id,
-        phone: c.phone,
-        name: cleanDisplayName(c.contactName, c.phone),
-        avatarUrl: avatarCache.get(c.id) || '',
-        stage: c.stage || 'Inbox',
-      })))
-      return
-    }
-
-    // ── Enviar mensagem ────────────────────────────────────────────────────
-    if (url.includes('/message/sendText') && req.method === 'POST') {
-      if (!isReady) { res.writeHead(503); res.end(JSON.stringify({ error: 'WhatsApp não conectado' })); return }
-      const body = await readBody(req)
-      const { number, textMessage } = JSON.parse(body || '{}')
-      const jid  = normJid(number)
-      const text = textMessage?.text || ''
-      if (!jid || !text) { res.writeHead(400); res.end(JSON.stringify({ error: 'number e text obrigatórios' })); return }
-      const sent = await client.sendMessage(jid, text)
-      json({ key: { id: sent.id.id, remoteJid: jid, fromMe: true } })
-      return
-    }
-
-    // ── Marcar como lido (atualiza badge no banco) ─────────────────────────
-    if (url.includes('/chat/markMessageAsRead') && req.method === 'POST') {
-      const body    = await readBody(req)
-      let reqBody   = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const chatId = reqBody?.read_messages?.[0]?.remoteJid || ''
-      if (chatId) {
-        await prisma.waChat.updateMany({ where: { id: chatId }, data: { unreadCount: 0 } })
-        if (isReady) {
-          try { const chat = await client.getChatById(chatId); await chat.sendSeen() } catch {}
-        }
-      }
-      json({ ok: true })
-      return
-    }
-
-    // ── Arquivar chat ──────────────────────────────────────────────────────
-    if (url.includes('/chat/archiveChat') && req.method === 'POST') {
-      const body    = await readBody(req)
-      let reqBody   = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const chatId  = reqBody?.lastMessage?.key?.remoteJid || ''
-      const archive = reqBody?.archive !== false
-      if (chatId) await prisma.waChat.updateMany({ where: { id: chatId }, data: { archived: archive } })
-      json({ ok: true })
-      return
-    }
-
-    // CRM: etapa do Kanban persistida no SQLite
-    if (url.includes('/crm/stage') && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const stage = String(reqBody.stage || 'Inbox')
-      const chatId = reqBody.chatId || ''
-      const phone = reqBody.phone || ''
-      const where = chatId ? { id: chatId } : { phone: normPhone(phone) }
-      await prisma.waChat.updateMany({ where, data: { stage, updatedAt: new Date() } })
-      pusherPublish('crm_stage_updated', { chatId, phone, stage })
-      json({ ok: true, stage })
-      return
-    }
-
-    // Sofi IA: estado e configuracao
-    if (url.includes('/ai/state')) {
-      json({
-        ok: true,
-        mode: aiConfig.mode,
-        tone: aiConfig.tone,
-        maxChars: aiConfig.maxChars,
-        allowGroups: aiConfig.allowGroups,
-        activePlaybook: aiConfig.activePlaybook,
-        playbooks: aiConfig.playbooks,
-        training: aiConfig.training,
-        handoffChats: [...handoffChats],
-        hasGeminiKey: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
-        providers: {
-          gemini: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY),
-          anthropic: !!process.env.ANTHROPIC_API_KEY,
-          mistral: !!process.env.MISTRAL_API_KEY,
-          deepseek: !!process.env.DEEPSEEK_API_KEY,
-          openrouter: !!process.env.OPENROUTER_API_KEY,
-          xai: !!process.env.XAI_API_KEY,
-        },
-      })
-      return
-    }
-
-    if (url.includes('/ai/control') && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const nextMode = String(reqBody.mode || aiConfig.mode)
-      if (AI_MODES.has(nextMode)) aiConfig.mode = nextMode
-      if (typeof reqBody.tone === 'string') aiConfig.tone = reqBody.tone.slice(0, 300)
-      if (Number(reqBody.maxChars) > 120) aiConfig.maxChars = Math.min(1200, Number(reqBody.maxChars))
-      if (typeof reqBody.allowGroups === 'boolean') aiConfig.allowGroups = reqBody.allowGroups
-      if (typeof reqBody.activePlaybook === 'string') aiConfig.activePlaybook = reqBody.activePlaybook.slice(0, 40)
-      if (reqBody.playbooks && typeof reqBody.playbooks === 'object') {
-        aiConfig.playbooks = {
-          ...aiConfig.playbooks,
-          vendas: String(reqBody.playbooks.vendas || aiConfig.playbooks.vendas || '').slice(0, 4000),
-          suporte: String(reqBody.playbooks.suporte || aiConfig.playbooks.suporte || '').slice(0, 4000),
-          pessoal: String(reqBody.playbooks.pessoal || aiConfig.playbooks.pessoal || '').slice(0, 4000),
-        }
-      }
-      saveAiConfig()
-      pusherPublish('ai_state', { mode: aiConfig.mode, tone: aiConfig.tone, allowGroups: aiConfig.allowGroups, activePlaybook: aiConfig.activePlaybook })
-      json({ ok: true, ...aiConfig })
-      return
-    }
-
-    if (url.includes('/ai/suggest') && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const chatId = reqBody.chatId || ''
-      const text = String(reqBody.text || '').trim()
-      if (!chatId) { res.writeHead(400); res.end(JSON.stringify({ error: 'chatId obrigatorio' })); return }
-      const chat = await prisma.waChat.findUnique({ where: { id: chatId }, select: { contactName: true } }).catch(() => null)
-      const reply = await generateSofiReply({
-        chatId,
-        incomingText: text || 'Sugira uma resposta para a ultima mensagem desta conversa.',
-        pushName: chat?.contactName || '',
-      })
-      json({ ok: true, reply })
-      return
-    }
-
-    if (url.includes('/ai/training') && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const text = String(reqBody.text || '').trim()
-      if (text) {
-        aiConfig.training = [text, ...aiConfig.training.filter(t => t !== text)].slice(0, 40)
-        saveAiConfig()
-      }
-      json({ ok: true, training: aiConfig.training })
-      return
-    }
-
-    if (url.includes('/ai/handoff') && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const chatId = reqBody.chatId || ''
-      const paused = reqBody.paused !== false
-      if (chatId) paused ? handoffChats.add(chatId) : handoffChats.delete(chatId)
-      json({ ok: true, chatId, paused })
-      return
-    }
-
-    // Segmentos prontos para filtros, extracao e envio em massa
-    if (url.includes('/crm/segments')) {
-      const rows = await prisma.waChat.groupBy({ by: ['stage'], _count: { stage: true }, where: { archived: false } })
-      const [all, named, groups, unread] = await Promise.all([
-        prisma.waChat.count({ where: { archived: false, isGroup: false } }),
-        prisma.waChat.count({ where: { archived: false, isGroup: false, contactName: { not: null } } }),
-        prisma.waChat.count({ where: { archived: false, isGroup: true } }),
-        prisma.waChat.count({ where: { archived: false, unreadCount: { gt: 0 } } }),
-      ])
-      json({ all, named, groups, unread, stages: rows.map(r => ({ stage: r.stage || 'Inbox', count: r._count.stage })) })
-      return
-    }
-
-    // ── Estatísticas do banco (debug) ──────────────────────────────────────
-    if (pathname === '/db/stats') {
-      const [chats, messages] = await Promise.all([
-        prisma.waChat.count(),
-        prisma.waMessage.count(),
-      ])
-      json({ chats, messages, ready: isReady, phone: phoneInfo })
-      return
-    }
-
-    // ── Grupos ────────────────────────────────────────────────────────────
-    if (url.includes('/group/fetchAllGroups')) {
-      if (!isReady) { json([]); return }
-      const chats  = await client.getChats()
-      const groups = chats.filter(c => c.isGroup)
-      json(await Promise.all(groups.map(async g => ({
-        id:      g.id._serialized,
-        subject: g.name || '',
-        participants: (g.participants || []).map(p => ({
-          id:    p.id?._serialized || '',
-          admin: p.isAdmin || false,
-        })),
-      }))))
-      return
-    }
-
-    if (pathname === '/instagram/webhook' && req.method === 'GET') {
-      const mode = parsedUrl.searchParams.get('hub.mode') || ''
-      const token = parsedUrl.searchParams.get('hub.verify_token') || ''
-      const challenge = parsedUrl.searchParams.get('hub.challenge') || ''
-      const expected = process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken || ''
-      if (mode === 'subscribe' && token && token === expected) {
-        res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end(challenge)
-      } else {
-        res.writeHead(403, { 'Content-Type': 'text/plain' })
-        res.end('forbidden')
-      }
-      return
-    }
-
-    if (pathname === '/instagram/webhook' && req.method === 'POST') {
-      const bodyRaw = await readBody(req)
-      let payload = {}
-      try { payload = JSON.parse(bodyRaw || '{}') } catch {}
-      addInstagramEvent({ type: 'webhook_received', payload: { object: payload.object || '', entries: (payload.entry || []).length } })
-      const entries = Array.isArray(payload.entry) ? payload.entry : []
-      for (const entry of entries) {
-        const changes = Array.isArray(entry.changes) ? entry.changes : []
-        for (const change of changes) {
-          const field = change?.field || ''
-          const value = change?.value || {}
-          if (field === 'comments') {
-            const text = String(value.text || '')
-            const fromId = String(value.from?.id || value.from?.user_id || '')
-            const fromName = String(value.from?.username || value.from?.name || '')
-            const commentId = String(value.id || value.comment_id || '')
-            const rule = findInstagramRule(text)
-            addInstagramConversation(fromId, { direction: 'in', source: 'instagram_comment', text, name: fromName, stage: rule?.targetStage || 'Inbox' })
-            addInstagramEvent({ type: 'comment', fromId, fromName, text, commentId, ruleId: rule?.id || null })
-            if (instagramState.automationEnabled && rule) {
-              const personalized = String(instagramState.autoReplyTemplate || '').replace('{name}', fromName || 'amigo(a)')
-              try {
-                if (instagramState.requireFollowGate) {
-                  const gateMsg = String(instagramState.followGateTemplate || '').replace('{name}', fromName || 'amigo(a)')
-                  if (commentId) await sendInstagramPrivateReply(commentId, gateMsg)
-                  addInstagramEvent({ type: 'follow_gate_sent', fromId, ruleId: rule.id })
-                } else {
-                  if (commentId) await sendInstagramPrivateReply(commentId, personalized)
-                  if (fromId) await sendInstagramDm(fromId, personalized)
-                  addInstagramEvent({ type: 'automation_sent', fromId, ruleId: rule.id })
-                }
-              } catch (e) {
-                addInstagramEvent({ type: 'automation_error', fromId, ruleId: rule.id, error: e.message })
-              }
-            }
-          }
-          if (field === 'messages') {
-            const message = value.message || {}
-            const text = String(message.text || value.text || '')
-            const fromId = String(value.from?.id || '')
-            const fromName = String(value.from?.username || value.from?.name || '')
-            const rule = findInstagramRule(text)
-            addInstagramConversation(fromId, { direction: 'in', source: 'instagram_dm', text, name: fromName, stage: rule?.targetStage || 'Inbox' })
-            addInstagramEvent({ type: 'dm_received', fromId, fromName, text, ruleId: rule?.id || null })
-          }
-        }
-      }
-      json({ ok: true })
-      return
-    }
-
-    if (pathname === '/instagram/state' && req.method === 'GET') {
-      const businessId = await tryResolveInstagramBusinessId()
-      json({
-        ok: true,
-        connected: !!businessId,
-        pageId: instagramState.pageId || process.env.INSTAGRAM_PAGE_ID || '',
-        businessId: businessId || process.env.INSTAGRAM_BUSINESS_ID || instagramState.businessId || '',
-        hasPageToken: !!(process.env.INSTAGRAM_PAGE_TOKEN || instagramState.pageToken),
-        hasVerifyToken: !!(process.env.INSTAGRAM_VERIFY_TOKEN || instagramState.verifyToken),
-        automationEnabled: !!instagramState.automationEnabled,
-        requireFollowGate: !!instagramState.requireFollowGate,
-        rules: instagramState.rules || [],
-      })
-      return
-    }
-
-    if (pathname === '/instagram/rules' && req.method === 'GET') {
-      json({ ok: true, rules: instagramState.rules || [] })
-      return
-    }
-
-    if (pathname === '/instagram/rules' && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const rules = Array.isArray(reqBody.rules) ? reqBody.rules : []
-      instagramState.rules = rules.slice(0, 50).map((rule, idx) => ({
-        id: String(rule.id || `rule_${idx + 1}`),
-        keyword: String(rule.keyword || '').trim(),
-        action: String(rule.action || 'dm_material').trim(),
-        enabled: rule.enabled !== false,
-        targetStage: String(rule.targetStage || 'Acompanhar'),
-      })).filter(r => r.keyword)
-      saveInstagramState()
-      json({ ok: true, rules: instagramState.rules })
-      return
-    }
-
-    if (pathname === '/instagram/control' && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      if (typeof reqBody.pageId === 'string' && reqBody.pageId.trim()) instagramState.pageId = reqBody.pageId.trim()
-      if (typeof reqBody.pageToken === 'string' && reqBody.pageToken.trim()) {
-        instagramState.pageToken = reqBody.pageToken.trim()
-        instagramState.hasPageToken = true
-      }
-      if (typeof reqBody.businessId === 'string' && reqBody.businessId.trim()) {
-        instagramState.businessId = reqBody.businessId.trim()
-        instagramState.connected = false
-      }
-      if (typeof reqBody.automationEnabled === 'boolean') instagramState.automationEnabled = reqBody.automationEnabled
-      if (typeof reqBody.requireFollowGate === 'boolean') instagramState.requireFollowGate = reqBody.requireFollowGate
-      if (typeof reqBody.autoReplyTemplate === 'string') instagramState.autoReplyTemplate = reqBody.autoReplyTemplate.slice(0, 500)
-      if (typeof reqBody.followGateTemplate === 'string') instagramState.followGateTemplate = reqBody.followGateTemplate.slice(0, 500)
-      const resolvedBusinessId = await tryResolveInstagramBusinessId()
-      instagramState.connected = !!resolvedBusinessId
-      saveInstagramState()
-      json({
-        ok: true,
-        pageId: instagramState.pageId || '',
-        businessId: instagramState.businessId || '',
-        automationEnabled: instagramState.automationEnabled,
-        requireFollowGate: instagramState.requireFollowGate,
-      })
-      return
-    }
-
-    if (pathname === '/instagram/events' && req.method === 'GET') {
-      json({ ok: true, events: [...(instagramState.events || [])].reverse() })
-      return
-    }
-
-    if (pathname === '/instagram/conversations' && req.method === 'GET') {
-      const list = Object.values(instagramState.conversations || {}).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
-      json({ ok: true, conversations: list })
-      return
-    }
-
-    if (pathname === '/instagram/send-dm' && req.method === 'POST') {
-      const body = await readBody(req)
-      let reqBody = {}
-      try { reqBody = JSON.parse(body || '{}') } catch {}
-      const userId = String(reqBody.userId || '').trim()
-      const text = String(reqBody.text || '').trim()
-      if (!userId || !text) { res.writeHead(400); res.end(JSON.stringify({ error: 'userId e text obrigatorios' })); return }
-      const result = await sendInstagramDm(userId, text)
-      addInstagramConversation(userId, { direction: 'out', source: 'instagram_dm', text })
-      addInstagramEvent({ type: 'dm_sent', userId, text })
-      json({ ok: true, result })
-      return
-    }
-
-    res.writeHead(404); res.end(JSON.stringify({ error: `Não encontrado: ${url}` }))
-  } catch (err) {
-    console.error('[WA API] Erro:', err.message)
-    res.writeHead(500); res.end(JSON.stringify({ error: err.message }))
+    const jid  = chatId || phone2JID(phone)
+    const chat = await waClient.getChatById(jid)
+    await chat.sendMessage(text)
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 
-server.listen(PORT, () => {
-  console.log('═'.repeat(60))
-  console.log('  Sofi CRM — WhatsApp Web + SQLite')
-  console.log('═'.repeat(60))
-  console.log(`  API:     http://localhost:${PORT}`)
-  console.log(`  Banco:   ${path.join(__dirname, 'whatsapp.db')}`)
-  console.log(`  Pusher:  "${PUSHER.channel}" @ ${PUSHER.cluster}`)
-  console.log('  Inicializando WhatsApp Web...')
-  console.log('═'.repeat(60))
+// Marcar mensagens como lidas
+app.post('/mark-read', async (req, res) => {
+  const { chatId } = req.body
+  if (!waReady) return res.json({ ok: false })
+  try {
+    const chat = await waClient.getChatById(chatId)
+    await chat.sendSeen()
+    upsertChat(chatId, { unread: 0 })
+    res.json({ ok: true })
+  } catch { res.json({ ok: false }) }
 })
+
+// Grupos
+app.get('/groups', async (req, res) => {
+  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
+  try {
+    const chats = await waClient.getChats()
+    const groups = []
+    for (const chat of chats.filter(c => c.isGroup)) {
+      const participants = await chat.participants || []
+      groups.push({
+        id:           chat.id._serialized,
+        name:         chat.name || chat.id._serialized,
+        description:  chat.description || '',
+        participants: participants.length,
+        members:      participants.map(p => ({
+          id:    p.id._serialized,
+          phone: normPhone(p.id._serialized),
+          admin: p.isAdmin || false,
+          name:  phonebook.get(normPhone(p.id._serialized))?.name || normPhone(p.id._serialized),
+        })).filter(m => m.phone && m.phone.length >= 7),
+      })
+    }
+    res.json(groups)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ── Envio em Massa ────────────────────────────────────────────────────────────
+let bulkRunning   = false
+let bulkAbort     = false
+let bulkProgress  = { total: 0, sent: 0, failed: 0, current: '', log: [] }
+
+app.post('/bulk-send', async (req, res) => {
+  const {
+    recipients,   // [{ phone, nome, empresa, ...vars }]
+    template,     // "Olá {nome}, ..."
+    delayMs = 4000,
+    randomExtraMs = 3000,
+    groupIds,     // opcional: array de chatIds de grupos
+    segmentStage, // opcional: enviar para stage específico
+    dryRun = false,
+  } = req.body
+
+  if (bulkRunning) return res.status(409).json({ error: 'Já existe um envio em andamento' })
+  if (!waReady)    return res.status(503).json({ error: 'WhatsApp não conectado' })
+  if (!template)   return res.status(400).json({ error: 'template obrigatório' })
+
+  // Monta lista final de destinatários
+  let finalList = []
+
+  if (Array.isArray(recipients) && recipients.length) {
+    finalList = recipients.map(r => ({ ...r, phone: String(r.phone || '').replace(/\D/g, '') }))
+      .filter(r => r.phone.length >= 8)
+  }
+
+  // Adicionar membros de grupos
+  if (Array.isArray(groupIds) && groupIds.length) {
+    try {
+      for (const gid of groupIds) {
+        const chat = await waClient.getChatById(gid).catch(() => null)
+        if (!chat || !chat.isGroup) continue
+        for (const p of (chat.participants || [])) {
+          const phone = normPhone(p.id._serialized)
+          if (phone && phone.length >= 8 && !finalList.find(r => r.phone === phone)) {
+            const pb = phonebook.get(phone) || {}
+            finalList.push({ phone, nome: pb.name || phone })
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Filtrar por segmento/stage
+  if (segmentStage) {
+    finalList = finalList.filter(r => {
+      const crm = crmMap.get(r.phone) || {}
+      return crm.stage === segmentStage
+    })
+  }
+
+  if (!finalList.length) return res.status(400).json({ error: 'Nenhum destinatário encontrado' })
+
+  bulkRunning  = true
+  bulkAbort    = false
+  bulkProgress = { total: finalList.length, sent: 0, failed: 0, current: '', log: [], startedAt: new Date().toISOString() }
+
+  res.json({ ok: true, total: finalList.length, message: 'Envio em massa iniciado' })
+
+  // Envio assíncrono
+  ;(async () => {
+    for (const recipient of finalList) {
+      if (bulkAbort) break
+
+      const { phone, ...vars } = recipient
+      const personalized = template.replace(/\{(\w+)\}/g, (_, k) => vars[k] || k)
+
+      bulkProgress.current = phone
+      pushSSE('bulk-progress', { ...bulkProgress })
+
+      if (!dryRun) {
+        try {
+          const chat = await waClient.getChatById(phone2JID(phone)).catch(() => null)
+          if (chat) {
+            await chat.sendMessage(personalized)
+            bulkProgress.sent++
+            bulkProgress.log.push({ phone, name: vars.nome || phone, status: 'sent', at: new Date().toISOString() })
+          } else {
+            // Tenta via número diretamente
+            await waClient.sendMessage(phone2JID(phone), personalized)
+            bulkProgress.sent++
+            bulkProgress.log.push({ phone, name: vars.nome || phone, status: 'sent', at: new Date().toISOString() })
+          }
+        } catch (e) {
+          bulkProgress.failed++
+          bulkProgress.log.push({ phone, name: vars.nome || phone, status: 'error', error: e.message, at: new Date().toISOString() })
+        }
+      } else {
+        bulkProgress.sent++
+        bulkProgress.log.push({ phone, name: vars.nome || phone, status: 'dry-run', at: new Date().toISOString() })
+      }
+
+      pushSSE('bulk-progress', { ...bulkProgress })
+
+      // Delay com variação aleatória para evitar bloqueio
+      const delay = Number(delayMs) + Math.floor(Math.random() * Number(randomExtraMs))
+      await new Promise(r => setTimeout(r, delay))
+    }
+
+    bulkRunning         = false
+    bulkProgress.done   = true
+    bulkProgress.endAt  = new Date().toISOString()
+    writeJson(BULK_LOG_F, bulkProgress)
+    pushSSE('bulk-done', { ...bulkProgress })
+    console.log(`[Bulk] Finalizado: ${bulkProgress.sent} enviados, ${bulkProgress.failed} falhas`)
+  })()
+})
+
+// Status do envio em massa
+app.get('/bulk-status', (req, res) => {
+  res.json({ running: bulkRunning, ...bulkProgress })
+})
+
+// Pausar envio em massa
+app.post('/bulk-stop', (req, res) => {
+  bulkAbort = true
+  res.json({ ok: true, message: 'Envio pausado na próxima iteração' })
+})
+
+// ── CRM / Stages ──────────────────────────────────────────────────────────────
+app.post('/crm/stage', (req, res) => {
+  const { chatId, phone, stage } = req.body
+  const p = phone || chatId2Phone(chatId)
+  const existing = crmMap.get(p) || {}
+  crmMap.set(p, { ...existing, stage })
+  saveCrm()
+  res.json({ ok: true })
+})
+
+app.post('/crm/update', (req, res) => {
+  const { phone, ...fields } = req.body
+  if (!phone) return res.status(400).json({ error: 'phone obrigatório' })
+  const existing = crmMap.get(phone) || {}
+  crmMap.set(phone, { ...existing, ...fields })
+  saveCrm()
+  res.json({ ok: true })
+})
+
+app.post('/crm/handoff', (req, res) => {
+  const { chatId, phone, paused } = req.body
+  const p = phone || chatId2Phone(chatId)
+  const existing = crmMap.get(p) || {}
+  crmMap.set(p, { ...existing, handoff: paused !== false })
+  saveCrm()
+  assistSuggestions.delete(chatId || phone2JID(p))
+  res.json({ ok: true })
+})
+
+// Segmentos (contagem por stage)
+app.get('/crm/segments', (req, res) => {
+  const counts = {}
+  for (const [, crm] of crmMap) {
+    const s = crm.stage || 'Inbox'
+    counts[s] = (counts[s] || 0) + 1
+  }
+  res.json(counts)
+})
+
+// ── AI State ──────────────────────────────────────────────────────────────────
+app.get('/ai/state', (req, res) => {
+  res.json({ ...aiState, hasGeminiKey: !!GEMINI_KEY })
+})
+
+app.post('/ai/control', (req, res) => {
+  const { mode, tone, maxChars, allowGroups, activePlaybook } = req.body
+  if (mode      !== undefined) aiState.mode          = mode
+  if (tone      !== undefined) aiState.tone          = tone
+  if (maxChars  !== undefined) aiState.maxChars       = Number(maxChars)
+  if (allowGroups !== undefined) aiState.allowGroups  = !!allowGroups
+  if (activePlaybook !== undefined) aiState.activePlaybook = activePlaybook
+  saveAiState()
+  res.json({ ok: true, ...aiState })
+})
+
+app.post('/ai/training', (req, res) => {
+  const { text } = req.body
+  if (!text) return res.status(400).json({ error: 'text obrigatório' })
+  aiState.training = aiState.training || []
+  aiState.training.push(text)
+  saveAiState()
+  res.json({ ok: true })
+})
+
+app.delete('/ai/training/:idx', (req, res) => {
+  const idx = parseInt(req.params.idx, 10)
+  if (!isNaN(idx)) aiState.training.splice(idx, 1)
+  saveAiState()
+  res.json({ ok: true })
+})
+
+app.post('/ai/suggest', async (req, res) => {
+  const { chatId, text } = req.body
+  const cached = assistSuggestions.get(chatId)
+  if (cached) {
+    assistSuggestions.delete(chatId)
+    return res.json({ suggestion: cached })
+  }
+  if (!genAI) return res.json({ suggestion: null })
+  const prompt = await sofiBuildPrompt(chatId, text || '')
+  try {
+    const model  = genAI.getGenerativeModel({ model: GEMINI_MODEL })
+    const result = await model.generateContent(prompt)
+    const reply  = result.response.text().trim().slice(0, aiState.maxChars)
+    res.json({ suggestion: reply })
+  } catch (e) {
+    res.json({ suggestion: null, error: e.message })
+  }
+})
+
+// ── Sync manual de contatos ────────────────────────────────────────────────────
+app.post('/contacts/sync', async (req, res) => {
+  if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
+  await syncContacts()
+  await loadRecentChats()
+  res.json({ ok: true, contacts: phonebook.size, chats: chatsMap.size })
+})
+
+// ── SSE: stream de eventos em tempo real ──────────────────────────────────────
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.flushHeaders()
+
+  // Envia estado atual imediatamente
+  const state = { connected: waReady, ready: waReady, state: waState, qrDataUrl: waQR || null }
+  res.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`)
+
+  sseClients.push(res)
+
+  // Heartbeat a cada 20s para manter conexão viva
+  const hb = setInterval(() => {
+    try { res.write(': heartbeat\n\n') } catch { clearInterval(hb) }
+  }, 20_000)
+
+  req.on('close', () => {
+    clearInterval(hb)
+    sseClients = sseClients.filter(c => c !== res)
+  })
+})
+
+// ── Start server ──────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n[WhatsApp Server] Rodando na porta ${PORT}`)
+  console.log(`[WhatsApp Server] API Key: ${API_KEY}`)
+  console.log(`[WhatsApp Server] Acesse: http://localhost:${PORT}/status\n`)
+})
+
+// Inicia o cliente WhatsApp automaticamente
+waClient = createClient()

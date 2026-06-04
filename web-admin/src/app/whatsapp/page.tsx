@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import Pusher from 'pusher-js'
 import AdminLayout from '@/components/layout/AdminLayout'
 import Cookies from 'js-cookie'
 import {
@@ -391,120 +390,129 @@ export default function WhatsAppPage() {
     })
   }, [])
 
-  // ── Pusher — WebSocket real-time ──────────────────────────────────────────────
+  // ── SSE — eventos em tempo real do backend whatsapp-web.js ──────────────────
   useEffect(() => {
-    const pusher = new Pusher('e86cbcb6b0359bab789f', { cluster: 'sa1' })
-    const channel = pusher.subscribe('whatsapp-sofi')
+    let es: EventSource | null = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    let closed = false
 
-    // Helper: atualiza estado de conexão SEM tocar no QR Code
-    // QR Code tem estado independente — persiste até o scan bem-sucedido
-    const applyState = (ready: boolean) => {
+    const applyState = (ready: boolean, qrDataUrl?: string | null) => {
       if (ready) {
-        // Conectado: cancela timer, atualiza estado, limpa QR (scan feito!)
         if (disconnectTimer.current) { clearTimeout(disconnectTimer.current); disconnectTimer.current = null }
         setWaState({ connected: true, ready: true, qrDataUrl: null, error: null })
-        setQrDataUrl(null) // QR não é mais necessário
+        setQrDataUrl(null)
         if (!prevWaReady.current) loadContacts()
         prevWaReady.current = true
       } else {
-        // Desconectado: só atualiza UI após 6s contínuos de "não conectado"
-        // Evita pisca-pisca quando Evolution API manda vários estados rápidos
+        if (qrDataUrl) {
+          setQrDataUrl(qrDataUrl)
+          setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
+          prevWaReady.current = false
+          if (disconnectTimer.current) { clearTimeout(disconnectTimer.current); disconnectTimer.current = null }
+          return
+        }
         if (disconnectTimer.current) clearTimeout(disconnectTimer.current)
         disconnectTimer.current = setTimeout(() => {
           setWaState(prev => prev?.ready ? prev : { connected: false, ready: false, qrDataUrl: null, error: null })
           prevWaReady.current = false
           disconnectTimer.current = null
-        }, 6000)
+        }, 4000)
       }
     }
 
-    // Estado de conexão via polling do relay (a cada 10s)
-    channel.bind('state', (payload: any) => { applyState(!!payload?.ready) })
+    const connect = () => {
+      if (closed) return
+      setSseStatus('connecting')
+      es = new EventSource('/api/whatsapp-live/events')
 
-    // Evento de conexão em tempo real do Evolution API
-    channel.bind('connection_update', (payload: any) => {
-      const state: string = payload?.data?.state || payload?.state || 'close'
-      applyState(state === 'open')
-    })
-
-    // QR Code disponível — busca via API e exibe até o usuário escanear
-    // NÃO some até a conexão ser confirmada como "open"
-    channel.bind('qrcode_updated', async () => {
-      try {
-        const st = await apiFetch('start', { method: 'POST', body: '{}' })
-        if (st?.qrDataUrl) {
-          setQrDataUrl(st.qrDataUrl)   // QR independente — não some com state changes
-          setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
-          prevWaReady.current = false
-          if (disconnectTimer.current) { clearTimeout(disconnectTimer.current); disconnectTimer.current = null }
-        }
-      } catch {}
-    })
-
-    // Nova mensagem recebida ou enviada
-    channel.bind('messages_upsert', (payload: any) => {
-      const raw   = payload?.data || payload
-      const items: any[] = Array.isArray(raw) ? raw : [raw]
-      for (const item of items) {
-        const key    = item?.key || {}
-        const chatId = key.remoteJid || item?.remoteJid || ''
-        if (!chatId || chatId === 'status@broadcast') continue
-        const phone  = normPhone(chatId)
-        const fromMe = !!key.fromMe
-        const msgId  = key.id || crypto.randomUUID()
-        const text   = extractMsgText(item?.message)
-        if (!text) continue
-        const pushName = item?.pushName || ''
-        const ts = item?.messageTimestamp
-        const at = ts
-          ? new Date(Number(ts) * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-          : now2()
-        const tsMs = ts ? Number(ts) * 1000 : Date.now()
-        const msg: Message = { id: msgId, from: fromMe ? 'agent' : 'lead', text, name: pushName, at, ts: tsMs }
-        setSelectedId(prev => {
-          if (prev === chatId || normPhone(prev) === phone)
-            setMessages(m => sortMessagesChronologically(m.some(x => x.id === msgId) ? m : [...m, msg]))
-          return prev
-        })
-        setContacts(prev => {
-          const idx = prev.findIndex(c => c.chatId === chatId || c.phone === phone)
-          const nowTs = Date.now() / 1000
-          if (idx >= 0) {
-            const u = [...prev]
-            u[idx] = { ...u[idx], lastMessage: text, lastAt: at, timestamp: Number(ts) || nowTs, unread: fromMe ? 0 : u[idx].unread + 1 }
-            return u.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-          }
-          return [{ chatId, phone, name: pushName || phone, lastMessage: text, lastAt: at, unread: fromMe ? 0 : 1, timestamp: Number(ts) || nowTs }, ...prev]
-        })
-      }
-    })
-
-    channel.bind('crm_stage_updated', (payload: any) => {
-      const stage = payload?.stage as Stage
-      if (!STAGES.includes(stage)) return
-      const chatId = payload?.chatId || ''
-      const phone = payload?.phone || normPhone(chatId)
-      setStages(prev => {
-        const next = { ...prev, [phone]: stage }
-        saveStages(next)
-        return next
+      es.addEventListener('state', (e: any) => {
+        try {
+          const d = JSON.parse(e.data)
+          applyState(!!d.ready)
+          setSseStatus('live')
+        } catch {}
       })
-      setContacts(prev => prev.map(c => (c.chatId === chatId || c.phone === phone) ? { ...c, stage } : c))
-    })
 
-    pusher.connection.bind('connected',    () => setSseStatus('live'))
-    pusher.connection.bind('disconnected', () => setSseStatus('offline'))
-    pusher.connection.bind('connecting',   () => setSseStatus('connecting'))
+      es.addEventListener('qr', (e: any) => {
+        try {
+          const d = JSON.parse(e.data)
+          if (d.qrDataUrl) applyState(false, d.qrDataUrl)
+        } catch {}
+      })
+
+      es.addEventListener('message', (e: any) => {
+        try {
+          const { chatId, msg } = JSON.parse(e.data)
+          if (!chatId || !msg) return
+          const phone = normPhone(chatId)
+          const mapped = mapMessageItem(msg)
+          setSelectedId(prev => {
+            if (prev === chatId || normPhone(prev) === phone)
+              setMessages(m => sortMessagesChronologically(m.some(x => x.id === mapped.id) ? m : [...m, mapped]))
+            return prev
+          })
+          setContacts(prev => {
+            const idx = prev.findIndex(c => c.chatId === chatId || c.phone === phone)
+            if (idx >= 0) {
+              const u = [...prev]
+              u[idx] = { ...u[idx], lastMessage: mapped.text, lastAt: mapped.at, timestamp: mapped.ts || Date.now(), unread: mapped.from === 'agent' ? 0 : u[idx].unread + 1 }
+              return u.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+            }
+            return [{ chatId, phone, name: msg.name || phone, lastMessage: mapped.text, lastAt: mapped.at, unread: mapped.from === 'agent' ? 0 : 1, timestamp: mapped.ts || Date.now() }, ...prev]
+          })
+        } catch {}
+      })
+
+      es.addEventListener('chat-update', (e: any) => {
+        try {
+          const d = JSON.parse(e.data)
+          setContacts(prev => prev.map(c => c.chatId === d.chatId ? { ...c, lastMessage: d.lastMsg || c.lastMessage, lastAt: d.lastAt || c.lastAt, unread: d.unread ?? c.unread } : c))
+        } catch {}
+      })
+
+      es.addEventListener('avatar', (e: any) => {
+        try {
+          const { chatId, avatarUrl } = JSON.parse(e.data)
+          setContacts(prev => prev.map(c => c.chatId === chatId ? { ...c, avatarUrl } : c))
+        } catch {}
+      })
+
+      es.addEventListener('bulk-progress', (e: any) => {
+        try {
+          const d = JSON.parse(e.data)
+          setMassRunning(true)
+          setMassSent(d.sent || 0)
+          setMassErrors(d.failed || 0)
+          if (d.log?.length) setMassLog(d.log.map((l: any) => `${l.status === 'sent' ? '✅' : '❌'} ${l.name || l.phone}: ${l.status}`))
+        } catch {}
+      })
+
+      es.addEventListener('bulk-done', (e: any) => {
+        try {
+          const d = JSON.parse(e.data)
+          setMassRunning(false)
+          setMassSent(d.sent || 0)
+          setMassErrors(d.failed || 0)
+          setMassLog(prev => [...prev, `\n✅ Envio finalizado: ${d.sent} enviados, ${d.failed} falhas`])
+        } catch {}
+      })
+
+      es.onerror = () => {
+        setSseStatus('offline')
+        es?.close()
+        if (!closed) reconnectTimer = setTimeout(connect, 4000)
+      }
+    }
+
+    connect()
 
     return () => {
+      closed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       if (disconnectTimer.current) clearTimeout(disconnectTimer.current)
-      channel.unbind_all()
-      pusher.unsubscribe('whatsapp-sofi')
-      pusher.disconnect()
+      es?.close()
     }
   }, [loadContacts]) // eslint-disable-line
-
-  // SSE removido — Pusher substitui completamente
 
   // ── Polling de mensagens (a cada 3s quando chat aberto) ──────────────────────
   // Detecta novas mensagens comparando IDs com o que já está na tela
@@ -781,7 +789,7 @@ export default function WhatsAppPage() {
     try {
       const text = baseText || [...messages].reverse().find(m => m.from === 'lead')?.text || selected.lastMessage || ''
       const data = await apiFetch('ai-suggest', { method: 'POST', body: JSON.stringify({ chatId: selected.chatId, text }) })
-      if (data?.reply) setComposer(data.reply)
+      if (data?.suggestion || data?.reply) setComposer(data.suggestion || data.reply)
     } finally { setAiSuggesting(false) }
   }
 
@@ -926,33 +934,36 @@ export default function WhatsAppPage() {
 
   const startMassSend = async () => {
     if (!waState?.ready || massRecipients.length === 0 || !massTemplate.trim()) return
-    setMassRunning(true); setMassSent(0); setMassErrors(0); setMassLog([]); massStopRef.current = false
-    for (let i = 0; i < massRecipients.length; i++) {
-      if (massStopRef.current) break
-      // Verifica se ainda está conectado a cada envio
-      if (!waState?.ready) {
-        setMassLog(l => [...l, '⚠️ WhatsApp desconectou — envio pausado'])
-        break
+    setMassSent(0); setMassErrors(0); setMassLog(['⏳ Iniciando envio em massa...']); massStopRef.current = false
+    try {
+      const result = await apiFetch('bulk-send', {
+        method: 'POST',
+        body: JSON.stringify({
+          recipients: massRecipients,
+          template: massTemplate,
+          delayMs: massDelay * 1000,
+          randomExtraMs: 3000,
+        }),
+      })
+      if (result?.ok) {
+        setMassRunning(true)
+        setMassLog([`✅ Envio iniciado: ${result.total} destinatários`])
+      } else {
+        setMassLog([`❌ Erro ao iniciar envio: ${result?.error || 'desconhecido'}`])
+        setMassRunning(false)
       }
-      const r = massRecipients[i]
-      const text = applyTemplate(massTemplate, r)
-      try {
-        await apiFetch('send', { method: 'POST', body: JSON.stringify({ phone: r.phone, chatId: `${r.phone}@s.whatsapp.net`, text }) })
-        setMassSent(s => s + 1)
-        setMassLog(l => [...l, `✅ ${r.phone}${r.nome ? ` (${r.nome})` : ''}`])
-      } catch {
-        setMassErrors(e => e + 1)
-        setMassLog(l => [...l, `❌ ${r.phone} — falhou`])
-      }
-      // Auto-scroll do log
-      setTimeout(() => { massLogRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }) }, 50)
-      if (i < massRecipients.length - 1 && !massStopRef.current) {
-        const delay = (massDelay + (Math.random() - 0.5) * 2) * 1000
-        await new Promise(res => setTimeout(res, Math.max(1500, delay)))
-      }
+    } catch (e: any) {
+      setMassLog([`❌ Erro: ${e.message}`])
+      setMassRunning(false)
     }
-    setMassLog(l => [...l, massStopRef.current ? '🛑 Envio interrompido pelo usuário' : '🎉 Envio concluído!'])
-    setMassRunning(false)
+  }
+
+  const stopMassSend = async () => {
+    massStopRef.current = true
+    try {
+      await apiFetch('bulk-stop', { method: 'POST', body: '{}' })
+      setMassLog(l => [...l, '🛑 Parando envio...'])
+    } catch {}
   }
 
   // ── Cores / Labels ──────────────────────────────────────────────────────────
@@ -1578,7 +1589,7 @@ export default function WhatsAppPage() {
                       <PlayIcon className="w-5 h-5" /> Iniciar envio ({massRecipients.length})
                     </button>
                   ) : (
-                    <button onClick={() => { massStopRef.current = true }}
+                    <button onClick={stopMassSend}
                       className="flex-1 py-2.5 rounded-xl text-sm font-extrabold flex items-center justify-center gap-2"
                       style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
                       <StopIcon className="w-5 h-5" /> Parar envio

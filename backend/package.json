@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "npx prisma db push --accept-data-loss && node src/prisma/seed.js && node src/server.js",
+    "whatsapp": "node whatsapp.js",
+    "whatsapp:dev": "nodemon whatsapp.js",
     "db:migrate": "npx prisma migrate dev",
     "db:migrate:prod": "npx prisma migrate deploy",
     "db:seed": "node src/prisma/seed.js",
@@ -24,7 +26,9 @@
     "@whiskeysockets/baileys": "^6.7.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.2",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
+    "express": "^5.2.1",
     "fastify": "^4.28.0",
     "firebase-admin": "^12.1.0",
     "ioredis": "^5.3.2",
