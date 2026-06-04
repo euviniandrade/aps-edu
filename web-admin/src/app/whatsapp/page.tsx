@@ -487,12 +487,9 @@ export default function WhatsAppPage() {
           if (disconnectTimer.current) { clearTimeout(disconnectTimer.current); disconnectTimer.current = null }
           return
         }
-        if (disconnectTimer.current) clearTimeout(disconnectTimer.current)
-        disconnectTimer.current = setTimeout(() => {
-          setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
-          prevWaReady.current = false
-          disconnectTimer.current = null
-        }, 1500)
+        // Atualiza imediatamente
+        setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
+        prevWaReady.current = false
       }
     }
 
@@ -665,20 +662,19 @@ export default function WhatsAppPage() {
     }
   }, [selectedId])
 
-  // ── Polling de status (a cada 5s) — mantém UI sincronizada com o backend ────
+  // ── Polling de status (a cada 3s) — mantém UI sincronizada com o backend ────
   useEffect(() => {
     const iv = setInterval(async () => {
       try {
         const st = await apiFetch('status')
         if (!st) return
         const isReady = !!(st.connected || st.ready)
-        if (isReady !== prevWaReady.current) {
-          setWaState({ connected: isReady, ready: isReady, qrDataUrl: st.qrDataUrl || null, error: null })
-          if (isReady && !prevWaReady.current) loadContacts()
-          prevWaReady.current = isReady
-        }
+        // Sempre atualiza o estado para manter sincronizado
+        setWaState({ connected: isReady, ready: isReady, qrDataUrl: st.qrDataUrl || null, error: null })
+        if (isReady && !prevWaReady.current) loadContacts()
+        prevWaReady.current = isReady
       } catch {}
-    }, 5000)
+    }, 3000)
     return () => clearInterval(iv)
   }, [loadContacts])
 
