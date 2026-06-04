@@ -301,6 +301,7 @@ export default function WhatsAppPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [groupSearch, setGroupSearch] = useState('')
   const [syncingContacts, setSyncingContacts] = useState(false)
+  const [contactsFetching, setContactsFetching] = useState(false)
 
   // Quick Replies
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([])
@@ -365,6 +366,7 @@ export default function WhatsAppPage() {
 
   // ── Contacts & Messages ─────────────────────────────────────────────────────
   const loadContacts = useCallback(async () => {
+    setContactsFetching(true)
     try {
       const data: any[] = await apiFetch('contacts')
       if (!Array.isArray(data)) return
@@ -398,7 +400,7 @@ export default function WhatsAppPage() {
         saveStages(next)
         return next
       })
-    } catch {}
+    } catch {} finally { setContactsFetching(false) }
   }, [])
 
   const loadMessages = useCallback(async (chatId: string) => {
@@ -1236,15 +1238,32 @@ export default function WhatsAppPage() {
               </div>
               <div className="flex-1 overflow-y-auto">
                 {filteredContacts.length === 0 && (
-                  <p className="p-6 text-center text-xs text-white/30">
-                    {!waState?.ready
-                      ? 'Conecte o WhatsApp primeiro'
-                      : contacts.length === 0
-                        ? 'Carregando conversas…'
-                        : hideUnnamed
-                          ? `Nenhum contato com nome (${unnamedCount} ocultos)`
-                          : 'Nenhuma conversa encontrada'}
-                  </p>
+                  <div className="p-6 text-center">
+                    {!waState?.ready ? (
+                      <p className="text-xs text-white/30">Conecte o WhatsApp primeiro</p>
+                    ) : contactsFetching ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <ArrowPathIcon className="w-5 h-5 animate-spin text-white/30" />
+                        <p className="text-xs text-white/30">Buscando conversas…</p>
+                      </div>
+                    ) : contacts.length === 0 ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <p className="text-xs text-white/40">Nenhuma conversa carregada ainda.</p>
+                        <button onClick={async () => { setSyncingContacts(true); try { await apiFetch('contacts-sync', { method: 'POST', body: '{}' }); await loadContacts() } finally { setSyncingContacts(false) } }}
+                          disabled={syncingContacts}
+                          className="px-4 py-2 rounded-xl text-xs font-bold text-black flex items-center gap-2 disabled:opacity-50"
+                          style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                          {syncingContacts ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <ArrowPathIcon className="w-4 h-4" />}
+                          Sincronizar conversas
+                        </button>
+                        <p className="text-[10px] text-white/20">Isso carrega todos os chats do celular</p>
+                      </div>
+                    ) : hideUnnamed ? (
+                      <p className="text-xs text-white/30">{`Nenhum contato com nome (${unnamedCount} ocultos)`}</p>
+                    ) : (
+                      <p className="text-xs text-white/30">Nenhuma conversa encontrada</p>
+                    )}
+                  </div>
                 )}
                 {filteredContacts.map(c => (
                   <button key={c.chatId} onClick={() => { setSelectedId(c.chatId); setContacts(prev => prev.map(x => x.chatId === c.chatId ? { ...x, unread: 0 } : x)) }}

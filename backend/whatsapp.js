@@ -280,7 +280,18 @@ function createClient() {
         '--disable-gpu',
         '--no-first-run',
         '--no-zygote',
-        '--single-process',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--safebrowsing-disable-auto-update',
+        '--ignore-certificate-errors',
+        '--ignore-ssl-errors',
+        '--ignore-certificate-errors-spki-list',
       ],
     },
   })
@@ -305,7 +316,10 @@ function createClient() {
     waState = 'CONNECTED'
     waQR    = null
     pushSSE('state', { state: waState, connected: true, ready: true })
-    syncContacts()
+    // Carrega chats e contatos em sequência
+    await syncContacts()
+    await loadRecentChats()
+    pushSSE('contacts-loaded', { count: chatsMap.size })
   })
 
   client.on('disconnected', reason => {
@@ -380,11 +394,21 @@ function createClient() {
     pushSSE('message', { chatId, msg: msgObj })
   })
 
-  client.initialize().catch(e => {
-    console.error('[WA] Erro ao inicializar:', e.message)
-    waState = 'ERROR'
-    pushSSE('state', { state: waState, connected: false, ready: false, error: e.message })
-  })
+  let retryCount = 0
+  const tryInit = () => {
+    client.initialize().catch(async e => {
+      console.error('[WA] Erro ao inicializar:', e.message)
+      waState = 'ERROR'
+      pushSSE('state', { state: waState, connected: false, ready: false, error: e.message })
+      if (retryCount < 3) {
+        retryCount++
+        const delay = retryCount * 5000
+        console.log(`[WA] Tentando novamente em ${delay/1000}s... (tentativa ${retryCount}/3)`)
+        setTimeout(tryInit, delay)
+      }
+    })
+  }
+  tryInit()
 
   return client
 }
