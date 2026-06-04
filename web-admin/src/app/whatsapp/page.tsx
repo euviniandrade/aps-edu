@@ -489,10 +489,10 @@ export default function WhatsAppPage() {
         }
         if (disconnectTimer.current) clearTimeout(disconnectTimer.current)
         disconnectTimer.current = setTimeout(() => {
-          setWaState(prev => prev?.ready ? prev : { connected: false, ready: false, qrDataUrl: null, error: null })
+          setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
           prevWaReady.current = false
           disconnectTimer.current = null
-        }, 4000)
+        }, 1500)
       }
     }
 
@@ -664,6 +664,23 @@ export default function WhatsAppPage() {
       if ((poll as any).__iv) clearInterval((poll as any).__iv)
     }
   }, [selectedId])
+
+  // ── Polling de status (a cada 5s) — mantém UI sincronizada com o backend ────
+  useEffect(() => {
+    const iv = setInterval(async () => {
+      try {
+        const st = await apiFetch('status')
+        if (!st) return
+        const isReady = !!(st.connected || st.ready)
+        if (isReady !== prevWaReady.current) {
+          setWaState({ connected: isReady, ready: isReady, qrDataUrl: st.qrDataUrl || null, error: null })
+          if (isReady && !prevWaReady.current) loadContacts()
+          prevWaReady.current = isReady
+        }
+      } catch {}
+    }, 5000)
+    return () => clearInterval(iv)
+  }, [loadContacts])
 
   // ── Polling de contatos (a cada 5s) — atualiza previews e badges ────────────
   useEffect(() => {
@@ -1201,14 +1218,33 @@ export default function WhatsAppPage() {
             </div>
 
             {platform === 'whatsapp' ? (
-              !waState?.ready && (
-                <button onClick={connectWA} disabled={initBusy}
-                  className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50 flex items-center gap-1.5"
-                  style={{ background: '#F8A303' }}>
-                  {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin inline" /> : <QrCodeIcon className="w-4 h-4" />}
-                  {initBusy ? 'Gerando QR...' : 'Conectar'}
-                </button>
-              )
+              <>
+                {!waState?.ready ? (
+                  <button onClick={connectWA} disabled={initBusy}
+                    className="px-3 py-1.5 rounded-xl text-xs font-extrabold text-black disabled:opacity-50 flex items-center gap-1.5"
+                    style={{ background: '#F8A303' }}>
+                    {initBusy ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <QrCodeIcon className="w-4 h-4" />}
+                    {initBusy ? 'Gerando QR...' : 'Conectar'}
+                  </button>
+                ) : (
+                  <button onClick={async () => {
+                    if (!confirm('Desconectar o WhatsApp?')) return
+                    try {
+                      await apiFetch('disconnect', { method: 'POST', body: '{}' })
+                      setWaState({ connected: false, ready: false, qrDataUrl: null, error: null })
+                      setContacts([])
+                      setMessages([])
+                      setSelectedId('')
+                      prevWaReady.current = false
+                    } catch {}
+                  }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <XCircleIcon className="w-4 h-4" />
+                    Desconectar
+                  </button>
+                )}
+              </>
             ) : (
               <button
                 onClick={instagramState?.connected ? loadInstagram : connectInstagram}
