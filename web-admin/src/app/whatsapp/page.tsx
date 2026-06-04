@@ -9,11 +9,31 @@ import {
   UserGroupIcon, ChatBubbleLeftRightIcon, FunnelIcon,
   ArrowUpTrayIcon, PlayIcon, StopIcon, ClipboardDocumentIcon,
   ArrowDownTrayIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon,
-  SparklesIcon, CommandLineIcon,
+  SparklesIcon, CommandLineIcon, PencilSquareIcon, BoltIcon,
+  ChartBarIcon, LockClosedIcon, PlusIcon, BookmarkIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai'
+type Tab = 'chats' | 'kanban' | 'mass' | 'groups' | 'ai' | 'analytics'
+
+interface QuickReply { id: string; title: string; text: string }
+interface InternalNote { id: string; chatId: string; text: string; at: string }
+
+const QUICK_REPLIES_KEY = 'sofi_quick_replies'
+const NOTES_KEY         = 'sofi_internal_notes'
+
+function loadQuickReplies(): QuickReply[] {
+  try { return JSON.parse(localStorage.getItem(QUICK_REPLIES_KEY) || '[]') } catch { return [] }
+}
+function saveQuickReplies(list: QuickReply[]) {
+  try { localStorage.setItem(QUICK_REPLIES_KEY, JSON.stringify(list)) } catch {}
+}
+function loadNotes(): InternalNote[] {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '[]') } catch { return [] }
+}
+function saveNotes(list: InternalNote[]) {
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(list)) } catch {}
+}
 
 const STAGES = ['Inbox', 'Hoje', 'Acompanhar', 'Pessoal', 'Concluido', 'Pausado'] as const
 type Stage = typeof STAGES[number]
@@ -282,6 +302,22 @@ export default function WhatsAppPage() {
   const [groupSearch, setGroupSearch] = useState('')
   const [syncingContacts, setSyncingContacts] = useState(false)
 
+  // Quick Replies
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([])
+  const [qrDropdown, setQrDropdown]     = useState(false)
+  const [qrFilter, setQrFilter]         = useState('')
+  const [showQrManager, setShowQrManager] = useState(false)
+  const [newQrTitle, setNewQrTitle]     = useState('')
+  const [newQrText, setNewQrText]       = useState('')
+
+  // Notas internas
+  const [noteMode, setNoteMode]         = useState(false) // true = nota interna
+  const [internalNotes, setInternalNotes] = useState<InternalNote[]>([])
+
+  // Busca global
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
+
   // Sofi IA no WhatsApp
   const [aiState, setAiState] = useState<AiState | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -313,6 +349,8 @@ export default function WhatsAppPage() {
     setStages(loadStages())
     setArchivedChats(loadArchived())
     setLabelsByPhone(loadLabels())
+    setQuickReplies(loadQuickReplies())
+    setInternalNotes(loadNotes())
   }, [])
 
   const persistStage = (phone: string, stage: Stage) => {
@@ -966,6 +1004,39 @@ export default function WhatsAppPage() {
     } catch {}
   }
 
+  // ── Quick Replies ───────────────────────────────────────────────────────────
+  const addQuickReply = () => {
+    if (!newQrTitle.trim() || !newQrText.trim()) return
+    const updated = [...quickReplies, { id: crypto.randomUUID(), title: newQrTitle.trim(), text: newQrText.trim() }]
+    setQuickReplies(updated); saveQuickReplies(updated)
+    setNewQrTitle(''); setNewQrText('')
+  }
+  const deleteQuickReply = (id: string) => {
+    const updated = quickReplies.filter(r => r.id !== id)
+    setQuickReplies(updated); saveQuickReplies(updated)
+  }
+  const applyQuickReply = (text: string) => {
+    setComposer(text); setQrDropdown(false); setQrFilter('')
+  }
+
+  // ── Notas internas ──────────────────────────────────────────────────────────
+  const addNote = () => {
+    const text = composer.trim()
+    if (!text || !selected) return
+    const note: InternalNote = { id: crypto.randomUUID(), chatId: selected.chatId, text, at: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }
+    const updated = [...internalNotes, note]
+    setInternalNotes(updated); saveNotes(updated)
+    setComposer('')
+  }
+
+  // Notas do chat selecionado
+  const currentNotes = selected ? internalNotes.filter(n => n.chatId === selected.chatId) : []
+
+  // ── Busca Global ────────────────────────────────────────────────────────────
+  const globalResults = globalSearch.trim().length > 1
+    ? contacts.filter(c => `${c.name} ${c.phone} ${c.lastMessage}`.toLowerCase().includes(globalSearch.toLowerCase()))
+    : []
+
   // ── Cores / Labels ──────────────────────────────────────────────────────────
   const sseColor = sseStatus === 'live' ? '#0ABD78' : sseStatus === 'connecting' ? '#F8A303' : '#666'
   const sseLabel = sseStatus === 'live' ? '● ao vivo' : sseStatus === 'connecting' ? '○ conectando' : '○ offline'
@@ -1022,7 +1093,7 @@ export default function WhatsAppPage() {
 
             {platform === 'whatsapp' && (
               <>
-                {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
+                {([['chats','Conversas',ChatBubbleLeftRightIcon],['kanban','Kanban',FunnelIcon],['mass','Envio em Massa',PaperAirplaneIcon],['groups','Grupos',UserGroupIcon],['ai','Sofi IA',SparklesIcon],['analytics','Analytics',ChartBarIcon]] as [Tab,string,any][]).map(([id,label,Icon]) => (
                   <button key={id} onClick={() => {
                     setTab(id)
                     if (id === 'groups' && groups.length === 0) loadGroups()
@@ -1340,34 +1411,133 @@ export default function WhatsAppPage() {
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* Notas internas do chat */}
+                  {currentNotes.length > 0 && (
+                    <div className="px-4 pb-2 space-y-1">
+                      {currentNotes.map(n => (
+                        <div key={n.id} className="flex items-start gap-2 p-2 rounded-xl text-xs"
+                          style={{ background: 'rgba(248,163,3,0.07)', border: '1px solid rgba(248,163,3,0.15)' }}>
+                          <LockClosedIcon className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <span className="text-amber-200/70 flex-1 whitespace-pre-wrap">{n.text}</span>
+                          <span className="text-white/20 shrink-0">{n.at}</span>
+                          <button onClick={() => { const upd = internalNotes.filter(x => x.id !== n.id); setInternalNotes(upd); saveNotes(upd) }}
+                            className="shrink-0 text-red-400/40 hover:text-red-400/80"><TrashIcon className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Composer */}
                   <div className="p-3 border-t shrink-0" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                    {!waState?.ready && <p className="text-xs text-amber-400/70 mb-2 text-center">WhatsApp desconectado</p>}
-                    <div className="flex gap-2">
-                      <button onClick={() => suggestAiReply()} disabled={!selected || aiSuggesting}
-                        title="Gerar resposta com Sofi"
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center disabled:opacity-40 shrink-0"
-                        style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.25)' }}>
-                        {aiSuggesting ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <SparklesIcon className="w-5 h-5" />}
+                    {!waState?.ready && !noteMode && <p className="text-xs text-amber-400/70 mb-2 text-center">WhatsApp desconectado</p>}
+
+                    {/* Toggle: Mensagem / Nota Interna */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <button onClick={() => setNoteMode(false)}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all"
+                        style={{ background: !noteMode ? 'rgba(10,189,120,0.18)' : 'rgba(255,255,255,0.05)', color: !noteMode ? '#0ABD78' : 'rgba(255,255,255,0.4)' }}>
+                        <PaperAirplaneIcon className="w-3 h-3 inline mr-1" />Mensagem
                       </button>
-                      <input value={composer} onChange={e => setComposer(e.target.value)}
+                      <button onClick={() => setNoteMode(true)}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all"
+                        style={{ background: noteMode ? 'rgba(248,163,3,0.18)' : 'rgba(255,255,255,0.05)', color: noteMode ? '#F8A303' : 'rgba(255,255,255,0.4)' }}>
+                        <LockClosedIcon className="w-3 h-3 inline mr-1" />Nota Interna
+                      </button>
+                      <button onClick={() => setShowQrManager(v => !v)}
+                        className="ml-auto px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all"
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+                        <BookmarkIcon className="w-3 h-3 inline mr-1" />Respostas Rápidas
+                      </button>
+                    </div>
+
+                    {/* Dropdown respostas rápidas */}
+                    {qrDropdown && (
+                      <div className="mb-2 rounded-xl overflow-hidden" style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <input value={qrFilter} onChange={e => setQrFilter(e.target.value)} autoFocus
+                          placeholder="Buscar resposta..."
+                          className="w-full px-3 py-2 text-xs text-white outline-none bg-transparent border-b"
+                          style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+                        {quickReplies.filter(r => !qrFilter || r.title.toLowerCase().includes(qrFilter.toLowerCase()) || r.text.toLowerCase().includes(qrFilter.toLowerCase())).map(r => (
+                          <button key={r.id} onClick={() => applyQuickReply(r.text)}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-white/[0.04] border-b transition-colors"
+                            style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <p className="font-bold text-white/80">/{r.title}</p>
+                            <p className="text-white/40 truncate mt-0.5">{r.text}</p>
+                          </button>
+                        ))}
+                        {quickReplies.length === 0 && <p className="px-3 py-2 text-xs text-white/30">Nenhuma resposta salva. Crie abaixo.</p>}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button onClick={() => suggestAiReply()} disabled={!selected || aiSuggesting || noteMode}
+                        title="Gerar resposta com Sofi"
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center disabled:opacity-30 shrink-0"
+                        style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.25)' }}>
+                        {aiSuggesting ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <SparklesIcon className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => setQrDropdown(v => !v)} title="Respostas rápidas (/)">
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-xs font-extrabold"
+                          style={{ background: qrDropdown ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.06)', color: qrDropdown ? '#818cf8' : 'rgba(255,255,255,0.4)', border: `1px solid ${qrDropdown ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}` }}>
+                          /
+                        </div>
+                      </button>
+                      <input value={composer}
+                        onChange={e => {
+                          const v = e.target.value
+                          setComposer(v)
+                          if (v.startsWith('/') && !noteMode) setQrDropdown(true)
+                          else setQrDropdown(false)
+                        }}
                         onKeyDown={e => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
-                            sendMessage()
+                            noteMode ? addNote() : sendMessage()
                           }
+                          if (e.key === 'Escape') setQrDropdown(false)
                         }}
-                        placeholder="Digite uma mensagem… (Enter para enviar)"
+                        placeholder={noteMode ? '📝 Nota interna (só você vê)…' : 'Digite uma mensagem… (/ para respostas rápidas)'}
                         disabled={sending}
                         className="flex-1 px-4 py-2.5 rounded-2xl text-sm text-white outline-none"
-                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.09)' }} />
-                      <button onClick={sendMessage} disabled={!composer.trim() || sending}
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-black disabled:opacity-40 shrink-0"
-                        style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
-                        {sending ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <PaperAirplaneIcon className="w-5 h-5" />}
+                        style={{ background: noteMode ? 'rgba(248,163,3,0.06)' : 'rgba(255,255,255,0.07)', border: `1px solid ${noteMode ? 'rgba(248,163,3,0.2)' : 'rgba(255,255,255,0.09)'}` }} />
+                      <button onClick={noteMode ? addNote : sendMessage} disabled={!composer.trim() || (!noteMode && sending)}
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-black disabled:opacity-40 shrink-0"
+                        style={{ background: noteMode ? 'linear-gradient(135deg,#F8A303,#fb923c)' : 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                        {sending && !noteMode ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : noteMode ? <LockClosedIcon className="w-4 h-4" /> : <PaperAirplaneIcon className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
+
+                  {/* Gerenciador de Respostas Rápidas */}
+                  {showQrManager && (
+                    <div className="border-t p-3 space-y-2 shrink-0" style={{ borderColor: 'rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.2)' }}>
+                      <p className="text-xs font-extrabold text-white/50 uppercase tracking-widest">Respostas Rápidas</p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {quickReplies.map(r => (
+                          <div key={r.id} className="flex items-center gap-2 text-xs">
+                            <span className="text-indigo-400 font-bold shrink-0">/{r.title}</span>
+                            <span className="text-white/40 flex-1 truncate">{r.text}</span>
+                            <button onClick={() => applyQuickReply(r.text)} className="text-green-400/70 hover:text-green-400 shrink-0"><PlayIcon className="w-3 h-3" /></button>
+                            <button onClick={() => deleteQuickReply(r.id)} className="text-red-400/40 hover:text-red-400 shrink-0"><TrashIcon className="w-3 h-3" /></button>
+                          </div>
+                        ))}
+                        {quickReplies.length === 0 && <p className="text-white/25 text-xs">Nenhuma resposta salva ainda.</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <input value={newQrTitle} onChange={e => setNewQrTitle(e.target.value)} placeholder="Título (ex: saudacao)"
+                          className="w-28 px-2 py-1.5 rounded-lg text-xs text-white outline-none"
+                          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        <input value={newQrText} onChange={e => setNewQrText(e.target.value)} placeholder="Texto da resposta…"
+                          className="flex-1 px-2 py-1.5 rounded-lg text-xs text-white outline-none"
+                          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        <button onClick={addQuickReply} disabled={!newQrTitle.trim() || !newQrText.trim()}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-black disabled:opacity-40"
+                          style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                          <PlusIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1974,6 +2144,111 @@ export default function WhatsAppPage() {
             </div>
           </div>
         )}
+
+        {/* ══ TAB: ANALYTICS ══════════════════════════════════════════════════ */}
+        {platform === 'whatsapp' && tab === 'analytics' && (() => {
+          const totalContacts  = contacts.length
+          const withName       = contacts.filter(c => hasRealName(c)).length
+          const groups_        = contacts.filter(c => c.isGroup).length
+          const unread         = contacts.reduce((s, c) => s + (c.unread || 0), 0)
+          const stageCount: Record<string, number> = {}
+          contacts.forEach(c => { const s = stages[c.phone] || 'Inbox'; stageCount[s] = (stageCount[s] || 0) + 1 })
+          const labelCount: Record<string, number> = {}
+          Object.values(labelsByPhone).forEach(ls => ls.forEach(l => { labelCount[l] = (labelCount[l] || 0) + 1 }))
+          const recentActivity = contacts.filter(c => c.timestamp && Date.now() - c.timestamp * (c.timestamp < 1e10 ? 1000 : 1) < 7 * 24 * 3600 * 1000).length
+          const totalNotes     = internalNotes.length
+          const totalQR        = quickReplies.length
+
+          return (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: 'Contatos totais',    value: totalContacts, color: '#6366F1' },
+                  { label: 'Com nome',            value: withName,      color: '#0ABD78' },
+                  { label: 'Grupos',              value: groups_,       color: '#0EA5E9' },
+                  { label: 'Mensagens não lidas', value: unread,        color: '#EF4444' },
+                  { label: 'Ativos (7 dias)',     value: recentActivity, color: '#F8A303' },
+                  { label: 'Notas internas',      value: totalNotes,    color: '#EC4899' },
+                  { label: 'Respostas rápidas',   value: totalQR,       color: '#8B5CF6' },
+                  { label: 'Arquivados',          value: archivedChats.size, color: '#6B7280' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-2xl p-4"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}20` }}>
+                    <p className="text-2xl font-extrabold" style={{ color }}>{value}</p>
+                    <p className="text-xs text-white/40 mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Pipeline / Stages */}
+                <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-xs font-extrabold text-white/50 uppercase tracking-widest mb-3">Pipeline (Kanban)</p>
+                  <div className="space-y-2">
+                    {STAGES.map(s => {
+                      const count = stageCount[s] || 0
+                      const pct   = totalContacts > 0 ? Math.round((count / totalContacts) * 100) : 0
+                      return (
+                        <div key={s}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span style={{ color: STAGE_COLORS[s] }}>{s}</span>
+                            <span className="text-white/40">{count} ({pct}%)</span>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: STAGE_COLORS[s] }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Labels */}
+                <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-xs font-extrabold text-white/50 uppercase tracking-widest mb-3">Labels / Tags</p>
+                  <div className="space-y-2">
+                    {LABELS.map(l => {
+                      const count = labelCount[l] || 0
+                      const max   = Math.max(...LABELS.map(lb => labelCount[lb] || 0), 1)
+                      const pct   = Math.round((count / max) * 100)
+                      return (
+                        <div key={l}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-white/60">{l}</span>
+                            <span className="text-white/40">{count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                            <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Respostas rápidas salvas */}
+                <div className="rounded-2xl p-4 md:col-span-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-extrabold text-white/50 uppercase tracking-widest">Respostas Rápidas Salvas</p>
+                    <button onClick={() => { setTab('chats'); setShowQrManager(true) }}
+                      className="text-xs text-indigo-400 hover:text-indigo-300">+ Adicionar</button>
+                  </div>
+                  {quickReplies.length === 0
+                    ? <p className="text-xs text-white/25">Nenhuma resposta rápida salva. Abra uma conversa e clique em "Respostas Rápidas".</p>
+                    : <div className="grid grid-cols-2 gap-2">
+                        {quickReplies.map(r => (
+                          <div key={r.id} className="p-2 rounded-xl text-xs" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                            <p className="font-extrabold text-indigo-400">/{r.title}</p>
+                            <p className="text-white/50 truncate mt-0.5">{r.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
       </div>
     </AdminLayout>
