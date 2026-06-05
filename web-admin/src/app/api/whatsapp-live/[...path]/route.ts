@@ -147,6 +147,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
   const { path } = await ctx.params
   const p0 = path[0]
 
+  // Debug endpoint
+  if (p0 === 'debug') {
+    return NextResponse.json({
+      backends: BACKEND_CANDIDATES,
+      env: {
+        WHATSAPP_BACKEND_URL: process.env.WHATSAPP_BACKEND_URL,
+        BACKEND_URL: process.env.BACKEND_URL,
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+      },
+    })
+  }
+
   try {
     // Proxy de avatares (imagens de perfil)
     if (p0 === 'wa-avatar') {
