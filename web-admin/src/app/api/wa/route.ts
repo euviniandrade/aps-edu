@@ -11,7 +11,14 @@ async function proxyRequest(req: NextRequest, path: string) {
   try {
     const url = `${BACKEND_URL}${path}${req.nextUrl.search}`
 
-    console.log(`[WA Proxy] ${req.method} ${path}`)
+    console.log(`[WA Proxy] ${req.method} ${path}`, {
+      url,
+      method: req.method,
+      headers: {
+        'x-api-key': API_KEY,
+        'Content-Type': 'application/json',
+      }
+    })
 
     const response = await fetch(url, {
       method: req.method,
@@ -24,7 +31,10 @@ async function proxyRequest(req: NextRequest, path: string) {
       cache: 'no-store',
     })
 
-    console.log(`[WA Proxy] Response: ${response.status}`)
+    console.log(`[WA Proxy] Response ${url}:`, {
+      status: response.status,
+      contentType: response.headers.get('content-type'),
+    })
 
     const contentType = response.headers.get('content-type')
 
