@@ -10,16 +10,16 @@ RUN apt-get update && apt-get install -y \
 
 COPY package*.json ./
 
-# Instala dependências (sem dev)
-RUN npm install --omit=dev
+# Instala dependências com npm ci (mais confiável que install)
+RUN npm ci --omit=dev
 
 # Copia código
-COPY whatsapp-baileys.js whatsapp.js
-COPY .env.local* ./
+COPY . .
 
 # Cria pasta de dados
 RUN mkdir -p /data
 
 EXPOSE 8081
 
-CMD ["node", "whatsapp.js"]
+# Inicia usando whatsapp-baileys.js como whatsapp.js
+CMD ["node", "whatsapp-baileys.js"]
