@@ -672,7 +672,7 @@ app.get('/messages', (req, res) => {
 
 // Busca mensagens históricas do WhatsApp para um chat
 app.get('/messages/fetch', async (req, res) => {
-  const { chatId, limit = 100 } = req.query
+  const { chatId, limit = 200 } = req.query
   if (!chatId) return res.status(400).json({ error: 'chatId obrigatório' })
   if (!waReady) return res.status(503).json({ error: 'WhatsApp não conectado' })
   try {
@@ -693,22 +693,38 @@ app.get('/messages/fetch', async (req, res) => {
       return ''
     }
 
-    const msgs = raw.map(m => ({
-      id:   m.id.id || crypto.randomUUID(),
-      from: m.fromMe ? 'agent' : 'lead',
-      text: extractText(m),
-      at:   new Date(m.timestamp * 1000).toISOString(),
-      ts:   m.timestamp * 1000,
-      name: m.notifyName || (m.fromMe ? 'Você' : ''),
-      ack:  m.ack || 0,
-    })).filter(m => m.text)
+    // Baixa mídia para imagens (inline base64)
+    const msgs = await Promise.all(raw.map(async m => {
+      let text = extractText(m)
+      let mediaData = null
+
+      // Para imagens: baixa e converte para base64
+      if (m.type === 'image' || m.type === 'sticker') {
+        try {
+          const media = await m.downloadMedia()
+          if (media) mediaData = `data:${media.mimetype};base64,${media.data}`
+        } catch {}
+      }
+
+      return {
+        id:        m.id.id || crypto.randomUUID(),
+        from:      m.fromMe ? 'agent' : 'lead',
+        text:      mediaData || text,
+        mediaType: m.type || 'text',
+        at:        new Date(m.timestamp * 1000).toISOString(),
+        ts:        m.timestamp * 1000,
+        name:      m.notifyName || (m.fromMe ? 'Você' : ''),
+        ack:       m.ack || 0,
+      }
+    }))
+    const filtered = msgs.filter(m => m.text)
 
     // Salva no cache local
-    if (msgs.length) {
-      msgsMap.set(String(chatId), msgs)
+    if (filtered.length) {
+      msgsMap.set(String(chatId), filtered)
       saveMsgs()
     }
-    res.json(msgs)
+    res.json(filtered)
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -750,16 +766,18 @@ app.get('/groups', async (req, res) => {
     const groups = []
     for (const chat of chats.filter(c => c.isGroup)) {
       const participants = await chat.participants || []
-      groups.push({
+      const avatarUrl = await waClient.getProfilePicUrl(chat.id._serialized).catch(() => '')
+    groups.push({
         id:           chat.id._serialized,
         name:         chat.name || chat.id._serialized,
         description:  chat.description || '',
         participants: participants.length,
+        avatarUrl:    avatarUrl || '',
         members:      participants.map(p => ({
           id:    p.id._serialized,
           phone: normPhone(p.id._serialized),
           admin: p.isAdmin || false,
-          name:  phonebook.get(normPhone(p.id._serialized))?.name || normPhone(p.id._serialized),
+          name:  phonebook.get(normPhone(p.id._serialized))?.name || '',
         })).filter(m => m.phone && m.phone.length >= 7),
       })
     }

@@ -315,6 +315,9 @@ export default function WhatsAppPage() {
   const [noteMode, setNoteMode]         = useState(false) // true = nota interna
   const [internalNotes, setInternalNotes] = useState<InternalNote[]>([])
 
+  // Sidebar colapsável
+  const [sidebarOpen, setSidebarOpen]   = useState(true)
+
   // Busca global
   const [globalSearch, setGlobalSearch] = useState('')
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
@@ -1302,11 +1305,17 @@ export default function WhatsAppPage() {
 
         {/* ══ TAB: CONVERSAS ══════════════════════════════════════════════════ */}
         {platform === 'whatsapp' && tab === 'chats' && (
-          <div className="flex flex-1 gap-3 overflow-hidden min-h-0">
+          <div className="flex flex-1 gap-2 overflow-hidden min-h-0">
 
-            {/* Lista contatos */}
-            <aside className="w-72 flex flex-col shrink-0 rounded-2xl overflow-hidden"
-              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Toggle sidebar */}
+            <button onClick={() => setSidebarOpen(v => !v)}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-5 h-12 flex items-center justify-center rounded-r-lg hidden"
+              style={{ background: 'rgba(255,255,255,0.08)' }}>
+            </button>
+
+            {/* Lista contatos — colapsável */}
+            <aside className={`flex flex-col shrink-0 rounded-2xl overflow-hidden transition-all duration-200 ${sidebarOpen ? 'w-72' : 'w-0 opacity-0 pointer-events-none'}`}
+              style={{ background: 'rgba(255,255,255,0.035)', border: sidebarOpen ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
               <div className="p-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -1418,7 +1427,12 @@ export default function WhatsAppPage() {
             <div className="flex-1 flex flex-col min-w-0 min-h-0 rounded-2xl overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
               {!selected ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                  <button onClick={() => setSidebarOpen(v => !v)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                    {sidebarOpen ? '← Ocultar lista' : '→ Ver contatos'}
+                  </button>
                   <p className="text-sm text-white/25">Selecione um contato</p>
                 </div>
               ) : (
@@ -1426,17 +1440,32 @@ export default function WhatsAppPage() {
                   {/* Header chat */}
                   <div className="px-4 py-3 border-b flex items-center gap-3 shrink-0"
                     style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                    {/* Botão toggle sidebar */}
+                    <button onClick={() => setSidebarOpen(v => !v)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-white/40 hover:text-white/70 transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}
+                      title={sidebarOpen ? 'Ocultar lista' : 'Mostrar lista'}>
+                      {sidebarOpen ? '◀' : '▶'}
+                    </button>
+                    {/* Foto do contato/grupo */}
                     {selected.avatarUrl ? (
-                      <img src={selected.avatarUrl} alt={selected.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      <img
+                        src={selected.avatarUrl.startsWith('/wa-avatar/') ? `/api/whatsapp-live${selected.avatarUrl}` : selected.avatarUrl}
+                        alt={selected.name}
+                        className="w-10 h-10 rounded-full object-cover shrink-0"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
                     ) : (
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-black font-extrabold shrink-0"
-                        style={{ background: 'linear-gradient(135deg,#0ABD78,#34D399)' }}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold shrink-0 text-white"
+                        style={{ background: `linear-gradient(135deg,${STAGE_COLORS[stages[selected.phone]||'Inbox']},${STAGE_COLORS[stages[selected.phone]||'Inbox']}88)` }}>
                         {(selected.name || '?').charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-extrabold text-white truncate">{selected.name}</p>
-                      <p className="text-[11px] text-white/35">{selected.phone}</p>
+                      <p className="text-sm font-extrabold text-white">{selected.name}</p>
+                      <p className="text-[11px] text-white/35">
+                        {selected.isGroup ? `Grupo · ${selected.phone.replace('@g.us','').replace(/(\d{10,})/, '+$1')}` : `+${selected.phone}`}
+                      </p>
                     </div>
                     {/* Stage selector */}
                     <select value={stages[selected.phone] || 'Inbox'}
@@ -1518,7 +1547,32 @@ export default function WhatsAppPage() {
                         <div className="max-w-[75%] rounded-2xl px-4 py-2.5"
                           style={{ background: msg.from === 'lead' ? 'rgba(255,255,255,0.08)' : msg.from === 'sofi' ? 'rgba(248,163,3,0.15)' : 'rgba(10,189,120,0.18)', border: '1px solid rgba(255,255,255,0.07)' }}>
                           {msg.from === 'sofi' && <p className="text-[9px] font-extrabold text-amber-400 uppercase tracking-widest mb-1">Sofi IA</p>}
-                          <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          {/* Detecta tipo de conteúdo */}
+                          {msg.text.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.text) ? (
+                            <img src={msg.text} alt="foto" className="max-w-xs rounded-xl object-cover" />
+                          ) : msg.text === '📷 Foto' || msg.text === '🎥 Vídeo' ? (
+                            <div className="flex items-center gap-2 py-1">
+                              <span className="text-2xl">{msg.text.split(' ')[0]}</span>
+                              <span className="text-xs text-white/50">{msg.text}</span>
+                            </div>
+                          ) : msg.text === '🎤 Áudio' ? (
+                            <div className="flex items-center gap-2 py-1">
+                              <span className="text-2xl">🎤</span>
+                              <div className="flex gap-0.5 items-center">
+                                {[3,5,4,6,3,5,4,3,6,4].map((h,i) => (
+                                  <div key={i} className="w-1 rounded-full bg-white/40" style={{ height: `${h*3}px` }} />
+                                ))}
+                              </div>
+                              <span className="text-xs text-white/40">Áudio</span>
+                            </div>
+                          ) : msg.text === '📄 Arquivo' ? (
+                            <div className="flex items-center gap-2 py-1">
+                              <span className="text-2xl">📄</span>
+                              <span className="text-xs text-white/50">Arquivo</span>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                          )}
                           <div className="flex items-center justify-end gap-1 mt-1">
                             <span className="text-[10px] text-white/25">{msg.at}</span>
                             {msg.from !== 'lead' && (
