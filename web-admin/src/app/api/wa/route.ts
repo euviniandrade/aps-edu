@@ -27,6 +27,42 @@ async function proxyRequest(req: NextRequest, path: string) {
     console.log(`[WA Proxy] Response: ${response.status}`)
 
     const contentType = response.headers.get('content-type')
+
+    // SSE (Server-Sent Events) - retornar stream diretamente
+    if (contentType?.includes('text/event-stream')) {
+      console.log(`[WA Proxy] Streaming SSE...`)
+
+      const encoder = new TextEncoder()
+      const customStream = new ReadableStream({
+        async start(controller) {
+          if (response.body) {
+            const reader = response.body.getReader()
+            try {
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                controller.enqueue(value)
+              }
+            } finally {
+              reader.releaseLock()
+            }
+          }
+          controller.close()
+        },
+      })
+
+      return new NextResponse(customStream, {
+        status: response.status,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        },
+      })
+    }
+
+    // JSON ou texto normal
     let body: any
 
     if (contentType?.includes('application/json')) {
