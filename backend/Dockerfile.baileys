@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY package*.json ./
 
-# Instala dependências com npm ci (mais confiável que install)
-RUN npm ci --omit=dev
+# Instala dependências (apenas produção)
+RUN npm install --production
 
 # Copia código
 COPY . .
