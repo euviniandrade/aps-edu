@@ -20,14 +20,22 @@ async function proxyRequest(req: NextRequest, path: string) {
       }
     })
 
+    const headers: Record<string, string> = {
+      'x-api-key': API_KEY,
+      'ngrok-skip-browser-warning': 'true',
+    }
+
+    // Only add Content-Type for requests with body
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      headers['Content-Type'] = 'application/json'
+    }
+
+    const body = req.method !== 'GET' && req.method !== 'HEAD' ? await req.text() : undefined
+
     const response = await fetch(url, {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? await req.text() : undefined,
+      headers,
+      body,
       cache: 'no-store',
     })
 
