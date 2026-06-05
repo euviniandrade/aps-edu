@@ -13,7 +13,12 @@ async function proxyRequest(req: NextRequest, pathParam?: string) {
 
     const headers: Record<string, string> = {
       'x-api-key': API_KEY,
+      'X-API-Key': API_KEY,
+      'Authorization': `Bearer ${API_KEY}`,
       'ngrok-skip-browser-warning': 'true',
+      'Accept': '*/*',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
