@@ -118,7 +118,7 @@ const getToken = () => Cookies.get('accessToken')
 const heads = () => ({ 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) })
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`/api/whatsapp-live/${path}`, { ...opts, headers: { ...heads(), ...(opts?.headers || {}) }, cache: 'no-store' })
+  const r = await fetch(`/api/wa/${path}`, { ...opts, headers: { ...heads(), ...(opts?.headers || {}) }, cache: 'no-store' })
   if (!r.ok) throw new Error(`${r.status}`)
   return r.json()
 }
@@ -499,7 +499,7 @@ export default function WhatsAppPage() {
     const connect = () => {
       if (closed) return
       setSseStatus('connecting')
-      es = new EventSource('/api/whatsapp-live/events')
+      es = new EventSource('/api/wa/events')
 
       es.addEventListener('state', (e: any) => {
         try {
@@ -1395,7 +1395,7 @@ export default function WhatsAppPage() {
                     <div className="flex items-center gap-3">
                       {c.avatarUrl ? (
                         <img
-                          src={c.avatarUrl.startsWith('/wa-avatar/') ? `/api/whatsapp-live${c.avatarUrl}` : c.avatarUrl}
+                          src={c.avatarUrl.startsWith('/wa-avatar/') ? `/api/wa${c.avatarUrl}` : c.avatarUrl}
                           alt={c.name}
                           className="w-10 h-10 rounded-full object-cover shrink-0"
                           style={{ border: `2px solid ${STAGE_COLORS[stages[c.phone] || 'Inbox']}` }}
@@ -1450,7 +1450,7 @@ export default function WhatsAppPage() {
                     {/* Foto do contato/grupo */}
                     {selected.avatarUrl ? (
                       <img
-                        src={selected.avatarUrl.startsWith('/wa-avatar/') ? `/api/whatsapp-live${selected.avatarUrl}` : selected.avatarUrl}
+                        src={selected.avatarUrl.startsWith('/wa-avatar/') ? `/api/wa${selected.avatarUrl}` : selected.avatarUrl}
                         alt={selected.name}
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
