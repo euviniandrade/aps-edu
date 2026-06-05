@@ -23,7 +23,8 @@ async function proxyRequest(req: NextRequest, path: string) {
     const headers: Record<string, string> = {
       'x-api-key': API_KEY,
       'ngrok-skip-browser-warning': 'true',
-      'User-Agent': 'WhatsApp-Proxy/1.0',
+      'User-Agent': 'curl/7.68.0',
+      'Accept': '*/*',
     }
 
     // Only add Content-Type for requests with body
