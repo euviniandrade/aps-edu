@@ -11,6 +11,13 @@ async function proxyRequest(req: NextRequest, pathParam: string) {
     const path = pathParam || '/'
     const url = `${BACKEND_URL}${path}${req.nextUrl.search}`
 
+    console.log('[Render Proxy]', {
+      method: req.method,
+      path,
+      url,
+      apiKey: API_KEY ? 'set' : 'NOT_SET',
+    })
+
     const headers: Record<string, string> = {
       'x-api-key': API_KEY,
       'ngrok-skip-browser-warning': 'true',
