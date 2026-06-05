@@ -29,7 +29,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai')
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const PORT         = process.env.WHATSAPP_PORT  || 8081
-const DATA_DIR     = path.join(__dirname, '.whatsapp_data')
+const DATA_DIR     = process.env.WHATSAPP_DATA_DIR || path.join(__dirname, '.whatsapp_data')
 const PHONEBOOK_F  = path.join(DATA_DIR, 'phonebook.json')
 const CHATS_F      = path.join(DATA_DIR, 'chats.json')
 const MSGS_F       = path.join(DATA_DIR, 'messages.json')
@@ -299,6 +299,7 @@ function createClient() {
     authStrategy: new LocalAuth({ dataPath: DATA_DIR }),
     puppeteer: {
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -319,6 +320,7 @@ function createClient() {
         '--ignore-certificate-errors',
         '--ignore-ssl-errors',
         '--ignore-certificate-errors-spki-list',
+        '--single-process',
       ],
     },
   })

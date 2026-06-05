@@ -1,0 +1,10 @@
+[build]
+dockerfilePath = "Dockerfile.whatsapp"
+
+[deploy]
+startCommand = "node whatsapp.js"
+restartPolicyType = "always"
+restartPolicyMaxRetries = 10
+
+[[deploy.volumes]]
+mountPath = "/data"
