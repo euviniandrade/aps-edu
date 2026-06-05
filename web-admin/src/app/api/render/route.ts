@@ -14,6 +14,8 @@ async function proxyRequest(req: NextRequest, pathParam: string) {
     const headers: Record<string, string> = {
       'x-api-key': API_KEY,
       'ngrok-skip-browser-warning': 'true',
+      'User-Agent': 'WhatsApp-Proxy/1.0',
+      'Accept': '*/*',
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
