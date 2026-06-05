@@ -14,10 +14,9 @@ const BACKEND_CANDIDATES = (() => {
     const u = v.trim().replace(/\/+$/, '')
     if (u && !urls.includes(u)) urls.push(u)
   }
+  // Em produção no Vercel: usar APENAS WHATSAPP_BACKEND_URL (apontando para Render)
   add(process.env.WHATSAPP_BACKEND_URL)
-  add(process.env.BACKEND_URL)
-  add(process.env.NEXT_PUBLIC_API_URL)
-  add('http://localhost:8081')
+  // Em desenvolvimento local, adicione http://localhost:8081 manualmente no .env.local
   return urls
 })()
 
