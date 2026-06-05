@@ -1042,5 +1042,26 @@ app.listen(PORT, () => {
   console.log(`[WhatsApp Server] Acesse: http://localhost:${PORT}/status\n`)
 })
 
+// ── Graceful shutdown — NÃO destroi a sessão, só fecha limpo ─────────────────
+async function gracefulShutdown(signal) {
+  console.log(`\n[WhatsApp Server] Recebeu ${signal} — encerrando graciosamente...`)
+  // Salva dados em disco antes de sair
+  try { writeJson(CHATS_F, Object.fromEntries(chatsMap)) } catch {}
+  try { writeJson(MSGS_F, Object.fromEntries(msgsMap)) } catch {}
+  try { writeJson(CRM_F, Object.fromEntries(crmMap)) } catch {}
+  try { writeJson(PHONEBOOK_F, Object.fromEntries(phonebook)) } catch {}
+  // NÃO chama waClient.logout() — isso apagaria a sessão!
+  // Apenas destrói o cliente para liberar o Chrome
+  if (waClient) {
+    try { await waClient.destroy() } catch {}
+  }
+  console.log('[WhatsApp Server] Dados salvos. Tchau!')
+  process.exit(0)
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'))
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')) // nodemon restart
+
 // Inicia o cliente WhatsApp automaticamente
 waClient = createClient()
