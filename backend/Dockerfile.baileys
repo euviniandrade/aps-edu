@@ -2,24 +2,22 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Copia TUDO primeiro (package.json, código, etc)
+COPY . .
+
 # Instala apenas dependências mínimas (sem Chrome)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-
 # Instala dependências (apenas produção)
-RUN npm install --production
-
-# Copia código
-COPY . .
+RUN npm install --omit=dev
 
 # Cria pasta de dados
 RUN mkdir -p /data
 
 EXPOSE 8081
 
-# Inicia usando whatsapp-baileys.js como whatsapp.js
+# Inicia usando whatsapp-baileys.js
 CMD ["node", "whatsapp-baileys.js"]
