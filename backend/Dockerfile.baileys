@@ -1,0 +1,25 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Instala apenas dependências mínimas (sem Chrome)
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+
+# Instala dependências (sem dev)
+RUN npm install --omit=dev
+
+# Copia código
+COPY whatsapp-baileys.js whatsapp.js
+COPY .env.local* ./
+
+# Cria pasta de dados
+RUN mkdir -p /data
+
+EXPOSE 8081
+
+CMD ["node", "whatsapp.js"]

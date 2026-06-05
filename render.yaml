@@ -1,29 +1,17 @@
 services:
   - type: web
-    name: aps-edu-api
-    runtime: node
+    name: aps-whatsapp
+    runtime: docker
+    dockerfilePath: backend/Dockerfile.baileys
     region: oregon
     plan: free
-    rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss
-    startCommand: node src/server.js
     healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 10000
-      - key: DATABASE_URL
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_REFRESH_SECRET
-        sync: false
-      - key: JWT_EXPIRES_IN
-        value: 15m
-      - key: JWT_REFRESH_EXPIRES_IN
-        value: 30d
+      - key: WHATSAPP_PORT
+        value: "8081"
+      - key: WHATSAPP_API_KEY
+        value: aps-edu-whatsapp
+      - key: WHATSAPP_DATA_DIR
+        value: /data
       - key: GEMINI_API_KEY
         sync: false
-      - key: CORS_ORIGIN
-        value: https://aps-edu-web.vercel.app
