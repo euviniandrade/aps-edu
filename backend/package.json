@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "npx prisma db push --accept-data-loss && node src/prisma/seed.js && node src/server.js",
+    "start": "node src/server.js",
     "whatsapp": "node whatsapp.js",
     "whatsapp:dev": "nodemon whatsapp.js",
     "db:migrate": "npx prisma migrate dev",
