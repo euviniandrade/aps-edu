@@ -3,6 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
 const whatsappService = require('./modules/whatsapp/whatsapp.service')
+const whatsappSync = require('./modules/whatsapp/whatsapp-sync.service')
 
 // Garante que a pasta de uploads existe ao iniciar
 const uploadsDir = path.join(process.cwd(), 'uploads')
