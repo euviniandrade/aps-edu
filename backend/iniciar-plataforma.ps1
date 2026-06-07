@@ -1,10 +1,8 @@
-# ═══════════════════════════════════════════════════════════════════════════
-# 🚀 SCRIPT DE INICIALIZAÇÃO AUTOMÁTICA - APS EDU WHATSAPP CRM
-# ═══════════════════════════════════════════════════════════════════════════
+# Script de inicializacao automatica - APS EDU WHATSAPP CRM
 
-Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║           🚀 INICIANDO APS EDU - WHATSAPP CRM                 ║" -ForegroundColor Cyan
-Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host "  INICIANDO APS EDU - WHATSAPP CRM" -ForegroundColor Cyan
+Write-Host "=====================================================" -ForegroundColor Cyan
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PASSO 1: Verificar se Redis está rodando
