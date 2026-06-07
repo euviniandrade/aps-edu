@@ -1,0 +1,6 @@
+export { ConversasTab } from './ConversasTab'
+// export { KanbanTab } from './KanbanTab'
+// export { EnvioEmMassaTab } from './EnvioEmMassaTab'
+// export { GruposTab } from './GruposTab'
+// export { SofiIATab } from './SofiIATab'
+// export { AnalyticsTab } from './AnalyticsTab'
