@@ -4,6 +4,8 @@
  * Recupera últimas 10 mensagens + metadados do lead
  */
 
+const { GoogleGenerativeAI } = require('@google/generative-ai')
+
 class AIContextService {
   constructor() {
     this.conversations = new Map()
@@ -90,6 +92,27 @@ Instruções:
 
   clearConversation(chatId) {
     this.conversations.delete(chatId)
+  }
+
+  async generateResponse(userMessage, systemPrompt) {
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+
+      const chat = model.startChat({
+        generationConfig: {
+          maxOutputTokens: 200,
+          temperature: 0.7,
+        },
+      })
+
+      const result = await chat.sendMessage(userMessage)
+      const response = await result.response
+      return response.text()
+    } catch (error) {
+      console.error('Erro ao gerar resposta com IA:', error)
+      throw error
+    }
   }
 }
 

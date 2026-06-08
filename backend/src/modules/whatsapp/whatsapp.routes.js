@@ -1,4 +1,11 @@
 const whatsappService = require('./whatsapp.service')
+const cacheService = require('./services/cache.service')
+const jobsService = require('./services/jobs.service')
+const monitoringService = require('./services/monitoring.service')
+const aiContextService = require('./services/ai-context.service')
+const aiGuardrailsService = require('./services/ai-guardrails.service')
+const aiResponseService = require('./services/ai-fallback.service')
+const prisma = require('../../shared/config/prisma')
 
 // Autenticação via API Key compartilhada (Vercel → Oracle VM).
 // Não depende de JWT nem de banco de dados.
@@ -125,5 +132,277 @@ module.exports = async function (fastify) {
     clearInterval(keepalive)
     whatsappService.emitter.off('message', onMessage)
     whatsappService.emitter.off('state', onState)
+  })
+
+  // ─────────────────────────────────────────────────────────────────
+  // NOVAS ROTAS — FASE 1: RESPONDER MENSAGENS INDIVIDUAIS
+  // ─────────────────────────────────────────────────────────────────
+
+  // GET /conversations — Listar conversas com paginação
+  fastify.get('/conversations', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { skip = 0, take = 50 } = request.query
+    try {
+      const conversations = await prisma.conversation.findMany({
+        skip: Number(skip),
+        take: Number(take),
+        include: {
+          lead: { select: { id: true, phoneNumber: true, contactName: true, stage: true } },
+          messages: { take: 1, orderBy: { timestamp: 'desc' } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      })
+
+      return {
+        success: true,
+        data: conversations.map(conv => ({
+          id: conv.id,
+          leadId: conv.leadId,
+          lead: conv.lead,
+          title: conv.title || conv.lead.contactName || conv.lead.phoneNumber,
+          lastMessage: conv.messages[0]?.content || '',
+          lastMessageAt: conv.messages[0]?.timestamp || conv.updatedAt,
+          messageCount: conv.messageCount,
+          archived: conv.archived,
+        })),
+        total: await prisma.conversation.count(),
+      }
+    } catch (error) {
+      monitoringService.recordRequest('/conversations', 500, 0)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // GET /conversations/:id/messages — Carregar histórico de uma conversa
+  fastify.get('/conversations/:id/messages', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { id } = request.params
+    const { skip = 0, take = 50 } = request.query
+    try {
+      const messages = await prisma.message.findMany({
+        where: { conversationId: id },
+        skip: Number(skip),
+        take: Number(take),
+        orderBy: { timestamp: 'asc' },
+      })
+
+      return {
+        success: true,
+        data: messages,
+      }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // POST /messages/reply/:conversationId — Responder uma conversa
+  fastify.post('/messages/reply/:conversationId', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { conversationId } = request.params
+    const { text } = request.body
+
+    if (!text || text.trim().length === 0) {
+      return { success: false, error: 'Mensagem vazia' }
+    }
+
+    try {
+      // Validar entrada (guardrails)
+      const guardResult = aiGuardrailsService.validateInput(text)
+      if (!guardResult.valid) {
+        return { success: false, error: guardResult.reason }
+      }
+
+      // Buscar conversa e lead
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: { lead: true },
+      })
+
+      if (!conversation) {
+        return { success: false, error: 'Conversa não encontrada' }
+      }
+
+      // Enviar mensagem via WhatsApp
+      const sendResult = await whatsappService.sendMessage({
+        chatId: conversation.lead.phoneNumber,
+        text: text,
+      })
+
+      // Sanitizar saída
+      const sanitized = aiGuardrailsService.validateOutput(text)
+      const finalText = sanitized.safe ? text : sanitized.text
+
+      // Registrar no banco de dados
+      const message = await prisma.message.create({
+        data: {
+          conversationId: conversationId,
+          content: finalText,
+          contentType: 'text',
+          messageId: sendResult?.key?.id || `msg_${Date.now()}`,
+          timestamp: new Date(),
+          fromPhone: 'bot',
+          ackStatus: 1,
+        },
+      })
+
+      // Registrar no evento (audit)
+      await prisma.leadEvent.create({
+        data: {
+          leadId: conversation.leadId,
+          eventType: 'message_sent',
+          description: `Mensagem enviada via API`,
+          metadata: { messageId: message.id },
+        },
+      })
+
+      // Rastrear métrica
+      monitoringService.recordMessage('sent')
+      monitoringService.recordRequest('/messages/reply', 200, 50)
+
+      return {
+        success: true,
+        data: message,
+        note: sanitized.sanitized ? 'Mensagem foi sanitizada (PII removido)' : undefined,
+      }
+    } catch (error) {
+      monitoringService.recordRequest('/messages/reply', 500, 0)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // POST /messages/bulk — Envio em massa
+  fastify.post('/messages/bulk', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { recipientIds, template } = request.body
+
+    if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+      return { success: false, error: 'Forneça lista de recipientIds' }
+    }
+
+    if (!template) {
+      return { success: false, error: 'Forneça template de mensagem' }
+    }
+
+    try {
+      // Validar template
+      const guardResult = aiGuardrailsService.validateInput(template)
+      if (!guardResult.valid) {
+        return { success: false, error: guardResult.reason }
+      }
+
+      // Criar job de envio em massa
+      const jobId = await jobsService.bulkSendMessages(recipientIds, template)
+
+      return {
+        success: true,
+        jobId: jobId,
+        status: 'processing',
+        message: `Envio em massa iniciado para ${recipientIds.length} leads`,
+      }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // GET /bulk/:jobId — Status do envio em massa
+  fastify.get('/bulk/:jobId', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { jobId } = request.params
+    try {
+      const status = await jobsService.getJobStatus(jobId)
+      return { success: true, data: status }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // POST /ai/suggest/:conversationId — Sugestão de resposta via IA
+  fastify.post('/ai/suggest/:conversationId', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { conversationId } = request.params
+    const { userMessage } = request.body
+
+    try {
+      // Buscar conversa e lead
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: { lead: true },
+      })
+
+      if (!conversation) {
+        return { success: false, error: 'Conversa não encontrada' }
+      }
+
+      // Carregar contexto (últimas mensagens + dados do lead)
+      const context = await aiContextService.getContextForChat(
+        conversationId,
+        conversation.lead,
+        []
+      )
+
+      // Obter resposta sugerida via Gemini
+      const suggestion = await aiContextService.generateResponse(
+        userMessage || context.recentMessages[context.recentMessages.length - 1]?.content,
+        context.systemPrompt
+      )
+
+      // Registrar sugestão (rate limiting)
+      const rateLimitOk = cacheService.trackAISuggest(conversationId)
+      if (!rateLimitOk) {
+        return {
+          success: false,
+          error: 'Limite de sugestões IA atingido (máximo 30/hora)',
+        }
+      }
+
+      // Rastrear métrica
+      monitoringService.recordAIRequest(true, 100, userMessage?.length || 0, suggestion.length)
+
+      return {
+        success: true,
+        suggestion: suggestion,
+        contextUsed: {
+          leadStage: conversation.lead.stage,
+          leadScore: conversation.lead.score,
+          recentMessagesCount: context.recentMessages.length,
+        },
+      }
+    } catch (error) {
+      monitoringService.recordAIRequest(false, 100, 0, 0)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // GET /metrics — Métricas de operação
+  fastify.get('/metrics', { preHandler: [apiKeyAuth] }, async () => {
+    try {
+      const metrics = monitoringService.getMetrics()
+      const queueStats = await jobsService.getAllQueueStats()
+      const cacheStats = cacheService.getStatus()
+
+      return {
+        success: true,
+        metrics: {
+          ...metrics,
+          queues: queueStats,
+          cache: cacheStats,
+        },
+      }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // GET /health/extended — Saúde estendida
+  fastify.get('/health/extended', async () => {
+    return {
+      whatsapp: {
+        connected: whatsappService.getState().connected,
+        ready: whatsappService.getState().ready,
+        lastEvent: whatsappService.getState().lastEventAt,
+      },
+      database: {
+        type: 'Prisma/SQLite',
+        leads: await prisma.lead.count(),
+        conversations: await prisma.conversation.count(),
+        messages: await prisma.message.count(),
+      },
+      cache: cacheService.getStatus(),
+      queues: await jobsService.getAllQueueStats(),
+    }
   })
 }

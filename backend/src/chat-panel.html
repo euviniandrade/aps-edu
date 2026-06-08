@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APS EDU - Chat Panel</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: white;
+      border-right: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .sidebar-header h2 {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+
+    .status-online {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-offline {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .conversations-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0;
+    }
+
+    .conversation-item {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .conversation-item:hover {
+      background: #f9f9f9;
+    }
+
+    .conversation-item.active {
+      background: #e8f4f8;
+      border-left: 4px solid #667eea;
+    }
+
+    .conversation-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .conversation-preview {
+      font-size: 0.85em;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+    }
+
+    .chat-header {
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+      background: #f9f9f9;
+    }
+
+    .chat-header h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .chat-header p {
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      word-wrap: break-word;
+    }
+
+    .message.incoming {
+      align-self: flex-start;
+      background: #e8e8e8;
+      color: #333;
+    }
+
+    .message.outgoing {
+      align-self: flex-end;
+      background: #667eea;
+      color: white;
+    }
+
+    .message-time {
+      font-size: 0.75em;
+      opacity: 0.7;
+      margin-top: 5px;
+    }
+
+    .input-area {
+      padding: 20px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+      font-family: inherit;
+    }
+
+    .input-area input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .input-area button {
+      padding: 12px 25px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .input-area button:hover {
+      background: #764ba2;
+    }
+
+    .input-area button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #999;
+      text-align: center;
+    }
+
+    .empty-state p {
+      font-size: 1.1em;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .message {
+        max-width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>💬 Chat Panel</h2>
+      <div id="statusBadge" class="status-badge status-offline">Desconectado</div>
+    </div>
+    <div class="conversations-list" id="conversationsList">
+      <div style="padding: 20px; text-align: center; color: #999;">
+        Nenhuma conversa ainda
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-header" id="chatHeader" style="display: none;">
+      <h3 id="chatName">Selecione uma conversa</h3>
+      <p id="chatPhone"></p>
+    </div>
+
+    <div id="messagesArea" class="messages-area">
+      <div class="empty-state">
+        <div>
+          <p>👋 Selecione uma conversa para começar</p>
+          <p style="font-size: 0.9em; color: #bbb; margin-top: 10px;">
+            As mensagens aparecerão aqui quando você receber no WhatsApp
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area" id="inputArea" style="display: none;">
+      <input
+        type="text"
+        id="messageInput"
+        placeholder="Escreva sua resposta..."
+        onkeypress="if(event.key==='Enter') sendMessage()"
+      />
+      <button onclick="sendMessage()">📤 Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    let currentChatId = null;
+    let conversations = {};
+    let whatsappConnected = false;
+
+    async function checkConnection() {
+      try {
+        const response = await fetch('/health/whatsapp');
+        const data = await response.json();
+        whatsappConnected = data.connected;
+
+        const badge = document.getElementById('statusBadge');
+        if (whatsappConnected) {
+          badge.textContent = '✅ Conectado';
+          badge.className = 'status-badge status-online';
+        } else {
+          badge.textContent = '❌ Desconectado';
+          badge.className = 'status-badge status-offline';
+        }
+      } catch (error) {
+        console.error('Erro ao verificar conexão:', error);
+      }
+    }
+
+    async function loadConversations() {
+      try {
+        const response = await fetch('/conversations');
+        if (response.ok) {
+          const data = await response.json();
+          conversations = data || {};
+          renderConversations();
+        }
+      } catch (error) {
+        console.log('Endpoint de conversas ainda não existe');
+      }
+    }
+
+    function renderConversations() {
+      const list = document.getElementById('conversationsList');
+
+      if (Object.keys(conversations).length === 0) {
+        list.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Nenhuma conversa ainda</div>';
+        return;
+      }
+
+      list.innerHTML = Object.entries(conversations)
+        .map(([chatId, conv]) => `
+          <div class="conversation-item ${currentChatId === chatId ? 'active' : ''}" onclick="selectConversation('${chatId}', '${conv.name || 'Desconhecido'}')">
+            <div class="conversation-name">${conv.name || 'Desconhecido'}</div>
+            <div class="conversation-preview">${conv.lastMessage || 'Sem mensagens'}</div>
+          </div>
+        `)
+        .join('');
+    }
+
+    function selectConversation(chatId, name) {
+      currentChatId = chatId;
+
+      const header = document.getElementById('chatHeader');
+      const inputArea = document.getElementById('inputArea');
+      const messagesArea = document.getElementById('messagesArea');
+
+      header.style.display = 'block';
+      inputArea.style.display = 'flex';
+
+      document.getElementById('chatName').textContent = name;
+      document.getElementById('chatPhone').textContent = chatId;
+
+      renderMessages();
+      renderConversations();
+
+      document.getElementById('messageInput').focus();
+    }
+
+    function renderMessages() {
+      const conv = conversations[currentChatId];
+      if (!conv || !conv.messages) {
+        document.getElementById('messagesArea').innerHTML = '<div class="empty-state"><p>Sem mensagens</p></div>';
+        return;
+      }
+
+      const messagesHtml = conv.messages
+        .map(msg => `
+          <div class="message ${msg.fromMe ? 'outgoing' : 'incoming'}">
+            ${msg.body}
+            <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString('pt-BR')}</div>
+          </div>
+        `)
+        .join('');
+
+      document.getElementById('messagesArea').innerHTML = messagesHtml;
+      document.getElementById('messagesArea').scrollTop = document.getElementById('messagesArea').scrollHeight;
+    }
+
+    async function sendMessage() {
+      if (!currentChatId || !whatsappConnected) {
+        alert('❌ WhatsApp não está conectado!');
+        return;
+      }
+
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      try {
+        input.disabled = true;
+
+        const response = await fetch('/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatId: currentChatId,
+            text: text
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao enviar mensagem');
+        }
+
+        // Adicionar mensagem localmente
+        if (!conversations[currentChatId]) {
+          conversations[currentChatId] = { messages: [] };
+        }
+
+        conversations[currentChatId].messages.push({
+          body: text,
+          timestamp: new Date(),
+          fromMe: true
+        });
+
+        input.value = '';
+        renderMessages();
+      } catch (error) {
+        alert('❌ Erro ao enviar: ' + error.message);
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    // Atualizar status a cada 5 segundos
+    checkConnection();
+    setInterval(checkConnection, 5000);
+
+    // Carregar conversas a cada 3 segundos
+    loadConversations();
+    setInterval(loadConversations, 3000);
+  </script>
+</body>
+</html>

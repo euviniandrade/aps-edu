@@ -3,10 +3,8 @@ const cors = require('@fastify/cors')
 const path = require('path')
 const fs = require('fs')
 const dotenv = require('dotenv')
-const { PrismaClient } = require('@prisma/client')
-const { Baileys } = require('@whiskeysockets/baileys')
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js')
 const qrcode = require('qrcode')
-const pino = require('pino')
 
 dotenv.config()
 
@@ -14,7 +12,7 @@ const fastify = Fastify({
   logger: true,
 })
 
-const prisma = new PrismaClient()
+const prisma = require('@prisma/client').PrismaClient ? new (require('@prisma/client').PrismaClient)() : null
 
 fastify.register(cors, { origin: '*' })
 
@@ -28,7 +26,7 @@ let whatsappState = {
   qrCode: null,
   qrCodeDataURL: null,
   error: null,
-  sock: null,
+  client: null,
   reconnectAttempt: 0,
   maxReconnectAttempts: 7,
   lastQRTime: null,
@@ -88,22 +86,118 @@ let circuitBreaker = {
 // EXPONENTIAL BACKOFF
 // ─────────────────────────────────────────────────────────────────────────
 function calculateBackoffDelay(attempt) {
-  // 1s, 2s, 4s, 8s, 16s, 32s, 60s max
   const delayMs = Math.min(1000 * Math.pow(2, attempt), 60000)
-  // Adicionar jitter (±20%)
   const jitter = delayMs * 0.2 * (Math.random() - 0.5)
-  return Math.max(delayMs + jitter, 1000) // Mínimo 1s
+  return Math.max(delayMs + jitter, 1000)
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// BAILEYS INTEGRATION
+// WHATSAPP-WEB.JS CLIENT
 // ─────────────────────────────────────────────────────────────────────────
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, ConnectionState } = require('@whiskeysockets/baileys')
+async function initializeClient() {
+  try {
+    console.log('📱 Inicializando WhatsApp Web JS...')
+
+    const client = new Client({
+      authStrategy: new LocalAuth({
+        clientId: 'aps-edu-crm',
+      }),
+      puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: true,
+      },
+    })
+
+    // QR Code Event
+    client.on('qr', async (qr) => {
+      const now = Date.now()
+      whatsappState.lastQRTime = now
+      whatsappState.qrCode = qr
+      console.log('📱 QR CODE GERADO - Escaneie com seu WhatsApp!')
+
+      try {
+        whatsappState.qrCodeDataURL = await qrcode.toDataURL(qr)
+        console.log('✅ QR Code convertido para imagem')
+      } catch (err) {
+        console.error('Erro ao gerar QR code:', err)
+      }
+
+      // Auto-refresh QR após 60 segundos
+      setTimeout(() => {
+        if (whatsappState.lastQRTime === now && !whatsappState.connected) {
+          console.log('🔄 QR CODE EXPIRADO - Aguardando novo...')
+          whatsappState.qrCode = null
+          whatsappState.qrCodeDataURL = null
+        }
+      }, 60000)
+    })
+
+    // Ready Event
+    client.on('ready', () => {
+      console.log('✅ WhatsApp conectado e pronto!')
+      whatsappState.connected = true
+      whatsappState.ready = true
+      whatsappState.qrCode = null
+      whatsappState.qrCodeDataURL = null
+      whatsappState.reconnectAttempt = 0
+      circuitBreaker.recordSuccess()
+      metrics.reconnectCount = 0
+    })
+
+    // Authenticated Event
+    client.on('authenticated', () => {
+      console.log('🔐 Autenticado com sucesso!')
+      whatsappState.connected = true
+    })
+
+    // Auth Failure Event
+    client.on('auth_failure', (msg) => {
+      console.error('❌ Falha de autenticação:', msg)
+      whatsappState.error = msg
+      circuitBreaker.recordFailure()
+    })
+
+    // Disconnected Event
+    client.on('disconnected', () => {
+      console.log('❌ Desconectado do WhatsApp')
+      whatsappState.connected = false
+      whatsappState.ready = false
+      metrics.reconnectCount++
+      if (whatsappState.reconnectAttempt < whatsappState.maxReconnectAttempts) {
+        reconnectWithBackoff(whatsappState.reconnectAttempt)
+      }
+    })
+
+    // Message Event
+    client.on('message', async (message) => {
+      console.log(`📨 Mensagem de ${message.from}: ${message.body}`)
+      metrics.messagesProcessed++
+
+      // Responder automaticamente
+      try {
+        await message.reply('Olá! Recebi sua mensagem. Esta é uma resposta automática da plataforma APS EDU.')
+        metrics.messagesSent++
+        console.log(`✅ Resposta enviada`)
+      } catch (err) {
+        console.error('Erro ao enviar resposta:', err)
+      }
+    })
+
+    whatsappState.client = client
+    await client.initialize()
+    return client
+  } catch (error) {
+    console.error('Erro ao inicializar cliente:', error)
+    whatsappState.error = error.message
+    circuitBreaker.recordFailure()
+    throw error
+  }
+}
 
 async function reconnectWithBackoff(attempt = 0) {
   if (attempt >= whatsappState.maxReconnectAttempts) {
-    console.error(`❌ Máximo de tentativas de reconexão atingido (${whatsappState.maxReconnectAttempts})`)
+    console.error(`❌ Máximo de tentativas atingido (${whatsappState.maxReconnectAttempts})`)
     circuitBreaker.recordFailure()
     return
   }
@@ -118,132 +212,23 @@ async function reconnectWithBackoff(attempt = 0) {
 
   setTimeout(() => {
     whatsappState.reconnectAttempt = attempt + 1
-    initializeBaileys().catch(err => {
+    initializeClient().catch(err => {
       console.error('Erro na reconexão:', err)
       reconnectWithBackoff(attempt + 1)
     })
   }, delay)
 }
 
-async function initializeBaileys() {
-  try {
-    const authDir = path.join(__dirname, '../.whatsapp_auth')
-    if (!fs.existsSync(authDir)) {
-      fs.mkdirSync(authDir, { recursive: true })
+// ─────────────────────────────────────────────────────────────────────────
+// HEALTH CHECK PERIÓDICO
+// ─────────────────────────────────────────────────────────────────────────
+function startHealthCheck() {
+  setInterval(() => {
+    if (whatsappState.client) {
+      const status = whatsappState.connected ? '✅ OK' : '⚠️ OFFLINE'
+      console.log(`[HEALTH] WhatsApp: ${status} | Circuit Breaker: ${circuitBreaker.isOpen ? '🔴 OPEN' : '🟢 CLOSED'} | Reconexões: ${metrics.reconnectCount}`)
     }
-
-    const { state, saveCreds } = await useMultiFileAuthState(authDir)
-
-    const logger = pino({ level: 'error' })
-
-    const sock = makeWASocket({
-      auth: state,
-      printQRInTerminal: false,
-      logger: logger,
-      browser: ['APS EDU', 'Chrome', '1.0.0'],
-      syncFullHistory: false,
-      maxMsToWaitForConnection: 30000,
-    })
-
-    // Handle messages
-    sock.ev.on('messages.upsert', async (m) => {
-      console.log(`📨 Mensagem recebida: ${m.messages.length}`)
-      for (const msg of m.messages) {
-        if (!msg.message) continue
-
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || ''
-        const from = msg.key.remoteJid
-        const fromMe = msg.key.fromMe
-
-        console.log(`📱 De: ${from} | Mensagem: ${text}`)
-
-        metrics.messagesProcessed++
-
-        // Responder automaticamente
-        if (!fromMe) {
-          try {
-            await sock.sendMessage(from, {
-              text: `Olá! Recebi sua mensagem: "${text}"\n\nEsta é uma resposta automática da plataforma APS EDU.`,
-            })
-            metrics.messagesSent++
-            console.log(`✅ Resposta enviada para ${from}`)
-          } catch (err) {
-            console.error('Erro ao enviar resposta:', err)
-          }
-        }
-      }
-    })
-
-    // Save credentials
-    sock.ev.on('creds.update', saveCreds)
-
-    // Remover listeners duplicados
-    sock.ev.removeAllListeners('connection.update')
-
-    // Ready event - ÚNICO listener para connection.update
-    sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update
-
-      if (qr) {
-        const now = Date.now()
-        whatsappState.lastQRTime = now
-        console.log('📱 QR CODE GERADO - Escaneie com seu WhatsApp!')
-        whatsappState.qrCode = qr
-        try {
-          whatsappState.qrCodeDataURL = await qrcode.toDataURL(qr)
-        } catch (err) {
-          console.error('Erro ao gerar QR code:', err)
-        }
-
-        // Auto-refresh QR após 55 segundos
-        setTimeout(() => {
-          if (whatsappState.lastQRTime === now && !whatsappState.connected) {
-            console.log('🔄 QR CODE EXPIRADO - Gerando novo...')
-            whatsappState.qrCode = null
-            whatsappState.qrCodeDataURL = null
-          }
-        }, 55000)
-      }
-
-      if (connection === 'connecting') {
-        console.log('⏳ Conectando ao WhatsApp...')
-        whatsappState.connected = false
-        whatsappState.ready = false
-      }
-
-      if (connection === 'open') {
-        console.log('✅ WhatsApp conectado!')
-        whatsappState.connected = true
-        whatsappState.ready = true
-        whatsappState.qrCode = null
-        whatsappState.qrCodeDataURL = null
-        whatsappState.reconnectAttempt = 0
-        circuitBreaker.recordSuccess()
-        metrics.reconnectCount = 0
-        console.log('🚀 WhatsApp pronto para usar!')
-      }
-
-      if (connection === 'close') {
-        console.log('❌ Desconectado')
-        whatsappState.connected = false
-        whatsappState.ready = false
-
-        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
-        if (shouldReconnect) {
-          metrics.reconnectCount++
-          reconnectWithBackoff(whatsappState.reconnectAttempt)
-        }
-      }
-    })
-
-    whatsappState.sock = sock
-    return sock
-  } catch (error) {
-    console.error('Erro ao inicializar Baileys:', error)
-    whatsappState.error = error.message
-    circuitBreaker.recordFailure()
-    throw error
-  }
+  }, 30000)
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -298,6 +283,7 @@ fastify.get('/whatsapp/qr', async (request, reply) => {
       error: 'QR code not available',
       connected: whatsappState.connected,
       ready: whatsappState.ready,
+      message: 'Aguardando QR code...',
     })
   }
 
@@ -409,9 +395,9 @@ fastify.get('/whatsapp/qr-html', async (request, reply) => {
 
             const data = await response.json()
             const img = document.getElementById('qr-image')
-            img.innerHTML = '<img src="' + data.qrCode + '" alt="QR Code">'
+            img.innerHTML = '<img src="' + data.qrCode + '" alt="QR Code" style="width: 300px; height: 300px;">'
           } catch (error) {
-            document.getElementById('qr-image').innerHTML = '<p style="color: #999;">QR code indisponível</p>'
+            document.getElementById('qr-image').innerHTML = '<p style="color: #999;">Aguardando QR code...</p>'
           }
         }
 
@@ -466,20 +452,19 @@ fastify.post('/messages/send', async (request, reply) => {
       return reply.code(400).send({ error: 'chatId and text required' })
     }
 
-    if (!whatsappState.sock || !whatsappState.connected) {
+    if (!whatsappState.client || !whatsappState.connected) {
       metrics.errors++
       return reply.code(503).send({ error: 'WhatsApp not connected' })
     }
 
-    // Enviar mensagem
-    const result = await whatsappState.sock.sendMessage(chatId, { text })
+    const result = await whatsappState.client.sendMessage(chatId, text)
     metrics.messagesSent++
 
     return {
       success: true,
       chatId,
       message: text,
-      messageKey: result.key,
+      messageId: result.id,
       timestamp: new Date().toISOString(),
     }
   } catch (error) {
@@ -510,10 +495,6 @@ fastify.get('/dashboard', async (request, reply) => {
       processed: metrics.messagesProcessed,
       sent: metrics.messagesSent,
     },
-    cache: {
-      type: 'memory-stub',
-      status: 'active',
-    },
     whatsapp: {
       connected: whatsappState.connected,
       ready: whatsappState.ready,
@@ -538,7 +519,7 @@ fastify.get('/dashboard-ui', async (request, reply) => {
 
 fastify.get('/kb/search', async (request, reply) => {
   metrics.requests++
-  const { q, limit = 5 } = request.query
+  const { q } = request.query
 
   if (!q) {
     metrics.errors++
@@ -548,29 +529,11 @@ fastify.get('/kb/search', async (request, reply) => {
   return [
     {
       id: '1',
-      title: 'Como fazer pagamento',
-      content: 'Você pode pagar via PIX, cartão ou boleto',
-      category: 'pagamento',
+      title: 'Como usar a plataforma',
+      content: 'Guia completo de como usar o WhatsApp CRM',
+      category: 'tutorial',
     },
   ]
-})
-
-fastify.post('/kb/article', async (request, reply) => {
-  metrics.requests++
-  const { title, content, category } = request.body
-
-  if (!title || !content || !category) {
-    metrics.errors++
-    return reply.code(400).send({ error: 'title, content and category required' })
-  }
-
-  return {
-    id: Date.now().toString(),
-    title,
-    content,
-    category,
-    createdAt: new Date().toISOString(),
-  }
 })
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -583,6 +546,7 @@ fastify.get('/', async (request, reply) => {
   return {
     name: 'APS EDU WhatsApp CRM',
     version: '1.0.0',
+    library: 'whatsapp-web.js',
     status: 'running',
     whatsapp: {
       connected: whatsappState.connected,
@@ -618,26 +582,14 @@ function formatUptime(ms) {
 // START SERVER
 // ─────────────────────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────
-// HEALTH CHECK PERIÓDICO
-// ─────────────────────────────────────────────────────────────────────────
-function startHealthCheck() {
-  setInterval(() => {
-    if (whatsappState.sock) {
-      const status = whatsappState.connected ? '✅ OK' : '⚠️ OFFLINE'
-      console.log(`[HEALTH] WhatsApp: ${status} | Circuit Breaker: ${circuitBreaker.isOpen ? '🔴 OPEN' : '🟢 CLOSED'} | Reconexões: ${metrics.reconnectCount}`)
-    }
-  }, 30000)
-}
-
 const start = async () => {
   try {
     const PORT = process.env.PORT || 3000
     const HOST = process.env.HOST || '0.0.0.0'
 
-    // Inicializar WhatsApp
-    console.log('📱 Inicializando WhatsApp...')
-    await initializeBaileys()
+    // Inicializar WhatsApp Web JS
+    console.log('📱 Inicializando WhatsApp com whatsapp-web.js...')
+    await initializeClient()
 
     // Iniciar health check periódico
     startHealthCheck()
@@ -646,7 +598,7 @@ const start = async () => {
 
     console.log('')
     console.log('═══════════════════════════════════════════════════')
-    console.log('  🚀 APS EDU - WhatsApp CRM')
+    console.log('  🚀 APS EDU - WhatsApp CRM (whatsapp-web.js)')
     console.log('═══════════════════════════════════════════════════')
     console.log('')
     console.log('📍 Acessos:')
@@ -655,7 +607,7 @@ const start = async () => {
     console.log(`  • Health:     http://localhost:${PORT}/health`)
     console.log(`  • API Root:   http://localhost:${PORT}`)
     console.log('')
-    console.log('📱 Status WhatsApp: Aguardando conexão...')
+    console.log('📱 Status WhatsApp: Aguardando QR code...')
     console.log('')
     console.log('═══════════════════════════════════════════════════')
     console.log('')
@@ -669,14 +621,14 @@ start()
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM - Encerrando...')
-  if (whatsappState.sock) await whatsappState.sock.end()
+  if (whatsappState.client) await whatsappState.client.destroy()
   await fastify.close()
   process.exit(0)
 })
 
 process.on('SIGINT', async () => {
   console.log('SIGINT - Encerrando...')
-  if (whatsappState.sock) await whatsappState.sock.end()
+  if (whatsappState.client) await whatsappState.client.destroy()
   await fastify.close()
   process.exit(0)
 })

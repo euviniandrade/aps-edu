@@ -52,21 +52,24 @@ model Conversation {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   content        String
-  contentType    String   @default("text")
-  messageId      String   @unique
+  contentType    String    @default("text")
+  messageId      String    @unique
   timestamp      DateTime
-  fromPhone      String   // "lead" or "bot"
-  ackStatus      Int      @default(1) // 1=sent, 2=delivered, 3=read
-  createdAt      DateTime @default(now())
+  fromPhone      String    // "lead" or "bot"
+  ackStatus      Int       @default(1) // 1=sent, 2=delivered, 3=read
+  bulkMessageId  String?   // FK para BulkMessage (envio em massa)
+  createdAt      DateTime  @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  bulkMessage  BulkMessage? @relation(fields: [bulkMessageId], references: [id], onDelete: SetNull)
 
   @@index([conversationId])
   @@index([timestamp])
   @@index([fromPhone])
+  @@index([bulkMessageId])
 }
 
 model LeadLabel {
@@ -93,6 +96,27 @@ model LeadEvent {
 
   @@index([leadId])
   @@index([eventType])
+  @@index([createdAt])
+}
+
+model BulkMessage {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String?
+  content       String
+  recipientCount Int
+  sentCount      Int      @default(0)
+  failedCount    Int      @default(0)
+  status        String   @default("pending") // pending, processing, completed, failed
+  jobId         String?
+  metadata      String? // JSON: filters, schedule, etc
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([userId])
+  @@index([status])
   @@index([createdAt])
 }
 
