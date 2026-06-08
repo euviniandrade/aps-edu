@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = 'https://aps-whatsapp.onrender.com'
+const BACKEND_URL = process.env.NODE_ENV === 'production'
+  ? 'https://aps-whatsapp.onrender.com'  // Produção
+  : 'http://localhost:3000'  // Desenvolvimento
 const API_KEY = 'aps-edu-whatsapp'
 
 async function proxyRequest(req: NextRequest, pathParam?: string) {
