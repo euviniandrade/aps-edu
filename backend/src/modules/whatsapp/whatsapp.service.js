@@ -3,6 +3,7 @@ const path = require('path')
 const QRCode = require('qrcode')
 const { GoogleGenerativeAI } = require('@google/generative-ai')
 const { EventEmitter } = require('events')
+const prisma = require('../../shared/config/prisma')
 
 const SESSION_PATH = process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), '.whatsapp_session')
 const MEMORY_PATH = process.env.WHATSAPP_MEMORY_PATH || path.join(SESSION_PATH, 'sofi-whatsapp-memory.json')
@@ -175,7 +176,7 @@ function emitState() {
 
 // ── Mensagens ────────────────────────────────────────────────────────────────
 
-function storeMessage(chatId, message) {
+async function storeMessage(chatId, message) {
   if (!messageHistory.has(chatId)) messageHistory.set(chatId, [])
   const msgs = messageHistory.get(chatId)
   // Evita duplicatas por id
@@ -183,21 +184,117 @@ function storeMessage(chatId, message) {
   msgs.push(message)
   if (msgs.length > 200) msgs.shift()
   saveMessagesStore()
+
+  // Salvar no banco de dados também
+  try {
+    const isGroup = chatId.includes('@g.us')
+    const phone = chatId.replace(/@.*/,'')
+    const contactName = message.name || phone
+
+    // Encontrar ou criar Lead (e ATUALIZAR nome se mudou)
+    let lead = await prisma.lead.findUnique({ where: { phoneNumber: phone } })
+    if (!lead) {
+      lead = await prisma.lead.create({
+        data: {
+          phoneNumber: phone,
+          contactName: contactName,
+          isGroup: isGroup,
+          lastMessageAt: new Date(message.at),
+          lastMessageText: message.text || ''
+        }
+      })
+    } else {
+      // Atualizar nome e última mensagem
+      lead = await prisma.lead.update({
+        where: { phoneNumber: phone },
+        data: {
+          contactName: contactName,
+          isGroup: isGroup,
+          lastMessageAt: new Date(message.at),
+          lastMessageText: message.text || ''
+        }
+      })
+    }
+
+    // Encontrar ou criar Conversation
+    let conversation = await prisma.conversation.findFirst({
+      where: { leadId: lead.id }
+    })
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: {
+          leadId: lead.id,
+          title: contactName,
+          lastMessageAt: new Date(message.at)
+        }
+      })
+    } else {
+      // Atualizar última mensagem da conversa
+      conversation = await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: new Date(message.at) }
+      })
+    }
+
+    // Salvar Message
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        content: message.text || '',
+        contentType: message.type || 'text',
+        messageId: message.id,
+        timestamp: new Date(message.at),
+        fromPhone: message.from || 'unknown',
+        ackStatus: message.ack || 1
+      }
+    }).catch(() => {}) // Ignorar duplicatas no BD
+  } catch (err) {
+    console.error('[WhatsApp] Erro ao salvar mensagem no BD:', err.message)
+  }
 }
 
-function getMessages(chatId, limit = 50) {
-  // Tenta chatId direto primeiro
+async function getMessages(chatId, limit = 50) {
+  // Tenta memória primeiro (mais rápido)
   let msgs = messageHistory.get(chatId)
-  if (!msgs || msgs.length === 0) {
-    // Tenta formatos alternativos (@s.whatsapp.net, @lid, número puro)
-    const phone = normalizePhone(chatId)
-    for (const tryId of [`${phone}@s.whatsapp.net`, `${phone}@lid`, phone]) {
-      if (tryId === chatId) continue
-      const m = messageHistory.get(tryId)
-      if (m && m.length > 0) { msgs = m; break }
-    }
+  if (msgs && msgs.length > 0) {
+    return msgs.slice(-limit)
   }
-  return (msgs || []).slice(-limit)
+
+  // Se não tiver em memória, recupera do banco de dados
+  try {
+    const phone = normalizePhone(chatId)
+    const lead = await prisma.lead.findUnique({
+      where: { phoneNumber: phone }
+    })
+
+    if (lead) {
+      const conversation = await prisma.conversation.findFirst({
+        where: { leadId: lead.id }
+      })
+
+      if (conversation) {
+        const dbMessages = await prisma.message.findMany({
+          where: { conversationId: conversation.id },
+          orderBy: { timestamp: 'desc' },
+          take: limit
+        })
+
+        // Formatar para o padrão do app
+        return dbMessages.reverse().map(m => ({
+          id: m.messageId,
+          text: m.content,
+          type: m.contentType,
+          at: m.timestamp.getTime(),
+          from: m.fromPhone,
+          ack: m.ackStatus
+        }))
+      }
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Erro ao recuperar mensagens do BD:', err.message)
+  }
+
+  return []
 }
 
 // ── CRM ──────────────────────────────────────────────────────────────────────
@@ -316,6 +413,62 @@ function extractText(msg) {
   )
 }
 
+// ── Sincronizar Histórico ───────────────────────────────────────────────────────
+
+async function syncAllConversationHistory() {
+  if (!sock) return
+
+  try {
+    console.log('[WhatsApp] 🔄 Carregando histórico de todas as conversas...')
+
+    // Carregar TODAS as conversas do banco
+    const conversations = await prisma.conversation.findMany({
+      include: {
+        lead: true,
+        messages: {
+          orderBy: { timestamp: 'asc' },
+          take: 200
+        }
+      }
+    })
+
+    console.log(`[WhatsApp] Carregando ${conversations.length} conversas...`)
+    let totalMsgs = 0
+
+    for (const conv of conversations) {
+      const chatId = conv.lead.phoneNumber + (conv.lead.isGroup ? '@g.us' : '@s.whatsapp.net')
+
+      if (!messageHistory.has(chatId)) {
+        messageHistory.set(chatId, [])
+      }
+
+      for (const msg of conv.messages) {
+        const formattedMsg = {
+          id: msg.messageId,
+          chatId: chatId,
+          text: msg.content,
+          type: msg.contentType,
+          at: msg.timestamp.getTime(),
+          from: msg.fromPhone,
+          ack: msg.ackStatus,
+          name: conv.lead.contactName
+        }
+
+        // Adicionar em memória se não existir
+        const msgs = messageHistory.get(chatId)
+        if (!msgs.some(m => m.id === msg.messageId)) {
+          msgs.push(formattedMsg)
+          totalMsgs++
+        }
+      }
+    }
+
+    console.log(`[WhatsApp] ✅ Sincronização completa! ${totalMsgs} mensagens carregadas em memória`)
+  } catch (err) {
+    console.error('[WhatsApp] Erro na sincronização:', err.message)
+  }
+}
+
 // ── Conexão Baileys ──────────────────────────────────────────────────────────
 
 async function start() {
@@ -406,14 +559,22 @@ async function start() {
       for (const chat of chats) {
         if (!chat.id || chat.id === 'status@broadcast') continue
         const existing = chatsStore.get(chat.id) || {}
+        const phonebookName = phonebookStore.get(normalizePhone(chat.id))?.name
+        const lastMsg = chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text ||
+          chat.lastMessage?.imageMessage?.caption || chat.lastMessage?.videoMessage?.caption ||
+          (chat.lastMessage?.imageMessage ? '📷 Imagem' : '') ||
+          (chat.lastMessage?.videoMessage ? '🎥 Vídeo' : '') ||
+          (chat.lastMessage?.audioMessage ? '🎤 Áudio' : '') ||
+          (chat.lastMessage?.documentMessage ? '📄 Documento' : '') ||
+          existing.lastMessage || ''
         chatsStore.set(chat.id, {
           ...existing,
           id: chat.id,
-          name: chat.name || existing.name || normalizePhone(chat.id),
+          name: chat.name || phonebookName || existing.name || normalizePhone(chat.id),
           isGroup: chat.id.endsWith('@g.us'),
           unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
           timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
-          lastMessage: chat.lastMessage?.conversation || chat.lastMessage?.extendedTextMessage?.text || existing.lastMessage || '',
+          lastMessage: lastMsg,
         })
         updated++
       }
@@ -423,9 +584,12 @@ async function start() {
       }
     })
 
-    // Histórico completo — só salva metadata de chat, ignora mensagens antigas para economizar memória
-    sock.ev.on('messaging-history.set', ({ chats: historyChats, isLatest }) => {
-      let updated = 0
+    // Histórico completo — salva chats E mensagens
+    sock.ev.on('messaging-history.set', ({ chats: historyChats, messages: historyMessages, isLatest }) => {
+      let updatedChats = 0
+      let updatedMsgs = 0
+
+      // 1) Salvar metadata dos chats
       for (const chat of (historyChats || [])) {
         if (!chat.id || chat.id === 'status@broadcast') continue
         const existing = chatsStore.get(chat.id) || {}
@@ -438,12 +602,55 @@ async function start() {
           timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
           lastMessage: existing.lastMessage || '',
         })
-        updated++
+        updatedChats++
       }
-      if (updated > 0) {
-        console.log(`[WhatsApp] ${updated} chats do histórico completo (isLatest=${isLatest}).`)
+
+      // 2) Salvar mensagens históricas em memória
+      for (const msg of (historyMessages || [])) {
+        try {
+          const chatId = msg.key?.remoteJid
+          if (!chatId || chatId === 'status@broadcast') continue
+          const text = extractText(msg)
+          if (!text) continue
+
+          const msgObj = {
+            id: msg.key.id,
+            chatId,
+            text,
+            type: 'text',
+            from: msg.key.fromMe ? 'me' : 'lead',
+            name: msg.pushName || '',
+            at: msg.messageTimestamp ? new Date(Number(msg.messageTimestamp) * 1000).toISOString() : new Date().toISOString(),
+            ack: msg.status || 1,
+          }
+
+          if (!messageHistory.has(chatId)) messageHistory.set(chatId, [])
+          const msgs = messageHistory.get(chatId)
+          if (!msgs.some(m => m.id === msgObj.id)) {
+            msgs.push(msgObj)
+            if (msgs.length > 200) msgs.shift()
+            updatedMsgs++
+          }
+
+          // Atualizar lastMessage no chatsStore
+          const existing = chatsStore.get(chatId) || {}
+          const ts = msg.messageTimestamp ? Number(msg.messageTimestamp) : Math.floor(Date.now() / 1000)
+          if (!existing.lastMessage || ts > (existing.timestamp || 0)) {
+            chatsStore.set(chatId, {
+              ...existing,
+              id: chatId,
+              lastMessage: text,
+              timestamp: ts,
+            })
+          }
+        } catch (e) { /* ignora mensagens inválidas */ }
+      }
+
+      if (updatedChats > 0 || updatedMsgs > 0) {
+        console.log(`[WhatsApp] 📨 Histórico: ${updatedChats} chats, ${updatedMsgs} mensagens (isLatest=${isLatest})`)
         saveChatsStore()
-        emitter.emit('state', getState())
+        saveMessagesStore()
+        emitter.emit('chats.update', { count: updatedChats })
       }
     })
 
@@ -492,6 +699,12 @@ async function start() {
         state.error = null
         emitState()
         console.log('[WhatsApp] ✅ Conectado com sucesso!')
+
+        // Sincronizar histórico de todas as conversas
+        console.log('[WhatsApp] 🔄 Sincronizando histórico de mensagens...')
+        syncAllConversationHistory().catch(err => {
+          console.error('[WhatsApp] Erro ao sincronizar histórico:', err.message)
+        })
       }
 
       if (connection === 'close') {
@@ -516,52 +729,78 @@ async function start() {
     })
 
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
-      if (type !== 'notify') return
+      // 'notify' = novas mensagens em tempo real
+      // 'append' = mensagens carregadas do cache (histórico de enviadas/recebidas)
+      const isRealTime = type === 'notify'
 
       for (const message of messages) {
-        if (message.key.fromMe) continue
-
-        const chatId = message.key.remoteJid
+        const chatId = message.key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
 
         const isGroup = chatId.endsWith('@g.us')
-        if (isGroup && !automation.allowGroups) continue
-
+        const fromMe = message.key.fromMe === true
         const text = extractText(message)
         if (!text) continue
 
-        state.lastMessageAt = new Date().toISOString()
-        const pushName = message.pushName || ''
-        const at = new Date().toISOString()
+        // Para mensagens em tempo real de grupo: verificar regra de automação
+        if (isRealTime && isGroup && !automation.allowGroups && !fromMe) continue
 
-        const incomingMsg = {
-          id: message.key.id || `${Date.now()}`,
-          chatId,
-          name: pushName,
-          text,
-          from: 'lead',
-          at,
+        const pushName = message.pushName || ''
+        const ts = message.messageTimestamp ? Number(message.messageTimestamp) : Math.floor(Date.now() / 1000)
+        const at = new Date(ts * 1000).toISOString()
+
+        // Nome do chat — para grupos, buscar metadata
+        let chatName = ''
+        if (isGroup) {
+          const existingChat = chatsStore.get(chatId)
+          chatName = existingChat?.name || ''
+          if (!chatName && isRealTime) {
+            try {
+              const metadata = await sock.groupMetadata(chatId)
+              chatName = metadata?.subject || ''
+            } catch (e) {}
+          }
+        } else {
+          const existingChat = chatsStore.get(chatId)
+          chatName = phonebookStore.get(normalizePhone(chatId))?.name || pushName || existingChat?.name || ''
         }
 
-        // Atualiza store de chats e persiste
+        const msgObj = {
+          id: message.key.id || `${Date.now()}`,
+          chatId,
+          name: fromMe ? 'Eu' : (chatName || pushName),
+          text,
+          from: fromMe ? 'me' : 'lead',
+          at,
+          ack: message.status || (fromMe ? 1 : 0),
+        }
+
+        // Atualiza store de chats
         const existing = chatsStore.get(chatId) || {}
         chatsStore.set(chatId, {
           ...existing,
           id: chatId,
-          name: pushName || existing.name || normalizePhone(chatId),
+          name: chatName || pushName || existing.name || normalizePhone(chatId),
           isGroup,
-          unreadCount: (existing.unreadCount || 0) + 1,
-          timestamp: Math.floor(Date.now() / 1000),
+          unreadCount: (!fromMe && isRealTime) ? (existing.unreadCount || 0) + 1 : (existing.unreadCount || 0),
+          timestamp: ts,
           lastMessage: text,
         })
         saveChatsStore()
 
-        storeMessage(chatId, incomingMsg)
-        emitter.emit('message', incomingMsg)
+        await storeMessage(chatId, msgObj)
 
-        await handleAutomation({ chatId, text, pushName, at }).catch(err => {
-          console.error('[WhatsApp] Erro na automação:', err.message)
-        })
+        // Só emitir evento e rodar automação para mensagens novas recebidas
+        if (isRealTime) {
+          state.lastMessageAt = new Date().toISOString()
+          emitter.emit('message', msgObj)
+
+          if (!fromMe) {
+            await handleAutomation({ chatId, text, pushName, at }).catch(err => {
+              console.error('[WhatsApp] Erro na automação:', err.message)
+            })
+          }
+        }
       }
     })
 
@@ -743,8 +982,42 @@ async function sendMessage({ phone, chatId, text }) {
 // ── Listagem ─────────────────────────────────────────────────────────────────
 
 async function listChats(limit = 500) {
+  try {
+    // Buscar do banco com nomes corretos
+    const conversations = await prisma.conversation.findMany({
+      include: {
+        lead: true,
+        messages: {
+          orderBy: { timestamp: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { lastMessageAt: 'desc' },
+      take: Number(limit)
+    })
+
+    // Se tiver dados do banco, retorna; senão usa memória
+    if (conversations && conversations.length > 0) {
+      return conversations.map(conv => ({
+        id: conv.lead.phoneNumber + (conv.lead.isGroup ? '@g.us' : '@s.whatsapp.net'),
+        name: conv.lead.contactName || conv.lead.phoneNumber,
+        isGroup: conv.lead.isGroup,
+        unreadCount: 0,
+        timestamp: Math.floor(conv.lastMessageAt?.getTime() / 1000) || 0,
+        lastMessage: conv.lead.lastMessageText || '...'
+      }))
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Erro ao listar chats do banco:', err.message)
+  }
+
+  // Fallback para memória (chatsStore) — enriquece com phonebook
   return Array.from(chatsStore.values())
     .filter(c => c.id !== 'status@broadcast')
+    .map(c => ({
+      ...c,
+      name: phonebookStore.get(normalizePhone(c.id))?.name || c.name || normalizePhone(c.id),
+    }))
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, Number(limit))
 }
@@ -786,6 +1059,18 @@ function resumeAuto() {
   return getState()
 }
 
+// ── AVATARES / FOTOS DE PERFIL ──────────────────────
+async function getProfilePicUrl(chatId) {
+  if (!sock) return null
+  try {
+    const contact = await sock.profilePictureUrl(chatId)
+    return contact
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao obter foto:', chatId, e.message)
+    return null
+  }
+}
+
 module.exports = {
   getState,
   start,
@@ -800,5 +1085,6 @@ module.exports = {
   addTraining,
   handoff,
   resumeAuto,
+  getProfilePicUrl,
   emitter,
 }
