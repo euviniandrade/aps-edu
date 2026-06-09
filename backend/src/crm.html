@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APS EDU — CRM WhatsApp</title>
+<style>
+:root{--g:#25D366;--p:#667eea;--bg:#0b141a;--sb:#111b21;--sh:#202c33;--sa:#2a3942;--mi:#202c33;--mo:#005c4b;--hb:#202c33;--ib:#2a3942;--tx:#e9edef;--tm:#8696a0;--br:#2a3942;--bl:#53bdeb}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.top{height:44px;background:var(--p);display:flex;align-items:center;justify-content:space-between;padding:0 14px;flex-shrink:0;z-index:10}
+.top h1{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.top .badge{font-size:10px;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:10px}
+.top-r{display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80}
+.stxt{font-size:11px;opacity:.9}
+.tbtn{background:#fff;color:var(--p);border:none;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer}
+.tbtn:hover{opacity:.9}
+.main{display:flex;flex:1;overflow:hidden}
+.sb{width:340px;background:var(--sb);border-right:1px solid var(--br);display:flex;flex-direction:column;flex-shrink:0}
+.sb-h{padding:6px 10px;background:var(--hb)}
+.tabs{display:flex;gap:2px;margin-bottom:6px}
+.tab{flex:1;background:rgba(255,255,255,.05);border:none;color:var(--tm);padding:4px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer}
+.tab.on{background:var(--p);color:#fff}
+.srch input{width:100%;background:var(--ib);border:none;border-radius:6px;padding:6px 10px;color:var(--tx);font-size:12px;outline:none}
+.srch input::placeholder{color:var(--tm)}
+.clist{flex:1;overflow-y:auto}
+.clist::-webkit-scrollbar{width:4px}
+.clist::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
+.ci{display:flex;align-items:center;gap:9px;padding:9px 10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.02);transition:.1s}
+.ci:hover{background:var(--sh)}.ci.on{background:var(--sa)}
+.av{width:42px;height:42px;border-radius:50%;flex-shrink:0;background:#333;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.ci-i{flex:1;min-width:0}
+.ci-n{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-p{font-size:11.5px;color:var(--tm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.ci-m{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.ci-t{font-size:10px;color:var(--tm)}
+.ci-u{background:var(--g);color:#fff;border-radius:50%;min-width:17px;height:17px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.ci-labels{display:flex;gap:2px;margin-top:2px}
+.ci-label{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.no-r{padding:16px;text-align:center;color:var(--tm);font-size:12px}
+.ca{flex:1;display:flex;flex-direction:column;background:var(--bg)}
+.ch{background:var(--hb);padding:8px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--br);flex-shrink:0}
+.ch .av{width:36px;height:36px;font-size:14px}
+.ch-i{flex:1}.ch-n{font-size:14px;font-weight:600}.ch-s{font-size:10px;color:var(--tm)}
+.ch-a{display:flex;gap:4px}
+.hb{background:transparent;border:1px solid var(--br);color:var(--tm);padding:3px 8px;border-radius:5px;font-size:10px;cursor:pointer;transition:.2s}
+.hb:hover{background:var(--sh);color:var(--tx)}
+.msgs{flex:1;overflow-y:auto;padding:10px 40px;display:flex;flex-direction:column;gap:2px}
+.msgs::-webkit-scrollbar{width:4px}
+.msgs::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
+.msg{max-width:65%;padding:5px 8px 2px;border-radius:7px;line-height:1.4}
+.msg.in{background:var(--mi);align-self:flex-start;border-top-left-radius:1px}
+.msg.out{background:var(--mo);align-self:flex-end;border-top-right-radius:1px}
+.msg-t{font-size:13.5px;word-wrap:break-word;white-space:pre-wrap}
+.msg-t b,.msg-t strong{font-weight:700}
+.msg-t i,.msg-t em{font-style:italic}
+.msg-t s{text-decoration:line-through}
+.msg-t code{background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;font-family:monospace;font-size:12px}
+.msg-f{font-size:10px;color:var(--tm);text-align:right;margin-top:1px;display:flex;align-items:center;justify-content:flex-end;gap:3px}
+.msg-img{max-width:280px;max-height:300px;border-radius:5px;margin-bottom:3px;cursor:pointer;display:block}
+.msg-img:hover{opacity:.92}
+.msg-vid{max-width:280px;border-radius:5px;margin-bottom:3px}
+.msg-aud{width:220px;height:36px;margin-bottom:3px}
+.msg-doc{background:rgba(255,255,255,.05);padding:6px 10px;border-radius:6px;display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px}
+.msg-doc a{color:var(--bl);text-decoration:none}
+.msg-doc a:hover{text-decoration:underline}
+.ack{font-size:12px}.ack.s{color:var(--tm)}.ack.r{color:var(--bl)}.ack.rd{color:var(--bl)}
+.divider{align-self:center;background:var(--hb);color:var(--tm);font-size:10px;padding:2px 10px;border-radius:6px;margin:4px 0}
+.msg-sender{font-size:11px;font-weight:600;margin-bottom:1px}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--tm);gap:10px;opacity:.5}
+.empty-i{font-size:64px}
+.ia{background:var(--hb);padding:6px 10px;display:flex;align-items:flex-end;gap:6px;border-top:1px solid var(--br);flex-shrink:0;position:relative}
+.ia textarea{flex:1;background:var(--ib);border:none;border-radius:8px;padding:8px 10px;color:var(--tx);font-size:13px;font-family:inherit;resize:none;outline:none;max-height:100px;min-height:38px;line-height:1.35}
+.ia textarea::placeholder{color:var(--tm)}
+.ib{border:none;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px;transition:.1s;background:transparent;color:var(--tm)}
+.ib:hover{color:var(--tx)}.ib.send{background:var(--g);color:#fff}
+.ib.send:hover{transform:scale(1.05)}
+.epick{display:none;position:absolute;bottom:50px;left:8px;background:var(--sb);border:1px solid var(--br);border-radius:10px;padding:8px;width:280px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.epick.vis{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.epick span{font-size:20px;cursor:pointer;padding:3px;text-align:center;border-radius:4px}
+.epick span:hover{background:rgba(255,255,255,.1)}
+.file-in{display:none}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a242c;color:#fff;padding:9px 20px;border-radius:8px;font-size:12px;font-weight:500;display:none;z-index:999;border-left:3px solid var(--g);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.toast.show{display:block}.toast.err{border-left-color:#f87171}
+.imgview{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;align-items:center;justify-content:center;cursor:pointer}
+.imgview.vis{display:flex}
+.imgview img{max-width:92vw;max-height:92vh;border-radius:6px}
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:#1a242c;border-radius:12px;width:580px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.mh{background:var(--p);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.mh h2{font-size:15px;font-weight:700}
+.mx{background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
+.mb{padding:14px 18px;overflow-y:auto;flex:1}
+.mb label{display:block;font-size:10px;color:var(--tm);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.mb textarea,.mb input[type=text]{width:100%;background:var(--ib);border:1px solid var(--br);border-radius:6px;padding:8px 10px;color:var(--tx);font-size:12px;font-family:inherit;outline:none;margin-bottom:10px}
+.mb textarea{resize:vertical;min-height:70px}
+.seg{display:flex;gap:4px;margin-bottom:10px}
+.seg-btn{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--br);color:var(--tm);padding:6px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+.seg-btn.on{background:var(--p);border-color:var(--p);color:#fff}
+.rlist{background:var(--ib);border-radius:6px;max-height:180px;overflow-y:auto;border:1px solid var(--br)}
+.ri{display:flex;align-items:center;gap:7px;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.02);cursor:pointer}
+.ri:hover{background:rgba(255,255,255,.02)}
+.ri input[type=checkbox]{accent-color:var(--p);width:14px;height:14px}
+.ri-n{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mf{padding:10px 18px;background:var(--hb);display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--br)}
+.mf-i{font-size:11px;color:var(--tm)}.mf-i b{color:var(--p)}
+.mbtn{background:var(--g);color:#fff;border:none;padding:7px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer}
+.mbtn:disabled{background:var(--br);cursor:not-allowed}
+.prog{height:5px;background:var(--ib);border-radius:3px;overflow:hidden;margin-bottom:8px;display:none}
+.prog.vis{display:block}
+.prog-b{height:100%;background:var(--g);transition:width .3s}
+/* Labels modal */
+.lbl-bar{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.lbl{font-size:9px;padding:2px 6px;border-radius:10px;color:#fff;cursor:pointer;font-weight:600}
+.lbl-add{font-size:9px;padding:2px 6px;border-radius:10px;color:var(--tm);border:1px dashed var(--br);cursor:pointer}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.selall{background:none;border:none;color:var(--p);font-size:11px;cursor:pointer;font-weight:600}
+.personalize-note{font-size:10px;color:var(--tm);margin-top:-6px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>📱 APS EDU — CRM WhatsApp <span class="badge" id="cc">...</span></h1>
+  <div class="top-r">
+    <div class="dot" id="dot"></div><span class="stxt" id="stxt">...</span>
+    <button class="tbtn" onclick="loadChats()">🔄 Recarregar</button>
+    <button class="tbtn" onclick="openLabelMgr()">🏷️ Selos</button>
+    <button class="tbtn" onclick="openBulk()">📤 Envio em Massa</button>
+  </div>
+</div>
+<div class="main">
+  <div class="sb">
+    <div class="sb-h">
+      <div class="tabs">
+        <button class="tab on" id="t-all" onclick="setTab('all')">Todos</button>
+        <button class="tab" id="t-contacts" onclick="setTab('contacts')">Contatos</button>
+        <button class="tab" id="t-groups" onclick="setTab('groups')">Grupos</button>
+        <button class="tab" id="t-unread" onclick="setTab('unread')">Não lidos</button>
+      </div>
+      <div class="srch"><input id="sq" placeholder="🔍 Buscar..." oninput="render()"></div>
+    </div>
+    <div class="clist" id="clist"><div class="no-r">⏳ Carregando...</div></div>
+  </div>
+  <div class="ca" id="ca"><div class="empty"><div class="empty-i">💬</div><div>Selecione uma conversa</div></div></div>
+</div>
+<!-- BULK MODAL -->
+<div class="ov" id="bulkOv">
+<div class="modal" style="width:640px">
+  <div class="mh"><h2>📤 Envio em Massa Inteligente</h2><button class="mx" onclick="closeBulk()">✕</button></div>
+  <div class="mb">
+    <label>📝 Mensagem (use {nome} para personalizar)</label>
+    <textarea id="bulkMsg" placeholder="Olá {nome}, tudo bem?...&#10;&#10;Separar por dupla quebra de linha (enter duplo) para enviar múltiplas mensagens para cada contato" oninput="updBulk()" style="min-height:120px;font-family:monospace;font-size:13px"></textarea>
+    <div class="personalize-note">💡 <b>{nome}</b> = primeiro nome · <b>Duplo enter</b> = múltiplas mensagens (uma por linha em branco)</div>
+
+    <!-- ANEXO - BEM VISÍVEL -->
+    <label>📎 Anexar arquivo (foto, vídeo, áudio, documento)</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;background:var(--ib);padding:10px 12px;border-radius:8px;border:1px dashed var(--br)">
+      <button onclick="document.getElementById('bulkFileIn').click()" style="background:var(--p);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">📎 Escolher arquivo</button>
+      <div style="flex:1;min-width:0">
+        <div id="bulkFileName" style="font-size:12px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nenhum arquivo selecionado</div>
+        <div id="bulkFileSize" style="font-size:10px;color:var(--tm)">Formatos: imagem, vídeo, áudio, PDF, Word, Excel, PPT</div>
+      </div>
+      <button id="bulkFileRm" style="display:none;background:#f87171;color:#fff;border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:12px;flex-shrink:0" onclick="removeBulkFile()">✕</button>
+      <input type="file" id="bulkFileIn" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv" onchange="onBulkFile(this)">
+    </div>
+    <!-- Preview do arquivo -->
+    <div id="bulkFilePreview" style="display:none;margin-bottom:10px;background:var(--ib);border-radius:6px;padding:8px;text-align:center"></div>
+
+    <!-- Opção de dividir mensagem -->
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:8px;cursor:pointer">
+      <input type="checkbox" id="bulkDivideMsg" style="accent-color:var(--p)"> 📤 Enviar mensagem em partes (sequencial)
+    </label>
+    <div id="bulkDivideMsgInfo" style="display:none;font-size:9px;color:var(--tm);background:var(--ib);padding:6px 8px;border-radius:4px;margin-bottom:8px;border-left:2px solid #fbbf24">
+      ℹ️ Deixe linhas em branco para separar as partes. Cada parte será enviada sequencialmente com pausa entre elas.
+    </div>
+
+    <!-- IA + PAUSA (configurações avançadas) -->
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer;font-size:11px;color:var(--p);font-weight:600;padding:4px 0">⚙️ Configurações avançadas (IA anti-bloqueio, pausa)</summary>
+      <div style="padding:8px 0">
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+          <button class="seg-btn on" onclick="genVariations()" id="genVarBtn" style="flex:none;padding:5px 12px;font-size:11px">✨ Gerar 4 variações com IA</button>
+          <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tm);margin:0"><input type="checkbox" id="useVariations" checked style="accent-color:var(--p)"> Diversificar (anti-bloqueio)</label>
+        </div>
+        <div id="varBox" style="display:none;background:rgba(102,126,234,.1);border:1px solid rgba(102,126,234,.2);border-radius:6px;padding:8px;margin-bottom:8px;font-size:11px">
+          <div style="font-size:9px;color:var(--p);font-weight:600;margin-bottom:3px">4 VARIAÇÕES (alternadas automaticamente):</div>
+          <div id="varList"></div>
+        </div>
+        <label style="font-size:10px">⏱️ Pausa entre envios</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="range" id="bulkDelay" min="3" max="30" value="8" oninput="document.getElementById('delayVal').textContent=this.value+'s'" style="flex:1;accent-color:var(--p)">
+          <span id="delayVal" style="font-size:12px;color:var(--tx);min-width:28px;font-weight:600">8s</span>
+        </div>
+        <div style="font-size:9px;color:var(--tm);margin-top:2px">Mínimo recomendado: 5s. Mais lento = mais seguro contra bloqueio.</div>
+      </div>
+    </details>
+
+    <label>Segmentar por</label>
+    <div class="seg">
+      <button class="seg-btn on" id="seg-all" onclick="setSeg('all')">Todos</button>
+      <button class="seg-btn" id="seg-group" onclick="setSeg('group')">Grupo</button>
+      <button class="seg-btn" id="seg-label" onclick="setSeg('label')">Selo</button>
+    </div>
+    <div id="segExtra"></div>
+    <label>Destinatários <button class="selall" onclick="toggleAll()">Selecionar todos</button></label>
+    <input type="text" id="bulkSrch" placeholder="Filtrar..." oninput="filterBulk()">
+    <div class="prog" id="bulkProg"><div class="prog-b" id="bulkBar"></div></div>
+    <div id="bulkLog" style="display:none;font-size:11px;color:var(--tm);max-height:60px;overflow-y:auto;margin-bottom:6px;background:var(--ib);border-radius:4px;padding:6px"></div>
+    <div class="rlist" id="rlist"></div>
+  </div>
+  <div class="mf">
+    <div class="mf-i">Selecionados: <b id="bulkCount">0</b></div>
+    <div style="display:flex;gap:4px">
+      <button class="mbtn" id="bulkBtn" onclick="sendBulk()" disabled style="flex:1">🚀 Enviar</button>
+      <button class="mbtn" id="bulkPauseBtn" onclick="togglePauseBulk()" style="display:none;padding:6px 12px" title="Pausar/Retomar envio">⏸️</button>
+      <button class="mbtn" id="bulkCancelBtn" onclick="cancelBulk()" style="display:none;padding:6px 12px;background:#f87171" title="Cancelar campanha">✕</button>
+    </div>
+  </div>
+</div>
+</div>
+<!-- LABEL MANAGER -->
+<div class="ov" id="lblOv">
+<div class="modal" style="width:420px">
+  <div class="mh"><h2>🏷️ Gerenciar Selos</h2><button class="mx" onclick="closeLabelMgr()">✕</button></div>
+  <div class="mb" id="lblBody"></div>
+  <div class="mf">
+    <input type="text" id="newLblName" placeholder="Nome do selo..." style="flex:1;margin:0;margin-right:8px">
+    <input type="color" id="newLblColor" value="#667eea" style="width:36px;height:32px;border:none;background:none;cursor:pointer">
+    <button class="mbtn" onclick="createLbl()" style="padding:6px 14px">+ Criar</button>
+  </div>
+</div>
+</div>
+<div class="imgview" id="imgview" onclick="this.classList.remove('vis')"><img id="ivSrc"></div>
+<div class="toast" id="toast"></div>
+<input type="file" class="file-in" id="fileIn" onchange="sendFile(this)">
+
+<script>
+const K='aps-edu-whatsapp',H={'x-wa-key':K},HJ={'x-wa-key':K,'Content-Type':'application/json'}
+
+// ESCONDE OVERLAY IMEDIATAMENTE SE CONECTADO
+fetch('/api/whatsapp/status',{headers:H}).then(r=>r.json()).then(st=>{
+  if(st.ready&&st.connected){
+    const el=document.getElementById('qrOv')
+    if(el)el.style.display='none'
+  }
+}).catch()
+let chats=[],cur=null,curName='',tab='all',avCache={},labels=[],segMode='all',lastMC=0,bulkCancelled=false,bulkPaused=false
+let bulkVariations=[],bulkFileData=null,bulkFileMime='',bulkFileName2=''
+
+function toast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(t==='err'?' err':'');clearTimeout(e._t);e._t=setTimeout(()=>e.className='toast',3000)}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+// WhatsApp text formatting: *bold* _italic_ ~strike~ ```code```
+function fmtWA(t){
+  let s=esc(t)
+  s=s.replace(/```([\s\S]*?)```/g,'<code>$1</code>')
+  s=s.replace(/\*([^\*]+)\*/g,'<b>$1</b>')
+  s=s.replace(/\_([^\_]+)\_/g,'<i>$1</i>')
+  s=s.replace(/\~([^\~]+)\~/g,'<s>$1</s>')
+  // URLs
+  s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" style="color:var(--bl)">$1</a>')
+  return s
+}
+
+function ini(n){return(n||'?').split(' ').slice(0,2).map(w=>(w||'')[0]).join('').toUpperCase()}
+function acol(n){const c=['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#f5576c','#fee140'];let h=0;for(let ch of(n||''))h=ch.charCodeAt(0)+((h<<5)-h);return c[Math.abs(h)%c.length]}
+function fmtT(ts){if(!ts)return'';const d=new Date(ts>9e9?ts:ts*1000),n=new Date();if(d.toDateString()===n.toDateString())return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});const diff=n-d;if(diff<7*864e5)return['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}
+function fmtH(ts){if(!ts)return'';return new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+function ackI(a){if(a>=3)return'<span class="ack rd">✓✓</span>';if(a>=2)return'<span class="ack r">✓✓</span>';if(a>=1)return'<span class="ack s">✓</span>';if(a===0)return'<span class="ack s">🕐</span>';return''}
+
+async function checkStatus(){try{const r=await fetch('/api/whatsapp/status',{headers:H});const d=await r.json();const ok=d.connected&&d.ready;document.getElementById('dot').style.background=ok?'#4ade80':'#f87171';document.getElementById('stxt').textContent=ok?'Conectado':'Desconectado'}catch{}}
+async function loadLabels(){try{const r=await fetch('/api/whatsapp/labels',{headers:H});labels=await r.json()}catch{labels=[]}}
+
+async function loadChats(){
+  try{const r=await fetch('/api/whatsapp/chats?limit=500',{headers:H});if(!r.ok)throw new Error('HTTP '+r.status)
+    const d=await r.json();chats=Array.isArray(d)?d:(d.chats||[])
+    document.getElementById('cc').textContent=chats.length+' conversas';render()
+  }catch(e){document.getElementById('clist').innerHTML='<div class="no-r">❌ '+esc(e.message)+'</div>'}
+}
+
+function getFiltered(){const q=document.getElementById('sq').value.toLowerCase();return chats.filter(c=>{if(tab==='contacts'&&c.isGroup)return false;if(tab==='groups'&&!c.isGroup)return false;if(tab==='unread'&&!(c.unreadCount>0))return false;if(q&&!(c.name||'').toLowerCase().includes(q)&&!c.id.includes(q))return false;return true})}
+function setTab(t){tab=t;['all','contacts','groups','unread'].forEach(x=>document.getElementById('t-'+x).className='tab'+(x===t?' on':''));render()}
+
+function render(){
+  const list=getFiltered(),el=document.getElementById('clist')
+  if(!list.length){el.innerHTML='<div class="no-r">Nenhuma conversa</div>';return}
+  el.innerHTML=list.map((c,i)=>{
+    const n=c.name||c.id.replace(/@.*/,''),bg=acol(n)
+    const p=c.lastMessage?esc(String(c.lastMessage).replace(/\n/g,' ').slice(0,42)):'...'
+    // Labels for this contact
+    const phone=c.id.replace(/@.*/,'')
+    const cls=labels.filter(l=>l.contacts&&l.contacts.includes(phone))
+    const lblHtml=cls.length?'<div class="ci-labels">'+cls.map(l=>`<div class="ci-label" style="background:${l.color}" title="${esc(l.name)}"></div>`).join('')+'</div>':''
+    return`<div class="ci${c.id===cur?' on':''}" onclick="openIdx(${i})"><div class="av" style="background:${bg}" data-cid="${c.id}">${c.isGroup?'👥':ini(n)}</div><div class="ci-i"><div class="ci-n">${esc(n)}</div><div class="ci-p">${p}</div>${lblHtml}</div><div class="ci-m"><div class="ci-t">${fmtT(c.timestamp)}</div>${c.unreadCount>0?`<div class="ci-u">${c.unreadCount>99?'99+':c.unreadCount}</div>`:''}</div></div>`
+  }).join('')
+  lazyAv()
+}
+
+const avObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){ldAv(e.target);avObs.unobserve(e.target)}})},{rootMargin:'50px'})
+function lazyAv(){document.querySelectorAll('.clist .av[data-cid]').forEach(el=>{const c=el.dataset.cid;if(avCache[c]){if(avCache[c]!=='x')el.innerHTML=`<img src="${avCache[c]}">`}else avObs.observe(el)})}
+async function ldAv(el){const c=el.dataset.cid;try{const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H});const d=await r.json();if(d.url){avCache[c]=d.url;el.innerHTML=`<img src="${d.url}">`}else avCache[c]='x'}catch{avCache[c]='x'}}
+
+function openIdx(i){const c=getFiltered()[i];if(c)openChat(c.id,c.name||c.id.replace(/@.*/,''),c.isGroup)}
+
+async function openChat(id,name,isGroup){
+  cur=id;curName=name;lastMC=0;render()
+  const bg=acol(name),av=avCache[id]&&avCache[id]!=='x'?`<img src="${avCache[id]}">`:ini(name)
+  const groupBtn=isGroup?`<button class="hb" onclick="bulkToGroup()">📤 Massa</button>`:''
+  const labelBtn=!isGroup?`<button class="hb" onclick="openLabelFor('${id}')">🏷️</button>`:''
+  document.getElementById('ca').innerHTML=`
+    <div class="ch"><div class="av" style="background:${bg}">${av}</div><div class="ch-i"><div class="ch-n">${esc(name)}</div><div class="ch-s">${isGroup?'Grupo':'Online'}</div></div><div class="ch-a">${groupBtn}${labelBtn}<button class="hb" onclick="searchInChat()">🔍</button></div></div>
+    <div class="msgs" id="msgs"><div class="no-r">⏳</div></div>
+    <div class="ia"><div class="epick" id="epick">${emojis()}</div><button class="ib" onclick="toggleEmoji()">😊</button><button class="ib" onclick="document.getElementById('fileIn').click()">📎</button><textarea id="inp" placeholder="Mensagem..." rows="1" onkeydown="onKey(event)" oninput="autoH(this)"></textarea><button class="ib send" onclick="sendMsg()" id="sendBtn">➤</button></div>`
+  await loadMsgs();document.getElementById('inp')?.focus()
+}
+
+function emojis(){return['😊','😂','❤️','👍','🙏','😍','🔥','✅','👏','😢','🎉','💪','📱','⏳','🤔','😎','💬','📸','🎵','📄','👤','📍','🙌','💡','⭐','🚀','💯','❌','⚠️','📌','🤝','🎯','👋','😁','🥰','😘','🤣','😅','🫡','🤞','🙂','👀','💀','🫶','😭','🥺','💕'].map(e=>`<span onclick="insE('${e}')">${e}</span>`).join('')}
+function toggleEmoji(){document.getElementById('epick').classList.toggle('vis')}
+function insE(e){const i=document.getElementById('inp');if(i){i.value+=e;i.focus()}}
+
+async function loadMsgs(){
+  if(!cur)return
+  try{const r=await fetch(`/api/whatsapp/messages?chatId=${encodeURIComponent(cur)}&limit=100`,{headers:H})
+    const d=await r.json(),msgs=d.value||d.messages||d||[]
+    if(!Array.isArray(msgs))return
+    // Sempre renderizar para capturar novas mensagens
+    lastMC=msgs.length
+    const a=document.getElementById('msgs');if(!a)return
+    const wb=a.scrollHeight-a.clientHeight-a.scrollTop<80
+    if(!msgs.length){a.innerHTML='<div class="no-r">Sem mensagens</div>';return}
+    let h='',ld=''
+    for(const m of msgs){
+      const ds=new Date(m.at).toLocaleDateString('pt-BR')
+      if(ds!==ld){h+=`<div class="divider">${ds}</div>`;ld=ds}
+      const out=m.fromMe||m.from==='agent'
+      let mc=''
+      const murl=`/api/whatsapp/media?id=${encodeURIComponent(m.id)}&key=${K}`
+      // Skip system messages
+      if(['e2e_notification','notification_template','gp2','call_log','protocol','revoked'].includes(m.type)){
+        continue
+      }
+      // Media
+      if(m.type==='image')mc+=`<img class="msg-img" src="${murl}" onclick="viewImg(this.src)" loading="lazy" onerror="this.outerHTML='📷 <i>Foto</i>'">`
+      else if(m.type==='sticker')mc+=`<img class="msg-img" style="max-width:150px" src="${murl}" loading="lazy" onerror="this.outerHTML='🎭 Sticker'">`
+      else if(m.type==='video')mc+=`<video controls class="msg-vid" src="${murl}" preload="none" onerror="this.outerHTML='🎥 <i>Vídeo</i>'"></video>`
+      else if(m.type==='ptt'||m.type==='audio')mc+=`<audio controls class="msg-aud" src="${murl}" preload="none" onerror="this.outerHTML='🎵 <i>Áudio</i>'"></audio>`
+      else if(m.type==='document')mc+=`<div class="msg-doc">📄 <a href="${murl}" target="_blank">${esc(m.text||'Documento')}</a></div>`
+      else if(m.type==='vcard'||m.type==='multi_vcard'){
+        // Parse vcard to show contact name
+        const fn=(m.text||'').match(/FN:(.+)/)?.[1]||'Contato'
+        mc+=`<div class="msg-doc">👤 ${esc(fn)}</div>`
+      }
+      else if(m.type==='location'||m.type==='live_location')mc+=`<div class="msg-doc">📍 Localização</div>`
+      // Text with formatting
+      const txt=m.text||''
+      if(txt&&!['document','vcard','multi_vcard'].includes(m.type))mc+=`<div class="msg-t">${fmtWA(txt)}</div>`
+      // Skip empty bubbles
+      if(!mc.trim())continue
+      const sender=(!out&&m.name&&cur.includes('@g.us'))?`<div class="msg-sender" style="color:${acol(m.name)}">${esc(m.name)}</div>`:''
+      h+=`<div class="msg ${out?'out':'in'}">${sender}${mc}<div class="msg-f">${fmtH(m.at)} ${out?ackI(m.ack):''}</div></div>`
+    }
+    a.innerHTML=h;if(wb)a.scrollTop=a.scrollHeight
+  }catch(e){console.error(e)}
+}
+
+async function sendMsg(){const i=document.getElementById('inp'),t=(i?.value||'').trim();if(!t||!cur)return;const b=document.getElementById('sendBtn');b.disabled=true;b.innerHTML='<div class="spin"></div>';i.value='';i.style.height='auto';try{await fetch('/api/whatsapp/send',{method:'POST',headers:HJ,body:JSON.stringify({chatId:cur,text:t})});lastMC=0;await loadMsgs();toast('✅')}catch{toast('❌ Erro','err')}finally{b.disabled=false;b.innerHTML='➤';i.focus()}}
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg()}}
+function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
+function sendFile(i){toast('📎 Em breve!','err');i.value=''}
+function viewImg(s){document.getElementById('ivSrc').src=s;document.getElementById('imgview').classList.add('vis')}
+function searchInChat(){const q=prompt('Buscar:');if(!q)return;let f=false;document.querySelectorAll('.msg-t').forEach(m=>{if(m.textContent.toLowerCase().includes(q.toLowerCase())){m.style.background='rgba(102,126,234,.3)';m.scrollIntoView({behavior:'smooth',block:'center'});f=true;setTimeout(()=>m.style.background='',3000)}});if(!f)toast('Não encontrado','err')}
+
+// ── BULK ─────────────────────────────────────────────
+
+function openBulk(){document.getElementById('bulkOv').classList.add('open');bulkVariations=[];bulkFileData=null;document.getElementById('varBox').style.display='none';document.getElementById('bulkLog').style.display='none';setSeg('all')}
+function closeBulk(){document.getElementById('bulkOv').classList.remove('open')}
+function setSeg(s){segMode=s;['all','group','label'].forEach(x=>document.getElementById('seg-'+x).className='seg-btn'+(x===s?' on':''))
+  const ex=document.getElementById('segExtra')
+  if(s==='group'){
+    const groups=chats.filter(c=>c.isGroup)
+    ex.innerHTML='<select id="segGroup" onchange="loadGroupMembers()" style="width:100%;background:var(--ib);border:1px solid var(--br);color:var(--tx);padding:6px;border-radius:6px;margin-bottom:8px"><option value="">Selecione um grupo...</option>'+groups.map(g=>`<option value="${g.id}">${esc(g.name||g.id)}</option>`).join('')+'</select>'
+  }else if(s==='label'){
+    ex.innerHTML='<select id="segLabel" onchange="loadLabelContacts()" style="width:100%;background:var(--ib);border:1px solid var(--br);color:var(--tx);padding:6px;border-radius:6px;margin-bottom:8px"><option value="">Selecione um selo...</option>'+labels.map(l=>`<option value="${l.id}" style="color:${l.color}">🏷️ ${esc(l.name)}</option>`).join('')+'</select>'
+  }else{ex.innerHTML='';renderBulkList()}
+}
+async function loadGroupMembers(){
+  const gid=document.getElementById('segGroup')?.value;if(!gid)return
+  try{
+    const r=await fetch(`/api/whatsapp/group-members/${encodeURIComponent(gid)}`,{headers:H})
+    const m=await r.json()
+    // Todos marcados por padrão ao selecionar grupo
+    renderBulkContacts(m.map(x=>({id:x.id,name:x.name,phone:x.phone,admin:x.isAdmin})), true)
+  }catch(e){toast('Erro: '+e.message,'err')}
+}
+function loadLabelContacts(){
+  const lid=document.getElementById('segLabel')?.value;if(!lid)return
+  const label=labels.find(l=>l.id===lid);if(!label)return
+  const contacts=label.contacts.map(phone=>{const c=chats.find(ch=>ch.id.includes(phone));return{id:c?c.id:`${phone}@c.us`,name:c?.name||phone,phone}})
+  renderBulkContacts(contacts, true)
+}
+function renderBulkList(){
+  const q=(document.getElementById('bulkSrch')?.value||'').toLowerCase()
+  const list=chats.filter(c=>!c.isGroup&&(!q||(c.name||'').toLowerCase().includes(q)||c.id.includes(q)))
+  renderBulkContacts(list.map(c=>({id:c.id,name:c.name||c.id.replace(/@.*/,''),phone:c.id.replace(/@.*/,'')})), false)
+}
+function renderBulkContacts(list, autoCheck=false){
+  const el=document.getElementById('rlist')
+  el.innerHTML=list.map(c=>{
+    const phone=c.phone||c.id.replace(/@.*/,'')
+    const name=c.name||phone
+    const firstName=name.split(' ')[0]
+    const adminBadge=c.admin?'<span style="font-size:9px;background:var(--p);color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">Admin</span>':''
+    return`<label class="ri">
+      <input type="checkbox" value="${c.id}" data-name="${esc(name)}" ${autoCheck?'checked':''} onchange="updBulk()">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}${adminBadge}</div>
+        <div style="font-size:10px;color:var(--tm)">${esc(phone)} · Vai receber como: <b style="color:var(--p)">{nome}</b> → <b>${esc(firstName)}</b></div>
+      </div>
+    </label>`
+  }).join('')
+  updBulk()
+  // Mostrar contagem
+  const count=list.length
+  const header=segMode==='group'?'Membros do grupo':'Contatos'
+  document.querySelector('[for="bulkSrch"]||label')
+}
+function filterBulk(){if(segMode==='all')renderBulkList()}
+function toggleAll(){const cbs=document.querySelectorAll('#rlist input[type=checkbox]');const all=[...cbs].every(c=>c.checked);cbs.forEach(c=>c.checked=!all);updBulk()}
+function updBulk(){const n=document.querySelectorAll('#rlist input:checked').length;document.getElementById('bulkCount').textContent=n;document.getElementById('bulkBtn').disabled=n===0||!document.getElementById('bulkMsg').value.trim()}
+
+// ── AI Variations ────────────────────────────────────
+async function genVariations(){
+  const msg=document.getElementById('bulkMsg').value.trim()
+  if(!msg){toast('Escreva a mensagem primeiro','err');return}
+  const btn=document.getElementById('genVarBtn')
+  btn.disabled=true;btn.textContent='⏳ Gerando...'
+  try{
+    const r=await fetch('/api/whatsapp/ai/variations',{method:'POST',headers:HJ,body:JSON.stringify({message:msg})})
+    const d=await r.json()
+    bulkVariations=d.variations||[msg]
+    const box=document.getElementById('varBox'),list=document.getElementById('varList')
+    list.innerHTML=bulkVariations.map((v,i)=>`<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--p);font-weight:700">${i+1}.</span> ${esc(v)}</div>`).join('')
+    box.style.display='block'
+    toast('✅ 4 variações geradas!')
+  }catch{toast('Erro ao gerar variações','err')}
+  finally{btn.disabled=false;btn.textContent='✨ Gerar variações com IA'}
+}
+
+// ── Bulk File ────────────────────────────────────────
+function onBulkFile(input){
+  const file=input.files[0];if(!file)return
+  const sizeMB=(file.size/1024/1024).toFixed(1)
+  document.getElementById('bulkFileName').textContent=file.name
+  document.getElementById('bulkFileSize').textContent=`${sizeMB} MB · ${file.type||'arquivo'}`
+  document.getElementById('bulkFileRm').style.display='flex'
+  bulkFileMime=file.type;bulkFileName2=file.name
+
+  const reader=new FileReader()
+  reader.onload=()=>{
+    bulkFileData=reader.result.split(',')[1]
+    // Preview
+    const prev=document.getElementById('bulkFilePreview')
+    if(file.type.startsWith('image/')){
+      prev.innerHTML=`<img src="${reader.result}" style="max-width:200px;max-height:150px;border-radius:6px">`
+      prev.style.display='block'
+    }else if(file.type.startsWith('video/')){
+      prev.innerHTML=`<video src="${reader.result}" controls style="max-width:200px;border-radius:6px"></video>`
+      prev.style.display='block'
+    }else if(file.type.startsWith('audio/')){
+      prev.innerHTML=`<audio src="${reader.result}" controls style="width:100%"></audio>`
+      prev.style.display='block'
+    }else{
+      prev.innerHTML=`<div style="font-size:32px;margin-bottom:4px">📄</div><div style="font-size:11px;color:var(--tm)">${esc(file.name)}</div>`
+      prev.style.display='block'
+    }
+  }
+  reader.readAsDataURL(file)
+}
+function removeBulkFile(){
+  bulkFileData=null
+  document.getElementById('bulkFileName').textContent='Nenhum arquivo selecionado'
+  document.getElementById('bulkFileSize').textContent='Formatos: imagem, vídeo, áudio, PDF, Word, Excel, PPT'
+  document.getElementById('bulkFileRm').style.display='none'
+  document.getElementById('bulkFilePreview').style.display='none'
+  document.getElementById('bulkFileIn').value=''
+}
+
+// Mostrar info de dividir mensagem
+document.addEventListener('DOMContentLoaded',()=>{
+  const divideChk=document.getElementById('bulkDivideMsg')
+  if(divideChk){
+    divideChk.addEventListener('change',()=>{
+      document.getElementById('bulkDivideMsgInfo').style.display=divideChk.checked?'block':'none'
+    })
+  }
+})
+
+// ── SEND BULK ────────────────────────────────────────
+async function sendBulk(){
+  const rawMsg=document.getElementById('bulkMsg').value.trim()
+  const cbs=[...document.querySelectorAll('#rlist input:checked')]
+  if(!rawMsg||!cbs.length){toast('Escreva a mensagem e selecione contatos','err');return}
+
+  const dividirMsg=document.getElementById('bulkDivideMsg').checked
+  let msgList
+
+  if(dividirMsg){
+    // Se dividir está ativo, usar duplo espaçamento para dividir
+    msgList=rawMsg.split(/\n\s*\n/).filter(m=>m.trim())
+  }else{
+    // Senão, usar a lógica original (que também divide por duplo espaçamento)
+    msgList=rawMsg.split(/\n\s*\n/).filter(m=>m.trim())
+  }
+
+  const useVar=document.getElementById('useVariations').checked&&bulkVariations.length>=2
+  const delay=Number(document.getElementById('bulkDelay').value)*1000
+  const btn=document.getElementById('bulkBtn'),bar=document.getElementById('bulkBar'),prog=document.getElementById('bulkProg'),log=document.getElementById('bulkLog')
+  const pauseBtn=document.getElementById('bulkPauseBtn'),cancelBtn=document.getElementById('bulkCancelBtn')
+
+  bulkCancelled=false;bulkPaused=false
+  btn.disabled=true;pauseBtn.style.display='inline-block';cancelBtn.style.display='inline-block'
+  pauseBtn.textContent='⏸️';prog.classList.add('vis');log.style.display='block';log.innerHTML=''
+  let ok=0,fail=0,totalEnvios=cbs.length*msgList.length
+  let envioNum=0
+
+  for(let i=0;i<cbs.length;i++){
+    if(bulkCancelled)break
+    const id=cbs[i].value,name=cbs[i].dataset.name||''
+    const firstName=name.split(' ')[0]||''
+
+    // Para cada contato, enviar todas as mensagens
+    for(let j=0;j<msgList.length;j++){
+      if(bulkCancelled)break
+
+      // Aguardar se estiver pausado
+      while(bulkPaused&&!bulkCancelled){
+        await new Promise(r=>setTimeout(r,100))
+      }
+      if(bulkCancelled)break
+
+      envioNum++
+      const tpl=msgList[j].trim()
+      const baseTpl=useVar?bulkVariations[j%bulkVariations.length]:tpl
+      const msg=baseTpl.replace(/\{nome\}/gi,firstName)
+
+      try{
+        if(bulkFileData&&j===0){
+          // Enviar arquivo só na primeira mensagem
+          const r=await fetch('/api/whatsapp/send-media',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,media:bulkFileData,mimetype:bulkFileMime,filename:bulkFileName2,caption:msg})})
+          if(!r.ok)throw new Error(`HTTP ${r.status}`)
+        }else{
+          // Enviar texto
+          const r=await fetch('/api/whatsapp/send',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,text:msg})})
+          if(!r.ok)throw new Error(`HTTP ${r.status}`)
+        }
+        ok++
+        if(j===msgList.length-1)log.innerHTML+=`<div style="color:var(--g)">✅ ${esc(name||id.replace(/@.*/,''))} (${msgList.length} msg)</div>`
+      }catch(e){
+        fail++
+        if(j===msgList.length-1)log.innerHTML+=`<div style="color:#f87171">❌ ${esc(name||id.replace(/@.*/,''))} - ${e.message}</div>`
+      }
+      bar.style.width=Math.round(envioNum/totalEnvios*100)+'%'
+      btn.textContent=`📤 ${envioNum}/${totalEnvios}`
+      log.scrollTop=log.scrollHeight
+
+      if(envioNum<totalEnvios&&!bulkCancelled)await new Promise(r=>setTimeout(r,delay))
+    }
+  }
+
+  btn.textContent='🚀 Enviar'
+  btn.disabled=false
+  pauseBtn.style.display='none'
+  cancelBtn.style.display='none'
+  prog.classList.remove('vis')
+
+  if(bulkCancelled){
+    toast('⚠️ Campanha cancelada! '+ok+' mensagens enviadas',)
+  }else{
+    const sucessos=Math.floor(ok/msgList.length)
+    const msg_total=ok+fail
+    toast(`✅ Concluído! ${sucessos} contatos · ${msg_total} mensagens · ${fail} falhas`)
+  }
+}
+
+function togglePauseBulk(){
+  bulkPaused=!bulkPaused
+  const btn=document.getElementById('bulkPauseBtn')
+  btn.textContent=bulkPaused?'▶️':'⏸️'
+  btn.style.background=bulkPaused?'#fbbf24':''
+  toast(bulkPaused?'⏸️ Campanha pausada':'▶️ Campanha retomada')
+}
+
+function cancelBulk(){
+  if(confirm('Tem certeza que quer cancelar a campanha?')){
+    bulkCancelled=true
+    toast('❌ Cancelando campanha...')
+  }
+}
+function bulkToGroup(){if(!cur)return;document.getElementById('bulkOv').classList.add('open');setSeg('group');setTimeout(()=>{const sel=document.getElementById('segGroup');if(sel){sel.value=cur;loadGroupMembers()}},100)}
+
+// ── LABELS ───────────────────────────────────────────
+function openLabelMgr(){document.getElementById('lblOv').classList.add('open');renderLblMgr()}
+function closeLabelMgr(){document.getElementById('lblOv').classList.remove('open')}
+function renderLblMgr(){
+  const b=document.getElementById('lblBody')
+  if(!labels.length){b.innerHTML='<div class="no-r">Nenhum selo criado</div>';return}
+  b.innerHTML=labels.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--br)"><div style="width:14px;height:14px;border-radius:50%;background:${l.color};flex-shrink:0"></div><span style="flex:1;font-size:13px">${esc(l.name)} <span style="color:var(--tm);font-size:11px">(${(l.contacts||[]).length})</span></span><button class="hb" onclick="deleteLbl('${l.id}')" style="color:#f87171">✕</button></div>`).join('')
+}
+async function createLbl(){
+  const name=document.getElementById('newLblName').value.trim(),color=document.getElementById('newLblColor').value
+  if(!name)return
+  await fetch('/api/whatsapp/labels',{method:'POST',headers:HJ,body:JSON.stringify({name,color})})
+  document.getElementById('newLblName').value=''
+  await loadLabels();renderLblMgr();render();toast('🏷️ Selo criado!')
+}
+async function deleteLbl(id){
+  await fetch(`/api/whatsapp/labels/${id}`,{method:'DELETE',headers:H})
+  await loadLabels();renderLblMgr();render();toast('Selo removido')
+}
+async function openLabelFor(contactId){
+  const phone=contactId.replace(/@.*/,'')
+  const current=labels.filter(l=>l.contacts&&l.contacts.includes(phone))
+  const opts=labels.map(l=>{const has=current.find(c=>c.id===l.id);return`<label style="display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer"><input type="checkbox" ${has?'checked':''} onchange="toggleLabel('${l.id}','${contactId}',this.checked)" style="accent-color:${l.color}"><div style="width:10px;height:10px;border-radius:50%;background:${l.color}"></div>${esc(l.name)}</label>`}).join('')
+  const html=opts||'<div class="no-r">Crie selos primeiro (botão 🏷️ no topo)</div>'
+  document.getElementById('lblBody').innerHTML=html
+  document.getElementById('lblOv').classList.add('open')
+}
+async function toggleLabel(labelId,contactId,add){
+  if(add)await fetch(`/api/whatsapp/labels/${labelId}/contacts`,{method:'POST',headers:HJ,body:JSON.stringify({contactId})})
+  else await fetch(`/api/whatsapp/labels/${labelId}/contacts/${encodeURIComponent(contactId)}`,{method:'DELETE',headers:H})
+  await loadLabels();render()
+}
+
+// ── QR CODE OVERLAY ──────────────────────────────────
+let qrInterval
+async function checkAndShowQR(){
+  try{
+    const r=await fetch('/api/whatsapp/status',{headers:H})
+    if(!r.ok){
+      document.getElementById('qrOv').style.display='flex'
+      if(!qrInterval)qrInterval=setInterval(refreshQR,3000)
+      return
+    }
+    const st=await r.json()
+    if(st.ready && st.connected){
+      document.getElementById('qrOv').style.display='none'
+      if(qrInterval){clearInterval(qrInterval);qrInterval=null}
+    }else{
+      document.getElementById('qrOv').style.display='flex'
+      if(!qrInterval)qrInterval=setInterval(refreshQR,3000)
+    }
+  }catch(e){
+    console.error('checkAndShowQR error:',e)
+    document.getElementById('qrOv').style.display='flex'
+    if(!qrInterval)qrInterval=setInterval(refreshQR,3000)
+  }
+}
+async function refreshQR(){
+  try{
+    const r=await fetch('/api/whatsapp/status',{headers:H})
+    const st=await r.json()
+    if(st.qrDataUrl){
+      document.getElementById('qrImg').src=st.qrDataUrl
+    }
+  }catch(e){
+    console.error('Erro ao carregar QR:',e)
+  }
+}
+
+// ╔═══════════════════════════════════════════════════╗
+// ║  INICIALIZAÇÃO COMPLETA                           ║
+// ╚═══════════════════════════════════════════════════╝
+
+function updateCounter(){document.getElementById('cc').textContent=chats.length+' conversas'}
+
+// SSE — conexão em tempo real para mensagens instantâneas
+let sseConn=null
+function connectSSE(){
+  if(sseConn)sseConn.close()
+  sseConn=new EventSource('/api/whatsapp/events',{withCredentials:false})
+  sseConn.addEventListener('message',e=>{
+    try{
+      const msg=JSON.parse(e.data)
+      if(!msg.chatId)return
+      // Atualizar lista de chats (subir conversa p/ topo)
+      const idx=chats.findIndex(c=>c.id===msg.chatId)
+      if(idx>=0){
+        chats[idx].lastMessage=msg.text
+        chats[idx].timestamp=Math.floor(new Date(msg.at||Date.now()).getTime()/1000)
+        if(msg.from==='lead')chats[idx].unreadCount=(chats[idx].unreadCount||0)+1
+        const c=chats.splice(idx,1)[0];chats.unshift(c)
+      }else{
+        // Nova conversa
+        chats.unshift({id:msg.chatId,name:msg.name||msg.chatId.replace(/@.*/,''),isGroup:msg.chatId.includes('@g.us'),lastMessage:msg.text,timestamp:Math.floor(Date.now()/1000),unreadCount:msg.from==='lead'?1:0})
+      }
+      updateCounter();render()
+      // Se conversa aberta, recarregar mensagens
+      if(cur===msg.chatId)loadMsgs()
+    }catch(err){}
+  })
+  sseConn.addEventListener('state',e=>{
+    try{
+      const st=JSON.parse(e.data)
+      const ok=st.connected&&st.ready
+      document.getElementById('dot').style.background=ok?'#4ade80':'#f87171'
+      document.getElementById('stxt').textContent=ok?'Conectado':'Desconectado'
+      if(ok)document.getElementById('qrOv').style.display='none'
+      else if(st.qrDataUrl){document.getElementById('qrOv').style.display='flex';document.getElementById('qrImg').src=st.qrDataUrl}
+    }catch(err){}
+  })
+  sseConn.onerror=()=>{
+    // Reconectar em 3s
+    setTimeout(()=>connectSSE(),3000)
+  }
+}
+
+(async function init(){
+  // Mostrar loading
+  document.getElementById('clist').innerHTML='<div class="no-r">⏳ Carregando conversas...</div>'
+
+  // Labels
+  try{const r=await fetch('/api/whatsapp/labels',{headers:H});const d=await r.json();labels=Array.isArray(d)?d:(d.labels||[])}catch{labels=[]}
+
+  // Status e QR
+  try{
+    const r=await fetch('/api/whatsapp/status',{headers:H})
+    const st=await r.json()
+    const ok=st.connected&&st.ready
+    document.getElementById('dot').style.background=ok?'#4ade80':'#f87171'
+    document.getElementById('stxt').textContent=ok?'Conectado':'Desconectado'
+    if(ok){
+      document.getElementById('qrOv').style.display='none'
+    }else{
+      document.getElementById('qrOv').style.display='flex'
+      if(st.qrDataUrl)document.getElementById('qrImg').src=st.qrDataUrl
+    }
+  }catch(e){}
+
+  // Carregar chats
+  try{
+    const r=await fetch('/api/whatsapp/chats?limit=500',{headers:H})
+    if(!r.ok)throw new Error('HTTP '+r.status)
+    const d=await r.json()
+    chats=Array.isArray(d)?d:(d.chats||[])
+    updateCounter()
+    render()
+    console.log('[INIT] ✅ '+chats.length+' chats carregados')
+  }catch(e){
+    console.error('[INIT] Erro:',e)
+    document.getElementById('clist').innerHTML='<div class="no-r">❌ '+esc(e.message)+'</div>'
+  }
+
+  // Conectar SSE para tempo real
+  connectSSE()
+})()
+
+// Intervals — backup para sincronizar (SSE já faz o tempo real)
+setInterval(checkStatus,10000)
+setInterval(loadChats,15000) // Recarregar lista completa a cada 15s
+setInterval(refreshQR,3000)
+setInterval(()=>{if(cur)loadMsgs()},2000) // Backup refresh mensagens abertas
+
+</script>
+
+<!-- QR CODE OVERLAY -->
+<div id="qrOv" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--bg);padding:40px;border-radius:20px;text-align:center;border:2px solid var(--p);position:relative">
+    <button onclick="document.getElementById('qrOv').style.display='none'" style="position:absolute;top:10px;right:10px;background:#f87171;border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-weight:bold">✕</button>
+    <div style="font-size:32px;margin-bottom:16px">📱</div>
+    <h2 style="color:var(--tx);margin-bottom:8px">Conectar WhatsApp</h2>
+    <p style="color:var(--tm);margin-bottom:24px;font-size:13px">Escaneie o QR Code com seu celular</p>
+    <img id="qrImg" src="" style="width:300px;height:300px;border-radius:10px;background:#fff;padding:10px;margin-bottom:16px">
+    <p style="color:var(--tm);font-size:11px">1. Abra WhatsApp no celular<br>2. Configurações → Conectados → Conectar telefone<br>3. Aponte a câmera para o QR Code</p>
+  </div>
+</div>
+
+</body>
+</html>
