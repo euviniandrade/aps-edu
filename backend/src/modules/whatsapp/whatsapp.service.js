@@ -469,6 +469,32 @@ async function syncAllConversationHistory() {
   }
 }
 
+// ── Buscar nomes dos grupos sem nome ─────────────────────────────────────────
+
+async function loadGroupNames() {
+  if (!sock) return
+  const groups = Array.from(chatsStore.values()).filter(c =>
+    c.isGroup && (!c.name || c.name === normalizePhone(c.id) || /^\d+$/.test(c.name))
+  )
+  if (groups.length === 0) return
+  console.log(`[WhatsApp] 🔄 Buscando nomes de ${groups.length} grupos...`)
+  let updated = 0
+  for (const group of groups.slice(0, 200)) {
+    try {
+      const metadata = await sock.groupMetadata(group.id)
+      if (metadata?.subject) {
+        chatsStore.set(group.id, { ...group, name: metadata.subject })
+        updated++
+      }
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 150)) // evitar rate limiting
+  }
+  if (updated > 0) {
+    console.log(`[WhatsApp] ✅ ${updated} nomes de grupos atualizados`)
+    saveChatsStore()
+  }
+}
+
 // ── Conexão Baileys ──────────────────────────────────────────────────────────
 
 async function start() {
@@ -525,16 +551,25 @@ async function start() {
         if (!contact.id || contact.id === 'status@broadcast') continue
         const phone = normalizePhone(contact.id)
         if (phone.length < 8) continue
+        const name = contact.name || contact.notify || contact.verifiedName
         const existing = phonebookStore.get(phone) || {}
         phonebookStore.set(phone, {
           ...existing,
           phone,
-          name: contact.name || contact.notify || existing.name || phone,
+          name: name || existing.name || phone,
           chatId: contact.id,
         })
+        // Atualizar chatsStore com o nome do contato
+        if (name && chatsStore.has(contact.id)) {
+          const existingChat = chatsStore.get(contact.id)
+          if (!existingChat.name || existingChat.name === phone) {
+            chatsStore.set(contact.id, { ...existingChat, name })
+          }
+        }
       }
       console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados.`)
       savePhonebookStore()
+      saveChatsStore()
     })
 
     sock.ev.on('contacts.upsert', (contacts) => {
@@ -699,6 +734,9 @@ async function start() {
         state.error = null
         emitState()
         console.log('[WhatsApp] ✅ Conectado com sucesso!')
+
+        // Buscar nomes dos grupos após 5s (deixa os chats.set/contacts.set carregarem primeiro)
+        setTimeout(() => loadGroupNames().catch(() => {}), 5000)
 
         // Sincronizar histórico de todas as conversas
         console.log('[WhatsApp] 🔄 Sincronizando histórico de mensagens...')
