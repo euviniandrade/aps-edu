@@ -182,7 +182,7 @@ async function storeMessage(chatId, message) {
   // Evita duplicatas por id
   if (message.id && msgs.some(m => m.id === message.id)) return
   msgs.push(message)
-  if (msgs.length > 200) msgs.shift()
+  if (msgs.length > 1000) msgs.shift()
   saveMessagesStore()
 
   // Salvar no banco de dados também
@@ -981,7 +981,7 @@ async function sendMessage({ phone, chatId, text }) {
 
 // ── Listagem ─────────────────────────────────────────────────────────────────
 
-async function listChats(limit = 500) {
+async function listChats(limit = 2000) {
   try {
     // Buscar do banco com nomes corretos
     const conversations = await prisma.conversation.findMany({

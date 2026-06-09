@@ -277,7 +277,7 @@ async function checkStatus(){try{const r=await fetch('/api/whatsapp/status',{hea
 async function loadLabels(){try{const r=await fetch('/api/whatsapp/labels',{headers:H});labels=await r.json()}catch{labels=[]}}
 
 async function loadChats(){
-  try{const r=await fetch('/api/whatsapp/chats?limit=500',{headers:H});if(!r.ok)throw new Error('HTTP '+r.status)
+  try{const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H});if(!r.ok)throw new Error('HTTP '+r.status)
     const d=await r.json();chats=Array.isArray(d)?d:(d.chats||[])
     document.getElementById('cc').textContent=chats.length+' conversas';render()
   }catch(e){document.getElementById('clist').innerHTML='<div class="no-r">❌ '+esc(e.message)+'</div>'}
@@ -743,7 +743,7 @@ function connectSSE(){
 
   // Carregar chats
   try{
-    const r=await fetch('/api/whatsapp/chats?limit=500',{headers:H})
+    const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H})
     if(!r.ok)throw new Error('HTTP '+r.status)
     const d=await r.json()
     chats=Array.isArray(d)?d:(d.chats||[])
