@@ -55,6 +55,27 @@ fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units'
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
 
+// Servir CRM HTML
+fastify.get('/crm', async (request, reply) => {
+  const crmPath = path.join(__dirname, 'crm.html')
+  const crmHtml = fs.readFileSync(crmPath, 'utf-8')
+
+  // Se temos QR code, injeta diretamente no HTML
+  const state = whatsappService.getState()
+  let html = crmHtml
+
+  if (state.qrDataUrl) {
+    // Substitui a src vazia pela data URL do QR code
+    html = html.replace(
+      'id="qrImg" src=""',
+      `id="qrImg" src="${state.qrDataUrl}"`
+    )
+  }
+
+  reply.type('text/html')
+  return html
+})
+
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
 

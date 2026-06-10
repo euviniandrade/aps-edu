@@ -1528,8 +1528,11 @@ function connectSSE(){
       document.getElementById('connDot').className='conn-dot'+(ok?' ok':'')
       if(ok){
         document.getElementById('qrModal').classList.remove('on')
-        // Se acabou de reconectar → recarrega chats imediatamente
-        if(!_wasConnected){loadChats();_wasConnected=true}
+        // Reconectou: aguarda 4s para o chats.set do Baileys popular, depois carrega
+        if(!_wasConnected){
+          _wasConnected=true
+          setTimeout(()=>loadChats(),4000)
+        }
       }else{
         _wasConnected=false
         if(s.qrDataUrl){_setQR(s.qrDataUrl);document.getElementById('qrModal').classList.add('on')}
@@ -1537,6 +1540,8 @@ function connectSSE(){
       }
     }catch{}
   })
+  // Chats prontos no backend → recarrega lista imediatamente
+  sseConn.addEventListener('chats.update',()=>{try{loadChats()}catch{}})
   sseConn.onerror=()=>setTimeout(connectSSE,3000)
 }
 

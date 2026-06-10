@@ -681,6 +681,8 @@ async function start() {
       if (updated > 0) {
         console.log(`[WhatsApp] ${updated} chats sincronizados do WhatsApp.`)
         saveChatsStore()
+        // Notifica o frontend que os chats estão prontos
+        emitter.emit('chats.update', { count: updated })
       }
     })
 
