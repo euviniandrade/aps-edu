@@ -866,13 +866,6 @@ async function start() {
       for (const message of messages) {
         const chatId = message.key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
-        // DEBUG temporário — remove após confirmar edit/delete
-        const dbgProto = message.message?.protocolMessage
-        const dbgEdited = message.message?.editedMessage
-        if (dbgProto || dbgEdited) {
-          console.log(`[WA-DBG upsert] type=${type} proto.type=${dbgProto?.type} edited=${!!dbgEdited} key=${message.key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)}`)
-        }
-
         // ── Detectar mensagem APAGADA (REVOKE type=0) ou EDITADA (type=14) ──
         const proto = message.message?.protocolMessage
         if (proto) {
@@ -1085,38 +1078,43 @@ async function start() {
       for (const { key, update } of updates) {
         const chatId = key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
-        // DEBUG temporário
-        const upProto = update.message?.protocolMessage
-        if (update.message === null || upProto) {
-          console.log(`[WA-DBG update] msgNull=${update.message===null} proto.type=${upProto?.type} key=${key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)}`)
-        }
 
         const msgs = messageHistory.get(chatId)
         if (!msgs) continue
 
-        // Verificar protocolMessage no update (delete/edit)
         const proto = update.message?.protocolMessage
 
-        // DELETE: message é null (apagada) ou proto.type === 0
-        if (update.message === null || (proto?.type === 0 && proto?.key?.id)) {
-          const targetId = proto?.key?.id || key.id
+        // DELETE: message === null
+        if (update.message === null) {
+          const idx = msgs.findIndex(m => m.id === key.id)
+          if (idx >= 0 && !msgs[idx].deleted) {
+            msgs[idx] = { ...msgs[idx], deleted: true, originalText: msgs[idx].text, text: '' }
+            saveMessagesStore()
+            emitter.emit('message.update', { chatId, msgId: key.id, deleted: true })
+            console.log(`[WhatsApp] 🗑️ Mensagem apagada: ${key.id}`)
+          }
+          continue
+        }
+
+        // DELETE via protocolMessage type=0
+        if (proto?.type === 0 && proto?.key?.id) {
+          const targetId = proto.key.id
           const idx = msgs.findIndex(m => m.id === targetId)
           if (idx >= 0 && !msgs[idx].deleted) {
             msgs[idx] = { ...msgs[idx], deleted: true, originalText: msgs[idx].text, text: '' }
             saveMessagesStore()
             emitter.emit('message.update', { chatId, msgId: targetId, deleted: true })
-            console.log(`[WhatsApp] 🗑️ Mensagem apagada (update): ${targetId}`)
+            console.log(`[WhatsApp] 🗑️ Mensagem apagada (proto): ${targetId}`)
           }
           continue
         }
 
-        // EDIT: proto.type === 14
+        // EDIT via protocolMessage type=14
         if (proto?.type === 14 && proto?.key?.id) {
           const targetId = proto.key.id
           const newText = proto.editedMessage?.conversation
             || proto.editedMessage?.extendedTextMessage?.text
-            || proto.editedMessage?.imageMessage?.caption
-            || ''
+            || proto.editedMessage?.imageMessage?.caption || ''
           if (newText) {
             const idx = msgs.findIndex(m => m.id === targetId)
             if (idx >= 0) {
@@ -1124,10 +1122,29 @@ async function start() {
               msgs[idx] = { ...msgs[idx], edited: true, originalText, text: newText }
               saveMessagesStore()
               emitter.emit('message.update', { chatId, msgId: targetId, edited: true, text: newText, originalText })
-              console.log(`[WhatsApp] ✏️ Mensagem editada (update): ${targetId}`)
+              console.log(`[WhatsApp] ✏️ Mensagem editada (proto14): ${targetId}`)
             }
           }
           continue
+        }
+
+        // EDIT via update.message direto (conteúdo novo sem protocolMessage)
+        // O Baileys envia o texto editado diretamente em update.message
+        if (update.message && !proto) {
+          const newText = update.message.conversation
+            || update.message.extendedTextMessage?.text
+            || update.message.imageMessage?.caption
+            || update.message.videoMessage?.caption || ''
+          if (newText) {
+            const idx = msgs.findIndex(m => m.id === key.id)
+            if (idx >= 0 && msgs[idx].text !== newText) {
+              const originalText = msgs[idx].originalText || msgs[idx].text
+              msgs[idx] = { ...msgs[idx], edited: true, originalText, text: newText }
+              saveMessagesStore()
+              emitter.emit('message.update', { chatId, msgId: key.id, edited: true, text: newText, originalText })
+              console.log(`[WhatsApp] ✏️ Mensagem editada: ${key.id}`)
+            }
+          }
         }
       }
     })
