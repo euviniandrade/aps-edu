@@ -1549,16 +1549,12 @@ function connectSSE(){
 ;(async()=>{
   try{await Promise.all([loadLabelsData(),loadQR()])}catch{}
   try{await checkConn()}catch{}
-  // Tenta carregar chats — se WhatsApp ainda não reconectou, retenta a cada 3s por até 30s
-  let loaded=false
-  for(let i=0;i<10;i++){
-    try{
-      await loadChats()
-      if(chats.length>0){loaded=true;break}
-    }catch{}
-    if(i<9)await new Promise(r=>setTimeout(r,3000))
+  // Tenta carregar uma vez imediatamente
+  try{await loadChats()}catch{}
+  // Se não carregou, mostra botão imediatamente — SSE e setInterval resolvem quando pronto
+  if(chats.length===0){
+    document.getElementById('chatList').innerHTML='<div class="no-item">⏳ Aguardando WhatsApp...<br><button class="btn" style="margin-top:8px;font-size:11px" onclick="loadChats()">🔄 Tentar agora</button></div>'
   }
-  if(!loaded){document.getElementById('chatList').innerHTML='<div class="no-item">⚠️ WhatsApp reconectando... <button class="btn" style="margin-top:8px;font-size:11px" onclick="loadChats()">🔄 Tentar agora</button></div>'}
   connectSSE()
   setInterval(checkConn,10000)
   setInterval(loadChats,20000)
