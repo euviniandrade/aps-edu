@@ -223,20 +223,40 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .kanban-wrap{flex:1;overflow-x:auto;overflow-y:hidden;padding:16px;display:flex;gap:14px;align-items:flex-start}
 .kanban-wrap::-webkit-scrollbar{height:5px}
 .kanban-wrap::-webkit-scrollbar-thumb{background:var(--br);border-radius:3px}
-.k-col{background:var(--sb);border-radius:12px;width:228px;flex-shrink:0;display:flex;flex-direction:column;max-height:calc(100vh - 96px)}
-.k-hd{padding:11px 14px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between}
-.k-hd-title{font-size:12px;font-weight:700}
-.k-hd-cnt{background:rgba(255,255,255,.15);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700}
+.k-col{background:var(--sb);border-radius:12px;width:228px;flex-shrink:0;display:flex;flex-direction:column;max-height:calc(100vh - 96px);transition:opacity .15s}
+.k-col.col-dragging{opacity:.4}
+.k-col.col-drag-over{outline:2px dashed var(--p);background:rgba(91,87,209,.07)}
+.k-hd{padding:9px 10px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;cursor:grab;user-select:none}
+.k-hd:active{cursor:grabbing}
+.k-hd-drag{font-size:12px;color:rgba(255,255,255,.3);flex-shrink:0}
+.k-hd-title{font-size:12px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-hd-cnt{background:rgba(255,255,255,.15);border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700;flex-shrink:0}
+.k-hd-del{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1}
+.k-hd-del:hover{color:#f87171}
 .k-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px;min-height:80px}
 .k-body::-webkit-scrollbar{width:3px}
 .k-body::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
-.k-card{background:var(--sh);border-radius:8px;padding:10px 12px;cursor:pointer;border:1px solid transparent}
+.k-card{background:var(--sh);border-radius:8px;padding:10px 12px;cursor:grab;border:1px solid transparent;user-select:none}
 .k-card:hover{border-color:var(--p);background:var(--sa)}
-.k-card.drag{opacity:.4}
+.k-card.drag{opacity:.35;transform:rotate(1deg)}
+.k-card.card-over{border-color:var(--p);margin-top:4px}
 .k-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k-msg{font-size:11px;color:var(--tm);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k-time{font-size:10px;color:var(--tm);margin-top:5px}
-.k-col.drag-over{background:rgba(91,87,209,.08);outline:1px dashed var(--p)}
+.k-col.drag-over .k-body{background:rgba(91,87,209,.06);border-radius:8px}
+/* Botão "Nova coluna" */
+.k-add-col{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.04);border:1.5px dashed var(--br);color:var(--tm);font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-start;margin-top:2px;transition:.12s}
+.k-add-col:hover{background:rgba(91,87,209,.12);border-color:var(--p);color:var(--p)}
+/* Modal nova coluna */
+.k-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center}
+.k-modal.on{display:flex}
+.k-modal-box{background:var(--sb);border-radius:14px;padding:22px;width:300px;border:1px solid var(--br);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.k-modal-box h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.k-modal-box input{width:100%;background:var(--ib);border:1px solid var(--br);border-radius:8px;padding:9px 12px;color:var(--tx);font-size:13px;outline:none;margin-bottom:10px}
+.k-color-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.k-color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.1s}
+.k-color-dot.sel{border-color:#fff;transform:scale(1.15)}
+.k-modal-btns{display:flex;gap:8px;justify-content:flex-end}
 
 /* ════════════════════════
    PAGE: DASHBOARD
@@ -487,6 +507,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <button class="btn" onclick="loadKanban()">🔄 Atualizar</button>
   </div>
   <div class="kanban-wrap" id="kanbanWrap"><div class="no-item">⏳ Carregando...</div></div>
+</div>
+
+<!-- Modal Nova Coluna -->
+<div class="k-modal" id="kModal" onclick="if(event.target===this)closeKModal()">
+  <div class="k-modal-box">
+    <h3>➕ Nova coluna temporária</h3>
+    <input id="kColName" placeholder="Nome da coluna (ex: Aniversários)" maxlength="30" onkeydown="if(event.key==='Enter')createTempCol()">
+    <div class="k-color-row" id="kColorRow"></div>
+    <div class="k-modal-btns">
+      <button class="btn" style="background:rgba(255,255,255,.06);color:var(--tm)" onclick="closeKModal()">Cancelar</button>
+      <button class="btn p" onclick="createTempCol()">✅ Criar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ PAGE: DASHBOARD ═══ -->
@@ -1184,18 +1217,194 @@ function togglePause(){massaPaused=!massaPaused;const b=document.getElementById(
 function cancelMassa(){if(confirm('Cancelar?')){massaCancelled=true}}
 
 // ── KANBAN ──
-const STAGES=[{id:'aguardando',label:'⏳ Aguardando',color:'#8696a0'},{id:'urgentes',label:'🔴 Urgentes',color:'#f87171'},{id:'ministerio',label:'✝️ Ministério Jovem',color:'#a78bfa'},{id:'marketing',label:'📣 Marketing',color:'#4facfe'},{id:'respondidos',label:'✅ Respondidos',color:'#43e97b'}]
+const BASE_STAGES=[
+  {id:'aguardando',label:'⏳ Aguardando',color:'#8696a0',temp:false},
+  {id:'urgentes',label:'🔴 Urgentes',color:'#f87171',temp:false},
+  {id:'ministerio',label:'✝️ Ministério Jovem',color:'#a78bfa',temp:false},
+  {id:'marketing',label:'📣 Marketing',color:'#4facfe',temp:false},
+  {id:'respondidos',label:'✅ Respondidos',color:'#43e97b',temp:false}
+]
+const TEMP_COLORS=['#f59e0b','#ec4899','#06b6d4','#84cc16','#f97316','#8b5cf6','#14b8a6','#ef4444']
+let STAGES=[...BASE_STAGES]
+let kanbData={} // dados vindos do server
+let kDrag=null,kDragIsCol=false,colDragId=null
+
+function loadTempCols(){
+  try{const t=JSON.parse(localStorage.getItem('kTempCols')||'[]');STAGES=[...BASE_STAGES,...t]}catch{STAGES=[...BASE_STAGES]}
+}
+function saveTempCols(){
+  localStorage.setItem('kTempCols',JSON.stringify(STAGES.filter(s=>s.temp)))
+}
+function saveColOrder(){
+  localStorage.setItem('kColOrder',JSON.stringify(STAGES.map(s=>s.id)))
+}
+function loadColOrder(){
+  try{
+    const order=JSON.parse(localStorage.getItem('kColOrder')||'null')
+    if(!order)return
+    const map=Object.fromEntries(STAGES.map(s=>[s.id,s]))
+    const sorted=order.map(id=>map[id]).filter(Boolean)
+    // Adiciona qualquer stage não salvo no final
+    STAGES.forEach(s=>{if(!sorted.find(x=>x.id===s.id))sorted.push(s)})
+    STAGES=sorted
+  }catch{}
+}
+
 async function loadKanban(){
+  loadTempCols();loadColOrder()
   const wrap=document.getElementById('kanbanWrap');if(!wrap)return
   wrap.innerHTML='<div class="no-item">⏳ Carregando...</div>'
   try{
-    const r=await fetch('/api/whatsapp/kanban',{headers:H});const data=await r.json()
-    wrap.innerHTML=STAGES.map(s=>`<div class="k-col" id="kcol-${s.id}"><div class="k-hd" style="background:${s.color}22;color:${s.color}"><span class="k-hd-title">${s.label}</span><span class="k-hd-cnt">${(data[s.id]||[]).length}</span></div><div class="k-body" id="kb-${s.id}">${(data[s.id]||[]).map(c=>kCard(c)).join('')}</div></div>`).join('')
-    document.querySelectorAll('.k-col').forEach(col=>{col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over')});col.addEventListener('dragleave',()=>col.classList.remove('drag-over'));col.addEventListener('drop',e=>kDrop(e,col.id.replace('kcol-','')))})
+    const r=await fetch('/api/whatsapp/kanban',{headers:H})
+    kanbData=await r.json()
+    // Adicionar cards de colunas temporárias (ficam em localStorage)
+    STAGES.filter(s=>s.temp).forEach(s=>{if(!kanbData[s.id])kanbData[s.id]=[]})
+    renderKanban()
   }catch(e){wrap.innerHTML=`<div class="no-item">❌ ${esc(e.message)}</div>`}
 }
-function kCard(c){return`<div class="k-card" draggable="true" ondragstart="kDrag='${c.phone||c.id}';this.classList.add('drag')" ondragend="this.classList.remove('drag')" onclick="go('wa');setTimeout(()=>openChat('${c.id||c.chatId}','${esc(c.name||c.phone||'')}',false),100)"><div class="k-name">${esc(c.name||c.phone||'')}</div><div class="k-msg">${esc(c.lastMessage||'')}</div><div class="k-time">${fmtT(c.timestamp)}</div></div>`}
-async function kDrop(e,stage){e.preventDefault();document.querySelectorAll('.k-col').forEach(c=>c.classList.remove('drag-over'));if(!kDrag)return;try{await fetch(`/api/whatsapp/crm/${encodeURIComponent(kDrag+'@s.whatsapp.net')}`,{method:'POST',headers:HJ,body:JSON.stringify({stage})});loadKanban();toast('✅ Movido!')}catch{toast('Erro','err')};kDrag=null}
+
+function renderKanban(){
+  const wrap=document.getElementById('kanbanWrap');if(!wrap)return
+  wrap.innerHTML=STAGES.map(s=>{
+    const cards=(kanbData[s.id]||[])
+    const delBtn=s.temp?`<button class="k-hd-del" title="Remover coluna" onclick="removeTempCol('${s.id}',event)">✕</button>`:''
+    return`<div class="k-col" id="kcol-${s.id}" draggable="true"
+      ondragstart="colDragStart(event,'${s.id}')"
+      ondragend="colDragEnd(event)"
+      ondragover="colOrCardDragOver(event,'${s.id}')"
+      ondragleave="colDragLeave(event,'${s.id}')"
+      ondrop="colOrCardDrop(event,'${s.id}')">
+      <div class="k-hd" style="background:${s.color}22;color:${s.color}">
+        <span class="k-hd-drag">⠿</span>
+        <span class="k-hd-title">${s.label}</span>
+        <span class="k-hd-cnt">${cards.length}</span>
+        ${delBtn}
+      </div>
+      <div class="k-body" id="kb-${s.id}">${cards.map(c=>kCard(c,s.id)).join('')}</div>
+    </div>`
+  }).join('')+`<button class="k-add-col" title="Nova coluna" onclick="openKModal()">＋</button>`
+}
+
+function kCard(c,stageId){
+  const ph=c.phone||c.id||''
+  const nm=esc(c.name||c.phone||'')
+  const cid=esc(c.id||c.chatId||ph+'@s.whatsapp.net')
+  return`<div class="k-card" draggable="true"
+    ondragstart="cardDragStart(event,'${ph}','${stageId}')"
+    ondragend="cardDragEnd(event)"
+    ondragover="cardDragOver(event)"
+    ondragleave="cardDragLeave(event)"
+    ondrop="cardDrop(event,'${stageId}')"
+    onclick="go('wa');setTimeout(()=>openChat('${cid}','${nm}',false),100)">
+    <div class="k-name">${nm}</div>
+    <div class="k-msg">${esc(c.lastMessage||'')}</div>
+    <div class="k-time">${fmtT(c.timestamp)}</div>
+  </div>`
+}
+
+// ── Drag de CARDS ──
+function cardDragStart(e,phone,fromStage){
+  e.stopPropagation()
+  kDrag={phone,fromStage};kDragIsCol=false
+  e.currentTarget.classList.add('drag')
+  e.dataTransfer.effectAllowed='move'
+}
+function cardDragEnd(e){e.currentTarget.classList.remove('drag');kDrag=null}
+function cardDragOver(e){e.preventDefault();e.stopPropagation();e.currentTarget.classList.add('card-over')}
+function cardDragLeave(e){e.currentTarget.classList.remove('card-over')}
+async function cardDrop(e,toStage){
+  e.preventDefault();e.stopPropagation()
+  e.currentTarget.classList.remove('card-over')
+  if(!kDrag||kDragIsCol)return
+  const {phone,fromStage}=kDrag;kDrag=null
+  if(fromStage===toStage)return
+  // Mover card nos dados locais
+  const idx=(kanbData[fromStage]||[]).findIndex(c=>(c.phone||c.id)===phone)
+  if(idx===-1)return
+  const card=kanbData[fromStage].splice(idx,1)[0]
+  if(!kanbData[toStage])kanbData[toStage]=[]
+  kanbData[toStage].unshift(card)
+  renderKanban()
+  // Salvar no servidor (só para colunas não temporárias)
+  try{await fetch(`/api/whatsapp/crm/${encodeURIComponent(phone+'@s.whatsapp.net')}`,{method:'POST',headers:HJ,body:JSON.stringify({stage:toStage})});toast('✅ Movido!')}catch{toast('Movido localmente','ok')}
+}
+
+// ── Drag de COLUNAS ──
+function colDragStart(e,colId){
+  if(e.target.classList.contains('k-hd-del'))return
+  // Só inicia drag de coluna se clicar no header (não num card)
+  if(e.target.closest('.k-card')){return}
+  colDragId=colId;kDragIsCol=true
+  e.dataTransfer.effectAllowed='move'
+  setTimeout(()=>e.currentTarget.classList.add('col-dragging'),0)
+}
+function colDragEnd(e){
+  e.currentTarget.classList.remove('col-dragging','col-drag-over')
+  document.querySelectorAll('.k-col').forEach(c=>c.classList.remove('col-drag-over'))
+  colDragId=null;kDragIsCol=false
+}
+function colOrCardDragOver(e,colId){
+  e.preventDefault()
+  if(kDragIsCol&&colDragId&&colDragId!==colId){
+    document.querySelectorAll('.k-col').forEach(c=>c.classList.remove('col-drag-over'))
+    document.getElementById('kcol-'+colId)?.classList.add('col-drag-over')
+  }
+}
+function colDragLeave(e,colId){
+  if(kDragIsCol)document.getElementById('kcol-'+colId)?.classList.remove('col-drag-over')
+}
+function colOrCardDrop(e,colId){
+  e.preventDefault()
+  document.querySelectorAll('.k-col').forEach(c=>c.classList.remove('col-drag-over'))
+  if(kDragIsCol&&colDragId&&colDragId!==colId){
+    // Reordenar colunas
+    const fromIdx=STAGES.findIndex(s=>s.id===colDragId)
+    const toIdx=STAGES.findIndex(s=>s.id===colId)
+    if(fromIdx===-1||toIdx===-1)return
+    const [moved]=STAGES.splice(fromIdx,1);STAGES.splice(toIdx,0,moved)
+    saveColOrder();renderKanban()
+    colDragId=null;kDragIsCol=false
+    return
+  }
+  // Senão: drop de card na coluna (área fora de um card)
+  if(!kDragIsCol&&kDrag)cardDrop(e,colId)
+}
+
+// ── Colunas temporárias ──
+let kSelColor=TEMP_COLORS[0]
+function openKModal(){
+  const inp=document.getElementById('kColName');if(inp)inp.value=''
+  kSelColor=TEMP_COLORS[0]
+  const row=document.getElementById('kColorRow')
+  if(row)row.innerHTML=TEMP_COLORS.map((c,i)=>`<div class="k-color-dot${i===0?' sel':''}" style="background:${c}" onclick="pickKColor('${c}',this)"></div>`).join('')
+  document.getElementById('kModal')?.classList.add('on')
+  setTimeout(()=>document.getElementById('kColName')?.focus(),80)
+}
+function closeKModal(){document.getElementById('kModal')?.classList.remove('on')}
+function pickKColor(c,el){kSelColor=c;document.querySelectorAll('.k-color-dot').forEach(d=>d.classList.remove('sel'));el.classList.add('sel')}
+function createTempCol(){
+  const name=(document.getElementById('kColName')?.value||'').trim()
+  if(!name){toast('Digite um nome','err');return}
+  const id='tmp_'+Date.now()
+  STAGES.push({id,label:name,color:kSelColor,temp:true})
+  kanbData[id]=[]
+  saveTempCols();saveColOrder()
+  closeKModal();renderKanban()
+  toast('✅ Coluna "'+name+'" criada!')
+}
+function removeTempCol(id,e){
+  e.stopPropagation()
+  if(!confirm('Remover coluna? Os contatos voltam para Aguardando.'))return
+  const idx=STAGES.findIndex(s=>s.id===id);if(idx===-1)return
+  // Mover cards de volta para aguardando
+  const cards=kanbData[id]||[]
+  if(!kanbData['aguardando'])kanbData['aguardando']=[]
+  kanbData['aguardando'].push(...cards)
+  delete kanbData[id]
+  STAGES.splice(idx,1)
+  saveTempCols();saveColOrder();renderKanban()
+  toast('Coluna removida')
+}
 
 // ── DASHBOARD ──
 async function loadDash(){
