@@ -1084,6 +1084,9 @@ async function start() {
 
         const proto = update.message?.protocolMessage
 
+        // DEBUG — log completo para entender estrutura da edição
+        console.log(`[WA-DBG] key=${key?.id?.slice(0,12)} msgNull=${update.message===null} proto=${JSON.stringify(proto)?.slice(0,120)} msgKeys=${update.message?Object.keys(update.message).join(','):''}`)
+
         // DELETE: message === null
         if (update.message === null) {
           const idx = msgs.findIndex(m => m.id === key.id)
