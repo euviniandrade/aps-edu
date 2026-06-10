@@ -1128,16 +1128,16 @@ async function start() {
           continue
         }
 
-        // EDIT via update.message direto (conteúdo novo sem protocolMessage)
-        // O Baileys envia o texto editado diretamente em update.message
-        if (update.message && !proto) {
+        // EDIT via update.message direto (proto existe mas sem type válido, ou sem proto)
+        // Debug confirmou: edição chega com update.message contendo texto, proto.type=undefined
+        if (update.message && (proto?.type === undefined || proto?.type === null)) {
           const newText = update.message.conversation
             || update.message.extendedTextMessage?.text
             || update.message.imageMessage?.caption
             || update.message.videoMessage?.caption || ''
           if (newText) {
             const idx = msgs.findIndex(m => m.id === key.id)
-            if (idx >= 0 && msgs[idx].text !== newText) {
+            if (idx >= 0 && !msgs[idx].deleted && msgs[idx].text !== newText) {
               const originalText = msgs[idx].originalText || msgs[idx].text
               msgs[idx] = { ...msgs[idx], edited: true, originalText, text: newText }
               saveMessagesStore()
