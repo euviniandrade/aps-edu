@@ -96,6 +96,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .bub-text code{background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;font-family:monospace;font-size:12px}
 .bub-text a{color:var(--bl)}
 .bub-foot{font-size:10px;color:var(--tm);display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px}
+.msg-deleted{opacity:0.55;font-style:italic}
+.bubble.deleted{opacity:0.7}
+.msg-edited-badge{font-size:10px;opacity:0.6}
+.msg-edited-orig{font-size:11px;margin-top:3px;opacity:0.7}
 .msg-img{max-width:260px;max-height:280px;border-radius:6px;display:block;cursor:pointer;margin-bottom:3px}
 .msg-video{max-width:260px;border-radius:6px;display:block;margin-bottom:3px}
 /* Player de áudio customizado */
@@ -893,9 +897,19 @@ async function loadMsgs(){
         const [lat,lng]=(m.text||'').split(',')
         content+=`<a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" style="color:var(--bl);font-size:12px">📍 Ver localização</a>`
       }
-      // Text
+      // Mensagem apagada
+      if(m.deleted){content='<div class="bub-text msg-deleted">🚫 <em>Mensagem apagada</em></div>';html+=`<div class="msg-row ${isOut?'out':'in'}"><div style="width:0"></div><div class="bubble ${isOut?'out':'in'} deleted">${content}<div class="bub-foot">${fmtH(m.at)}</div></div></div>`;continue}
+      // Text (com indicador de edição)
       const txt=m.text||''
-      if(txt&&!['document','vcard','multi_vcard','location'].includes(m.type))content+=`<div class="bub-text">${fmtWA(txt)}</div>`
+      if(txt&&!['document','vcard','multi_vcard','location'].includes(m.type)){
+        if(m.edited&&m.originalText&&m.originalText!==txt){
+          content+=`<div class="bub-text">${fmtWA(txt)}<div class="msg-edited-orig">✏️ <span style="text-decoration:line-through;opacity:0.55">${fmtWA(m.originalText)}</span></div></div>`
+        }else if(m.edited){
+          content+=`<div class="bub-text">${fmtWA(txt)} <span class="msg-edited-badge">✏️</span></div>`
+        }else{
+          content+=`<div class="bub-text">${fmtWA(txt)}</div>`
+        }
+      }
       if(!content.trim())continue
       content+=`<div class="bub-foot">${fmtH(m.at)}${isOut?' '+ackIco(m.ack):''}</div>`
       html+=`<div class="msg-row ${isOut?'out':'in'}">
@@ -1543,6 +1557,8 @@ function connectSSE(){
   })
   // Chats prontos no backend → recarrega lista imediatamente
   sseConn.addEventListener('chats.update',()=>{try{loadChats()}catch{}})
+  // Mensagem editada ou apagada → recarrega mensagens se for o chat aberto
+  sseConn.addEventListener('message.update',e=>{try{const d=JSON.parse(e.data);if(d.chatId===curId&&innerTab==='msgs')loadMsgs()}catch{}})
   sseConn.onerror=()=>setTimeout(connectSSE,3000)
 }
 

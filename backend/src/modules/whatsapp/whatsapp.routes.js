@@ -130,10 +130,12 @@ module.exports = async function (fastify) {
     const onMessage = (data) => send('message', data)
     const onState = (data) => send('state', data)
     const onChatsUpdate = (data) => send('chats.update', data)
+    const onMessageUpdate = (data) => send('message.update', data)
 
     whatsappService.emitter.on('message', onMessage)
     whatsappService.emitter.on('state', onState)
     whatsappService.emitter.on('chats.update', onChatsUpdate)
+    whatsappService.emitter.on('message.update', onMessageUpdate)
 
     const keepalive = setInterval(() => {
       try { raw.write(': keepalive\n\n') } catch {}
@@ -148,6 +150,7 @@ module.exports = async function (fastify) {
     whatsappService.emitter.off('message', onMessage)
     whatsappService.emitter.off('state', onState)
     whatsappService.emitter.off('chats.update', onChatsUpdate)
+    whatsappService.emitter.off('message.update', onMessageUpdate)
   })
 
   // ─────────────────────────────────────────────────────────────────

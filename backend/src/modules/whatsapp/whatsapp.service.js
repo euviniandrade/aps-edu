@@ -867,6 +867,44 @@ async function start() {
         const chatId = message.key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
 
+        // ── Detectar mensagem APAGADA (REVOKE) ─────────────────────────────
+        const proto = message.message?.protocolMessage
+        if (proto?.type === 0 && proto?.key?.id) {
+          const targetId = proto.key.id
+          const targetChat = proto.key.remoteJid || chatId
+          const msgs = messageHistory.get(targetChat)
+          if (msgs) {
+            const idx = msgs.findIndex(m => m.id === targetId)
+            if (idx >= 0) {
+              msgs[idx] = { ...msgs[idx], deleted: true, originalText: msgs[idx].text, text: '' }
+              saveMessagesStore()
+              emitter.emit('message.update', { chatId: targetChat, msgId: targetId, deleted: true })
+            }
+          }
+          continue
+        }
+
+        // ── Detectar mensagem EDITADA ───────────────────────────────────────
+        const edited = message.message?.editedMessage || message.message?.protocolMessage?.editedMessage
+        const editedKey = edited?.message?.key || edited?.key
+        const editedNewText = edited?.message?.message
+          ? (edited.message.message.conversation || edited.message.message.extendedTextMessage?.text || '')
+          : ''
+        if (editedKey?.id && editedNewText) {
+          const targetId = editedKey.id
+          const msgs = messageHistory.get(chatId)
+          if (msgs) {
+            const idx = msgs.findIndex(m => m.id === targetId)
+            if (idx >= 0) {
+              const originalText = msgs[idx].originalText || msgs[idx].text
+              msgs[idx] = { ...msgs[idx], edited: true, originalText, text: editedNewText }
+              saveMessagesStore()
+              emitter.emit('message.update', { chatId, msgId: targetId, edited: true, text: editedNewText, originalText })
+            }
+          }
+          continue
+        }
+
         const isGroup = chatId.endsWith('@g.us')
         const fromMe = message.key.fromMe === true
         const text = extractText(message)
