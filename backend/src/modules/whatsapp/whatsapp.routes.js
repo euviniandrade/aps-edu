@@ -406,6 +406,16 @@ module.exports = async function (fastify) {
     }
   })
 
+  // ── LIMPAR HISTÓRICO DE CHAT (força re-sync) ─────────
+  fastify.delete('/messages/:chatId', { preHandler: [apiKeyAuth] }, async (request, reply) => {
+    try {
+      const chatId = decodeURIComponent(request.params.chatId)
+      return whatsappService.clearChatHistory(chatId)
+    } catch (e) {
+      return reply.code(e.statusCode || 500).send({ error: e.message })
+    }
+  })
+
   // ── AVATARES ────────────────────────────────────────
   fastify.get('/avatar', async (request) => {
     try {

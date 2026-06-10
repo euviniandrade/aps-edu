@@ -62,7 +62,16 @@ function bootstrapPersistence() {
   const messagesData = loadJsonFile(MESSAGES_STORE_PATH)
   if (messagesData && typeof messagesData === 'object') {
     for (const [k, v] of Object.entries(messagesData)) {
-      if (Array.isArray(v)) messageHistory.set(k, v)
+      if (!Array.isArray(v)) continue
+      // Deduplicar por ID ao carregar (evita duplicatas acumuladas no arquivo)
+      const seen = new Set()
+      const deduped = v.filter(m => {
+        if (!m.id) return true
+        if (seen.has(m.id)) return false
+        seen.add(m.id)
+        return true
+      })
+      messageHistory.set(k, deduped)
     }
     console.log(`[WhatsApp] Histórico de ${messageHistory.size} chats carregado do disco.`)
     // Resync: atualizar lastMessage/lastFromMe em chats que têm "..." ou vazio
@@ -993,6 +1002,7 @@ async function start() {
           id: message.key.id || `${Date.now()}`,
           chatId,
           name: fromMe ? 'Eu' : (chatName || pushName),
+          senderId: !fromMe && isGroup ? (message.key.participant || message.participant || null) : null,
           text: text || '',
           type: mediaType,
           mediaLabel: mediaType !== 'text' ? (
@@ -1735,5 +1745,13 @@ module.exports = {
   scheduleMessage,
   listScheduled,
   cancelScheduled,
+  clearChatHistory,
   emitter,
+}
+
+function clearChatHistory(chatId) {
+  if (!chatId) throw Object.assign(new Error('chatId obrigatório'), { statusCode: 400 })
+  messageHistory.delete(chatId)
+  saveMessagesStore()
+  return { ok: true }
 }

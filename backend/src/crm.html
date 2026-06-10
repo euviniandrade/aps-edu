@@ -872,9 +872,10 @@ async function loadMsgs(){
       if(ds!==lastDate){html+=`<div class="date-div">${ds}</div>`;lastDate=ds}
       const sName=isOut?'Você':(m.name||curName)
       const sBg=acol(isOut?'eu_self':sName)
-      // Avatar: só mostra em mensagens RECEBIDAS em grupos; em privado sem avatar
-      const showAv=!isOut&&curIsGroup
-      const sAv=showAv?(avCache[curId]&&avCache[curId]!=='x'?`<img src="${avCache[curId]}">`:(ini(sName))):'';
+      // Avatar: mostra em mensagens RECEBIDAS (tanto 1-a-1 quanto grupos)
+      const showAv=!isOut
+      const avId=curIsGroup?(m.senderId||curId):curId
+      const sAv=showAv?(avCache[avId]&&avCache[avId]!=='x'?`<img src="${avCache[avId]}">`:(ini(sName))):'';
       const murl=`/api/whatsapp/media?id=${encodeURIComponent(m.id||'')}&key=${K}`
       let content=''
       // Sender name for groups (incoming only)
