@@ -561,9 +561,8 @@ async function syncAllConversationHistory() {
 
 async function loadGroupNames() {
   if (!sock) return
-  const groups = Array.from(chatsStore.values()).filter(c =>
-    c.isGroup && (!c.name || c.name === normalizePhone(c.id) || /^\d+$/.test(c.name))
-  )
+  // Atualiza TODOS os grupos (não só sem nome) — garante que nomes renomeados sejam corrigidos
+  const groups = Array.from(chatsStore.values()).filter(c => c.isGroup)
   if (groups.length === 0) return
   console.log(`[WhatsApp] 🔄 Buscando nomes de ${groups.length} grupos...`)
   let updated = 0
@@ -823,6 +822,7 @@ async function start() {
         })
       }
       saveChatsStore()
+      emitter.emit('chats.update', { count: chats.length })
     })
 
     sock.ev.on('connection.update', async (update) => {
@@ -933,6 +933,16 @@ async function start() {
                 saveMessagesStore()
                 emitter.emit('message.update', { chatId: targetChat, msgId: targetId, deleted: true })
                 console.log(`[WhatsApp] 🗑️ Mensagem apagada: ${targetId} em ${targetChat}`)
+                // Atualizar preview do chat se era a última mensagem
+                const chatEntry = chatsStore.get(targetChat)
+                if (chatEntry) {
+                  const lastMsg = msgs[msgs.length - 1]
+                  if (lastMsg?.id === targetId || idx === msgs.length - 1) {
+                    chatsStore.set(targetChat, { ...chatEntry, lastMessage: '🚫 Mensagem apagada' })
+                    saveChatsStore()
+                    emitter.emit('chats.update', { count: 1 })
+                  }
+                }
               }
             }
             continue
@@ -1062,6 +1072,7 @@ async function start() {
 
         // Atualiza store de chats
         const existing = chatsStore.get(chatId) || {}
+        const isNewChat = !existing.id  // chat nunca visto antes
         chatsStore.set(chatId, {
           ...existing,
           id: chatId,
@@ -1075,6 +1086,8 @@ async function start() {
           lastAck: fromMe ? (message.status || 1) : null,
         })
         saveChatsStore()
+        // Chat novo: emite chats.update para o frontend recarregar a lista
+        if (isNewChat && isRealTime) emitter.emit('chats.update', { count: 1 })
 
         // Guardar mensagem bruta do Baileys para download de mídia sob demanda
         if (mediaType !== 'text' && message.key.id) {
@@ -1145,6 +1158,11 @@ async function start() {
             saveMessagesStore()
             emitter.emit('message.update', { chatId, msgId: key.id, deleted: true })
             console.log(`[WhatsApp] 🗑️ Mensagem apagada: ${key.id}`)
+            // Atualizar preview do chat
+            if (idx === msgs.length - 1) {
+              const chatEntry = chatsStore.get(chatId)
+              if (chatEntry) { chatsStore.set(chatId, { ...chatEntry, lastMessage: '🚫 Mensagem apagada' }); saveChatsStore(); emitter.emit('chats.update', { count: 1 }) }
+            }
           }
           continue
         }
@@ -1392,12 +1410,27 @@ async function sendMessage({ phone, chatId, text }) {
 async function listChats(limit = 2000) {
   // Sempre usa chatsStore como base (tem dados mais ricos: nomes, timestamps, lastMessage)
   // Enriquece com phonebook para nomes melhores
-  const memoryChats = Array.from(chatsStore.values())
+  const allChats = Array.from(chatsStore.values())
     .filter(c => c.id && c.id !== 'status@broadcast')
-    .map(c => ({
-      ...c,
-      name: phonebookStore.get(normalizePhone(c.id))?.name || c.name || normalizePhone(c.id),
-    }))
+    .map(c => {
+      const phone = normalizePhone(c.id)
+      const pbName = phonebookStore.get(phone)?.name
+      const resolvedName = pbName || (c.name && c.name !== '.' && c.name.trim() ? c.name : null) || phone
+      return { ...c, name: resolvedName }
+    })
+
+  // Deduplicar por número de telefone normalizado (mesmo contato pode ter @s.whatsapp.net e @lid)
+  const phoneMap = new Map()
+  for (const c of allChats) {
+    const phone = normalizePhone(c.id)
+    const existing = phoneMap.get(phone)
+    // Mantém o com timestamp mais recente; ou o @s.whatsapp.net se igual
+    if (!existing || (c.timestamp || 0) > (existing.timestamp || 0) || (c.id.includes('@s.whatsapp.net') && !existing.id.includes('@s.whatsapp.net'))) {
+      phoneMap.set(phone, c)
+    }
+  }
+
+  const memoryChats = Array.from(phoneMap.values())
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, Number(limit))
 
