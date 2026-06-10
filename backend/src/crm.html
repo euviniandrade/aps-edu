@@ -624,7 +624,8 @@ function renderList(){
     const name=c.name||c.id.replace(/@.*/,'')
     const bg=acol(name)
     const avEl=avCache[c.id]&&avCache[c.id]!=='x'?`<img src="${avCache[c.id]}">`:(c.isGroup?'👥':ini(name))
-    const prev=c.lastMessage?esc(String(c.lastMessage).replace(/\n/g,' ').slice(0,46)):'...'
+    const rawPrev=String(c.lastMessage||'').replace(/\n/g,' ').trim()
+    const prev=rawPrev?esc(rawPrev.slice(0,46)):'<span style="color:var(--tm);font-style:italic">...</span>'
     // lastFromMe pode vir como boolean, string, ou 0/1
     const isOut=c.lastFromMe===true||c.lastFromMe==='true'||c.lastFromMe===1
     // Unread só aparece se a última mensagem NÃO foi minha E tem unread > 0
@@ -1171,13 +1172,14 @@ function connectSSE(){
   sseConn.addEventListener('message',e=>{
     try{
       const msg=JSON.parse(e.data);if(!msg.chatId)return
-      const isOut=msg.fromMe===true||msg.fromMe==='true'
-      const preview=msg.text||'📎 Arquivo'
+      const isOut=msg.fromMe===true||msg.fromMe==='true'||msg.from==='me'
+      const preview=msg.text||(msg.mediaLabel||'')|| (msg.type&&msg.type!=='text'?'📎 Arquivo':'')
       const idx=chats.findIndex(c=>c.id===msg.chatId)
       if(idx>=0){
         chats[idx].lastMessage=preview
         chats[idx].timestamp=Math.floor(new Date(msg.at||Date.now()).getTime()/1000)
         chats[idx].lastFromMe=isOut
+        chats[idx].lastAck=isOut?(msg.ack||1):null
         // Incrementa unread apenas para mensagens RECEBIDAS e se não é a conversa aberta
         if(!isOut){
           if(msg.chatId!==curId)chats[idx].unreadCount=(chats[idx].unreadCount||0)+1

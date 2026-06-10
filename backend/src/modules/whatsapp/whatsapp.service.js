@@ -837,10 +837,31 @@ async function start() {
           name: fromMe ? 'Eu' : (chatName || pushName),
           text: text || '',
           type: mediaType,
+          mediaLabel: mediaType !== 'text' ? (
+            mediaType === 'image' ? '📷 Foto'
+            : mediaType === 'video' ? '🎥 Vídeo'
+            : mediaType === 'audio' || mediaType === 'ptt' ? '🎤 Áudio'
+            : mediaType === 'document' ? '📄 Documento'
+            : mediaType === 'sticker' ? '😀 Figurinha'
+            : mediaType === 'location' ? '📍 Localização'
+            : '📎 Arquivo'
+          ) : '',
+          fromMe,
           from: fromMe ? 'me' : 'lead',
           at,
           ack: message.status || (fromMe ? 1 : 0),
         }
+
+        // Preview da última mensagem (com emoji para mídia)
+        const mediaLabel = mediaType === 'image' ? '📷 Foto'
+          : mediaType === 'video' ? '🎥 Vídeo'
+          : mediaType === 'audio' ? '🎤 Áudio'
+          : mediaType === 'ptt' ? '🎤 Áudio'
+          : mediaType === 'document' ? '📄 Documento'
+          : mediaType === 'sticker' ? '😀 Figurinha'
+          : mediaType === 'location' ? '📍 Localização'
+          : ''
+        const lastPreview = text || mediaLabel || ''
 
         // Atualiza store de chats
         const existing = chatsStore.get(chatId) || {}
@@ -851,7 +872,9 @@ async function start() {
           isGroup,
           unreadCount: (!fromMe && isRealTime) ? (existing.unreadCount || 0) + 1 : (existing.unreadCount || 0),
           timestamp: ts,
-          lastMessage: text,
+          lastMessage: lastPreview,
+          lastFromMe: fromMe,
+          lastAck: fromMe ? (message.status || 1) : null,
         })
         saveChatsStore()
 
@@ -1041,6 +1064,8 @@ async function sendMessage({ phone, chatId, text }) {
     isGroup: false,
     timestamp: Math.floor(Date.now() / 1000),
     lastMessage: String(text),
+    lastFromMe: true,
+    lastAck: 1,
   })
   saveChatsStore()
 
@@ -1189,11 +1214,14 @@ async function sendMedia({ chatId, phone, media, mimetype, filename, caption }) 
   const result = await sock.sendMessage(jid, content)
 
   // Atualiza chatsStore
+  const mediaPreview = caption || (content.image ? '📷 Foto' : content.video ? '🎥 Vídeo' : content.audio ? '🎤 Áudio' : '📄 Documento')
   const existing = chatsStore.get(jid) || {}
   chatsStore.set(jid, {
     ...existing, id: jid,
     timestamp: Math.floor(Date.now() / 1000),
-    lastMessage: caption || (content.image ? '📷 Imagem' : content.video ? '🎥 Vídeo' : content.audio ? '🎤 Áudio' : '📄 Documento')
+    lastMessage: mediaPreview,
+    lastFromMe: true,
+    lastAck: 1,
   })
   saveChatsStore()
 
