@@ -866,6 +866,12 @@ async function start() {
       for (const message of messages) {
         const chatId = message.key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
+        // DEBUG temporário — remove após confirmar edit/delete
+        const dbgProto = message.message?.protocolMessage
+        const dbgEdited = message.message?.editedMessage
+        if (dbgProto || dbgEdited) {
+          console.log(`[WA-DBG upsert] type=${type} proto.type=${dbgProto?.type} edited=${!!dbgEdited} key=${message.key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)}`)
+        }
 
         // ── Detectar mensagem APAGADA (REVOKE type=0) ou EDITADA (type=14) ──
         const proto = message.message?.protocolMessage
@@ -1079,6 +1085,11 @@ async function start() {
       for (const { key, update } of updates) {
         const chatId = key?.remoteJid
         if (!chatId || chatId === 'status@broadcast') continue
+        // DEBUG temporário
+        const upProto = update.message?.protocolMessage
+        if (update.message === null || upProto) {
+          console.log(`[WA-DBG update] msgNull=${update.message===null} proto.type=${upProto?.type} key=${key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)}`)
+        }
 
         const msgs = messageHistory.get(chatId)
         if (!msgs) continue
