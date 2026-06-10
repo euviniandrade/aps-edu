@@ -236,8 +236,23 @@ function emitState() {
 async function storeMessage(chatId, message) {
   if (!messageHistory.has(chatId)) messageHistory.set(chatId, [])
   const msgs = messageHistory.get(chatId)
-  // Evita duplicatas por id
-  if (message.id && msgs.some(m => m.id === message.id)) return
+  // Evita duplicatas por id — mas se o texto mudou (sync pós-edição), atualiza
+  if (message.id) {
+    const idx = msgs.findIndex(m => m.id === message.id)
+    if (idx >= 0) {
+      const existing = msgs[idx]
+      // Se o texto veio diferente e a msg não está já marcada como editada, aplica edição
+      if (message.text && message.text !== existing.text && !existing.deleted) {
+        const originalText = existing.originalText || existing.text
+        if (message.text !== originalText) {
+          msgs[idx] = { ...existing, edited: true, originalText, text: message.text }
+          saveMessagesStore()
+          emitter.emit('message.update', { chatId, msgId: message.id, edited: true })
+        }
+      }
+      return
+    }
+  }
   msgs.push(message)
   if (msgs.length > 1000) msgs.shift()
   saveMessagesStore()
@@ -868,10 +883,6 @@ async function start() {
         if (!chatId || chatId === 'status@broadcast') continue
         // ── Detectar mensagem APAGADA (REVOKE type=0) ou EDITADA (type=14) ──
         const proto = message.message?.protocolMessage
-        const editedMsgDbg = message.message?.editedMessage
-        if (proto || editedMsgDbg) {
-          console.log(`[WA-DBG upsert] type=${type} proto.type=${proto?.type} hasEdited=${!!editedMsgDbg} key=${message.key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)} msgKeys=${Object.keys(message.message||{}).join(',')}`)
-        }
         if (proto) {
           // DELETE for everyone
           if (proto.type === 0 && proto.key?.id) {
@@ -1087,9 +1098,6 @@ async function start() {
         if (!msgs) continue
 
         const proto = update.message?.protocolMessage
-
-        // DEBUG — log completo para entender estrutura da edição
-        console.log(`[WA-DBG] key=${key?.id?.slice(0,12)} msgNull=${update.message===null} proto=${JSON.stringify(proto)?.slice(0,120)} msgKeys=${update.message?Object.keys(update.message).join(','):''}`)
 
         // DELETE: message === null
         if (update.message === null) {
