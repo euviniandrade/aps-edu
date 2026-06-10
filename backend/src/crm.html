@@ -686,7 +686,8 @@ setInterval(()=>{
 // ── LOAD CHATS ──
 async function loadChats(){
   try{
-    const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H})
+    const _ctrl=new AbortController();setTimeout(()=>_ctrl.abort(),5000)
+    const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H,signal:_ctrl.signal})
     const d=await r.json();chats=Array.isArray(d)?d:(d.chats||[])
     renderList();renderGroups();loadAvatars()
     const tu=chats.reduce((s,c)=>s+(c.unreadCount>0&&!c.lastFromMe?c.unreadCount:0),0)

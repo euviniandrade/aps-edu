@@ -1207,13 +1207,17 @@ async function listChats(limit = 2000) {
 
   if (memoryChats.length > 0) return memoryChats
 
-  // Fallback: banco de dados (só usado se chatsStore vazio)
+  // Fallback: banco de dados com timeout de 3s (evita travar se DB inacessível)
   try {
-    const conversations = await prisma.conversation.findMany({
-      include: { lead: true },
-      orderBy: { lastMessageAt: 'desc' },
-      take: Number(limit)
-    })
+    if (!prisma) return []
+    const conversations = await Promise.race([
+      prisma.conversation.findMany({
+        include: { lead: true },
+        orderBy: { lastMessageAt: 'desc' },
+        take: Number(limit)
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 3000))
+    ])
     if (conversations && conversations.length > 0) {
       return conversations.map(conv => ({
         id: conv.lead.phoneNumber + (conv.lead.isGroup ? '@g.us' : '@s.whatsapp.net'),
@@ -1225,7 +1229,7 @@ async function listChats(limit = 2000) {
       }))
     }
   } catch (err) {
-    console.error('[WhatsApp] Erro ao listar chats do banco:', err.message)
+    // Silencioso — DB pode não estar disponível neste servidor
   }
 
   return []
