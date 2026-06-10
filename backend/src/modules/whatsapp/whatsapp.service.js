@@ -787,6 +787,7 @@ async function start() {
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode
         const loggedOut = statusCode === DisconnectReason.loggedOut
+        const restartRequired = statusCode === DisconnectReason.restartRequired
 
         state.ready = false
         state.connected = false
@@ -798,10 +799,23 @@ async function start() {
         sock = null
         emitState()
 
-        if (!loggedOut) {
-          console.log('[WhatsApp] Reconectando em 8s...')
-          setTimeout(() => start(), 8000)
+        if (loggedOut) {
+          console.log('[WhatsApp] Sessão encerrada. Aguardando novo QR Code.')
+        } else if (restartRequired) {
+          console.log('[WhatsApp] Restart necessário — reconectando em 2s...')
+          setTimeout(() => start(), 2000)
+        } else {
+          // Reconexão progressiva: 5s → 10s → 20s → 30s
+          const attempt = (state._reconnectAttempt || 0) + 1
+          state._reconnectAttempt = attempt
+          const delay = Math.min(5000 * Math.pow(1.5, attempt - 1), 30000)
+          console.log(`[WhatsApp] Reconectando em ${Math.round(delay/1000)}s... (tentativa ${attempt})`)
+          setTimeout(() => { state._reconnectAttempt = 0; start() }, delay)
         }
+      }
+
+      if (connection === 'open') {
+        state._reconnectAttempt = 0
       }
     })
 
@@ -1469,6 +1483,18 @@ function removeContactFromLabel(labelId, contactId) {
   saveLabels()
   return label
 }
+
+// ── WATCHDOG: reconecta automaticamente se offline por 2 minutos ────────────
+setInterval(() => {
+  if (!state.ready && !state.connected && !state.qr) {
+    const err = state.error || ''
+    // Não reconectar se foi logout intencional
+    if (!err.includes('encerrada') && !err.includes('loggedOut')) {
+      console.log('[WhatsApp] Watchdog: offline detectado, tentando reconectar...')
+      start().catch(() => {})
+    }
+  }
+}, 2 * 60 * 1000) // a cada 2 minutos
 
 module.exports = {
   getState,
