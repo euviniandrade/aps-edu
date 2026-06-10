@@ -1464,14 +1464,20 @@ async function getMedia(msgId) {
 async function getGroupMembers(gid) {
   if (!sock || !state.ready) throw Object.assign(new Error('WhatsApp não conectado'), { statusCode: 409 })
   const metadata = await sock.groupMetadata(gid)
-  return (metadata.participants || []).map(p => ({
-    id: p.id,
-    phone: normalizePhone(p.id),
-    name: phonebookStore.get(normalizePhone(p.id))?.name ||
-      chatsStore.get(p.id)?.name ||
-      normalizePhone(p.id),
-    isAdmin: p.admin === 'admin' || p.admin === 'superadmin'
-  }))
+  return (metadata.participants || []).map(p => {
+    const phone = normalizePhone(p.id)
+    // Normaliza JID para @s.whatsapp.net (evita @lid que não suporta avatar)
+    const jid = p.id.includes('@lid') ? `${phone}@s.whatsapp.net` : p.id
+    return {
+      id: jid,
+      phone,
+      name: phonebookStore.get(phone)?.name ||
+        chatsStore.get(jid)?.name ||
+        chatsStore.get(p.id)?.name ||
+        phone,
+      isAdmin: p.admin === 'admin' || p.admin === 'superadmin'
+    }
+  })
 }
 
 // ── ENVIO DE MÍDIA ──────────────────────────────────

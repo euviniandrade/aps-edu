@@ -1097,18 +1097,23 @@ async function openGroup(id,name){
   try{
     const r=await fetch(`/api/whatsapp/group-members/${encodeURIComponent(id)}`,{headers:H})
     const members=await r.json()
-    const bg=acol(name);const av=avCache[id]&&avCache[id]!=='x'?`<img src="${avCache[id]}">`:'👥'
+    const bg=acol(name)
+    const grpAv=avCache[id]&&avCache[id]!=='x'?`<img src="${avCache[id]}">`:'👥'
     det.innerHTML=`
       <div class="g-detail-hdr">
-        <div class="av sm" style="background:${bg}">${av}</div>
+        <div class="av sm" style="background:${bg}" data-cid="${id}">${grpAv}</div>
         <div style="flex:1"><div style="font-size:14px;font-weight:700">${esc(name)}</div><div style="font-size:11px;color:var(--tm)">${members.length} membros</div></div>
         <button class="btn g" style="font-size:11px;padding:6px 14px" onclick="massaToGroup('${id}','${esc(name)}')">📤 Envio em massa</button>
       </div>
-      <div class="g-detail-body">${members.map(m=>`<div class="member-row">
-        <div class="av xs" style="background:${acol(m.name||m.id)}">${ini(m.name||m.id)}</div>
-        <div class="member-info"><div class="member-name">${esc(m.name||m.phone||m.id)}</div><div class="member-phone">${esc(m.phone||m.id.replace(/@.*/,''))}</div></div>
-        ${m.isAdmin?'<span class="admin-tag">Admin</span>':''}
-      </div>`).join('')}</div>`
+      <div class="g-detail-body">${members.map(m=>{
+        const mav=avCache[m.id]&&avCache[m.id]!=='x'?`<img src="${avCache[m.id]}">`:`${ini(m.name||m.id)}`
+        return`<div class="member-row">
+          <div class="av xs" style="background:${acol(m.name||m.id)}" data-cid="${m.id}">${mav}</div>
+          <div class="member-info"><div class="member-name">${esc(m.name||m.phone||m.id)}</div><div class="member-phone">${esc(m.phone||m.id.replace(/@.*/,''))}</div></div>
+          ${m.isAdmin?'<span class="admin-tag">Admin</span>':''}
+        </div>`
+      }).join('')}</div>`
+    loadAvatars()
   }catch(e){det.innerHTML=`<div class="no-item">❌ ${esc(e.message)}</div>`}
 }
 function massaToGroup(id,name){go('massa');setSeg('group');setTimeout(()=>{const s=document.getElementById('segGrpSel');if(s){s.value=id;loadGrpRec()}},200)}
