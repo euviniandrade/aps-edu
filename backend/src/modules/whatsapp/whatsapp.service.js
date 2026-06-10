@@ -101,6 +101,33 @@ function bootstrapPersistence() {
     console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados do disco.`)
   }
 
+  // Limpeza de nomes errados: se o chat tem um nome igual a um nome do phonebook DE OUTRO número,
+  // significa que pushName do remetente foi gravado indevidamente. Resetar para o número de telefone.
+  // Isso corrige o problema onde mensagens enviadas gravavam o nome do remetente (ex: "Vinicius Andrade")
+  // em chats de outras pessoas que não estavam na agenda.
+  if (phonebookStore.size > 0) {
+    // Coletar todos os nomes do phonebook para detectar nomes "de remetente" gravados errado
+    const phonebookNames = new Set()
+    for (const [, pb] of phonebookStore.entries()) {
+      if (pb.name && pb._lidOf === undefined) phonebookNames.add(pb.name.toLowerCase())
+    }
+    let cleaned = 0
+    for (const [chatId, chat] of chatsStore.entries()) {
+      if (chat.isGroup || !chat.name) continue
+      const chatPhone = normalizePhone(chatId)
+      const ownPbEntry = phonebookStore.get(chatPhone)
+      // Se o chat NÃO tem entrada na agenda E o nome é igual a algum nome da agenda (nome de remetente gravado errado)
+      if (!ownPbEntry && phonebookNames.has((chat.name || '').toLowerCase())) {
+        chatsStore.set(chatId, { ...chat, name: chatPhone })
+        cleaned++
+      }
+    }
+    if (cleaned > 0) {
+      console.log(`[WhatsApp] 🧹 ${cleaned} nomes de remetente removidos de chats sem agenda.`)
+      writeJsonFile(CHATS_STORE_PATH, Object.fromEntries(chatsStore))
+    }
+  }
+
   const labelsData = loadJsonFile(LABELS_STORE_PATH)
   if (Array.isArray(labelsData)) {
     labelsStore = labelsData
@@ -1045,7 +1072,10 @@ async function start() {
           }
         } else {
           const existingChat = chatsStore.get(chatId)
-          chatName = phonebookStore.get(normalizePhone(chatId))?.name || pushName || existingChat?.name || ''
+          // NUNCA usar pushName como nome do chat em mensagens enviadas (pushName = nome DO REMETENTE = seu próprio nome)
+          // Para mensagens recebidas, pushName é o nome do contato (válido como fallback)
+          const fallbackName = fromMe ? null : pushName
+          chatName = phonebookStore.get(normalizePhone(chatId))?.name || existingChat?.name || fallbackName || ''
         }
 
         const msgObj = {
@@ -1088,7 +1118,8 @@ async function start() {
         chatsStore.set(chatId, {
           ...existing,
           id: chatId,
-          name: chatName || pushName || existing.name || normalizePhone(chatId),
+          // Nunca usar pushName de mensagem enviada como nome do chat (seria o nome do remetente = você)
+          name: chatName || existing.name || normalizePhone(chatId),
           isGroup,
           unreadCount: (!fromMe && isRealTime) ? (existing.unreadCount || 0) + 1 : (existing.unreadCount || 0),
           timestamp: ts,
