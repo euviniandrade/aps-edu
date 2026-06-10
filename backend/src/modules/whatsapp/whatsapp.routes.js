@@ -498,11 +498,11 @@ module.exports = async function (fastify) {
   // ── KANBAN DATA ───────────────────────────────────────
   fastify.get('/kanban', { preHandler: [apiKeyAuth] }, async () => {
     const contacts = whatsappService.listCrmContacts()
-    const byStage = { novo: [], qualificado: [], proposta: [], negociacao: [], fechado: [] }
+    const byStage = { aguardando: [], urgentes: [], ministerio: [], marketing: [], respondidos: [] }
     for (const c of contacts) {
-      const stage = c.stage || 'novo'
-      if (byStage[stage]) byStage[stage].push(c)
-      else byStage['novo'].push(c)
+      const stage = c.stage || 'aguardando'
+      if (byStage[stage] !== undefined) byStage[stage].push(c)
+      else byStage['aguardando'].push(c)
     }
     return byStage
   })

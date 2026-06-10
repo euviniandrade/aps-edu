@@ -358,7 +358,14 @@ function listCrmContacts() {
     const phone = normalizePhone(chatId)
     if (seen.has(phone)) continue
     seen.add(phone)
-    const crm = crmStore.get(phone) || { stage: 'novo', tags: ['whatsapp'], score: 50 }
+    // Stage automático: se tem mensagens não lidas (não minhas) → aguardando
+    // Se última mensagem foi minha → respondidos; senão → aguardando
+    const autoStage = (chat.unreadCount > 0 && !chat.lastFromMe) ? 'aguardando'
+      : chat.lastFromMe ? 'respondidos'
+      : 'aguardando'
+    const crm = crmStore.get(phone) || { stage: autoStage, tags: ['whatsapp'], score: 50 }
+    // Se CRM tem stage mas é o default antigo 'novo', usa autoStage
+    if (crm.stage === 'novo') crm.stage = autoStage
     const phonebook = phonebookStore.get(phone)
     const name = chat.name || phonebook?.name || phone
     result.push({ ...chat, id: chatId, name, phone, ...crm })
