@@ -1467,20 +1467,42 @@ function connectSSE(){
       const b=document.getElementById('badge-wa');if(tu>0){b.textContent=tu>99?'99+':tu;b.classList.add('on')}else b.classList.remove('on')
     }catch{}
   })
+  let _wasConnected=false
   sseConn.addEventListener('state',e=>{
-    try{const s=JSON.parse(e.data);const ok=s.connected&&s.ready;document.getElementById('connDot').className='conn-dot'+(ok?' ok':'');if(ok)document.getElementById('qrModal').classList.remove('on');else if(s.qrDataUrl){document.getElementById('qrImg').src=s.qrDataUrl;document.getElementById('qrModal').classList.add('on')}}catch{}
+    try{
+      const s=JSON.parse(e.data)
+      const ok=s.connected&&s.ready
+      document.getElementById('connDot').className='conn-dot'+(ok?' ok':'')
+      if(ok){
+        document.getElementById('qrModal').classList.remove('on')
+        // Se acabou de reconectar → recarrega chats imediatamente
+        if(!_wasConnected){loadChats();_wasConnected=true}
+      }else{
+        _wasConnected=false
+        if(s.qrDataUrl){document.getElementById('qrImg').src=s.qrDataUrl;document.getElementById('qrModal').classList.add('on')}
+      }
+    }catch{}
   })
   sseConn.onerror=()=>setTimeout(connectSSE,3000)
 }
 
 // ── INIT ──
 ;(async()=>{
-  await Promise.all([loadLabelsData(),loadQR()])
-  await checkConn()
-  await loadChats()
+  try{await Promise.all([loadLabelsData(),loadQR()])}catch{}
+  try{await checkConn()}catch{}
+  // Tenta carregar chats — se WhatsApp ainda não reconectou, retenta a cada 3s por até 30s
+  let loaded=false
+  for(let i=0;i<10;i++){
+    try{
+      await loadChats()
+      if(chats.length>0){loaded=true;break}
+    }catch{}
+    if(i<9)await new Promise(r=>setTimeout(r,3000))
+  }
+  if(!loaded){document.getElementById('chatList').innerHTML='<div class="no-item">⚠️ WhatsApp reconectando... <button class="btn" style="margin-top:8px;font-size:11px" onclick="loadChats()">🔄 Tentar agora</button></div>'}
   connectSSE()
   setInterval(checkConn,10000)
-  setInterval(loadChats,25000)
+  setInterval(loadChats,20000)
   setInterval(()=>{if(curId&&innerTab==='msgs')loadMsgs()},4000)
 })()
 </script>
