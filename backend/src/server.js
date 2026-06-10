@@ -72,6 +72,8 @@ fastify.get('/crm', async (request, reply) => {
     )
   }
 
+  reply.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+  reply.header('Pragma', 'no-cache')
   reply.type('text/html')
   return html
 })
