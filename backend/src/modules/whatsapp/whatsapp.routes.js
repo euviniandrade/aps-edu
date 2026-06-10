@@ -60,6 +60,17 @@ module.exports = async function (fastify) {
     return whatsappService.listChats(limit)
   })
 
+  // Servir mídia (imagens, áudios, vídeos, documentos) das mensagens
+  fastify.get('/media', { preHandler: [apiKeyAuth] }, async (request, reply) => {
+    const { id } = request.query
+    if (!id) return reply.code(400).send({ error: 'id obrigatório' })
+    const result = await whatsappService.getMedia(id)
+    if (!result) return reply.code(404).send({ error: 'Mídia não encontrada' })
+    reply.header('Content-Type', result.mimetype)
+    reply.header('Cache-Control', 'public, max-age=86400')
+    return reply.send(result.buffer)
+  })
+
   fastify.get('/messages', { preHandler: [apiKeyAuth] }, async (request) => {
     const { chatId, limit = 50 } = request.query
     if (!chatId) return []

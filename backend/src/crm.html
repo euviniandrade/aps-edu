@@ -98,7 +98,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .bub-foot{font-size:10px;color:var(--tm);display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:2px}
 .msg-img{max-width:260px;max-height:280px;border-radius:6px;display:block;cursor:pointer;margin-bottom:3px}
 .msg-video{max-width:260px;border-radius:6px;display:block;margin-bottom:3px}
-.msg-audio{width:220px;height:36px;display:block;margin-bottom:3px}
+/* Player de áudio customizado */
+.audio-player{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.18);border-radius:22px;padding:8px 12px;width:240px;margin-bottom:3px}
+.ap-play{width:36px;height:36px;border-radius:50%;background:var(--g);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.12s}
+.ap-play:hover{filter:brightness(1.12)}
+.ap-wrap{flex:1;display:flex;flex-direction:column;gap:3px}
+.ap-bar{height:4px;background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer;position:relative}
+.ap-prog{height:100%;background:var(--g);border-radius:2px;width:0%;transition:width .1s linear}
+.ap-time{font-size:10px;color:var(--tm)}
 .msg-doc{background:rgba(255,255,255,.06);padding:8px 10px;border-radius:7px;display:flex;align-items:center;gap:8px;margin-bottom:3px}
 .msg-doc a{color:var(--bl);font-size:12px;text-decoration:none}
 .date-div{align-self:center;background:var(--hb);color:var(--tm);font-size:10px;padding:3px 12px;border-radius:8px;margin:6px 0;flex-shrink:0}
@@ -771,35 +778,84 @@ async function loadMsgs(){
       if(ds!==lastDate){html+=`<div class="date-div">${ds}</div>`;lastDate=ds}
       const sName=isOut?'Você':(m.name||curName)
       const sBg=acol(isOut?'eu_self':sName)
-      const sAv=isOut
-        ?(avCache['_me']&&avCache['_me']!=='x'?`<img src="${avCache['_me']}">`:'👤')
-        :(avCache[curId]&&avCache[curId]!=='x'?`<img src="${avCache[curId]}">`:(curIsGroup?'👥':ini(sName)))
+      // Avatar: só mostra em mensagens RECEBIDAS em grupos; em privado sem avatar
+      const showAv=!isOut&&curIsGroup
+      const sAv=showAv?(avCache[curId]&&avCache[curId]!=='x'?`<img src="${avCache[curId]}">`:(ini(sName))):'';
       const murl=`/api/whatsapp/media?id=${encodeURIComponent(m.id||'')}&key=${K}`
       let content=''
       // Sender name for groups (incoming only)
       if(curIsGroup&&!isOut&&m.name)content+=`<div class="bub-sender" style="color:${sBg}">${esc(m.name)}</div>`
       // Media
-      if(m.type==='image'||m.type==='sticker')content+=`<img class="msg-img" src="${murl}" onclick="document.getElementById('ivImg').src=this.src;document.getElementById('imgview').classList.add('on')" loading="lazy" onerror="this.style.display='none'" ${m.type==='sticker'?'style="max-width:140px"':''} >`
+      if(m.type==='image')content+=`<img class="msg-img" src="${murl}" onclick="document.getElementById('ivImg').src=this.src;document.getElementById('imgview').classList.add('on')" loading="lazy" onerror="this.style.display='none'">`
+      else if(m.type==='sticker')content+=`<img class="msg-img" src="${murl}" loading="lazy" onerror="this.style.display='none'" style="max-width:140px;background:transparent">`
       else if(m.type==='video')content+=`<video controls class="msg-video" src="${murl}" preload="none"></video>`
       else if(m.type==='ptt'||m.type==='audio'){
         const tid='t_'+Math.random().toString(36).slice(2)
-        content+=`<audio controls class="msg-audio" src="${murl}" preload="none"></audio>`
+        content+=`<div class="audio-player">
+          <button class="ap-play" onclick="apToggle(this)">▶</button>
+          <div class="ap-wrap">
+            <div class="ap-bar"><div class="ap-prog"></div></div>
+            <span class="ap-time">0:00</span>
+          </div>
+          <audio src="${murl}" preload="none" onended="apEnded(this)" ontimeupdate="apTick(this)" onloadedmetadata="apMeta(this)"></audio>
+        </div>`
         content+=`<button class="trans-btn" onclick="doTranscribe('${murl}','${tid}')">📝 Transcrever</button><div id="${tid}"></div>`
       }
-      else if(m.type==='document')content+=`<div class="msg-doc">📄 <a href="${murl}" target="_blank">${esc(m.text||'Documento')}</a></div>`
+      else if(m.type==='document')content+=`<div class="msg-doc">📄 <a href="${murl}" target="_blank" download>${esc(m.text||'Documento')}</a></div>`
+      else if(m.type==='location'&&m.text){
+        const [lat,lng]=(m.text||'').split(',')
+        content+=`<a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" style="color:var(--bl);font-size:12px">📍 Ver localização</a>`
+      }
       // Text
       const txt=m.text||''
-      if(txt&&!['document','vcard','multi_vcard'].includes(m.type))content+=`<div class="bub-text">${fmtWA(txt)}</div>`
+      if(txt&&!['document','vcard','multi_vcard','location'].includes(m.type))content+=`<div class="bub-text">${fmtWA(txt)}</div>`
       if(!content.trim())continue
       content+=`<div class="bub-foot">${fmtH(m.at)}${isOut?' '+ackIco(m.ack):''}</div>`
       html+=`<div class="msg-row ${isOut?'out':'in'}">
-        <div class="av xs" style="background:${sBg}" title="${esc(sName)}">${sAv}</div>
+        ${showAv?`<div class="av xs" style="background:${sBg}" title="${esc(sName)}">${sAv}</div>`:'<div style="width:0"></div>'}
         <div class="bubble ${isOut?'out':'in'}">${content}</div>
       </div>`
     }
     area.innerHTML=html||'<div class="no-item">Sem mensagens</div>'
     area.scrollTop=area.scrollHeight
   }catch(e){console.error(e)}
+}
+
+// ── AUDIO PLAYER ──
+function apToggle(btn){
+  const player=btn.closest('.audio-player')
+  const audio=player.querySelector('audio')
+  if(audio.paused){
+    // Pausar todos os outros
+    document.querySelectorAll('.audio-player audio').forEach(a=>{if(a!==audio){a.pause();a.closest('.audio-player').querySelector('.ap-play').textContent='▶'}})
+    audio.play()
+    btn.textContent='⏸'
+  }else{
+    audio.pause()
+    btn.textContent='▶'
+  }
+}
+function apEnded(audio){
+  const btn=audio.closest('.audio-player').querySelector('.ap-play')
+  if(btn)btn.textContent='▶'
+  const prog=audio.closest('.audio-player').querySelector('.ap-prog')
+  if(prog)prog.style.width='0%'
+}
+function apTick(audio){
+  if(!audio.duration)return
+  const pct=(audio.currentTime/audio.duration)*100
+  const prog=audio.closest('.audio-player').querySelector('.ap-prog')
+  const time=audio.closest('.audio-player').querySelector('.ap-time')
+  if(prog)prog.style.width=pct+'%'
+  if(time)time.textContent=fmtSec(audio.currentTime)+(audio.duration?' / '+fmtSec(audio.duration):'')
+}
+function apMeta(audio){
+  const time=audio.closest('.audio-player').querySelector('.ap-time')
+  if(time&&audio.duration)time.textContent='0:00 / '+fmtSec(audio.duration)
+}
+function fmtSec(s){
+  const m=Math.floor(s/60),sec=Math.floor(s%60)
+  return m+':'+(sec<10?'0':'')+sec
 }
 
 // ── TRANSCRIBE ──

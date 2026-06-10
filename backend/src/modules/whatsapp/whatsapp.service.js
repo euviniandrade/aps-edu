@@ -28,6 +28,8 @@ const phonebookStore = new Map()
 let labelsStore = []
 // Cache de avatares (evita chamadas repetidas à API do WhatsApp)
 const avatarCache = new Map() // chatId -> { url, expires }
+// Store de mensagens brutas do Baileys (para download de mídia sob demanda)
+const rawMessageStore = new Map() // msgId -> rawBaileysMessage
 
 // ── Persistência ────────────────────────────────────────────────────────────
 
@@ -63,6 +65,20 @@ function bootstrapPersistence() {
       if (Array.isArray(v)) messageHistory.set(k, v)
     }
     console.log(`[WhatsApp] Histórico de ${messageHistory.size} chats carregado do disco.`)
+    // Resync: atualizar lastMessage/lastFromMe em chats que têm "..." ou vazio
+    for (const [chatId, msgs] of messageHistory.entries()) {
+      if (!Array.isArray(msgs) || !msgs.length) continue
+      const chat = chatsStore.get(chatId)
+      if (!chat) continue
+      const last = msgs[msgs.length - 1]
+      if (!last) continue
+      const mediaLabels = { image:'📷 Foto', video:'🎥 Vídeo', audio:'🎤 Áudio', ptt:'🎤 Áudio', document:'📄 Documento', sticker:'😀 Figurinha', location:'📍 Localização' }
+      const preview = last.text || mediaLabels[last.type] || ''
+      const isFromMe = last.from === 'me' || last.from === 'agent' || last.fromMe === true
+      if (preview && (!chat.lastMessage || chat.lastMessage === '...')) {
+        chatsStore.set(chatId, { ...chat, lastMessage: preview, lastFromMe: isFromMe, lastAck: isFromMe ? (last.ack || 1) : null })
+      }
+    }
   }
 
   const crmData = loadJsonFile(CRM_STORE_PATH)
@@ -531,6 +547,7 @@ async function start() {
       useMultiFileAuthState,
       fetchLatestBaileysVersion,
       makeCacheableSignalKeyStore,
+      downloadMediaMessage,
     } = require('@whiskeysockets/baileys')
     const pino = require('pino')
 
@@ -855,13 +872,14 @@ async function start() {
         // Preview da última mensagem (com emoji para mídia)
         const mediaLabel = mediaType === 'image' ? '📷 Foto'
           : mediaType === 'video' ? '🎥 Vídeo'
-          : mediaType === 'audio' ? '🎤 Áudio'
-          : mediaType === 'ptt' ? '🎤 Áudio'
+          : mediaType === 'audio' || mediaType === 'ptt' ? '🎤 Áudio'
           : mediaType === 'document' ? '📄 Documento'
           : mediaType === 'sticker' ? '😀 Figurinha'
           : mediaType === 'location' ? '📍 Localização'
           : ''
         const lastPreview = text || mediaLabel || ''
+        // Em grupos, prefixa com nome do remetente
+        const senderPrefix = isGroup && !fromMe && pushName ? `${pushName}: ` : ''
 
         // Atualiza store de chats
         const existing = chatsStore.get(chatId) || {}
@@ -872,11 +890,22 @@ async function start() {
           isGroup,
           unreadCount: (!fromMe && isRealTime) ? (existing.unreadCount || 0) + 1 : (existing.unreadCount || 0),
           timestamp: ts,
-          lastMessage: lastPreview,
+          lastMessage: senderPrefix + lastPreview,
+          lastSender: isGroup && !fromMe ? (pushName || '') : '',
           lastFromMe: fromMe,
           lastAck: fromMe ? (message.status || 1) : null,
         })
         saveChatsStore()
+
+        // Guardar mensagem bruta do Baileys para download de mídia sob demanda
+        if (mediaType !== 'text' && message.key.id) {
+          rawMessageStore.set(message.key.id, message)
+          // Limitar tamanho do store (máx 2000 msgs brutas)
+          if (rawMessageStore.size > 2000) {
+            const firstKey = rawMessageStore.keys().next().value
+            rawMessageStore.delete(firstKey)
+          }
+        }
 
         await storeMessage(chatId, msgObj)
 
@@ -1170,6 +1199,30 @@ async function getProfilePicUrl(chatId) {
   }
 }
 
+// ── DOWNLOAD DE MÍDIA ───────────────────────────────
+async function getMedia(msgId) {
+  const raw = rawMessageStore.get(msgId)
+  if (!raw) return null
+  if (!sock) return null
+  try {
+    const { downloadMediaMessage } = require('@whiskeysockets/baileys')
+    const buffer = await downloadMediaMessage(raw, 'buffer', {}, { logger: require('pino')({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage })
+    const msgContent = raw.message || {}
+    const mimetype =
+      msgContent.imageMessage?.mimetype ||
+      msgContent.videoMessage?.mimetype ||
+      msgContent.audioMessage?.mimetype ||
+      msgContent.pttMessage?.mimetype ||
+      msgContent.documentMessage?.mimetype ||
+      msgContent.stickerMessage?.mimetype ||
+      'application/octet-stream'
+    return { buffer, mimetype }
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao baixar mídia:', e.message)
+    return null
+  }
+}
+
 // ── MEMBROS DE GRUPO ────────────────────────────────
 async function getGroupMembers(gid) {
   if (!sock || !state.ready) throw Object.assign(new Error('WhatsApp não conectado'), { statusCode: 409 })
@@ -1396,6 +1449,7 @@ module.exports = {
   handoff,
   resumeAuto,
   getProfilePicUrl,
+  getMedia,
   getGroupMembers,
   generateVariations,
   getLabels,
