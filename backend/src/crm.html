@@ -597,7 +597,7 @@ let innerTab='msgs',curStatus='open'
 let bulkFile=null,bulkFileMime='',bulkFileNm='',bulkAudio=null
 let massaCancelled=false,massaPaused=false,massaVars=[]
 let mediaRec=null,audioChunks=[],recCht=false,recPTT=false
-let segMode='all',dashCharts={},kDrag=null,sseConn=null
+let segMode='all',dashCharts={},kDrag=null,kDragIsCol=false,colDragId=null,sseConn=null
 
 // ── UTILS ──
 function toast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast on'+(t==='err'?' err':'');clearTimeout(e._t);e._t=setTimeout(()=>e.className='toast',3000)}
@@ -1281,7 +1281,7 @@ const BASE_STAGES=[
 const TEMP_COLORS=['#f59e0b','#ec4899','#06b6d4','#84cc16','#f97316','#8b5cf6','#14b8a6','#ef4444']
 let STAGES=[...BASE_STAGES]
 let kanbData={} // dados vindos do server
-let kDrag=null,kDragIsCol=false,colDragId=null
+// kDrag, kDragIsCol, colDragId declarados na linha de variáveis globais (linha ~600)
 
 function loadTempCols(){
   try{const t=JSON.parse(localStorage.getItem('kTempCols')||'[]');STAGES=[...BASE_STAGES,...t]}catch{STAGES=[...BASE_STAGES]}
