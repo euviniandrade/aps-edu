@@ -1101,7 +1101,7 @@ function togglePause(){massaPaused=!massaPaused;const b=document.getElementById(
 function cancelMassa(){if(confirm('Cancelar?')){massaCancelled=true}}
 
 // ── KANBAN ──
-const STAGES=[{id:'novo',label:'🆕 Novo',color:'#667eea'},{id:'qualificado',label:'✅ Qualificado',color:'#43e97b'},{id:'proposta',label:'📋 Proposta',color:'#4facfe'},{id:'negociacao',label:'🤝 Negociação',color:'#fbbf24'},{id:'fechado',label:'🏆 Fechado',color:'#f093fb'}]
+const STAGES=[{id:'aguardando',label:'⏳ Aguardando',color:'#8696a0'},{id:'urgentes',label:'🔴 Urgentes',color:'#f87171'},{id:'ministerio',label:'✝️ Ministério Jovem',color:'#a78bfa'},{id:'marketing',label:'📣 Marketing',color:'#4facfe'},{id:'respondidos',label:'✅ Respondidos',color:'#43e97b'}]
 async function loadKanban(){
   const wrap=document.getElementById('kanbanWrap');if(!wrap)return
   wrap.innerHTML='<div class="no-item">⏳ Carregando...</div>'
