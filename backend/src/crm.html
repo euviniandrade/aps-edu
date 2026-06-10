@@ -595,7 +595,7 @@ async function loadChats(){
   try{
     const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H})
     const d=await r.json();chats=Array.isArray(d)?d:(d.chats||[])
-    renderList();renderGroups()
+    renderList();renderGroups();loadAvatars()
     const tu=chats.reduce((s,c)=>s+(c.unreadCount>0&&!c.lastFromMe?c.unreadCount:0),0)
     const b=document.getElementById('badge-wa')
     if(tu>0){b.textContent=tu>99?'99+':tu;b.classList.add('on')}else b.classList.remove('on')
@@ -644,25 +644,45 @@ function renderList(){
 }
 
 // ── AVATARS ──
-const avObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){fetchAv(e.target);avObs.unobserve(e.target)}})},{rootMargin:'100px'})
-function lazyAv(){
+// Fila de busca para não sobrecarregar o WhatsApp
+let avQueue=[],avFetching=false
+async function processAvQueue(){
+  if(avFetching||!avQueue.length)return
+  avFetching=true
+  while(avQueue.length){
+    const cid=avQueue.shift()
+    if(avCache[cid])continue // já buscado enquanto esperava
+    try{
+      const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(cid)}`,{headers:H})
+      const d=await r.json()
+      avCache[cid]=d.url||'x'
+      // Atualiza TODOS os elementos com esse cid na página
+      document.querySelectorAll(`[data-cid]`).forEach(el=>{
+        if(el.dataset.cid===cid&&d.url)el.innerHTML=`<img src="${d.url}">`
+      })
+    }catch{avCache[cid]='x'}
+    await new Promise(r=>setTimeout(r,120)) // pausa entre requisições
+  }
+  avFetching=false
+}
+function loadAvatars(){
   document.querySelectorAll('[data-cid]').forEach(el=>{
     const c=el.dataset.cid;if(!c)return
-    if(avCache[c]){if(avCache[c]!=='x'&&!el.querySelector('img'))el.innerHTML=`<img src="${avCache[c]}">`;return}
-    avObs.observe(el)
+    if(avCache[c]){
+      if(avCache[c]!=='x'&&!el.querySelector('img'))el.innerHTML=`<img src="${avCache[c]}">`
+      return
+    }
+    if(!avQueue.includes(c))avQueue.push(c)
   })
+  processAvQueue()
 }
-async function fetchAv(el){
-  const c=el.dataset.cid;if(!c)return
+// Atalho compatível com código antigo
+function lazyAv(){loadAvatars()}
+function fetchAv(el){
+  const c=el?.dataset?.cid;if(!c)return
   if(avCache[c]){if(avCache[c]!=='x')el.innerHTML=`<img src="${avCache[c]}">`;return}
-  try{
-    const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H})
-    const d=await r.json()
-    avCache[c]=d.url||'x'
-    // Re-find element (may have been replaced by re-render)
-    const fresh=document.querySelector(`[data-cid="${CSS.escape(c)}"]`)
-    if(fresh&&d.url)fresh.innerHTML=`<img src="${d.url}">`
-  }catch{avCache[c]='x'}
+  if(!avQueue.includes(c))avQueue.push(c)
+  processAvQueue()
 }
 
 // ── OPEN CHAT ──
@@ -902,7 +922,7 @@ function renderGroups(){
       <div class="g-item-info"><div class="g-item-name">${esc(name)}</div><div class="g-item-sub">📥 ${g.unreadCount||0} não lidos</div></div>
     </div>`
   }).join('')||'<div class="no-item">Nenhum grupo</div>'
-  lazyAv()
+  loadAvatars()
 }
 async function openGroup(id,name){
   const det=document.getElementById('gDetail')
