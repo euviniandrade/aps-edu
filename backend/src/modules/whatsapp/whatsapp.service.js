@@ -11,6 +11,7 @@ const CHATS_STORE_PATH = path.join(SESSION_PATH, 'chats-store.json')
 const MESSAGES_STORE_PATH = path.join(SESSION_PATH, 'messages-store.json')
 const CRM_STORE_PATH = path.join(SESSION_PATH, 'crm-store.json')
 const PHONEBOOK_STORE_PATH = path.join(SESSION_PATH, 'phonebook-store.json')
+const LABELS_STORE_PATH = path.join(SESSION_PATH, 'labels-store.json')
 
 const emitter = new EventEmitter()
 emitter.setMaxListeners(100)
@@ -23,6 +24,10 @@ const chatsStore = new Map()
 const crmStore = new Map()
 // Catálogo de contatos do celular (contacts.set / contacts.upsert) — persistido em disco
 const phonebookStore = new Map()
+// Selos / Labels — persistido em disco
+let labelsStore = []
+// Cache de avatares (evita chamadas repetidas à API do WhatsApp)
+const avatarCache = new Map() // chatId -> { url, expires }
 
 // ── Persistência ────────────────────────────────────────────────────────────
 
@@ -70,6 +75,12 @@ function bootstrapPersistence() {
     for (const [k, v] of Object.entries(phonebookData)) phonebookStore.set(k, v)
     console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados do disco.`)
   }
+
+  const labelsData = loadJsonFile(LABELS_STORE_PATH)
+  if (Array.isArray(labelsData)) {
+    labelsStore = labelsData
+    console.log(`[WhatsApp] ${labelsStore.length} selos carregados do disco.`)
+  }
 }
 
 // Timers de debounce para salvar sem travar o loop de eventos
@@ -103,6 +114,10 @@ function savePhonebookStore() {
   _savePhonebookTimer = setTimeout(() => {
     writeJsonFile(PHONEBOOK_STORE_PATH, Object.fromEntries(phonebookStore))
   }, 1500)
+}
+
+function saveLabels() {
+  writeJsonFile(LABELS_STORE_PATH, labelsStore)
 }
 
 // Carrega dados na inicialização do módulo
@@ -1020,21 +1035,26 @@ async function sendMessage({ phone, chatId, text }) {
 // ── Listagem ─────────────────────────────────────────────────────────────────
 
 async function listChats(limit = 2000) {
+  // Sempre usa chatsStore como base (tem dados mais ricos: nomes, timestamps, lastMessage)
+  // Enriquece com phonebook para nomes melhores
+  const memoryChats = Array.from(chatsStore.values())
+    .filter(c => c.id && c.id !== 'status@broadcast')
+    .map(c => ({
+      ...c,
+      name: phonebookStore.get(normalizePhone(c.id))?.name || c.name || normalizePhone(c.id),
+    }))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    .slice(0, Number(limit))
+
+  if (memoryChats.length > 0) return memoryChats
+
+  // Fallback: banco de dados (só usado se chatsStore vazio)
   try {
-    // Buscar do banco com nomes corretos
     const conversations = await prisma.conversation.findMany({
-      include: {
-        lead: true,
-        messages: {
-          orderBy: { timestamp: 'desc' },
-          take: 1
-        }
-      },
+      include: { lead: true },
       orderBy: { lastMessageAt: 'desc' },
       take: Number(limit)
     })
-
-    // Se tiver dados do banco, retorna; senão usa memória
     if (conversations && conversations.length > 0) {
       return conversations.map(conv => ({
         id: conv.lead.phoneNumber + (conv.lead.isGroup ? '@g.us' : '@s.whatsapp.net'),
@@ -1042,22 +1062,14 @@ async function listChats(limit = 2000) {
         isGroup: conv.lead.isGroup,
         unreadCount: 0,
         timestamp: Math.floor(conv.lastMessageAt?.getTime() / 1000) || 0,
-        lastMessage: conv.lead.lastMessageText || '...'
+        lastMessage: conv.lead.lastMessageText || ''
       }))
     }
   } catch (err) {
     console.error('[WhatsApp] Erro ao listar chats do banco:', err.message)
   }
 
-  // Fallback para memória (chatsStore) — enriquece com phonebook
-  return Array.from(chatsStore.values())
-    .filter(c => c.id !== 'status@broadcast')
-    .map(c => ({
-      ...c,
-      name: phonebookStore.get(normalizePhone(c.id))?.name || c.name || normalizePhone(c.id),
-    }))
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-    .slice(0, Number(limit))
+  return []
 }
 
 // ── Configurações ────────────────────────────────────────────────────────────
@@ -1098,21 +1110,148 @@ function resumeAuto() {
 }
 
 // ── AVATARES / FOTOS DE PERFIL ──────────────────────
+const AVATAR_TTL = 60 * 60 * 1000 // 1 hora de cache
+const AVATAR_FAIL_TTL = 10 * 60 * 1000 // 10 min para erros
+
 async function getProfilePicUrl(chatId) {
+  if (!chatId) return null
+  // Verificar cache
+  const cached = avatarCache.get(chatId)
+  if (cached && Date.now() < cached.expires) return cached.url
+
   if (!sock) return null
   try {
-    const contact = await sock.profilePictureUrl(chatId)
-    return contact
-  } catch (e) {
-    console.error('[WhatsApp] Erro ao obter foto:', chatId, e.message)
+    const url = await sock.profilePictureUrl(chatId, 'image')
+    avatarCache.set(chatId, { url, expires: Date.now() + AVATAR_TTL })
+    return url
+  } catch {
+    avatarCache.set(chatId, { url: null, expires: Date.now() + AVATAR_FAIL_TTL })
     return null
   }
+}
+
+// ── MEMBROS DE GRUPO ────────────────────────────────
+async function getGroupMembers(gid) {
+  if (!sock || !state.ready) throw Object.assign(new Error('WhatsApp não conectado'), { statusCode: 409 })
+  const metadata = await sock.groupMetadata(gid)
+  return (metadata.participants || []).map(p => ({
+    id: p.id,
+    phone: normalizePhone(p.id),
+    name: phonebookStore.get(normalizePhone(p.id))?.name ||
+      chatsStore.get(p.id)?.name ||
+      normalizePhone(p.id),
+    isAdmin: p.admin === 'admin' || p.admin === 'superadmin'
+  }))
+}
+
+// ── ENVIO DE MÍDIA ──────────────────────────────────
+async function sendMedia({ chatId, phone, media, mimetype, filename, caption }) {
+  if (!sock || !state.ready) throw Object.assign(new Error('WhatsApp não conectado'), { statusCode: 409 })
+  if (!media) throw Object.assign(new Error('Nenhum arquivo enviado'), { statusCode: 400 })
+
+  let jid
+  if (chatId && chatId.includes('@')) {
+    jid = chatId
+  } else {
+    const normalized = String(phone || chatId || '').replace(/\D/g, '')
+    if (!normalized) throw Object.assign(new Error('Informe chatId ou phone'), { statusCode: 400 })
+    jid = `${normalized}@s.whatsapp.net`
+  }
+
+  const buffer = Buffer.from(media, 'base64')
+  let content
+
+  if ((mimetype || '').startsWith('image/')) {
+    content = { image: buffer, caption: caption || '', mimetype }
+  } else if ((mimetype || '').startsWith('video/')) {
+    content = { video: buffer, caption: caption || '', mimetype }
+  } else if ((mimetype || '').startsWith('audio/')) {
+    content = { audio: buffer, mimetype, ptt: false }
+  } else {
+    content = { document: buffer, fileName: filename || 'arquivo', mimetype: mimetype || 'application/octet-stream', caption: caption || '' }
+  }
+
+  const result = await sock.sendMessage(jid, content)
+
+  // Atualiza chatsStore
+  const existing = chatsStore.get(jid) || {}
+  chatsStore.set(jid, {
+    ...existing, id: jid,
+    timestamp: Math.floor(Date.now() / 1000),
+    lastMessage: caption || (content.image ? '📷 Imagem' : content.video ? '🎥 Vídeo' : content.audio ? '🎤 Áudio' : '📄 Documento')
+  })
+  saveChatsStore()
+
+  return { id: result?.key?.id, to: jid }
+}
+
+// ── VARIAÇÕES DE MENSAGEM COM IA ────────────────────
+async function generateVariations(message) {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      const model = genAI.getGenerativeModel({ model: process.env.WHATSAPP_GEMINI_MODEL || 'gemini-2.0-flash-lite' })
+      const prompt = `Crie 4 variações da seguinte mensagem WhatsApp mantendo o mesmo significado mas com palavras diferentes (para evitar bloqueio de spam). Retorne APENAS um JSON array com as 4 strings, sem explicações extras.
+
+Mensagem: "${message}"
+
+Formato: ["variação1", "variação2", "variação3", "variação4"]`
+      const result = await model.generateContent(prompt)
+      const text = result.response.text().trim()
+      const match = text.match(/\[[\s\S]*?\]/)
+      if (match) {
+        const variations = JSON.parse(match[0])
+        if (Array.isArray(variations) && variations.length >= 2) return variations.slice(0, 4)
+      }
+    } catch (err) {
+      console.error('[Sofi] Erro ao gerar variações:', err.message)
+    }
+  }
+  // Fallback simples
+  return [message, message + ' 😊', `Olá! ${message}`, message.replace(/!$/, '.')]
+}
+
+// ── LABELS / SELOS ──────────────────────────────────
+function getLabels() {
+  return labelsStore
+}
+
+function createLabel({ name, color }) {
+  const label = { id: `lbl_${Date.now()}`, name: String(name || ''), color: String(color || '#667eea'), contacts: [] }
+  labelsStore.push(label)
+  saveLabels()
+  return label
+}
+
+function deleteLabel(id) {
+  labelsStore = labelsStore.filter(l => l.id !== id)
+  saveLabels()
+  return { success: true }
+}
+
+function addContactToLabel(labelId, contactId) {
+  const label = labelsStore.find(l => l.id === labelId)
+  if (!label) return { error: 'Selo não encontrado' }
+  const phone = normalizePhone(contactId)
+  if (!label.contacts.includes(phone)) label.contacts.push(phone)
+  saveLabels()
+  return label
+}
+
+function removeContactFromLabel(labelId, contactId) {
+  const label = labelsStore.find(l => l.id === labelId)
+  if (!label) return { error: 'Selo não encontrado' }
+  const phone = normalizePhone(contactId)
+  label.contacts = label.contacts.filter(c => c !== phone)
+  saveLabels()
+  return label
 }
 
 module.exports = {
   getState,
   start,
   sendMessage,
+  sendMedia,
   listChats,
   getMessages,
   getCrm,
@@ -1124,5 +1263,12 @@ module.exports = {
   handoff,
   resumeAuto,
   getProfilePicUrl,
+  getGroupMembers,
+  generateVariations,
+  getLabels,
+  createLabel,
+  deleteLabel,
+  addContactToLabel,
+  removeContactFromLabel,
   emitter,
 }

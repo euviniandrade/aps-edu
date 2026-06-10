@@ -96,7 +96,7 @@ module.exports = async function (fastify) {
   })
 
   // SSE — eventos em tempo real (estado + mensagens recebidas)
-  fastify.get('/events', { preHandler: [apiKeyAuth] }, async (request, reply) => {
+  fastify.get('/events', async (request, reply) => { // sem auth — EventSource não suporta headers
     const raw = reply.raw
     raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -385,6 +385,66 @@ module.exports = async function (fastify) {
     } catch (error) {
       return { success: false, error: error.message }
     }
+  })
+
+  // ── AVATARES ────────────────────────────────────────
+  fastify.get('/avatar', async (request) => {
+    try {
+      const { chatId } = request.query
+      const url = await whatsappService.getProfilePicUrl(chatId)
+      return { url }
+    } catch (e) {
+      return { url: null }
+    }
+  })
+
+  // ── MEMBROS DE GRUPO ─────────────────────────────────
+  fastify.get('/group-members/:gid', { preHandler: [apiKeyAuth] }, async (request, reply) => {
+    try {
+      const members = await whatsappService.getGroupMembers(decodeURIComponent(request.params.gid))
+      return members
+    } catch (e) {
+      return reply.code(e.statusCode || 500).send({ error: e.message })
+    }
+  })
+
+  // ── ENVIO DE MÍDIA ──────────────────────────────────
+  fastify.post('/send-media', { preHandler: [apiKeyAuth] }, async (request, reply) => {
+    try {
+      const result = await whatsappService.sendMedia(request.body || {})
+      return result
+    } catch (e) {
+      return reply.code(e.statusCode || 500).send({ error: e.message })
+    }
+  })
+
+  // ── VARIAÇÕES COM IA ────────────────────────────────
+  fastify.post('/ai/variations', { preHandler: [apiKeyAuth] }, async (request) => {
+    try {
+      const { message } = request.body || {}
+      if (!message) return { variations: [] }
+      const variations = await whatsappService.generateVariations(message)
+      return { variations }
+    } catch (e) {
+      return { variations: [request.body?.message || ''], error: e.message }
+    }
+  })
+
+  // ── LABELS / SELOS ──────────────────────────────────
+  fastify.get('/labels', async () => whatsappService.getLabels())
+  fastify.post('/labels', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { name, color } = request.body
+    return whatsappService.createLabel({ name, color })
+  })
+  fastify.delete('/labels/:id', { preHandler: [apiKeyAuth] }, async (request) => {
+    return whatsappService.deleteLabel(request.params.id)
+  })
+  fastify.post('/labels/:id/contacts', { preHandler: [apiKeyAuth] }, async (request) => {
+    const { contactId } = request.body
+    return whatsappService.addContactToLabel(request.params.id, contactId)
+  })
+  fastify.delete('/labels/:id/contacts/:contactId', { preHandler: [apiKeyAuth] }, async (request) => {
+    return whatsappService.removeContactFromLabel(request.params.id, request.params.contactId)
   })
 
   // GET /health/extended — Saúde estendida

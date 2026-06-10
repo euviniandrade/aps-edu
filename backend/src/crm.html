@@ -302,8 +302,10 @@ function render(){
 }
 
 const avObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){ldAv(e.target);avObs.unobserve(e.target)}})},{rootMargin:'50px'})
+const bulkAvObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){ldBulkAv(e.target);bulkAvObs.unobserve(e.target)}})},{rootMargin:'50px'})
 function lazyAv(){document.querySelectorAll('.clist .av[data-cid]').forEach(el=>{const c=el.dataset.cid;if(avCache[c]){if(avCache[c]!=='x')el.innerHTML=`<img src="${avCache[c]}">`}else avObs.observe(el)})}
-async function ldAv(el){const c=el.dataset.cid;try{const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H});const d=await r.json();if(d.url){avCache[c]=d.url;el.innerHTML=`<img src="${d.url}">`}else avCache[c]='x'}catch{avCache[c]='x'}}
+async function ldAv(el){const c=el.dataset.cid;if(!c)return;try{const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H});const d=await r.json();if(d.url){avCache[c]=d.url;el.innerHTML=`<img src="${d.url}">`}else avCache[c]='x'}catch{avCache[c]='x'}}
+async function ldBulkAv(el){const c=el.dataset.cid;if(!c)return;try{const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H});const d=await r.json();if(d.url){avCache[c]=d.url;el.outerHTML=`<img src="${d.url}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">`}else avCache[c]='x'}catch{avCache[c]='x'}}
 
 function openIdx(i){const c=getFiltered()[i];if(c)openChat(c.id,c.name||c.id.replace(/@.*/,''),c.isGroup)}
 
@@ -415,19 +417,26 @@ function renderBulkContacts(list, autoCheck=false){
     const name=c.name||phone
     const firstName=name.split(' ')[0]
     const adminBadge=c.admin?'<span style="font-size:9px;background:var(--p);color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">Admin</span>':''
+    const bg=acol(name)
+    const avEl=avCache[c.id]&&avCache[c.id]!=='x'
+      ?`<img src="${avCache[c.id]}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      :`<div class="bav" data-cid="${c.id}" style="width:34px;height:34px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${c.id.includes('@g.us')?'👥':ini(name)}</div>`
     return`<label class="ri">
       <input type="checkbox" value="${c.id}" data-name="${esc(name)}" ${autoCheck?'checked':''} onchange="updBulk()">
+      ${avEl}
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}${adminBadge}</div>
-        <div style="font-size:10px;color:var(--tm)">${esc(phone)} · Vai receber como: <b style="color:var(--p)">{nome}</b> → <b>${esc(firstName)}</b></div>
+        <div style="font-size:10px;color:var(--tm)">${esc(phone)} · <b style="color:var(--p)">{nome}</b> → <b>${esc(firstName)}</b></div>
       </div>
     </label>`
   }).join('')
   updBulk()
-  // Mostrar contagem
-  const count=list.length
-  const header=segMode==='group'?'Membros do grupo':'Contatos'
-  document.querySelector('[for="bulkSrch"]||label')
+  // Lazy load avatars nos destinatários
+  document.querySelectorAll('#rlist .bav[data-cid]').forEach(el=>{
+    const cid=el.dataset.cid
+    if(avCache[cid]&&avCache[cid]!=='x'){el.outerHTML=`<img src="${avCache[cid]}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">`;return}
+    if(!avCache[cid])bulkAvObs.observe(el)
+  })
 }
 function filterBulk(){if(segMode==='all')renderBulkList()}
 function toggleAll(){const cbs=document.querySelectorAll('#rlist input[type=checkbox]');const all=[...cbs].every(c=>c.checked);cbs.forEach(c=>c.checked=!all);updBulk()}
