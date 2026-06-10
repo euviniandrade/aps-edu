@@ -361,7 +361,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <span>⚡</span><span class="nb-lbl">Rápidas</span>
   </button>
   <div class="nav-foot">
-    <button class="nb" onclick="document.getElementById('qrModal').classList.add('on')" title="QR Code">
+    <button class="nb" onclick="showQR()" title="QR Code">
       <span>📱</span><span class="nb-lbl">QR</span>
     </button>
     <div class="conn-dot" id="connDot"></div>
@@ -570,9 +570,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <button class="qr-modal-close" onclick="document.getElementById('qrModal').classList.remove('on')">✕</button>
     <div style="font-size:32px;margin-bottom:10px">📱</div>
     <h2 style="margin-bottom:6px;font-size:16px">Conectar WhatsApp</h2>
-    <p style="color:var(--tm);font-size:11px;margin-bottom:18px">Escaneie com seu celular</p>
-    <img id="qrImg" src="" style="width:260px;height:260px;background:#fff;padding:10px;border-radius:10px;display:block;margin:0 auto 12px">
-    <p style="color:var(--tm);font-size:10px">WhatsApp → Configurações → Conectados</p>
+    <p style="color:var(--tm);font-size:11px;margin-bottom:18px" id="qrStatus">Escaneie com seu celular</p>
+    <div style="width:260px;height:260px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;overflow:hidden" id="qrImgWrap">
+      <img id="qrImg" src="" style="width:260px;height:260px;padding:10px;display:block" onerror="this.style.display='none';document.getElementById('qrLoading').style.display='flex'" onload="this.style.display='block';document.getElementById('qrLoading').style.display='none'">
+      <div id="qrLoading" style="display:none;flex-direction:column;align-items:center;gap:8px;color:#888;font-size:12px">
+        <div style="width:32px;height:32px;border:3px solid #ddd;border-top-color:#667eea;border-radius:50%;animation:sp .9s linear infinite"></div>
+        <span>Gerando QR...</span>
+      </div>
+    </div>
+    <p style="color:var(--tm);font-size:10px;margin-bottom:8px">WhatsApp → Configurações → Conectados</p>
+    <button class="btn" style="font-size:11px;padding:5px 14px" onclick="refreshQR()">🔄 Atualizar QR</button>
   </div>
 </div>
 
@@ -617,7 +624,7 @@ function go(v){
   if(v==='massa')renderRec()
 }
 
-// ── STATUS ──
+// ── STATUS / QR ──
 async function checkConn(){
   try{
     const r=await fetch('/api/whatsapp/status',{headers:H});const s=await r.json()
@@ -625,10 +632,56 @@ async function checkConn(){
     const dot=document.getElementById('connDot')
     dot.className='conn-dot'+(ok?' ok':'')
     dot.title=ok?'Conectado':'Desconectado'
-    if(!ok&&s.qrDataUrl){document.getElementById('qrImg').src=s.qrDataUrl;document.getElementById('qrModal').classList.add('on')}
+    if(!ok&&s.qrDataUrl){_setQR(s.qrDataUrl);document.getElementById('qrModal').classList.add('on')}
     if(ok)document.getElementById('qrModal').classList.remove('on')
   }catch{}
 }
+
+function _setQR(dataUrl){
+  const img=document.getElementById('qrImg')
+  const loading=document.getElementById('qrLoading')
+  if(dataUrl){
+    img.src=dataUrl
+    img.style.display='block'
+    if(loading)loading.style.display='none'
+  }else{
+    img.src=''
+    img.style.display='none'
+    if(loading)loading.style.display='flex'
+  }
+}
+
+async function showQR(){
+  document.getElementById('qrModal').classList.add('on')
+  _setQR(null) // mostra loading enquanto busca
+  document.getElementById('qrStatus').textContent='Escaneie com seu celular'
+  await refreshQR()
+}
+
+async function refreshQR(){
+  try{
+    const r=await fetch('/api/whatsapp/status',{headers:H})
+    const s=await r.json()
+    if(s.connected&&s.ready){
+      document.getElementById('qrModal').classList.remove('on')
+      return
+    }
+    if(s.qrDataUrl){
+      _setQR(s.qrDataUrl)
+      document.getElementById('qrStatus').textContent='Escaneie com seu celular'
+    }else{
+      _setQR(null)
+      document.getElementById('qrStatus').textContent=s.error||'Aguardando conexão...'
+    }
+  }catch{
+    document.getElementById('qrStatus').textContent='Erro ao carregar QR'
+  }
+}
+
+// Auto-refresh QR a cada 15s enquanto o modal está aberto (QR expira em ~20s)
+setInterval(()=>{
+  if(document.getElementById('qrModal').classList.contains('on'))refreshQR()
+},15000)
 
 // ── LOAD CHATS ──
 async function loadChats(){
@@ -1479,7 +1532,8 @@ function connectSSE(){
         if(!_wasConnected){loadChats();_wasConnected=true}
       }else{
         _wasConnected=false
-        if(s.qrDataUrl){document.getElementById('qrImg').src=s.qrDataUrl;document.getElementById('qrModal').classList.add('on')}
+        if(s.qrDataUrl){_setQR(s.qrDataUrl);document.getElementById('qrModal').classList.add('on')}
+        else if(s.error){const st=document.getElementById('qrStatus');if(st)st.textContent=s.error}
       }
     }catch{}
   })

@@ -136,6 +136,32 @@ function saveLabels() {
   writeJsonFile(LABELS_STORE_PATH, labelsStore)
 }
 
+// Remove apenas os arquivos de autenticação do Baileys (mantém histórico de chats/msgs)
+function clearAuthFiles() {
+  const keep = new Set([
+    'chats-store.json', 'messages-store.json', 'crm-store.json',
+    'phonebook-store.json', 'labels-store.json', 'quick-replies.json',
+    'scheduled-messages.json', 'sofi-whatsapp-memory.json'
+  ])
+  try {
+    if (!fs.existsSync(SESSION_PATH)) return
+    const files = fs.readdirSync(SESSION_PATH)
+    let deleted = 0
+    for (const f of files) {
+      if (keep.has(f)) continue
+      const fp = path.join(SESSION_PATH, f)
+      try {
+        const stat = fs.statSync(fp)
+        if (stat.isFile()) { fs.unlinkSync(fp); deleted++ }
+        else if (stat.isDirectory()) { fs.rmSync(fp, { recursive: true, force: true }); deleted++ }
+      } catch (_) {}
+    }
+    console.log(`[WhatsApp] 🧹 ${deleted} arquivos de autenticação removidos (histórico preservado).`)
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao limpar auth:', e.message)
+  }
+}
+
 // Carrega dados na inicialização do módulo
 bootstrapPersistence()
 
@@ -786,29 +812,40 @@ async function start() {
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode
+        const errorMsg = lastDisconnect?.error?.message || ''
         const loggedOut = statusCode === DisconnectReason.loggedOut
         const restartRequired = statusCode === DisconnectReason.restartRequired
+        // Bad MAC = sessão Signal Protocol corrompida (acontece após múltiplos restarts sem logout limpo)
+        const isBadMac = errorMsg.toLowerCase().includes('bad mac') || errorMsg.includes('Bad MAC')
+          || errorMsg.includes('bad-mac') || statusCode === 401
 
         state.ready = false
         state.connected = false
         state.qr = null
         state.qrDataUrl = null
-        state.error = loggedOut
-          ? 'Sessão encerrada — faça login novamente.'
-          : (lastDisconnect?.error?.message || 'WhatsApp desconectado.')
         sock = null
-        emitState()
 
-        if (loggedOut) {
-          console.log('[WhatsApp] Sessão encerrada. Aguardando novo QR Code.')
+        if (isBadMac || loggedOut) {
+          // Limpa APENAS os arquivos de autenticação (preserva histórico de chats/msgs)
+          const reason = isBadMac ? 'Sessão corrompida (Bad MAC)' : 'Sessão encerrada'
+          console.log(`[WhatsApp] ⚠️ ${reason} — limpando autenticação e gerando novo QR...`)
+          state.error = 'Reconectando... escaneie o QR Code quando aparecer.'
+          emitState()
+          clearAuthFiles()
+          // Reinicia em 3s → vai gerar novo QR automaticamente
+          setTimeout(() => { state._reconnectAttempt = 0; start() }, 3000)
         } else if (restartRequired) {
           console.log('[WhatsApp] Restart necessário — reconectando em 2s...')
+          state.error = 'Reconectando...'
+          emitState()
           setTimeout(() => start(), 2000)
         } else {
-          // Reconexão progressiva: 5s → 10s → 20s → 30s
+          // Reconexão progressiva: 5s → 7.5s → 11s → ... → 30s
           const attempt = (state._reconnectAttempt || 0) + 1
           state._reconnectAttempt = attempt
           const delay = Math.min(5000 * Math.pow(1.5, attempt - 1), 30000)
+          state.error = `Desconectado — reconectando em ${Math.round(delay/1000)}s... (tentativa ${attempt})`
+          emitState()
           console.log(`[WhatsApp] Reconectando em ${Math.round(delay/1000)}s... (tentativa ${attempt})`)
           setTimeout(() => { state._reconnectAttempt = 0; start() }, delay)
         }
@@ -1484,17 +1521,15 @@ function removeContactFromLabel(labelId, contactId) {
   return label
 }
 
-// ── WATCHDOG: reconecta automaticamente se offline por 2 minutos ────────────
+// ── WATCHDOG: reconecta automaticamente se offline (a cada 60s) ─────────────
 setInterval(() => {
-  if (!state.ready && !state.connected && !state.qr) {
-    const err = state.error || ''
-    // Não reconectar se foi logout intencional
-    if (!err.includes('encerrada') && !err.includes('loggedOut')) {
-      console.log('[WhatsApp] Watchdog: offline detectado, tentando reconectar...')
-      start().catch(() => {})
-    }
+  if (!sock && !state.ready && !state.connected) {
+    // Não reconectar se já está gerando QR (aguardando scan)
+    if (state.qr) return
+    console.log('[WhatsApp] Watchdog: offline sem QR ativo — tentando reconectar...')
+    start().catch(() => {})
   }
-}, 2 * 60 * 1000) // a cada 2 minutos
+}, 60 * 1000) // a cada 1 minuto
 
 module.exports = {
   getState,
