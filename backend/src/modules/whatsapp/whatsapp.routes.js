@@ -447,6 +447,98 @@ module.exports = async function (fastify) {
     return whatsappService.removeContactFromLabel(request.params.id, request.params.contactId)
   })
 
+  // ── QUICK REPLIES ────────────────────────────────────
+  fastify.get('/quick-replies', { preHandler: [apiKeyAuth] }, async () => whatsappService.getQuickReplies())
+  fastify.post('/quick-replies', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.addQuickReply(req.body || {}))
+  fastify.delete('/quick-replies/:id', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.deleteQuickReply(req.params.id))
+
+  // ── NOTAS INTERNAS ────────────────────────────────────
+  fastify.get('/notes/:chatId', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.getNotes(decodeURIComponent(req.params.chatId)))
+  fastify.post('/notes/:chatId', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.addNote(decodeURIComponent(req.params.chatId), req.body?.text))
+  fastify.delete('/notes/:chatId/:noteId', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.deleteNote(decodeURIComponent(req.params.chatId), req.params.noteId))
+
+  // ── STATUS DE CONVERSA ────────────────────────────────
+  fastify.post('/status/:chatId', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.setConvStatus(decodeURIComponent(req.params.chatId), req.body?.status))
+
+  // ── AGENDAMENTO ───────────────────────────────────────
+  fastify.post('/schedule', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.scheduleMessage(req.body || {}))
+  fastify.get('/schedule', { preHandler: [apiKeyAuth] }, async () => whatsappService.listScheduled())
+  fastify.delete('/schedule/:id', { preHandler: [apiKeyAuth] }, async (req) => whatsappService.cancelScheduled(req.params.id))
+
+  // ── TRANSCRIÇÃO DE ÁUDIO ──────────────────────────────
+  fastify.post('/transcribe', { preHandler: [apiKeyAuth] }, async (req) => {
+    try {
+      const { audio, mimetype } = req.body || {}
+      if (!audio) return { error: 'Nenhum áudio enviado' }
+      if (!process.env.GEMINI_API_KEY) return { error: 'GEMINI_API_KEY não configurada' }
+      const { GoogleGenerativeAI } = require('@google/generative-ai')
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+      const result = await model.generateContent([
+        { inlineData: { data: audio, mimeType: mimetype || 'audio/ogg' } },
+        'Transcreva exatamente o que foi dito neste áudio em português. Responda somente com a transcrição, sem explicações.'
+      ])
+      return { text: result.response.text().trim() }
+    } catch (e) {
+      return { error: e.message }
+    }
+  })
+
+  // ── KANBAN DATA ───────────────────────────────────────
+  fastify.get('/kanban', { preHandler: [apiKeyAuth] }, async () => {
+    const contacts = whatsappService.listCrmContacts()
+    const byStage = { novo: [], qualificado: [], proposta: [], negociacao: [], fechado: [] }
+    for (const c of contacts) {
+      const stage = c.stage || 'novo'
+      if (byStage[stage]) byStage[stage].push(c)
+      else byStage['novo'].push(c)
+    }
+    return byStage
+  })
+
+  // ── DASHBOARD DATA ────────────────────────────────────
+  fastify.get('/dashboard', { preHandler: [apiKeyAuth] }, async () => {
+    try {
+      const { PrismaClient } = require('@prisma/client')
+      const now = new Date()
+      const days7ago = new Date(now - 7 * 86400000)
+
+      const [totalLeads, totalMsgs, recentMsgs] = await Promise.all([
+        prisma.lead.count(),
+        prisma.message.count(),
+        prisma.message.findMany({
+          where: { timestamp: { gte: days7ago } },
+          select: { timestamp: true, fromPhone: true },
+          orderBy: { timestamp: 'asc' }
+        })
+      ])
+
+      // Agrupar por dia
+      const byDay = {}
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now - i * 86400000)
+        byDay[d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })] = { received: 0, sent: 0 }
+      }
+      for (const m of recentMsgs) {
+        const key = new Date(m.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        if (byDay[key]) {
+          if (m.fromPhone === 'bot' || m.fromPhone === 'agent') byDay[key].sent++
+          else byDay[key].received++
+        }
+      }
+
+      return {
+        totalLeads,
+        totalMessages: totalMsgs,
+        connectedChats: whatsappService.getState().connected,
+        byDay,
+        stages: { novo: 0, qualificado: 0, proposta: 0, negociacao: 0, fechado: 0 }
+      }
+    } catch (e) {
+      return { error: e.message, byDay: {}, totalLeads: 0, totalMessages: 0 }
+    }
+  })
+
   // GET /health/extended — Saúde estendida
   fastify.get('/health/extended', async () => {
     return {

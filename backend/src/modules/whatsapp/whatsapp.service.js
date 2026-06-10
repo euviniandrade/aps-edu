@@ -793,10 +793,23 @@ async function start() {
         const isGroup = chatId.endsWith('@g.us')
         const fromMe = message.key.fromMe === true
         const text = extractText(message)
-        if (!text) continue
 
-        // Para mensagens em tempo real de grupo: verificar regra de automação
-        if (isRealTime && isGroup && !automation.allowGroups && !fromMe) continue
+        // Detectar tipo de mídia mesmo sem texto
+        const msgContent = message.message || {}
+        const mediaType = msgContent.imageMessage ? 'image'
+          : msgContent.videoMessage ? 'video'
+          : msgContent.audioMessage ? 'audio'
+          : msgContent.pttMessage ? 'ptt'
+          : msgContent.documentMessage ? 'document'
+          : msgContent.stickerMessage ? 'sticker'
+          : msgContent.locationMessage ? 'location'
+          : 'text'
+
+        // Só pula se não tem conteúdo nenhum
+        if (!text && mediaType === 'text') continue
+
+        // ⚠️ CORREÇÃO: grupos SEMPRE armazenam — só automação é bloqueada
+        // (removido o continue que impedia grupos de aparecer)
 
         const pushName = message.pushName || ''
         const ts = message.messageTimestamp ? Number(message.messageTimestamp) : Math.floor(Date.now() / 1000)
@@ -822,7 +835,8 @@ async function start() {
           id: message.key.id || `${Date.now()}`,
           chatId,
           name: fromMe ? 'Eu' : (chatName || pushName),
-          text,
+          text: text || '',
+          type: mediaType,
           from: fromMe ? 'me' : 'lead',
           at,
           ack: message.status || (fromMe ? 1 : 0),
@@ -843,12 +857,13 @@ async function start() {
 
         await storeMessage(chatId, msgObj)
 
-        // Só emitir evento e rodar automação para mensagens novas recebidas
+        // Emitir evento em tempo real para TODOS (grupos incluídos)
         if (isRealTime) {
           state.lastMessageAt = new Date().toISOString()
           emitter.emit('message', msgObj)
 
-          if (!fromMe) {
+          // Automação: só roda em privado (ou grupos se allowGroups=true)
+          if (!fromMe && (!isGroup || automation.allowGroups)) {
             await handleAutomation({ chatId, text, pushName, at }).catch(err => {
               console.error('[WhatsApp] Erro na automação:', err.message)
             })
@@ -1211,6 +1226,96 @@ Formato: ["variação1", "variação2", "variação3", "variação4"]`
   return [message, message + ' 😊', `Olá! ${message}`, message.replace(/!$/, '.')]
 }
 
+// ── QUICK REPLIES ────────────────────────────────────
+const QUICK_REPLIES_PATH = path.join(SESSION_PATH, 'quick-replies.json')
+let quickReplies = []
+try { const d = loadJsonFile(QUICK_REPLIES_PATH); if (Array.isArray(d)) quickReplies = d } catch {}
+
+function getQuickReplies() { return quickReplies }
+function saveQuickRepliesFn() { writeJsonFile(QUICK_REPLIES_PATH, quickReplies) }
+function addQuickReply({ shortcut, text }) {
+  const id = `qr_${Date.now()}`
+  quickReplies.push({ id, shortcut: String(shortcut || '').toLowerCase(), text: String(text || '') })
+  saveQuickRepliesFn()
+  return quickReplies
+}
+function deleteQuickReply(id) {
+  quickReplies = quickReplies.filter(q => q.id !== id)
+  saveQuickRepliesFn()
+  return quickReplies
+}
+
+// ── NOTAS INTERNAS ────────────────────────────────────
+function getNotes(chatId) {
+  const phone = normalizePhone(chatId)
+  return (crmStore.get(phone) || {}).notes_list || []
+}
+function addNote(chatId, text) {
+  const phone = normalizePhone(chatId)
+  const crm = crmStore.get(phone) || {}
+  const notes = crm.notes_list || []
+  notes.push({ id: `n_${Date.now()}`, text, at: new Date().toISOString() })
+  crmStore.set(phone, { ...crm, notes_list: notes })
+  saveCrmStore()
+  return notes
+}
+function deleteNote(chatId, noteId) {
+  const phone = normalizePhone(chatId)
+  const crm = crmStore.get(phone) || {}
+  const notes = (crm.notes_list || []).filter(n => n.id !== noteId)
+  crmStore.set(phone, { ...crm, notes_list: notes })
+  saveCrmStore()
+  return notes
+}
+
+// ── STATUS DE CONVERSA ────────────────────────────────
+function setConvStatus(chatId, status) {
+  const phone = normalizePhone(chatId)
+  const crm = crmStore.get(phone) || {}
+  crmStore.set(phone, { ...crm, convStatus: status })
+  saveCrmStore()
+  return { chatId, status }
+}
+
+// ── AGENDAMENTO DE MENSAGENS ──────────────────────────
+const SCHEDULED_PATH = path.join(SESSION_PATH, 'scheduled-messages.json')
+let scheduledMessages = []
+try { const d = loadJsonFile(SCHEDULED_PATH); if (Array.isArray(d)) scheduledMessages = d } catch {}
+
+function saveScheduled() { writeJsonFile(SCHEDULED_PATH, scheduledMessages) }
+
+function scheduleMessage({ chatId, text, sendAt }) {
+  const id = `sch_${Date.now()}`
+  scheduledMessages.push({ id, chatId, text, sendAt: new Date(sendAt).getTime(), sent: false })
+  saveScheduled()
+  return { id, chatId, sendAt }
+}
+
+function listScheduled() { return scheduledMessages.filter(m => !m.sent) }
+function cancelScheduled(id) {
+  scheduledMessages = scheduledMessages.filter(m => m.id !== id)
+  saveScheduled()
+  return { success: true }
+}
+
+// Verificar agendamentos a cada minuto
+setInterval(async () => {
+  const now = Date.now()
+  const due = scheduledMessages.filter(m => !m.sent && m.sendAt <= now)
+  for (const msg of due) {
+    try {
+      if (sock && state.ready) {
+        await sock.sendMessage(msg.chatId, { text: msg.text })
+        msg.sent = true
+        console.log(`[WhatsApp] 📅 Mensagem agendada enviada para ${msg.chatId}`)
+      }
+    } catch (e) {
+      console.error('[WhatsApp] Erro ao enviar mensagem agendada:', e.message)
+    }
+  }
+  if (due.length > 0) saveScheduled()
+}, 30000)
+
 // ── LABELS / SELOS ──────────────────────────────────
 function getLabels() {
   return labelsStore
@@ -1270,5 +1375,15 @@ module.exports = {
   deleteLabel,
   addContactToLabel,
   removeContactFromLabel,
+  getQuickReplies,
+  addQuickReply,
+  deleteQuickReply,
+  getNotes,
+  addNote,
+  deleteNote,
+  setConvStatus,
+  scheduleMessage,
+  listScheduled,
+  cancelScheduled,
   emitter,
 }
