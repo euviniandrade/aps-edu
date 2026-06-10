@@ -247,6 +247,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .k-card:hover{border-color:var(--p);background:var(--sa)}
 .k-card.drag{opacity:.35;transform:rotate(1deg)}
 .k-card.card-over{border-color:var(--p);margin-top:4px}
+.k-card-top{display:flex;align-items:center;gap:8px}
+.k-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;overflow:hidden}
+.k-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.k-info{flex:1;min-width:0}
 .k-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k-msg{font-size:11px;color:var(--tm);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k-time{font-size:10px;color:var(--tm);margin-top:5px}
@@ -1348,6 +1352,8 @@ async function loadKanban(){
 
 function renderKanban(){
   const wrap=document.getElementById('kanbanWrap');if(!wrap)return
+  // Sincronizar avatars do cache de chats antes de renderizar
+  if(chats.length===0&&typeof loadChats==='function')loadChats().catch(()=>{})
   wrap.innerHTML=STAGES.map(s=>{
     const cards=(kanbData[s.id]||[])
     const delBtn=s.temp?`<button class="k-hd-del" title="Remover coluna" onclick="removeTempCol('${s.id}',event)">✕</button>`:''
@@ -1366,12 +1372,16 @@ function renderKanban(){
       <div class="k-body" id="kb-${s.id}">${cards.map(c=>kCard(c,s.id)).join('')}</div>
     </div>`
   }).join('')+`<button class="k-add-col" title="Nova coluna" onclick="openKModal()">＋</button>`
+  loadAvatars()
 }
 
 function kCard(c,stageId){
   const ph=c.phone||c.id||''
   const nm=esc(c.name||c.phone||'')
   const cid=esc(c.id||c.chatId||ph+'@s.whatsapp.net')
+  const bg=acol(c.name||ph)
+  const avUrl=avCache[c.id||ph+'@s.whatsapp.net']
+  const avEl=avUrl&&avUrl!=='x'?`<img src="${avUrl}">`:(c.isGroup?'👥':ini(c.name||ph))
   return`<div class="k-card" draggable="true"
     ondragstart="cardDragStart(event,'${ph}','${stageId}')"
     ondragend="cardDragEnd(event)"
@@ -1379,8 +1389,13 @@ function kCard(c,stageId){
     ondragleave="cardDragLeave(event)"
     ondrop="cardDrop(event,'${stageId}')"
     onclick="go('wa');setTimeout(()=>openChat('${cid}','${nm}',false),100)">
-    <div class="k-name">${nm}</div>
-    <div class="k-msg">${esc(c.lastMessage||'')}</div>
+    <div class="k-card-top">
+      <div class="k-av" style="background:${bg}" data-cid="${cid}">${avEl}</div>
+      <div class="k-info">
+        <div class="k-name">${nm}</div>
+        <div class="k-msg">${esc(c.lastMessage||'')}</div>
+      </div>
+    </div>
     <div class="k-time">${fmtT(c.timestamp)}</div>
   </div>`
 }
