@@ -1531,7 +1531,7 @@ function connectSSE(){
         // Reconectou: aguarda 4s para o chats.set do Baileys popular, depois carrega
         if(!_wasConnected){
           _wasConnected=true
-          setTimeout(()=>loadChats(),4000)
+          loadChats()
         }
       }else{
         _wasConnected=false

@@ -124,6 +124,8 @@ module.exports = async function (fastify) {
 
     // Estado inicial imediato
     send('state', whatsappService.getState())
+    // Se já há chats carregados, notifica o frontend imediatamente
+    whatsappService.listChats(5).then(c => { if (c.length > 0) send('chats.update', { count: c.length }) }).catch(() => {})
 
     const onMessage = (data) => send('message', data)
     const onState = (data) => send('state', data)
