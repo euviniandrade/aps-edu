@@ -699,7 +699,11 @@ async function loadChats(){
   try{
     const _ctrl=new AbortController();setTimeout(()=>_ctrl.abort(),5000)
     const r=await fetch('/api/whatsapp/chats?limit=2000',{headers:H,signal:_ctrl.signal})
-    const d=await r.json();chats=Array.isArray(d)?d:(d.chats||[])
+    const d=await r.json();const raw=Array.isArray(d)?d:(d.chats||[])
+    // Deduplicar: mesmo número de telefone → manter só o mais recente (resolve @lid vs @s.whatsapp.net)
+    const _pm=new Map()
+    for(const c of raw){const ph=c.id.replace(/@.*/,'');const ex=_pm.get(ph);if(!ex||(c.timestamp||0)>(ex.timestamp||0)||(!ex.id.includes('@s.whatsapp.net')&&c.id.includes('@s.whatsapp.net')))_pm.set(ph,c)}
+    chats=Array.from(_pm.values()).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
     renderList();renderGroups();loadAvatars()
     const tu=chats.reduce((s,c)=>s+(c.unreadCount>0&&!c.lastFromMe?c.unreadCount:0),0)
     const b=document.getElementById('badge-wa')
@@ -1543,7 +1547,10 @@ function connectSSE(){
       const msg=JSON.parse(e.data);if(!msg.chatId)return
       const isOut=msg.fromMe===true||msg.fromMe==='true'||msg.from==='me'
       const preview=msg.text||(msg.mediaLabel||'')|| (msg.type&&msg.type!=='text'?'📎 Arquivo':'')
-      const idx=chats.findIndex(c=>c.id===msg.chatId)
+      const msgPhone=msg.chatId.replace(/@.*/,'')
+      // Busca por JID exato primeiro; se não achar, busca pelo número normalizado (evita duplicatas @lid vs @s.whatsapp.net)
+      let idx=chats.findIndex(c=>c.id===msg.chatId)
+      if(idx<0)idx=chats.findIndex(c=>!c.isGroup&&c.id.replace(/@.*/,'')===msgPhone)
       if(idx>=0){
         chats[idx].lastMessage=preview
         chats[idx].timestamp=Math.floor(new Date(msg.at||Date.now()).getTime()/1000)
@@ -1551,7 +1558,8 @@ function connectSSE(){
         chats[idx].lastAck=isOut?(msg.ack||1):null
         // Incrementa unread apenas para mensagens RECEBIDAS e se não é a conversa aberta
         if(!isOut){
-          if(msg.chatId!==curId)chats[idx].unreadCount=(chats[idx].unreadCount||0)+1
+          const openJid=curId&&curId.replace(/@.*/,'')===msgPhone
+          if(!openJid)chats[idx].unreadCount=(chats[idx].unreadCount||0)+1
           else chats[idx].unreadCount=0
         }
         const c=chats.splice(idx,1)[0];chats.unshift(c)
@@ -1559,7 +1567,8 @@ function connectSSE(){
         chats.unshift({id:msg.chatId,name:msg.name||msg.chatId.replace(/@.*/,''),isGroup:msg.chatId.includes('@g.us'),lastMessage:preview,timestamp:Math.floor(Date.now()/1000),unreadCount:1,lastFromMe:false})
       }
       renderList()
-      if(curId===msg.chatId&&innerTab==='msgs')loadMsgs()
+      const openJid=curId&&curId.replace(/@.*/,'')===msgPhone
+      if(openJid&&innerTab==='msgs')loadMsgs()
       // Badge
       const tu=chats.reduce((s,c)=>s+(!c.lastFromMe&&c.unreadCount>0?c.unreadCount:0),0)
       const b=document.getElementById('badge-wa');if(tu>0){b.textContent=tu>99?'99+':tu;b.classList.add('on')}else b.classList.remove('on')
