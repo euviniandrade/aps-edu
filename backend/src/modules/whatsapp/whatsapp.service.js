@@ -648,33 +648,49 @@ async function start() {
           name: name || existing.name || phone,
           chatId: contact.id,
         })
-        // Atualizar chatsStore com o nome do contato
-        if (name && chatsStore.has(contact.id)) {
-          const existingChat = chatsStore.get(contact.id)
-          if (!existingChat.name || existingChat.name === phone) {
-            chatsStore.set(contact.id, { ...existingChat, name })
-          }
-        }
       }
       console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados.`)
+      // Re-aplicar nomes em TODOS os chats — resolve mismatch @lid vs @s.whatsapp.net
+      let namesUpdated = 0
+      for (const [chatId, chat] of chatsStore.entries()) {
+        if (chat.isGroup) continue
+        const phone = normalizePhone(chatId)
+        const pb = phonebookStore.get(phone)
+        if (pb?.name && (!chat.name || /^\d+$/.test(chat.name) || chat.name === phone)) {
+          chatsStore.set(chatId, { ...chat, name: pb.name })
+          namesUpdated++
+        }
+      }
       savePhonebookStore()
       saveChatsStore()
+      if (namesUpdated > 0) emitter.emit('chats.update', { count: namesUpdated })
     })
 
     sock.ev.on('contacts.upsert', (contacts) => {
+      let changed = 0
       for (const contact of (contacts || [])) {
         if (!contact.id || contact.id === 'status@broadcast') continue
         const phone = normalizePhone(contact.id)
         if (phone.length < 8) continue
+        const name = contact.name || contact.notify
         const existing = phonebookStore.get(phone) || {}
         phonebookStore.set(phone, {
           ...existing,
           phone,
-          name: contact.name || contact.notify || existing.name || phone,
+          name: name || existing.name || phone,
           chatId: contact.id,
         })
+        // Atualizar nome no chat se estava como número
+        for (const [chatId, chat] of chatsStore.entries()) {
+          if (chat.isGroup) continue
+          if (normalizePhone(chatId) === phone && name && (!chat.name || /^\d+$/.test(chat.name) || chat.name === phone)) {
+            chatsStore.set(chatId, { ...chat, name })
+            changed++
+          }
+        }
       }
       savePhonebookStore()
+      if (changed > 0) { saveChatsStore(); emitter.emit('chats.update', { count: changed }) }
     })
 
     // Popula chatsStore com histórico ao conectar
@@ -719,14 +735,26 @@ async function start() {
       for (const chat of (historyChats || [])) {
         if (!chat.id || chat.id === 'status@broadcast') continue
         const existing = chatsStore.get(chat.id) || {}
+        const phonebookName = phonebookStore.get(normalizePhone(chat.id))?.name
+        // Extrair lastMessage da estrutura do chat
+        const histLastMsg = chat.lastMessage?.conversation
+          || chat.lastMessage?.extendedTextMessage?.text
+          || chat.lastMessage?.imageMessage?.caption
+          || chat.lastMessage?.videoMessage?.caption
+          || (chat.lastMessage?.imageMessage ? '📷 Foto' : '')
+          || (chat.lastMessage?.videoMessage ? '🎥 Vídeo' : '')
+          || (chat.lastMessage?.audioMessage || chat.lastMessage?.pttMessage ? '🎤 Áudio' : '')
+          || (chat.lastMessage?.documentMessage ? '📄 Documento' : '')
+          || (chat.lastMessage?.stickerMessage ? '😀 Figurinha' : '')
+          || ''
         chatsStore.set(chat.id, {
           ...existing,
           id: chat.id,
-          name: chat.name || existing.name || normalizePhone(chat.id),
+          name: chat.name || phonebookName || existing.name || normalizePhone(chat.id),
           isGroup: chat.id.endsWith('@g.us'),
           unreadCount: chat.unreadCount ?? existing.unreadCount ?? 0,
           timestamp: chat.conversationTimestamp || existing.timestamp || Math.floor(Date.now() / 1000),
-          lastMessage: existing.lastMessage || '',
+          lastMessage: histLastMsg || existing.lastMessage || '',
         })
         updatedChats++
       }
