@@ -1424,9 +1424,16 @@ async function listChats(limit = 2000) {
   for (const c of allChats) {
     const phone = normalizePhone(c.id)
     const existing = phoneMap.get(phone)
-    // Mantém o com timestamp mais recente; ou o @s.whatsapp.net se igual
-    if (!existing || (c.timestamp || 0) > (existing.timestamp || 0) || (c.id.includes('@s.whatsapp.net') && !existing.id.includes('@s.whatsapp.net'))) {
+    if (!existing) {
       phoneMap.set(phone, c)
+    } else {
+      const newTs = c.timestamp || 0
+      const exTs = existing.timestamp || 0
+      // Mantém o mais recente; se timestamps iguais, prefere @s.whatsapp.net (mais compatível com API de avatar)
+      const newer = newTs > exTs
+      const sameTs = newTs === exTs
+      const preferNew = newer || (sameTs && c.id.includes('@s.whatsapp.net') && !existing.id.includes('@s.whatsapp.net'))
+      if (preferNew) phoneMap.set(phone, c)
     }
   }
 
