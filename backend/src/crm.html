@@ -1053,7 +1053,13 @@ function renderRecItems(list,check){
     return`<label class="rec-item"><input type="checkbox" value="${c.id}" data-name="${esc(name)}" ${check?'checked':''} onchange="updSendBtn()">${avEl}<div class="rec-name"><div class="rec-name-a">${esc(name)}${c.admin?'<span class="admin-tag" style="margin-left:5px">Admin</span>':''}</div><div class="rec-name-b">{nome} → <b>${esc(first)}</b></div></div></label>`
   }).join('')||'<div class="no-item">Sem contatos</div>'
   updSendBtn()
-  document.querySelectorAll('#recList .av[data-cid]').forEach(el=>{const c=el.dataset.cid;if(avCache[c]&&avCache[c]!=='x'){el.outerHTML=`<img src="${avCache[c]}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">`;return};if(!avCache[c])avObs.observe(el)})
+  // Carregar avatares usando a fila sequencial
+  document.querySelectorAll('#recList [data-cid]').forEach(el=>{
+    const c=el.dataset.cid;if(!c)return
+    if(avCache[c]&&avCache[c]!=='x'){el.innerHTML=`<img src="${avCache[c]}" style="width:100%;height:100%;object-fit:cover">`;return}
+    if(!avQueue.includes(c))avQueue.push(c)
+  })
+  processAvQueue()
 }
 function toggleAllRec(){const cbs=document.querySelectorAll('#recList input');const all=[...cbs].every(c=>c.checked);cbs.forEach(c=>c.checked=!all);updSendBtn()}
 // ── MSG MODE (única / partes) ──

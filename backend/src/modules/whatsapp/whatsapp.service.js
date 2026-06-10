@@ -336,7 +336,7 @@ function normalizePhone(chatId) {
 
 function getCrm(chatId) {
   const phone = normalizePhone(chatId)
-  return crmStore.get(phone) || { phone, stage: 'novo', tags: ['whatsapp'], score: 50, notes: '' }
+  return crmStore.get(phone) || { phone, stage: 'aguardando', tags: ['whatsapp'], score: 50, notes: '' }
 }
 
 function saveCrm(chatId, data) {
@@ -909,6 +909,28 @@ async function start() {
 
         await storeMessage(chatId, msgObj)
 
+        // ── Kanban automático ──────────────────────────────────────────────
+        // Mensagem RECEBIDA → vai para "aguardando" (contato aguarda resposta)
+        // Mensagem ENVIADA  → vai para "respondidos" (eu respondi)
+        // Grupos não entram no kanban
+        if (!isGroup) {
+          const phone = normalizePhone(chatId)
+          const crm = crmStore.get(phone) || {}
+          if (!fromMe) {
+            // Recebi mensagem: contato está aguardando resposta minha
+            const stagesAlwaysReset = ['respondidos', 'aguardando']
+            const newStage = stagesAlwaysReset.includes(crm.stage) || !crm.stage ? 'aguardando' : crm.stage
+            crmStore.set(phone, { ...crm, phone, stage: 'aguardando', tags: crm.tags || ['whatsapp'], score: crm.score || 50 })
+            saveCrmStore()
+          } else {
+            // Enviei mensagem: movi para respondidos SE estava em aguardando
+            if (!crm.stage || crm.stage === 'aguardando') {
+              crmStore.set(phone, { ...crm, phone, stage: 'respondidos', tags: crm.tags || ['whatsapp'], score: crm.score || 50 })
+              saveCrmStore()
+            }
+          }
+        }
+
         // Emitir evento em tempo real para TODOS (grupos incluídos)
         if (isRealTime) {
           state.lastMessageAt = new Date().toISOString()
@@ -1097,6 +1119,14 @@ async function sendMessage({ phone, chatId, text }) {
     lastAck: 1,
   })
   saveChatsStore()
+
+  // Kanban: enviei → mover para respondidos se estava em aguardando
+  const phoneForCrm = normalizePhone(jid)
+  const crmForSend = crmStore.get(phoneForCrm) || {}
+  if (!crmForSend.stage || crmForSend.stage === 'aguardando') {
+    crmStore.set(phoneForCrm, { ...crmForSend, phone: phoneForCrm, stage: 'respondidos', tags: crmForSend.tags || ['whatsapp'], score: crmForSend.score || 50 })
+    saveCrmStore()
+  }
 
   return { id: result?.key?.id || null, to: normalized, at: outMsg.at }
 }
