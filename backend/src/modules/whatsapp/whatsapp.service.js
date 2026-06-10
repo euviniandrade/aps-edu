@@ -868,6 +868,10 @@ async function start() {
         if (!chatId || chatId === 'status@broadcast') continue
         // ── Detectar mensagem APAGADA (REVOKE type=0) ou EDITADA (type=14) ──
         const proto = message.message?.protocolMessage
+        const editedMsgDbg = message.message?.editedMessage
+        if (proto || editedMsgDbg) {
+          console.log(`[WA-DBG upsert] type=${type} proto.type=${proto?.type} hasEdited=${!!editedMsgDbg} key=${message.key?.id?.slice(0,12)} chat=${chatId?.slice(0,20)} msgKeys=${Object.keys(message.message||{}).join(',')}`)
+        }
         if (proto) {
           // DELETE for everyone
           if (proto.type === 0 && proto.key?.id) {
