@@ -1073,6 +1073,54 @@ async function start() {
       }
     })
 
+    // ── Mensagens editadas/apagadas pelo dispositivo primário (seu celular) ──
+    // Quando VOCÊ edita ou apaga uma mensagem, Baileys recebe via messages.update
+    sock.ev.on('messages.update', (updates) => {
+      for (const { key, update } of updates) {
+        const chatId = key?.remoteJid
+        if (!chatId || chatId === 'status@broadcast') continue
+
+        const msgs = messageHistory.get(chatId)
+        if (!msgs) continue
+
+        // Verificar protocolMessage no update (delete/edit)
+        const proto = update.message?.protocolMessage
+
+        // DELETE: message é null (apagada) ou proto.type === 0
+        if (update.message === null || (proto?.type === 0 && proto?.key?.id)) {
+          const targetId = proto?.key?.id || key.id
+          const idx = msgs.findIndex(m => m.id === targetId)
+          if (idx >= 0 && !msgs[idx].deleted) {
+            msgs[idx] = { ...msgs[idx], deleted: true, originalText: msgs[idx].text, text: '' }
+            saveMessagesStore()
+            emitter.emit('message.update', { chatId, msgId: targetId, deleted: true })
+            console.log(`[WhatsApp] 🗑️ Mensagem apagada (update): ${targetId}`)
+          }
+          continue
+        }
+
+        // EDIT: proto.type === 14
+        if (proto?.type === 14 && proto?.key?.id) {
+          const targetId = proto.key.id
+          const newText = proto.editedMessage?.conversation
+            || proto.editedMessage?.extendedTextMessage?.text
+            || proto.editedMessage?.imageMessage?.caption
+            || ''
+          if (newText) {
+            const idx = msgs.findIndex(m => m.id === targetId)
+            if (idx >= 0) {
+              const originalText = msgs[idx].originalText || msgs[idx].text
+              msgs[idx] = { ...msgs[idx], edited: true, originalText, text: newText }
+              saveMessagesStore()
+              emitter.emit('message.update', { chatId, msgId: targetId, edited: true, text: newText, originalText })
+              console.log(`[WhatsApp] ✏️ Mensagem editada (update): ${targetId}`)
+            }
+          }
+          continue
+        }
+      }
+    })
+
   } catch (error) {
     state.error = `Erro ao iniciar Baileys: ${error.message}`
     sock = null
