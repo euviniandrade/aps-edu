@@ -378,26 +378,55 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="m-config">
     <div class="m-sec">
       <h3>📝 Mensagem</h3>
-      <label>Texto — use <b style="color:var(--p)">{nome}</b> para personalizar</label>
-      <textarea class="field" id="mMsg" style="min-height:90px" placeholder="Olá {nome}, tudo bem?" oninput="updSendBtn()"></textarea>
-      <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap">
-        <button class="btn" style="font-size:11px;padding:5px 10px" onclick="genVars()">✨ Gerar variações IA</button>
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tm);cursor:pointer"><input type="checkbox" id="useVars" checked style="accent-color:var(--p)"> Anti-bloqueio</label>
+      <!-- Toggle modo: única / partes -->
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="seg-b on" id="mmode-single" onclick="setMsgMode('single')" style="flex:none;padding:5px 12px;font-size:11px">📄 Mensagem única</button>
+        <button class="seg-b" id="mmode-parts" onclick="setMsgMode('parts')" style="flex:none;padding:5px 12px;font-size:11px">✂️ Dividir em partes</button>
       </div>
-      <div class="var-box" id="varBox"><div class="var-box-hd">4 Variações:</div><div id="varList"></div></div>
+      <!-- MODO ÚNICO -->
+      <div id="msgModeSingle">
+        <label>Texto — use <b style="color:var(--p)">{nome}</b> para personalizar</label>
+        <textarea class="field" id="mMsg" style="min-height:90px" placeholder="Olá {nome}, tudo bem?" oninput="updSendBtn()"></textarea>
+        <div style="display:flex;gap:6px;margin-top:7px;align-items:center;flex-wrap:wrap">
+          <button class="btn" style="font-size:11px;padding:5px 10px" onclick="genVars()">✨ Gerar variações IA</button>
+          <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tm);cursor:pointer"><input type="checkbox" id="useVars" checked style="accent-color:var(--p)"> Anti-bloqueio</label>
+        </div>
+        <div class="var-box" id="varBox"><div class="var-box-hd">4 Variações:</div><div id="varList"></div></div>
+      </div>
+      <!-- MODO PARTES -->
+      <div id="msgModeParts" style="display:none">
+        <div style="font-size:10px;color:var(--tm);margin-bottom:8px;line-height:1.5">Cada parte é enviada como <b>mensagem separada</b>, com o intervalo configurado. Use <b style="color:var(--p)">{nome}</b> em qualquer parte.</div>
+        <div id="msgParts">
+          <div class="msg-part-row" data-idx="0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:10px;color:var(--p);font-weight:700">Parte 1</span>
+            </div>
+            <textarea class="field" style="min-height:60px" placeholder="Texto da parte 1..." oninput="updSendBtn()"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn" style="font-size:11px;padding:5px 10px" onclick="addMsgPart()">+ Adicionar parte</button>
+          <button class="btn" style="font-size:11px;padding:5px 10px" onclick="removeMsgPart()">− Remover última</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10px;color:var(--tm)">
+          <span>Intervalo entre partes:</span>
+          <input type="number" id="partDelay" min="1" max="30" value="3" style="width:50px;background:var(--ib);border:1px solid var(--br);border-radius:5px;padding:3px 6px;color:var(--tx);font-size:11px;outline:none">
+          <span>segundos</span>
+        </div>
+      </div>
     </div>
     <div class="m-sec">
       <h3>📎 Arquivo (opcional)</h3>
       <div class="file-zone" onclick="document.getElementById('mFileIn').click()">
         <div class="fz-ico">📁</div>
-        <div class="fz-txt">Clique para selecionar<br><span style="font-size:9px">Imagem · Vídeo · Áudio · PDF · Word · Excel</span></div>
+        <div class="fz-txt">Clique para selecionar<br><span style="font-size:9px">Imagem · Vídeo · Áudio · PDF · Word · Excel · PPT · ODT · CSV · Contatos (.vcf) · ZIP</span></div>
       </div>
       <div class="file-preview-row" id="filePrev">
         <div id="fileThumb"></div>
         <div style="flex:1;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" id="fileName3">—</div>
         <button style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:16px" onclick="clearBulkFile()">✕</button>
       </div>
-      <input type="file" id="mFileIn" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.pptx,.txt" onchange="onBulkFile(this)">
+      <input type="file" id="mFileIn" style="display:none" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.txt,.csv,.rtf,.vcf,.zip,.rar" onchange="onBulkFile(this)">
     </div>
     <div class="m-sec">
       <h3>🎤 Áudio PTT (opcional)</h3>
@@ -508,7 +537,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 </div>
 
 <div class="imgview" id="imgview" onclick="this.classList.remove('on')"><img id="ivImg"></div>
-<input type="file" id="fileIn" style="display:none" onchange="sendFile(this)" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.pptx">
+<input type="file" id="fileIn" style="display:none" onchange="sendFile(this)" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.txt,.csv,.rtf,.vcf,.zip,.rar">
 <div class="toast" id="toast"></div>
 
 <script>
@@ -596,10 +625,13 @@ function renderList(){
     const bg=acol(name)
     const avEl=avCache[c.id]&&avCache[c.id]!=='x'?`<img src="${avCache[c.id]}">`:(c.isGroup?'👥':ini(name))
     const prev=c.lastMessage?esc(String(c.lastMessage).replace(/\n/g,' ').slice(0,46)):'...'
-    const isOut=c.lastFromMe===true
-    // Unread só aparece se a última mensagem NÃO foi minha
-    const unreadBadge=(!isOut&&c.unreadCount>0)?`<div class="ci-unread">${c.unreadCount>99?'99+':c.unreadCount}</div>`:''
-    const tick=isOut?`<span style="font-size:11px;color:var(--bl);flex-shrink:0">${ackIco(c.lastAck||0)}</span>`:''
+    // lastFromMe pode vir como boolean, string, ou 0/1
+    const isOut=c.lastFromMe===true||c.lastFromMe==='true'||c.lastFromMe===1
+    // Unread só aparece se a última mensagem NÃO foi minha E tem unread > 0
+    const unreadBadge=(!isOut&&(c.unreadCount||0)>0)?`<div class="ci-unread">${c.unreadCount>99?'99+':c.unreadCount}</div>`:''
+    // Tick ✓ só aparece em mensagens enviadas por mim
+    const ack=c.lastAck!=null?c.lastAck:(isOut?1:null)
+    const tick=isOut&&ack!=null?`<span style="font-size:11px;flex-shrink:0;margin-right:2px">${ackIco(ack)}</span>`:''
     return`<div class="ci${c.id===curId?' on':''}" onclick="openCI(${i})">
       <div class="av" style="background:${bg}" data-cid="${c.id}">${avEl}</div>
       <div class="ci-body">
@@ -612,11 +644,25 @@ function renderList(){
 }
 
 // ── AVATARS ──
-const avObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){fetchAv(e.target);avObs.unobserve(e.target)}})},{rootMargin:'60px'})
-function lazyAv(){document.querySelectorAll('[data-cid]').forEach(el=>{const c=el.dataset.cid;if(avCache[c]){if(avCache[c]!=='x')el.innerHTML=`<img src="${avCache[c]}">`;return}avObs.observe(el)})}
+const avObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){fetchAv(e.target);avObs.unobserve(e.target)}})},{rootMargin:'100px'})
+function lazyAv(){
+  document.querySelectorAll('[data-cid]').forEach(el=>{
+    const c=el.dataset.cid;if(!c)return
+    if(avCache[c]){if(avCache[c]!=='x'&&!el.querySelector('img'))el.innerHTML=`<img src="${avCache[c]}">`;return}
+    avObs.observe(el)
+  })
+}
 async function fetchAv(el){
-  const c=el.dataset.cid;if(!c||avCache[c])return
-  try{const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H});const d=await r.json();avCache[c]=d.url||'x';if(d.url)el.innerHTML=`<img src="${d.url}">`}catch{avCache[c]='x'}
+  const c=el.dataset.cid;if(!c)return
+  if(avCache[c]){if(avCache[c]!=='x')el.innerHTML=`<img src="${avCache[c]}">`;return}
+  try{
+    const r=await fetch(`/api/whatsapp/avatar?chatId=${encodeURIComponent(c)}`,{headers:H})
+    const d=await r.json()
+    avCache[c]=d.url||'x'
+    // Re-find element (may have been replaced by re-render)
+    const fresh=document.querySelector(`[data-cid="${CSS.escape(c)}"]`)
+    if(fresh&&d.url)fresh.innerHTML=`<img src="${d.url}">`
+  }catch{avCache[c]='x'}
 }
 
 // ── OPEN CHAT ──
@@ -886,11 +932,41 @@ function filterRec(){if(segMode==='all')renderRec()}
 function setSeg(s){
   segMode=s;['all','group','label'].forEach(x=>{const b=document.getElementById('seg-'+x);if(b)b.className='seg-b'+(x===s?' on':'')})
   const ex=document.getElementById('segExtra')
-  if(s==='group'){const grps=chats.filter(c=>c.isGroup);ex.innerHTML=`<select id="segGrpSel" onchange="loadGrpRec()" style="width:100%;background:var(--ib);border:1px solid var(--br);border-radius:7px;padding:7px 10px;color:var(--tx);font-size:12px;outline:none;margin-bottom:8px"><option value="">Selecione um grupo...</option>${grps.map(g=>`<option value="${g.id}">${esc(g.name||g.id)}</option>`).join('')}</select>`}
+  if(s==='group'){
+    const grps=chats.filter(c=>c.isGroup)
+    ex.innerHTML=`
+      <div style="position:relative;margin-bottom:8px">
+        <input id="grpSrchInp" placeholder="🔍 Buscar grupo..." autocomplete="off"
+          style="width:100%;background:var(--ib);border:1px solid var(--br);border-radius:7px;padding:7px 10px;color:var(--tx);font-size:12px;outline:none"
+          oninput="filterGrpList()" onfocus="document.getElementById('grpDropdown').style.display='block'">
+        <div id="grpDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--sb);border:1px solid var(--br);border-radius:0 0 7px 7px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.4)">
+          ${grps.map(g=>`<div class="grp-opt" data-id="${g.id}" data-name="${esc(g.name||g.id)}" onclick="selectGrp(this)"
+            style="padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03)"
+            onmouseenter="this.style.background='var(--sa)'" onmouseleave="this.style.background=''">${esc(g.name||g.id)}</div>`).join('')}
+        </div>
+      </div>
+      <div id="selGrpLabel" style="font-size:10px;color:var(--tm);margin-bottom:4px"></div>`
+    document.addEventListener('click',e=>{if(!e.target.closest('#grpSrchInp')&&!e.target.closest('#grpDropdown')){const d=document.getElementById('grpDropdown');if(d)d.style.display='none'}},{once:false})
+  }
   else if(s==='label'){ex.innerHTML=`<select id="segLblSel" onchange="loadLblRec()" style="width:100%;background:var(--ib);border:1px solid var(--br);border-radius:7px;padding:7px 10px;color:var(--tx);font-size:12px;outline:none;margin-bottom:8px"><option value="">Selecione um selo...</option>${labels.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('')}</select>`}
   else{ex.innerHTML='';renderRec()}
 }
-async function loadGrpRec(){const gid=document.getElementById('segGrpSel')?.value;if(!gid)return;try{const r=await fetch(`/api/whatsapp/group-members/${encodeURIComponent(gid)}`,{headers:H});const m=await r.json();renderRecItems(m.map(x=>({id:x.id,name:x.name||x.phone||x.id,admin:x.isAdmin})),true)}catch(e){toast('Erro: '+e.message,'err')}}
+// Group search helpers
+function filterGrpList(){
+  const q=(document.getElementById('grpSrchInp')?.value||'').toLowerCase()
+  const dd=document.getElementById('grpDropdown');if(!dd)return
+  dd.style.display='block'
+  dd.querySelectorAll('.grp-opt').forEach(el=>{el.style.display=!q||el.dataset.name.toLowerCase().includes(q)?'block':'none'})
+}
+function selectGrp(el){
+  const id=el.dataset.id,name=el.dataset.name
+  const inp=document.getElementById('grpSrchInp');if(inp)inp.value=name
+  const lbl=document.getElementById('selGrpLabel');if(lbl)lbl.textContent='Grupo selecionado: '+name
+  const dd=document.getElementById('grpDropdown');if(dd)dd.style.display='none'
+  loadGrpRecById(id)
+}
+async function loadGrpRecById(gid){if(!gid)return;try{const r=await fetch(`/api/whatsapp/group-members/${encodeURIComponent(gid)}`,{headers:H});const m=await r.json();renderRecItems(m.map(x=>({id:x.id,name:x.name||x.phone||x.id,admin:x.isAdmin})),true)}catch(e){toast('Erro: '+e.message,'err')}}
+async function loadGrpRec(){const gid=document.getElementById('segGrpSel')?.value;if(!gid)return;loadGrpRecById(gid)}
 function loadLblRec(){const lid=document.getElementById('segLblSel')?.value;if(!lid)return;const lbl=labels.find(l=>l.id===lid);if(!lbl)return;const c=(lbl.contacts||[]).map(p=>{const ch=chats.find(x=>x.id.includes(p));return{id:ch?ch.id:p+'@s.whatsapp.net',name:ch?.name||p}});renderRecItems(c,true)}
 function renderRecItems(list,check){
   const el=document.getElementById('recList')
@@ -903,11 +979,43 @@ function renderRecItems(list,check){
   document.querySelectorAll('#recList .av[data-cid]').forEach(el=>{const c=el.dataset.cid;if(avCache[c]&&avCache[c]!=='x'){el.outerHTML=`<img src="${avCache[c]}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">`;return};if(!avCache[c])avObs.observe(el)})
 }
 function toggleAllRec(){const cbs=document.querySelectorAll('#recList input');const all=[...cbs].every(c=>c.checked);cbs.forEach(c=>c.checked=!all);updSendBtn()}
+// ── MSG MODE (única / partes) ──
+let msgMode='single'
+function setMsgMode(m){
+  msgMode=m
+  ;['single','parts'].forEach(x=>{const b=document.getElementById('mmode-'+x);if(b)b.className='seg-b'+(x===m?' on':'')})
+  document.getElementById('msgModeSingle').style.display=m==='single'?'block':'none'
+  document.getElementById('msgModeParts').style.display=m==='parts'?'block':'none'
+  updSendBtn()
+}
+function addMsgPart(){
+  const container=document.getElementById('msgParts')
+  const idx=container.querySelectorAll('.msg-part-row').length
+  const div=document.createElement('div');div.className='msg-part-row';div.dataset.idx=idx
+  div.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;margin-top:8px"><span style="font-size:10px;color:var(--p);font-weight:700">Parte ${idx+1}</span></div><textarea class="field" style="min-height:60px" placeholder="Texto da parte ${idx+1}..." oninput="updSendBtn()"></textarea>`
+  container.appendChild(div);updSendBtn()
+}
+function removeMsgPart(){
+  const container=document.getElementById('msgParts')
+  const rows=container.querySelectorAll('.msg-part-row')
+  if(rows.length>1)container.removeChild(rows[rows.length-1])
+  updSendBtn()
+}
+function getMsgParts(first){
+  if(msgMode==='single'){
+    const raw=document.getElementById('mMsg')?.value.trim()||''
+    return[raw.replace(/\{nome\}/gi,first)]
+  }else{
+    return[...document.querySelectorAll('#msgParts textarea')].map(t=>t.value.trim().replace(/\{nome\}/gi,first)).filter(t=>t)
+  }
+}
 function updSendBtn(){
   const n=document.querySelectorAll('#recList input:checked').length
   document.getElementById('recCount').textContent=n
-  const msg=document.getElementById('mMsg')?.value.trim()
-  document.getElementById('mSendBtn').disabled=!n||(!msg&&!bulkFile&&!bulkAudio)
+  let hasMsg=false
+  if(msgMode==='single')hasMsg=!!(document.getElementById('mMsg')?.value.trim())
+  else hasMsg=[...document.querySelectorAll('#msgParts textarea')].some(t=>t.value.trim())
+  document.getElementById('mSendBtn').disabled=!n||(!hasMsg&&!bulkFile&&!bulkAudio)
 }
 function onBulkFile(input){
   const file=input.files[0];if(!file)return;bulkAudio=null;document.getElementById('pttSt').textContent=''
@@ -946,13 +1054,14 @@ async function genVars(){
   finally{btn.textContent='✨ Gerar variações IA';btn.disabled=false}
 }
 async function sendMassa(){
-  const raw=document.getElementById('mMsg').value.trim()
   const cbs=[...document.querySelectorAll('#recList input:checked')]
   if(!cbs.length){toast('Selecione destinatários','err');return}
-  if(!raw&&!bulkFile&&!bulkAudio){toast('Adicione mensagem ou arquivo','err');return}
-  const useV=document.getElementById('useVars').checked&&massaVars.length>=2
+  const useV=document.getElementById('useVars')?.checked&&massaVars.length>=2
   const delay=Number(document.getElementById('delayR').value)*1000
-  const parts=raw?raw.split(/\n\s*\n/).filter(p=>p.trim()):[]
+  const partDelaySec=Number(document.getElementById('partDelay')?.value||3)*1000
+  // Verificar se tem conteúdo
+  const testParts=getMsgParts('teste')
+  if(!testParts.some(p=>p)&&!bulkFile&&!bulkAudio){toast('Adicione mensagem ou arquivo','err');return}
   massaCancelled=false;massaPaused=false
   const sBtn=document.getElementById('mSendBtn'),prog=document.getElementById('mProg'),bar=document.getElementById('mBar'),log=document.getElementById('mLog'),pBtn=document.getElementById('mPauseBtn'),cBtn=document.getElementById('mCancelBtn')
   sBtn.disabled=true;pBtn.style.display='inline-block';cBtn.style.display='inline-block'
@@ -965,8 +1074,21 @@ async function sendMassa(){
     if(massaCancelled)break
     try{
       if(bulkAudio){const r=await fetch('/api/whatsapp/send-media',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,media:bulkAudio,mimetype:'audio/webm',ptt:true})});if(!r.ok)throw new Error('HTTP '+r.status)}
-      if(bulkFile){const cap=(useV?massaVars[i%massaVars.length]:(parts[0]||raw||'')).replace(/\{nome\}/gi,first);const r=await fetch('/api/whatsapp/send-media',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,media:bulkFile,mimetype:bulkFileMime,filename:bulkFileNm,caption:cap})});if(!r.ok)throw new Error('HTTP '+r.status)}
-      if(!bulkAudio&&parts.length){for(let j=0;j<parts.length;j++){if(massaCancelled)break;const tpl=(useV?massaVars[j%massaVars.length]:parts[j]).replace(/\{nome\}/gi,first);const r=await fetch('/api/whatsapp/send',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,text:tpl})});if(!r.ok)throw new Error('HTTP '+r.status);if(j<parts.length-1)await new Promise(r=>setTimeout(r,1500))}}
+      if(bulkFile){
+        const parts2=getMsgParts(first)
+        const cap=(useV&&massaVars.length>=2?massaVars[i%massaVars.length]:parts2[0]||'')
+        const r=await fetch('/api/whatsapp/send-media',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,media:bulkFile,mimetype:bulkFileMime,filename:bulkFileNm,caption:cap})})
+        if(!r.ok)throw new Error('HTTP '+r.status)
+      }
+      if(!bulkAudio){
+        const msgParts=getMsgParts(first).filter(p=>p)
+        for(let j=0;j<msgParts.length;j++){
+          if(massaCancelled)break
+          const txt=useV&&massaVars.length>=2&&msgMode==='single'?massaVars[i%massaVars.length].replace(/\{nome\}/gi,first):msgParts[j]
+          if(txt){const r=await fetch('/api/whatsapp/send',{method:'POST',headers:HJ,body:JSON.stringify({chatId:id,text:txt})});if(!r.ok)throw new Error('HTTP '+r.status)}
+          if(j<msgParts.length-1)await new Promise(r=>setTimeout(r,partDelaySec))
+        }
+      }
       ok++;log.innerHTML+=`<span style="color:var(--g)">✅ ${esc(name||id)}</span> `
     }catch(e){fail++;log.innerHTML+=`<span style="color:var(--rd)">❌ ${esc(name||id)}</span> `}
     bar.style.width=Math.round((i+1)/cbs.length*100)+'%';sBtn.textContent=`📤 ${i+1}/${cbs.length}`;log.scrollTop=log.scrollHeight
