@@ -647,6 +647,13 @@ async function start() {
           name: name || existing.name || phone,
           chatId: contact.id,
         })
+        // Mapear LID → telefone real (contact.lid existe quando o contato usa multi-device)
+        if (contact.lid) {
+          const lidNum = normalizePhone(contact.lid)
+          if (lidNum.length >= 8) {
+            phonebookStore.set(lidNum, { phone, name: name || existing.name || phone, chatId: contact.id, _lidOf: phone })
+          }
+        }
       }
       console.log(`[WhatsApp] ${phonebookStore.size} contatos do catálogo carregados.`)
       // Re-aplicar nomes em TODOS os chats — resolve mismatch @lid vs @s.whatsapp.net
@@ -679,6 +686,11 @@ async function start() {
           name: name || existing.name || phone,
           chatId: contact.id,
         })
+        // Mapear LID → telefone real
+        if (contact.lid) {
+          const lidNum = normalizePhone(contact.lid)
+          if (lidNum.length >= 8) phonebookStore.set(lidNum, { phone, name: name || existing.name || phone, chatId: contact.id, _lidOf: phone })
+        }
         // Atualizar nome no chat se estava como número
         for (const [chatId, chat] of chatsStore.entries()) {
           if (chat.isGroup) continue
@@ -1413,23 +1425,26 @@ async function listChats(limit = 2000) {
   const allChats = Array.from(chatsStore.values())
     .filter(c => c.id && c.id !== 'status@broadcast')
     .map(c => {
-      const phone = normalizePhone(c.id)
-      const pbName = phonebookStore.get(phone)?.name
-      const resolvedName = pbName || (c.name && c.name !== '.' && c.name.trim() ? c.name : null) || phone
-      return { ...c, name: resolvedName }
+      const rawPhone = normalizePhone(c.id)
+      // Para @lid: buscar o telefone real via mapeamento lid→phone
+      const pb = phonebookStore.get(rawPhone)
+      const dedupePhone = pb?._lidOf || rawPhone
+      const pbName = phonebookStore.get(dedupePhone)?.name || pb?.name
+      const resolvedName = pbName || (c.name && c.name !== '.' && c.name.trim() ? c.name : null) || dedupePhone
+      return { ...c, name: resolvedName, _dedupePhone: dedupePhone }
     })
 
-  // Deduplicar por número de telefone normalizado (mesmo contato pode ter @s.whatsapp.net e @lid)
+  // Deduplicar pelo telefone real (resolve @lid vs @s.whatsapp.net mesmo contato)
   const phoneMap = new Map()
   for (const c of allChats) {
-    const phone = normalizePhone(c.id)
+    const phone = c._dedupePhone
     const existing = phoneMap.get(phone)
     if (!existing) {
       phoneMap.set(phone, c)
     } else {
       const newTs = c.timestamp || 0
       const exTs = existing.timestamp || 0
-      // Mantém o mais recente; se timestamps iguais, prefere @s.whatsapp.net (mais compatível com API de avatar)
+      // Prefere o mais recente; em empate prefere @s.whatsapp.net (suporta avatar)
       const newer = newTs > exTs
       const sameTs = newTs === exTs
       const preferNew = newer || (sameTs && c.id.includes('@s.whatsapp.net') && !existing.id.includes('@s.whatsapp.net'))
