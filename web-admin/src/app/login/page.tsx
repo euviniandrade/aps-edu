@@ -67,7 +67,7 @@ export default function LoginPage() {
         unit:  data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
       }
       Cookies.set('user', JSON.stringify(userMinimal), { expires: 30, sameSite: 'strict', secure: true })
-      router.replace('/dashboard')
+      router.replace('/gestao')
     } catch {
       setError('E-mail ou senha incorretos.')
     } finally {
