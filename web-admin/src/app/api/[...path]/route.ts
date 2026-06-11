@@ -30,24 +30,20 @@ async function proxyToAppsScript(request: NextRequest, path: string[], bodyText 
   const cleanPath = path.join('/')
   const token = getBearerToken(request)
 
-  let response: Response
-  if (request.method === 'GET' || request.method === 'HEAD') {
-    const target = new URL(`${appUrl}/${cleanPath}`)
-    request.nextUrl.searchParams.forEach((value, key) => target.searchParams.set(key, value))
-    if (token) target.searchParams.set('_token', token)
-    response = await fetch(target, { method: 'GET', cache: 'no-store' })
-  } else {
-    let body: any = {}
-    if (bodyText) {
-      try { body = JSON.parse(bodyText) } catch { body = { raw: bodyText } }
-    }
-    response = await fetch(appUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...body, _method: request.method, _path: cleanPath, _token: token }),
-      cache: 'no-store',
-    })
+  let body: any = {}
+  if (bodyText) {
+    try { body = JSON.parse(bodyText) } catch { body = { raw: bodyText } }
   }
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    request.nextUrl.searchParams.forEach((value, key) => { body[key] = value })
+  }
+
+  const response = await fetch(appUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...body, _method: request.method, _path: cleanPath, _token: token }),
+    cache: 'no-store',
+  })
 
   const responseText = await response.text()
   let data: any
