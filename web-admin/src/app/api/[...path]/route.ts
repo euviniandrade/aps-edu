@@ -49,7 +49,13 @@ async function proxyToAppsScript(request: NextRequest, path: string[], bodyText 
     })
   }
 
-  const data = await response.json().catch(async () => ({ raw: await response.text() }))
+  const responseText = await response.text()
+  let data: any
+  try {
+    data = JSON.parse(responseText)
+  } catch {
+    data = { raw: responseText }
+  }
   const status = typeof data?.code === 'number' && data?.error ? data.code : response.status
   return NextResponse.json(data, { status })
 }
