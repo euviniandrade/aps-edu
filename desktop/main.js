@@ -1,8 +1,8 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
+﻿const { app, BrowserWindow, dialog, shell } = require('electron');
 const path = require('path');
 
-const DEFAULT_PRODUCTION_URL = 'https://aps-edu.vercel.app/whatsapp';
-const DEFAULT_LOCAL_URL = 'http://localhost:3001/whatsapp';
+const DEFAULT_PRODUCTION_URL = 'https://aps-edu.vercel.app/gestao';
+const DEFAULT_LOCAL_URL = 'http://localhost:3001/gestao';
 
 let mainWindow = null;
 let triedUrls = [];
@@ -77,7 +77,7 @@ function createWindow() {
               <div style="max-width:720px;padding:32px;text-align:center;">
                 <h1 style="margin:0 0 12px;font-size:28px;">APS-EDU Desktop</h1>
                 <p style="margin:0;color:#c9d1d9;line-height:1.6;">
-                  Não consegui abrir o painel web agora. Verifique se o site está online.
+                  NÃ£o consegui abrir o painel web agora. Verifique se o site estÃ¡ online.
                 </p>
               </div>
             </body>
@@ -101,7 +101,7 @@ function createWindow() {
 
     dialog.showErrorBox(
       'APS-EDU Desktop',
-      `Não foi possível abrir o painel web.\n\nÚltimo erro: ${errorDescription} (${errorCode})`
+      `NÃ£o foi possÃ­vel abrir o painel web.\n\nÃšltimo erro: ${errorDescription} (${errorCode})`
     );
   });
 

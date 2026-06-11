@@ -1,8 +1,8 @@
-# fly.toml — APS EDU Backend
-# Documentação: https://fly.io/docs/reference/configuration/
+﻿# fly.toml â€” APS EDU Backend
+# DocumentaÃ§Ã£o: https://fly.io/docs/reference/configuration/
 
 app = "aps-edu-api"
-primary_region = "gru"  # São Paulo, Brasil
+primary_region = "gru"  # SÃ£o Paulo, Brasil
 
 [build]
   dockerfile = "Dockerfile"
@@ -10,7 +10,7 @@ primary_region = "gru"  # São Paulo, Brasil
 [env]
   PORT = "3000"
   NODE_ENV = "production"
-  # As demais variáveis (DATABASE_URL, JWT_SECRET, etc.) devem ser configuradas
+  # As demais variÃ¡veis (DATABASE_URL, JWT_SECRET, etc.) devem ser configuradas
   # via: fly secrets set NOME=VALOR
 
 [http_service]
@@ -31,9 +31,6 @@ primary_region = "gru"  # São Paulo, Brasil
   cpu_kind = "shared"
   cpus = 1
 
-[mounts]
-  source = "whatsapp_data"
-  destination = "/app/.wwebjs_auth"
 
 [deploy]
   release_command = "npx prisma migrate deploy"

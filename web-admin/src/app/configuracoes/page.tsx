@@ -130,7 +130,7 @@ export default function ConfiguracoesPage() {
             </div>
             <div>
               <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Telefone / WhatsApp
+                Telefone
               </label>
               <input
                 type="tel" value={form.phone}

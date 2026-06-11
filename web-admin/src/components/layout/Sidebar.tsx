@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
@@ -15,19 +15,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard',     icon: '🏠', label: 'Dashboard' },
-  { href: '/meu-dia',       icon: '🎯', label: 'Meu Dia' },
-  { href: '/tasks',         icon: '✅', label: 'Tarefas' },
-  { href: '/events',        icon: '📅', label: 'Eventos' },
-  { href: '/announcements', icon: '📣', label: 'Mural' },
-  { href: '/minha-area',    icon: '🤖', label: 'Sofi IA' },
-  { href: '/gamification',  icon: '🏆', label: 'Gamificação' },
-  { href: '/reports',       icon: '📊', label: 'Relatórios', leaderOnly: true },
-  { href: '/feedback',      icon: '💬', label: 'Feedback' },
-  { href: '/users',         icon: '👥', label: 'Usuários',   adminOnly: true },
-  { href: '/units',         icon: '🏫', label: 'Unidades',   adminOnly: true },
-  { href: '/roles',         icon: '🔐', label: 'Perfis',     adminOnly: true },
-  { href: '/promotores',    icon: '⭐', label: 'Promotores', adminOnly: true },
+  { href: '/gestao',        icon: 'G', label: 'Centro' },
+  { href: '/meu-dia',       icon: 'D', label: 'Meu Dia' },
+  { href: '/tasks',         icon: 'âœ…', label: 'Tarefas' },
+  { href: '/estoque',       icon: '??', label: 'Estoque' },
+  { href: '/reports',       icon: 'ðŸ“Š', label: 'RelatÃ³rios', leaderOnly: true },
+  { href: '/users',         icon: 'P', label: 'Pessoas',   adminOnly: true },
+  { href: '/units',         icon: 'ðŸ«', label: 'Unidades',   adminOnly: true },
+  { href: '/analytics',     icon: 'A', label: 'Analytics IA' },
+  { href: '/automacoes',    icon: 'Z', label: 'Automacoes' },
 ]
 
 function getRoleFromUser(user: any): string {
@@ -71,7 +67,7 @@ export default function Sidebar() {
     router.push('/login')
   }
 
-  const userName  = user?.name || 'Usuário'
+  const userName  = user?.name || 'UsuÃ¡rio'
   const userInitial = userName[0]?.toUpperCase() || 'U'
 
   return (
@@ -92,13 +88,13 @@ export default function Sidebar() {
             boxShadow: '0 4px 12px rgba(248,163,3,0.3)',
           }}
         >
-          🎓
+          ðŸŽ“
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
             <div className="text-white font-bold text-sm leading-tight whitespace-nowrap">APS EDU</div>
             <div className="text-xs whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              {admin ? 'Administrador' : leader ? 'Liderança' : 'Colaborador'}
+              {admin ? 'Administrador' : leader ? 'LideranÃ§a' : 'Colaborador'}
             </div>
           </div>
         )}
@@ -108,7 +104,7 @@ export default function Sidebar() {
           style={{ color: 'rgba(255,255,255,0.2)' }}
           title={collapsed ? 'Expandir' : 'Recolher'}
         >
-          {collapsed ? '›' : '‹'}
+          {collapsed ? 'â€º' : 'â€¹'}
         </button>
       </div>
 
@@ -152,18 +148,18 @@ export default function Sidebar() {
       <div className="p-2 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Link
           href="/configuracoes"
-          title={collapsed ? 'Configurações' : undefined}
+          title={collapsed ? 'ConfiguraÃ§Ãµes' : undefined}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-blue-200/60 hover:text-white hover:bg-white/5"
         >
-          <span className="text-base flex-shrink-0">⚙️</span>
-          {!collapsed && <span>Configurações</span>}
+          <span className="text-base flex-shrink-0">âš™ï¸</span>
+          {!collapsed && <span>ConfiguraÃ§Ãµes</span>}
         </Link>
         <button
           onClick={logout}
           title={collapsed ? 'Sair' : undefined}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-blue-200/60 hover:text-white hover:bg-white/5"
         >
-          <span className="text-base flex-shrink-0">🚪</span>
+          <span className="text-base flex-shrink-0">ðŸšª</span>
           {!collapsed && <span>Sair</span>}
         </button>
         {!collapsed && user && (

@@ -1,9 +1,7 @@
-require('dotenv').config()
+﻿require('dotenv').config()
 const path = require('path')
 const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
-const whatsappService = require('./modules/whatsapp/whatsapp.service')
-const whatsappSync = require('./modules/whatsapp/whatsapp-sync.service')
 
 // Garante que a pasta de uploads existe ao iniciar
 const uploadsDir = path.join(process.cwd(), 'uploads')
@@ -23,7 +21,7 @@ fastify.register(require('@fastify/multipart'), {
   limits: { fileSize: 20 * 1024 * 1024 } // 20MB
 })
 
-// Servir arquivos enviados pelos usuários (fotos, documentos)
+// Servir arquivos enviados pelos usuÃ¡rios (fotos, documentos)
 fastify.register(require('@fastify/static'), {
   root: uploadsDir,
   prefix: '/uploads/',
@@ -53,30 +51,6 @@ fastify.register(require('./modules/feedback/feedback.routes'), { prefix: '/api/
 fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles' })
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
-fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
-
-// Servir CRM HTML
-fastify.get('/crm', async (request, reply) => {
-  const crmPath = path.join(__dirname, 'crm.html')
-  const crmHtml = fs.readFileSync(crmPath, 'utf-8')
-
-  // Se temos QR code, injeta diretamente no HTML
-  const state = whatsappService.getState()
-  let html = crmHtml
-
-  if (state.qrDataUrl) {
-    // Substitui a src vazia pela data URL do QR code
-    html = html.replace(
-      'id="qrImg" src=""',
-      `id="qrImg" src="${state.qrDataUrl}"`
-    )
-  }
-
-  reply.header('Cache-Control', 'no-store, no-cache, must-revalidate')
-  reply.header('Pragma', 'no-cache')
-  reply.type('text/html')
-  return html
-})
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
@@ -84,11 +58,8 @@ fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOS
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: '0.0.0.0' })
-    if (process.env.WHATSAPP_ENABLED === 'true') {
-      whatsappService.start().catch(err => fastify.log.error(err, 'Erro ao iniciar WhatsApp'))
-    }
-    console.log(`\n🚀 APS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
-    console.log(`📚 Documentação em http://localhost:${process.env.PORT || 3000}/docs\n`)
+    console.log(`\nðŸš€ APS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
+    console.log(`ðŸ“š DocumentaÃ§Ã£o em http://localhost:${process.env.PORT || 3000}/docs\n`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)

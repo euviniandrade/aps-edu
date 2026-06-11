@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import {
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
-  UserGroupIcon, RocketLaunchIcon,
+  UserGroupIcon, RocketLaunchIcon, ArchiveBoxIcon,
 } from '@heroicons/react/24/outline'
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
@@ -21,54 +21,57 @@ import {
   ChatBubbleLeftEllipsisIcon as ChatIconSolid,
   KeyIcon as KeyIconSolid, BuildingLibraryIcon as BuildingIconSolid,
   UserGroupIcon as UserGroupIconSolid, RocketLaunchIcon as RocketLaunchIconSolid,
+  ArchiveBoxIcon as ArchiveBoxIconSolid,
 } from '@heroicons/react/24/solid'
 
-// Nav organizado em seções
+// Nav principal enxuto; telas especificas ficam acessiveis pelo Centro de Gestao e pela busca.
 const navSections = [
   {
-    label: 'Principal',
+    label: 'Centro',
     items: [
-      { href: '/dashboard',     label: 'Dashboard',    icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
+      { href: '/gestao',        label: 'Centro',       icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
       { href: '/meu-dia',       label: 'Meu Dia',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#4A9EFF', roles: [] },
-      { href: '/notificacoes',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
     ],
   },
   {
-    label: 'Trabalho',
+    label: 'Operacao',
     items: [
       { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
-      { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
-      { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
-      { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
-      { href: '/whatsapp',      label: 'WhatsApp CRM', icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#0ABD78', roles: [] },
-      { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
+      { href: '/estoque',       label: 'Estoque',      icon: ArchiveBoxIcon,             iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
+      { href: '/reports',       label: 'Relatorios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
     ],
   },
   {
-    label: 'Inteligência IA',
+    label: 'Rede',
+    items: [
+      { href: '/users',         label: 'Pessoas',      icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
+      { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Inteligencia',
     items: [
       { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
-      { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
-      { href: '/inovacao',      label: 'Inovação IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
-      { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#E07B39', roles: ['leader', 'admin'] },
-    ],
-  },
-  {
-    label: 'Administração',
-    items: [
-      { href: '/users',         label: 'Usuários',     icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
-      { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
-      { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
-      { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
+      { href: '/automacoes',    label: 'Automacoes',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
     ],
   },
 ]
 
-// Flatten para manter compatibilidade com currentPage lookup
-const navItems = navSections.flatMap(s => s.items)
+const hiddenNavItems = [
+  { href: '/dashboard',     label: 'Dashboard',    icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
+  { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
+  { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
+  { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
+  { href: '/gamification',  label: 'Gamificacao',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
+  { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
+  { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
+  { href: '/inovacao',      label: 'Inovacao IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
+  { href: '/notificacoes',  label: 'Notificacoes', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
+  { href: '/minha-area',    label: 'Minha Central', icon: KeyIcon,                   iconSolid: KeyIconSolid,       color: '#FDC347', roles: [] },
+]
 
-// Item exclusivo do admin — ícone reutilizado do KeyIcon com cor dourada especial
-const myAreaItem = { href: '/minha-area', label: '⚡ Sofi IA', icon: KeyIcon, iconSolid: KeyIconSolid, color: '#FDC347' }
+// Flatten para manter compatibilidade com currentPage lookup
+const navItems = [...navSections.flatMap(s => s.items), ...hiddenNavItems]
 
 function getRoleLevel(role: string): string {
   const r = role.toLowerCase()
@@ -110,15 +113,16 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
   }, [open, onClose])
   if (!open) return null
   const shortcuts = [
-    { key: '⌘K / Ctrl+K', desc: 'Abrir buscador / Sofi IA' },
+    { key: 'âŒ˜K / Ctrl+K', desc: 'Abrir buscador / Sofi IA' },
     { key: '?',            desc: 'Ver atalhos de teclado' },
     { key: 'Esc',          desc: 'Fechar modal / painel' },
     { key: 'G + D',        desc: 'Ir para Dashboard' },
+    { key: 'G + G',        desc: 'Ir para Centro de Gestao' },
     { key: 'G + T',        desc: 'Ir para Tarefas' },
     { key: 'G + E',        desc: 'Ir para Eventos' },
-    { key: 'G + N',        desc: 'Ir para Notificações' },
+    { key: 'G + N',        desc: 'Ir para NotificaÃ§Ãµes' },
     { key: 'G + A',        desc: 'Ir para Analytics IA' },
-    { key: 'G + M',        desc: 'Ir para Minha Área (Sofi)' },
+    { key: 'G + M',        desc: 'Ir para Minha Central' },
   ]
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -128,7 +132,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-bold text-white">Atalhos de teclado</h3>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">✕</button>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">âœ•</button>
         </div>
         <div className="space-y-2">
           {shortcuts.map(s => (
@@ -155,20 +159,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Global keyboard shortcuts
   const gPressedRef = useRef(false)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // ⌘K / Ctrl+K → Command Palette
+    // âŒ˜K / Ctrl+K â†’ Command Palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       setPaletteOpen(v => !v)
       return
     }
-    // ? → shortcuts modal (only when not typing)
+    // ? â†’ shortcuts modal (only when not typing)
     const tag = (e.target as HTMLElement)?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA') return
     if (e.key === '?') { setShortcutsOpen(v => !v); return }
     // G + key navigation
     if (e.key === 'g' || e.key === 'G') { gPressedRef.current = true; setTimeout(() => { gPressedRef.current = false }, 1000); return }
     if (gPressedRef.current) {
-      const map: Record<string, string> = { d: '/dashboard', t: '/tasks', e: '/events', n: '/notificacoes', a: '/analytics', m: '/minha-area' }
+      const map: Record<string, string> = { d: '/dashboard', g: '/gestao', t: '/tasks', e: '/events', n: '/notificacoes', a: '/analytics', m: '/gestao' }
       const dest = map[e.key.toLowerCase()]
       if (dest) { e.preventDefault(); router.push(dest); gPressedRef.current = false }
     }
@@ -211,7 +215,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className="flex h-screen overflow-hidden"
       style={{ backgroundColor: 'var(--bg-base)' }}
     >
-      {/* ── BACKGROUND ORBS ──────────────────────────────── */}
+      {/* â”€â”€ BACKGROUND ORBS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div
           className="glow-orb animate-orb"
@@ -232,7 +236,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       </div>
 
-      {/* ── MOBILE OVERLAY ───────────────────────────────── */}
+      {/* â”€â”€ MOBILE OVERLAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-20 lg:hidden"
@@ -241,9 +245,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* ══════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           SIDEBAR
-          ══════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <aside
         style={{
           width: 256,
@@ -258,7 +262,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           lg:relative lg:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* ── LOGO AREA ───────────────────────────────── */}
+        {/* â”€â”€ LOGO AREA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div
           className="flex items-center gap-3 px-5 py-5"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
@@ -273,52 +277,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">
-              Educação Adventista
+              EducaÃ§Ã£o Adventista
             </p>
             <p
               className="text-[10px] font-semibold tracking-[0.16em] truncate mt-0.5 uppercase"
               style={{ color: 'var(--gold)', opacity: 0.8 }}
             >
-              Associação Paulista Sul
+              AssociaÃ§Ã£o Paulista Sul
             </p>
           </div>
         </div>
 
-        {/* ── MINHA ÁREA — destaque exclusivo ─────────── */}
-        <div className="px-3 pt-3 pb-2">
-          <Link
-            href="/minha-area"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-200 group relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, rgba(248,163,3,0.18) 0%, rgba(253,195,71,0.08) 100%)',
-              border: '1px solid rgba(248,163,3,0.35)',
-              boxShadow: '0 4px 20px rgba(248,163,3,0.12)',
-            }}
-          >
-            {/* Shimmer */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              style={{ background: 'linear-gradient(105deg, transparent 30%, rgba(248,163,3,0.08) 50%, transparent 70%)', backgroundSize: '200% 100%' }} />
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg relative z-10"
-              style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', boxShadow: '0 0 14px rgba(248,163,3,0.4)' }}>
-              ⚡
-            </div>
-            <div className="min-w-0 relative z-10">
-              <p className="text-sm font-extrabold leading-none" style={{ color: '#FDC347' }}>Minha Área</p>
-              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'rgba(248,163,3,0.55)' }}>
-                Tarefas · Senhas · Conquistas
-              </p>
-            </div>
-            <div className="ml-auto relative z-10 flex-shrink-0">
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#F8A303' }} />
-            </div>
-          </Link>
-        </div>
-
-        {/* ── NAVIGATION (por seções) ──────────────────── */}
+        {/* â”€â”€ NAVIGATION (por seÃ§Ãµes) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <nav className="flex-1 py-2 px-3 overflow-y-auto scrollbar-thin space-y-1">
           {navSections.map((section) => {
-            // Filtrar itens visíveis da seção
+            // Filtrar itens visÃ­veis da seÃ§Ã£o
             const sectionItems = section.items.filter(item => {
               if (!item.roles || item.roles.length === 0) return true
               if (item.roles.includes('admin')  && roleLevel !== 'admin') return false
@@ -355,12 +328,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             style={{ color: isActive ? item.color : 'rgba(255,255,255,0.65)' }}>
                             {item.label}
                           </span>
-                          {/* Badge especial para Notificações */}
+                          {/* Badge especial para NotificaÃ§Ãµes */}
                           {item.href === '/notificacoes' && !isActive && (
                             <span className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ background: '#FF4757' }} />
                           )}
-                          {/* Badge especial para Automações */}
+                          {/* Badge especial para AutomaÃ§Ãµes */}
                           {item.href === '/automacoes' && !isActive && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                               style={{ background: 'rgba(74,158,255,0.15)', color: '#4A9EFF' }}>
@@ -371,7 +344,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           {item.href === '/analytics' && !isActive && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                               style={{ background: 'rgba(249,194,52,0.15)', color: '#F9C234' }}>
-                              ✨
+                              âœ¨
                             </span>
                           )}
                           {isActive && (
@@ -387,7 +360,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* ── USER + LOGOUT ────────────────────────────── */}
+        {/* â”€â”€ USER + LOGOUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {/* User card */}
           <div
@@ -416,9 +389,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all hover:bg-white/5 group"
           >
-            <span style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.35)', fontSize: 16, lineHeight: '17px' }}>⚙️</span>
+            <span style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.35)', fontSize: 16, lineHeight: '17px' }}>âš™ï¸</span>
             <span className="text-sm font-medium group-hover:text-white/70 transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Configurações
+              ConfiguraÃ§Ãµes
             </span>
           </Link>
 
@@ -441,7 +414,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        {/* ── APS COLOR BAND ──────────────────────────── */}
+        {/* â”€â”€ APS COLOR BAND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex h-0.5">
           <div className="flex-1" style={{ background: '#F9C234' }} />
           <div className="flex-1" style={{ background: '#29ABE2' }} />
@@ -450,12 +423,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* ══════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           MAIN AREA
-          ══════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
 
-        {/* ── TOP BAR ─────────────────────────────────── */}
+        {/* â”€â”€ TOP BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <header
           className="flex-shrink-0 flex items-center justify-between px-5 py-3.5"
           style={{
@@ -482,7 +455,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className="text-xs hidden sm:block"
                 style={{ color: 'rgba(255,255,255,0.25)' }}
               >
-                Educação Adventista
+                EducaÃ§Ã£o Adventista
               </span>
               {currentPage && (
                 <>
@@ -503,7 +476,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* ⌘K Command Palette trigger */}
+            {/* âŒ˜K Command Palette trigger */}
             <button
               onClick={() => setPaletteOpen(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
@@ -517,7 +490,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-xs">Buscar...</span>
               <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono"
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                ⌘K
+                âŒ˜K
               </kbd>
             </button>
             {/* Mobile search */}
@@ -538,11 +511,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>?</kbd>
             </button>
 
-            {/* Bell → Notificações */}
+            {/* Bell â†’ NotificaÃ§Ãµes */}
             <Link href="/notificacoes"
               className="relative p-2 rounded-xl transition-all hover:bg-white/5"
               style={{ color: 'rgba(255,255,255,0.4)' }}
-              title="Notificações"
+              title="NotificaÃ§Ãµes"
             >
               <BellIcon className="w-5 h-5" />
               <span
@@ -578,33 +551,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        {/* ── DOT GRID TEXTURE ────────────────────────── */}
+        {/* â”€â”€ DOT GRID TEXTURE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="absolute inset-0 dot-grid pointer-events-none" style={{ zIndex: -1 }} />
 
-        {/* ── PAGE CONTENT ────────────────────────────── */}
+        {/* â”€â”€ PAGE CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <main className="flex-1 overflow-y-auto p-5 lg:p-6 pb-24 lg:pb-6">
           {children}
         </main>
       </div>
 
-      {/* ── AI ASSISTANT FLOAT ──────────────────────── */}
+      {/* â”€â”€ AI ASSISTANT FLOAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <AiAssistant />
 
-      {/* ── COMMAND PALETTE ⌘K ──────────────────────── */}
+      {/* â”€â”€ COMMAND PALETTE âŒ˜K â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
-      {/* ── KEYBOARD SHORTCUTS MODAL ─────────────────── */}
+      {/* â”€â”€ KEYBOARD SHORTCUTS MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
-      {/* ── MOBILE BOTTOM NAV ────────────────────────── */}
+      {/* â”€â”€ MOBILE BOTTOM NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2"
         style={{ background: 'rgba(7,9,22,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {[
-          { href: '/dashboard',    icon: '🏠', label: 'Início' },
-          { href: '/tasks',        icon: '✅', label: 'Tarefas' },
-          { href: '/minha-area',   icon: '⚡', label: 'Sofi' },
-          { href: '/notificacoes', icon: '🔔', label: 'Notif.' },
-          { href: '/inovacao',     icon: '🚀', label: 'Inovar' },
+          { href: '/gestao',       icon: 'G', label: 'Centro' },
+          { href: '/meu-dia',      icon: 'D', label: 'Dia' },
+          { href: '/tasks',        icon: 'âœ…', label: 'Tarefas' },
+          { href: '/estoque',      icon: 'ðŸ“¦', label: 'Estoque' },
+          { href: '/reports',      icon: 'R', label: 'Relat.' },
         ].map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (

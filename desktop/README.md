@@ -1,6 +1,6 @@
-# APS-EDU Desktop
+﻿# APS-EDU Desktop
 
-Thin Electron wrapper for the APS-EDU WhatsApp CRM.
+Thin Electron wrapper for the APS-EDU management platform.
 
 ## Run
 
@@ -17,6 +17,6 @@ The app tries the following URLs, in order:
 1. `APS_EDU_WEB_URL`
 2. `APS_EDU_DESKTOP_URL`
 3. `NEXT_PUBLIC_WEB_URL`
-4. `https://aps-edu.vercel.app/whatsapp`
-5. `http://localhost:3001/whatsapp`
+4. `https://aps-edu.vercel.app/dashboard`
+5. `http://localhost:3001/dashboard`
 

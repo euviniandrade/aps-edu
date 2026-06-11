@@ -2,7 +2,6 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copia package.json e instala
 COPY backend/package*.json ./
 
 RUN apt-get update && apt-get install -y \
@@ -12,13 +11,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN npm install --omit=dev
 
-# Copia código
-COPY backend/whatsapp-baileys.js whatsapp.js
+COPY backend/ ./
 COPY backend/.env.local* ./
 
-# Cria pasta de dados
-RUN mkdir -p /data
+EXPOSE 3000
 
-EXPOSE 8081
-
-CMD ["node", "whatsapp.js"]
+CMD ["node", "src/server.js"]

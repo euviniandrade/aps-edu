@@ -1,9 +1,9 @@
-{
+﻿{
   "name": "aps-edu-desktop",
   "version": "1.0.0",
   "private": true,
   "author": "APS-EDU",
-  "description": "Desktop wrapper for APS-EDU WhatsApp CRM",
+  "description": "Desktop wrapper for APS-EDU management platform",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

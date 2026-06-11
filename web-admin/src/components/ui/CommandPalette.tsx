@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import api from '@/lib/api'
@@ -14,19 +14,22 @@ interface Command {
 }
 
 const NAV_COMMANDS = [
-  { id: 'go-dashboard',     label: 'Ir para Dashboard',     icon: '🏠', path: '/dashboard',     keywords: ['home', 'inicio'] },
-  { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: '🎯', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
-  { id: 'go-tasks',         label: 'Ir para Tarefas',       icon: '✅', path: '/tasks',         keywords: ['task', 'tarefa'] },
-  { id: 'go-events',        label: 'Ir para Eventos',       icon: '📅', path: '/events',        keywords: ['evento', 'agenda', 'calendario'] },
-  { id: 'go-sofi',          label: 'Abrir Sofi IA',         icon: '🤖', path: '/minha-area',    keywords: ['ia', 'ai', 'assistente', 'chat'] },
-  { id: 'go-reports',       label: 'Ir para Relatórios',    icon: '📊', path: '/reports',       keywords: ['relatorio', 'grafico'] },
-  { id: 'go-announcements', label: 'Ir para Mural',         icon: '📣', path: '/announcements', keywords: ['mural', 'aviso', 'comunicado'] },
-  { id: 'go-users',         label: 'Ir para Usuários',      icon: '👥', path: '/users',         keywords: ['usuario', 'pessoa', 'membro'] },
-  { id: 'go-notif',         label: 'Notificações',          icon: '🔔', path: '/notificacoes',  keywords: ['notif', 'alerta'] },
-  { id: 'go-automacoes',    label: 'Automações IA',         icon: '⚡', path: '/automacoes',    keywords: ['automation', 'regra', 'fluxo'] },
-  { id: 'go-analytics',     label: 'Analytics Preditivo',   icon: '🔮', path: '/analytics',     keywords: ['predicao', 'forecast', 'tendencia'] },
-  { id: 'go-inovacao',      label: 'Central de Inovação IA', icon: '🚀', path: '/inovacao',      keywords: ['inovacao', 'ia', 'agentes', 'marketing', 'saas', 'dados'] },
-  { id: 'go-config',        label: 'Configurações',         icon: '⚙️', path: '/configuracoes', keywords: ['config', 'perfil', 'senha'] },
+  { id: 'go-gestao',        label: 'Ir para Centro de Gestao', icon: 'G', path: '/gestao',        keywords: ['gestao', 'suite', 'plataforma', 'cockpit', 'operacao', 'educacao', 'minha area', 'sofi pessoal', 'central'] },
+  { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: 'D', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
+  { id: 'go-tasks',         label: 'Ir para Tarefas',       icon: 'âœ…', path: '/tasks',         keywords: ['task', 'tarefa'] },
+  { id: 'go-estoque',       label: 'Ir para Estoque',       icon: '??', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimonio', 'inventario', 'compras'] },
+  { id: 'go-reports',       label: 'Ir para RelatÃ³rios',    icon: 'ðŸ“Š', path: '/reports',       keywords: ['relatorio', 'grafico'] },
+  { id: 'go-users',         label: 'Ir para Pessoas',       icon: 'P', path: '/users',         keywords: ['usuario', 'pessoa', 'membro', 'equipe'] },
+  { id: 'go-units',         label: 'Ir para Unidades',      icon: 'U', path: '/units',         keywords: ['colegio', 'unidade', 'rede', 'escola'] },
+  { id: 'go-analytics',     label: 'Analytics IA',          icon: 'A', path: '/analytics',     keywords: ['predicao', 'forecast', 'tendencia', 'indicador'] },
+  { id: 'go-automacoes',    label: 'AutomaÃ§Ãµes IA',         icon: 'Z', path: '/automacoes',    keywords: ['automation', 'regra', 'fluxo'] },
+  { id: 'go-dashboard',     label: 'Dashboard antigo',      icon: 'D', path: '/dashboard',     keywords: ['home', 'inicio', 'dashboard antigo'] },
+  { id: 'go-events',        label: 'Eventos',               icon: 'E', path: '/events',        keywords: ['evento', 'agenda', 'calendario'] },
+  { id: 'go-announcements', label: 'Ir para Mural',         icon: 'ðŸ“£', path: '/announcements', keywords: ['mural', 'aviso', 'comunicado'] },
+  { id: 'go-notif',         label: 'NotificaÃ§Ãµes',          icon: 'ðŸ””', path: '/notificacoes',  keywords: ['notif', 'alerta'] },
+  { id: 'go-sofi',          label: 'Ferramentas pessoais',  icon: 'S', path: '/minha-area',    keywords: ['ia', 'ai', 'assistente', 'chat', 'cofre', 'notas', 'caderno'] },
+  { id: 'go-inovacao',      label: 'Central de InovaÃ§Ã£o IA', icon: 'ðŸš€', path: '/inovacao',      keywords: ['inovacao', 'ia', 'agentes', 'marketing', 'saas', 'dados'] },
+  { id: 'go-config',        label: 'ConfiguraÃ§Ãµes',         icon: 'âš™ï¸', path: '/configuracoes', keywords: ['config', 'perfil', 'senha'] },
 ]
 
 interface CommandPaletteProps {
@@ -91,8 +94,8 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: `Você é um assistente rápido da plataforma APS EDU (Educação Adventista).
-Responda em 1-2 frases curtas e objetivas em português.
+            prompt: `VocÃª Ã© um assistente rÃ¡pido da plataforma APS EDU (EducaÃ§Ã£o Adventista).
+Responda em 1-2 frases curtas e objetivas em portuguÃªs.
 Pergunta: ${query}`,
           }),
         })
@@ -138,7 +141,7 @@ Pergunta: ${query}`,
 
   const categoryLabel: Record<string, string> = {
     navigate: 'Navegar',
-    action: 'Ações',
+    action: 'AÃ§Ãµes',
     ai: 'IA',
     search: 'Busca',
   }
@@ -172,12 +175,12 @@ Pergunta: ${query}`,
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar, navegar, perguntar à IA..."
+            placeholder="Buscar, navegar, perguntar Ã  IA..."
             className="flex-1 bg-transparent outline-none text-sm"
             style={{ color: 'white' }}
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>✕</button>
+            <button onClick={() => setQuery('')} style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>âœ•</button>
           )}
           <kbd
             className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono"
@@ -194,7 +197,7 @@ Pergunta: ${query}`,
               {!query && (
                 <div className="px-4 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                    Navegação rápida
+                    NavegaÃ§Ã£o rÃ¡pida
                   </p>
                 </div>
               )}
@@ -245,7 +248,7 @@ Pergunta: ${query}`,
               }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-base">🤖</span>
+                <span className="text-base">ðŸ¤–</span>
                 <p className="text-xs font-semibold" style={{ color: '#F8A303' }}>Sofi IA</p>
                 {aiLoading && (
                   <div className="flex gap-1 ml-1">
@@ -274,8 +277,8 @@ Pergunta: ${query}`,
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
         >
           {[
-            ['↑↓', 'Navegar'],
-            ['↵', 'Selecionar'],
+            ['â†‘â†“', 'Navegar'],
+            ['â†µ', 'Selecionar'],
             ['ESC', 'Fechar'],
           ].map(([key, label]) => (
             <div key={key} className="flex items-center gap-1.5">
@@ -289,7 +292,7 @@ Pergunta: ${query}`,
             </div>
           ))}
           <div className="ml-auto text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>
-            ✨ Powered by Sofi IA
+            âœ¨ Powered by Sofi IA
           </div>
         </div>
       </div>

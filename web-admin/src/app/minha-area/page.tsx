@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminLayout from '@/components/layout/AdminLayout'
@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { CheckCircleIcon as CheckSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid'
 
-// ─── TYPES ───────────────────────────────────────────────────
+// â”€â”€â”€ TYPES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface PersonalTask {
   id: string
   title: string
@@ -64,12 +64,12 @@ interface WorkDay {
   endMin: number
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────
+// â”€â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getGreeting(name: string): { text: string; emoji: string } {
   const h = new Date().getHours()
-  if (h < 12) return { text: `Bom dia, ${name}!`, emoji: '🌅' }
-  if (h < 18) return { text: `Boa tarde, ${name}!`, emoji: '☀️' }
-  return { text: `Boa noite, ${name}!`, emoji: '🌙' }
+  if (h < 12) return { text: `Bom dia, ${name}!`, emoji: 'ðŸŒ…' }
+  if (h < 18) return { text: `Boa tarde, ${name}!`, emoji: 'â˜€ï¸' }
+  return { text: `Boa noite, ${name}!`, emoji: 'ðŸŒ™' }
 }
 
 function fmtTime(totalMin: number): string {
@@ -108,7 +108,7 @@ function parsePersonalTasksFromText(text: string): Partial<PersonalTask>[] {
     const dateMatch = raw.match(/(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/)
     let dueDate = ''
     if (/hoje/i.test(raw)) dueDate = toIsoDate(today)
-    else if (/amanh[ãa]/i.test(raw)) dueDate = toIsoDate(tomorrow)
+    else if (/amanh[Ã£a]/i.test(raw)) dueDate = toIsoDate(tomorrow)
     else if (dateMatch) {
       const year = dateMatch[3] ? Number(dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]) : today.getFullYear()
       dueDate = toIsoDate(new Date(year, Number(dateMatch[2]) - 1, Number(dateMatch[1])))
@@ -116,12 +116,12 @@ function parsePersonalTasksFromText(text: string): Partial<PersonalTask>[] {
 
     const title = raw
       .replace(/\([^)]*\)/g, '')
-      .replace(/prazo\s*:?\s*(hoje|amanh[ãa]|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)/ig, '')
+      .replace(/prazo\s*:?\s*(hoje|amanh[Ã£a]|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)/ig, '')
       .replace(/\d+\s*(h|hora|horas|min|minuto|minutos)/ig, '')
-      .replace(/^\s*[-–•]\s*/, '')
+      .replace(/^\s*[-â€“â€¢]\s*/, '')
       .trim()
     const lower = raw.toLowerCase()
-    const category: PersonalTask['category'] = /campanha|instagram|tiktok|marketing|drone|conte[úu]do|postar/.test(lower)
+    const category: PersonalTask['category'] = /campanha|tiktok|marketing|drone|conte[Ãºu]do|postar/.test(lower)
       ? 'campanha'
       : /pessoal/.test(lower) ? 'pessoal' : 'trabalho'
     const priority: PersonalTask['priority'] = dueDate === toIsoDate(today) || /urgente|prioridade|hoje/.test(lower) ? 'high' : 'medium'
@@ -143,7 +143,7 @@ function calendarPayloadForTask(task: Partial<PersonalTask>) {
   }
 }
 
-// ─── CREDENTIALS VAULT (local-only, PIN-derived encryption) ─────────
+// â”€â”€â”€ CREDENTIALS VAULT (local-only, PIN-derived encryption) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const VAULT_KEY = 'aps_edu_vault_v2'
 const VAULT_PIN_KEY = 'aps_edu_vault_pin'
 const NOTEBOOK_KEY = 'aps_edu_notebooks_v1'
@@ -160,23 +160,23 @@ const NOTEBOOK_TYPES: {
     label: 'Ideia',
     color: '#F8A303',
     soft: 'rgba(248,163,3,0.12)',
-    description: 'Hipótese, impacto e primeiro experimento.',
-    placeholder: 'Capture a ideia, por que ela importa e qual seria o menor teste possível...',
+    description: 'HipÃ³tese, impacto e primeiro experimento.',
+    placeholder: 'Capture a ideia, por que ela importa e qual seria o menor teste possÃ­vel...',
   },
   {
     value: 'reuniao',
-    label: 'Reunião',
+    label: 'ReuniÃ£o',
     color: '#4A9EFF',
     soft: 'rgba(74,158,255,0.12)',
-    description: 'Pauta, decisões, responsáveis e próximos passos.',
-    placeholder: 'Registre participantes, pauta, decisões, tarefas e pendências da reunião...',
+    description: 'Pauta, decisÃµes, responsÃ¡veis e prÃ³ximos passos.',
+    placeholder: 'Registre participantes, pauta, decisÃµes, tarefas e pendÃªncias da reuniÃ£o...',
   },
   {
     value: 'frase',
     label: 'Frase',
     color: '#A78BFA',
     soft: 'rgba(167,139,250,0.12)',
-    description: 'Citações, repertório e aplicações futuras.',
+    description: 'CitaÃ§Ãµes, repertÃ³rio e aplicaÃ§Ãµes futuras.',
     placeholder: 'Guarde a frase, contexto, autor e onde ela pode ser usada...',
   },
   {
@@ -185,15 +185,15 @@ const NOTEBOOK_TYPES: {
     color: '#0ABD78',
     soft: 'rgba(10,189,120,0.12)',
     description: 'Objetivo, marcos, indicadores e riscos.',
-    placeholder: 'Desenhe objetivo, entregas, responsáveis, prazos, métricas e riscos...',
+    placeholder: 'Desenhe objetivo, entregas, responsÃ¡veis, prazos, mÃ©tricas e riscos...',
   },
   {
     value: 'livre',
     label: 'Livre',
     color: '#FFFFFF',
     soft: 'rgba(255,255,255,0.08)',
-    description: 'Captura rápida sem fricção.',
-    placeholder: 'Escreva qualquer pensamento solto, link, briefing ou lembrança...',
+    description: 'Captura rÃ¡pida sem fricÃ§Ã£o.',
+    placeholder: 'Escreva qualquer pensamento solto, link, briefing ou lembranÃ§a...',
   },
 ]
 
@@ -311,7 +311,7 @@ function hasPinSet(): boolean {
   return !!localStorage.getItem(VAULT_PIN_KEY)
 }
 
-// ─── NOTIFICATIONS ────────────────────────────────────────────
+// â”€â”€â”€ NOTIFICATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function requestNotifPermission() {
   if (!('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
@@ -325,7 +325,7 @@ function sendNotif(title: string, body: string, icon = '/icons/icon-192x192.png'
   new Notification(title, { body, icon })
 }
 
-// ─── CAT PRIORITY ─────────────────────────────────────────────
+// â”€â”€â”€ CAT PRIORITY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CAT_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   trabalho:  { label: 'Trabalho',  color: '#4A9EFF', bg: 'rgba(74,158,255,0.12)' },
   campanha:  { label: 'Campanha',  color: '#F8A303', bg: 'rgba(248,163,3,0.12)' },
@@ -333,11 +333,11 @@ const CAT_STYLE: Record<string, { label: string; color: string; bg: string }> = 
 }
 const PRI_STYLE: Record<string, { label: string; color: string }> = {
   high:   { label: 'Alta',  color: '#FF4757' },
-  medium: { label: 'Média', color: '#F8A303' },
+  medium: { label: 'MÃ©dia', color: '#F8A303' },
   low:    { label: 'Baixa', color: '#0ABD78' },
 }
 
-// ─── WORKDAY TIMER COMPONENT ──────────────────────────────────
+// â”€â”€â”€ WORKDAY TIMER COMPONENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
   tasks: PersonalTask[]
   workDay?: WorkDay
@@ -377,7 +377,7 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
     return acc
   }, { count: 0, time: 0 }).count
 
-  // Tempo estimado de conclusão se começar agora
+  // Tempo estimado de conclusÃ£o se comeÃ§ar agora
   const estFinishMin  = nowTotal + pendingMin
   const estFinishHour = Math.floor(estFinishMin / 60) % 24
   const estFinishMins = estFinishMin % 60
@@ -403,14 +403,14 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
           {flash && (
             <span className="text-[10px] px-2 py-0.5 rounded-full animate-pulse"
               style={{ background: 'rgba(248,163,3,0.2)', color: '#F8A303' }}>
-              ✨ Atualizado pela Sofi
+              âœ¨ Atualizado pela Sofi
             </span>
           )}
         </div>
         <button onClick={() => setEditing(!editing)}
           className="text-xs px-3 py-1 rounded-lg transition-all"
           style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)' }}>
-          {editing ? 'Fechar' : '⚙️ Configurar'}
+          {editing ? 'Fechar' : 'âš™ï¸ Configurar'}
         </button>
       </div>
 
@@ -437,10 +437,10 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Início', value: `${String(wd.startHour).padStart(2,'0')}:${String(wd.startMin).padStart(2,'0')}`, color: '#4A9EFF' },
-          { label: 'Término', value: `${String(wd.endHour).padStart(2,'0')}:${String(wd.endMin).padStart(2,'0')}`, color: '#8B5CF6' },
-          { label: remaining > 0 ? '⏳ Restam' : '✅ Encerrado', value: remaining > 0 ? fmtTime(remaining) : '--', color: remaining < 60 && remaining > 0 ? '#FF4757' : '#0ABD78' },
-          { label: '🎯 Cabem agora', value: `${fitsCount} tarefa${fitsCount !== 1 ? 's' : ''}`, color: '#F8A303' },
+          { label: 'InÃ­cio', value: `${String(wd.startHour).padStart(2,'0')}:${String(wd.startMin).padStart(2,'0')}`, color: '#4A9EFF' },
+          { label: 'TÃ©rmino', value: `${String(wd.endHour).padStart(2,'0')}:${String(wd.endMin).padStart(2,'0')}`, color: '#8B5CF6' },
+          { label: remaining > 0 ? 'â³ Restam' : 'âœ… Encerrado', value: remaining > 0 ? fmtTime(remaining) : '--', color: remaining < 60 && remaining > 0 ? '#FF4757' : '#0ABD78' },
+          { label: 'ðŸŽ¯ Cabem agora', value: `${fitsCount} tarefa${fitsCount !== 1 ? 's' : ''}`, color: '#F8A303' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-3 text-center"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -454,17 +454,17 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
         <div className="mt-3 p-3 rounded-xl space-y-1 text-xs"
           style={{ background: remaining < pendingMin ? 'rgba(255,71,87,0.06)' : 'rgba(248,163,3,0.07)', border: `1px solid ${remaining < pendingMin ? 'rgba(255,71,87,0.2)' : 'rgba(248,163,3,0.15)'}` }}>
           <div className="flex items-center gap-2">
-            <span>📋</span>
+            <span>ðŸ“‹</span>
             <span style={{ color: remaining < pendingMin ? 'rgba(255,150,150,0.9)' : 'rgba(255,200,80,0.9)' }}>
-              <strong>{pendingTasks.length} tarefas</strong> · <strong>{fmtTime(pendingMin)}</strong> de trabalho pendente
-              {remaining > 0 && remaining < pendingMin && <span style={{ color: '#FF4757' }}> — não dá pra tudo hoje! Priorize.</span>}
+              <strong>{pendingTasks.length} tarefas</strong> Â· <strong>{fmtTime(pendingMin)}</strong> de trabalho pendente
+              {remaining > 0 && remaining < pendingMin && <span style={{ color: '#FF4757' }}> â€” nÃ£o dÃ¡ pra tudo hoje! Priorize.</span>}
             </span>
           </div>
           {pendingMin > 0 && remaining > 0 && (
             <div className="flex items-center gap-2">
-              <span>🏁</span>
+              <span>ðŸ</span>
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>
-                Se começar agora, termina por volta das{' '}
+                Se comeÃ§ar agora, termina por volta das{' '}
                 <strong style={{ color: 'rgba(255,255,255,0.75)' }}>
                   {String(estFinishHour).padStart(2,'0')}:{String(estFinishMins).padStart(2,'0')}
                 </strong>
@@ -502,8 +502,8 @@ function WorkDayEditor({ wd, onSave }: { wd: WorkDay; onSave: (w: WorkDay) => vo
     <div className="rounded-xl p-4 mb-4 grid grid-cols-2 gap-3"
       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
       {[
-        { label: 'Início', hKey: 'startHour', mKey: 'startMin' },
-        { label: 'Término', hKey: 'endHour',   mKey: 'endMin'   },
+        { label: 'InÃ­cio', hKey: 'startHour', mKey: 'startMin' },
+        { label: 'TÃ©rmino', hKey: 'endHour',   mKey: 'endMin'   },
       ].map(({ label, hKey, mKey }) => (
         <div key={label}>
           <p className="text-xs text-white/40 mb-1.5 uppercase tracking-widest">{label}</p>
@@ -536,14 +536,14 @@ function WorkDayEditor({ wd, onSave }: { wd: WorkDay; onSave: (w: WorkDay) => vo
         <button onClick={() => onSave(v)}
           className="w-full py-2 rounded-xl text-sm font-bold text-black"
           style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-          Salvar horário
+          Salvar horÃ¡rio
         </button>
       </div>
     </div>
   )
 }
 
-// ─── TASK CARD ────────────────────────────────────────────────
+// â”€â”€â”€ TASK CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TaskCard({
   task, onUpdate, onDelete
 }: {
@@ -570,7 +570,7 @@ function TaskCard({
           if (p <= 1) {
             clearInterval(intervalRef.current!)
             setRunning(false)
-            sendNotif('⏰ Tempo esgotado!', `"${task.title}" — ${task.duration} min concluídos!`)
+            sendNotif('â° Tempo esgotado!', `"${task.title}" â€” ${task.duration} min concluÃ­dos!`)
             return 0
           }
           return p - 1
@@ -697,7 +697,7 @@ function TaskCard({
   )
 }
 
-// ─── TASK FORM ────────────────────────────────────────────────
+// â”€â”€â”€ TASK FORM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => void; onClose: () => void }) {
   const [form, setForm] = useState<{
     title: string
@@ -720,7 +720,7 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
       </div>
       <div className="space-y-3">
         <input
-          type="text" placeholder="O que você precisa fazer?"
+          type="text" placeholder="O que vocÃª precisa fazer?"
           value={form.title} onChange={e => set('title', e.target.value)}
           className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none text-white"
           style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
@@ -739,7 +739,7 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
             </select>
           </div>
           <div>
-            <p className="text-[10px] text-white/40 mb-1 uppercase tracking-widest">Duração (min)</p>
+            <p className="text-[10px] text-white/40 mb-1 uppercase tracking-widest">DuraÃ§Ã£o (min)</p>
             <input type="number" min={5} max={480} value={form.duration}
               onChange={e => set('duration', parseInt(e.target.value) || 30)}
               className="w-full px-2.5 py-2 rounded-lg text-xs outline-none text-white text-center font-bold"
@@ -751,7 +751,7 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
               className="w-full px-2.5 py-2 rounded-lg text-xs outline-none text-white"
               style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <option value="high">Alta</option>
-              <option value="medium">Média</option>
+              <option value="medium">MÃ©dia</option>
               <option value="low">Baixa</option>
             </select>
           </div>
@@ -765,7 +765,7 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
           </div>
           <div>
             <p className="text-[10px] text-white/40 mb-1 uppercase tracking-widest">Notas</p>
-            <input type="text" placeholder="Detalhe rápido..." value={form.notes}
+            <input type="text" placeholder="Detalhe rÃ¡pido..." value={form.notes}
               onChange={e => set('notes', e.target.value)}
               className="w-full px-2.5 py-2 rounded-lg text-xs outline-none text-white"
               style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }} />
@@ -788,7 +788,7 @@ function TaskForm({ onAdd, onClose }: { onAdd: (t: Partial<PersonalTask>) => voi
   )
 }
 
-// ─── CREDENTIALS VAULT ────────────────────────────────────────
+// â”€â”€â”€ CREDENTIALS VAULT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getNotebookMeta(type: NotebookEntry['type']) {
   return NOTEBOOK_TYPES.find(item => item.value === type) || NOTEBOOK_TYPES[0]
 }
@@ -796,10 +796,10 @@ function getNotebookMeta(type: NotebookEntry['type']) {
 function notebookTitle(type: NotebookEntry['type']) {
   const titles: Record<NotebookEntry['type'], string> = {
     ideia: 'Nova ideia',
-    reuniao: 'Nova reunião',
+    reuniao: 'Nova reuniÃ£o',
     frase: 'Nova frase',
     plano: 'Novo plano',
-    livre: 'Nova anotação',
+    livre: 'Nova anotaÃ§Ã£o',
   }
   return titles[type]
 }
@@ -807,9 +807,9 @@ function notebookTitle(type: NotebookEntry['type']) {
 function notebookTags(type: NotebookEntry['type']) {
   const tags: Record<NotebookEntry['type'], string[]> = {
     ideia: ['ideia', 'experimento'],
-    reuniao: ['reunião', 'decisões'],
-    frase: ['frase', 'repertório'],
-    plano: ['plano', 'execução'],
+    reuniao: ['reuniÃ£o', 'decisÃµes'],
+    frase: ['frase', 'repertÃ³rio'],
+    plano: ['plano', 'execuÃ§Ã£o'],
     livre: ['captura'],
   }
   return tags[type]
@@ -822,23 +822,23 @@ Nome curto:
 
 Problema que resolve:
 
-Público ou área impactada:
+PÃºblico ou Ã¡rea impactada:
 
-Hipótese:
+HipÃ³tese:
 
 Valor esperado:
 
-Menor experimento possível:
+Menor experimento possÃ­vel:
 
-Recursos necessários:
+Recursos necessÃ¡rios:
 
-Riscos ou dúvidas:
+Riscos ou dÃºvidas:
 
-Próxima ação concreta:`,
-    reuniao: `REUNIÃO
+PrÃ³xima aÃ§Ã£o concreta:`,
+    reuniao: `REUNIÃƒO
 Data:
 Participantes:
-Objetivo da reunião:
+Objetivo da reuniÃ£o:
 
 Pauta:
 1.
@@ -848,17 +848,17 @@ Pauta:
 Principais pontos discutidos:
 -
 
-Decisões tomadas:
+DecisÃµes tomadas:
 -
 
-Tarefas e responsáveis:
-- Responsável | Entrega | Prazo | Status
+Tarefas e responsÃ¡veis:
+- ResponsÃ¡vel | Entrega | Prazo | Status
 
-Pendências:
+PendÃªncias:
 -
 
-Próxima reunião ou acompanhamento:`,
-    frase: `FRASE / REPERTÓRIO
+PrÃ³xima reuniÃ£o ou acompanhamento:`,
+    frase: `FRASE / REPERTÃ“RIO
 Frase:
 
 Autor ou origem:
@@ -869,7 +869,7 @@ Por que vale guardar:
 
 Onde posso usar:
 
-Versão adaptada para APS-EDU:
+VersÃ£o adaptada para APS-EDU:
 
 Ideias relacionadas:`,
     plano: `PLANO
@@ -884,36 +884,36 @@ Marcos:
 2.
 3.
 
-Responsáveis:
+ResponsÃ¡veis:
 
 Indicadores de sucesso:
 
-Riscos e mitigação:
+Riscos e mitigaÃ§Ã£o:
 
-Plano dos próximos 7 dias:
+Plano dos prÃ³ximos 7 dias:
 1.
 2.
 3.`,
-    livre: `CAPTURA RÁPIDA
+    livre: `CAPTURA RÃPIDA
 Ideia, lembrete ou contexto:
 
 Detalhes importantes:
 
-Links ou referências:
+Links ou referÃªncias:
 
-Próxima ação:`,
+PrÃ³xima aÃ§Ã£o:`,
   }
   return templates[type]
 }
 
 function normalizeNotebookEntry(entry: NotebookEntry): NotebookEntry {
   const type = entry.type || 'livre'
-  const oldEmptyTitles = ['Nova anotacao', 'Nova anotação']
+  const oldEmptyTitles = ['Nova anotacao', 'Nova anotaÃ§Ã£o']
   return {
     ...entry,
     type,
-    title: oldEmptyTitles.includes(entry.title) ? notebookTitle(type) : entry.title.replace('anotacao', 'anotação'),
-    tags: entry.tags?.length ? entry.tags.map(tag => tag.replace('reuniao', 'reunião')) : notebookTags(type),
+    title: oldEmptyTitles.includes(entry.title) ? notebookTitle(type) : entry.title.replace('anotacao', 'anotaÃ§Ã£o'),
+    tags: entry.tags?.length ? entry.tags.map(tag => tag.replace('reuniao', 'reuniÃ£o')) : notebookTags(type),
     content: entry.content || notebookTemplate(type),
   }
 }
@@ -976,7 +976,7 @@ function IntelligentNotebook() {
     const updated: NotebookEntry = {
       ...draft,
       ...extra,
-      title: (extra?.title ?? draft.title).trim() || 'Sem título',
+      title: (extra?.title ?? draft.title).trim() || 'Sem tÃ­tulo',
       updatedAt: new Date().toISOString(),
     }
     const exists = entries.some(item => item.id === updated.id)
@@ -1042,7 +1042,7 @@ function IntelligentNotebook() {
   const organizeWithSofi = async () => {
     const currentDraft: NotebookEntry = { ...draft, updatedAt: new Date().toISOString() }
     if (!currentDraft.content.trim()) {
-      setSaveHint('Escreva uma anotação primeiro')
+      setSaveHint('Escreva uma anotaÃ§Ã£o primeiro')
       window.setTimeout(() => setSaveHint(''), 1800)
       return
     }
@@ -1050,25 +1050,25 @@ function IntelligentNotebook() {
     setAiBusy(true)
     setSofiPanel({
       title: currentDraft.title || notebookTitle(currentDraft.type),
-      content: 'A Sofi está lendo sua anotação e organizando a resposta...',
+      content: 'A Sofi estÃ¡ lendo sua anotaÃ§Ã£o e organizando a resposta...',
       status: 'loading',
     })
 
-    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul. Organize esta anotação como um caderno digital de alto nível, com clareza executiva, decisões rastreáveis e próximos passos acionáveis.
+    const prompt = `VocÃª Ã© a Sofi, assistente executiva da AssociaÃ§Ã£o Paulista Sul. Organize esta anotaÃ§Ã£o como um caderno digital de alto nÃ­vel, com clareza executiva, decisÃµes rastreÃ¡veis e prÃ³ximos passos acionÃ¡veis.
 
-Título: ${currentDraft.title}
+TÃ­tulo: ${currentDraft.title}
 Tipo: ${currentDraft.type}
 Tags: ${currentDraft.tags.join(', ')}
-Conteúdo:
+ConteÃºdo:
 ${currentDraft.content}
 
-Responda em português do Brasil, com acentuação correta, pontuação profissional e este formato:
+Responda em portuguÃªs do Brasil, com acentuaÃ§Ã£o correta, pontuaÃ§Ã£o profissional e este formato:
 Resumo executivo
 Ideias-chave
-Próximas ações
-Possíveis tarefas
+PrÃ³ximas aÃ§Ãµes
+PossÃ­veis tarefas
 Perguntas que eu deveria responder
-Versão refinada da anotação`
+VersÃ£o refinada da anotaÃ§Ã£o`
 
     try {
       const res = await fetch('/api/gemini', {
@@ -1077,7 +1077,7 @@ Versão refinada da anotação`
         body: JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      const output = data.content || data.error || 'A Sofi não conseguiu organizar esta anotação agora.'
+      const output = data.content || data.error || 'A Sofi nÃ£o conseguiu organizar esta anotaÃ§Ã£o agora.'
       const completed: NotebookEntry = { ...currentDraft, aiOutput: output, updatedAt: new Date().toISOString() }
       const fresh = blankEntry(currentDraft.type)
       const withoutCompleted = entries.filter(item => item.id !== completed.id)
@@ -1123,15 +1123,15 @@ Versão refinada da anotação`
       status: 'loading',
     }))
 
-    const prompt = `Você é a Sofi, assistente executiva da Associação Paulista Sul.
+    const prompt = `VocÃª Ã© a Sofi, assistente executiva da AssociaÃ§Ã£o Paulista Sul.
 
 Texto anterior:
 ${sofiPanel.content}
 
-Pedido de ajuste do usuário:
+Pedido de ajuste do usuÃ¡rio:
 ${instruction}
 
-Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use português do Brasil, títulos curtos, bullets claros, decisões, próximos passos e tarefas quando fizer sentido.`
+Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use portuguÃªs do Brasil, tÃ­tulos curtos, bullets claros, decisÃµes, prÃ³ximos passos e tarefas quando fizer sentido.`
 
     try {
       const res = await fetch('/api/gemini', {
@@ -1140,7 +1140,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
         body: JSON.stringify({ prompt }),
       })
       const data = await res.json()
-      const output = data.content || data.error || 'A Sofi não conseguiu ajustar a resposta agora.'
+      const output = data.content || data.error || 'A Sofi nÃ£o conseguiu ajustar a resposta agora.'
       setSofiPanel(prev => ({ ...prev, content: output, status: data.error ? 'error' : 'done' }))
       setSofiInstruction('')
     } catch (err: any) {
@@ -1175,7 +1175,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
             <button onClick={createEntry}
               className="w-11 h-11 rounded-2xl flex items-center justify-center text-black transition hover:scale-105"
               style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 12px 28px rgba(248,163,3,0.28)' }}
-              title="Nova anotação">
+              title="Nova anotaÃ§Ã£o">
               <PlusIcon className="w-4 h-4" />
             </button>
           </div>
@@ -1209,10 +1209,10 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
                 <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                   {sofiPanel.content.replace(/\*\*/g, '').split('\n').filter(line => line.trim()).map((line, index) => {
                     const clean = line.replace(/^#{1,4}\s*/, '').trim()
-                    const isHeading = /^#{1,4}\s/.test(line) || /^(Resumo executivo|Ideias-chave|Próximas ações|Possíveis tarefas|Perguntas|Versão refinada)/i.test(clean)
-                    const isBullet = /^[-*•]\s/.test(clean) || /^\d+[.)]\s/.test(clean)
+                    const isHeading = /^#{1,4}\s/.test(line) || /^(Resumo executivo|Ideias-chave|PrÃ³ximas aÃ§Ãµes|PossÃ­veis tarefas|Perguntas|VersÃ£o refinada)/i.test(clean)
+                    const isBullet = /^[-*â€¢]\s/.test(clean) || /^\d+[.)]\s/.test(clean)
                     if (isHeading) return <p key={index} className="text-xs font-extrabold text-white mt-3 first:mt-0">{clean}</p>
-                    if (isBullet) return <p key={index} className="text-xs leading-5 text-white/70 pl-3 border-l" style={{ borderColor: `${typeMeta.color}55` }}>{clean.replace(/^[-*•]\s*/, '')}</p>
+                    if (isBullet) return <p key={index} className="text-xs leading-5 text-white/70 pl-3 border-l" style={{ borderColor: `${typeMeta.color}55` }}>{clean.replace(/^[-*â€¢]\s*/, '')}</p>
                     return <p key={index} className="text-xs leading-5 text-white/65">{clean}</p>
                   })}
                 </div>
@@ -1220,20 +1220,20 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
                   <textarea
                     value={sofiInstruction}
                     onChange={e => setSofiInstruction(e.target.value)}
-                    placeholder="Peça para a Sofi corrigir, resumir, deixar mais executivo, transformar em tarefas..."
+                    placeholder="PeÃ§a para a Sofi corrigir, resumir, deixar mais executivo, transformar em tarefas..."
                     className="w-full h-20 resize-none rounded-xl px-3 py-2 text-xs text-white outline-none"
                     style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)' }}
                   />
                   <button onClick={askSofiToAdjust} disabled={aiBusy || !sofiInstruction.trim()}
                     className="mt-2 w-full py-2 rounded-xl text-xs font-extrabold text-black disabled:opacity-45"
                     style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-                    {aiBusy ? 'Sofi ajustando...' : 'Pedir ajuste à Sofi'}
+                    {aiBusy ? 'Sofi ajustando...' : 'Pedir ajuste Ã  Sofi'}
                   </button>
                 </div>
               </>
             ) : (
               <div className="h-[120px] flex items-center justify-center text-center text-xs text-white/28 px-3">
-                Envie a anotação para a Sofi e a resposta aparecerá aqui. O editor será limpo para o próximo preenchimento.
+                Envie a anotaÃ§Ã£o para a Sofi e a resposta aparecerÃ¡ aqui. O editor serÃ¡ limpo para o prÃ³ximo preenchimento.
               </div>
             )}
           </div>
@@ -1243,7 +1243,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar anotações..."
+              placeholder="Buscar anotaÃ§Ãµes..."
               className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
             />
@@ -1294,10 +1294,10 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
                     border: `1px solid ${activeId === entry.id ? `${meta.color}55` : 'rgba(255,255,255,0.06)'}`,
                   }}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-white truncate">{entry.title || 'Sem título'}</p>
+                    <p className="text-sm font-bold text-white truncate">{entry.title || 'Sem tÃ­tulo'}</p>
                     {entry.favorite && <StarSolid className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#F8A303' }} />}
                   </div>
-                  <p className="text-[11px] text-white/35 line-clamp-2 mt-1">{entry.content || 'Sem conteúdo ainda'}</p>
+                  <p className="text-[11px] text-white/35 line-clamp-2 mt-1">{entry.content || 'Sem conteÃºdo ainda'}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded"
                       style={{ color: meta.color, background: meta.soft, border: `1px solid ${meta.color}30` }}>
@@ -1309,7 +1309,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
               )
             })}
             {filtered.length === 0 && (
-              <div className="text-center py-10 text-white/25 text-sm">Nenhuma anotação encontrada</div>
+              <div className="text-center py-10 text-white/25 text-sm">Nenhuma anotaÃ§Ã£o encontrada</div>
             )}
           </div>
         </aside>
@@ -1328,7 +1328,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
                 onChange={e => setDraftField('title', e.target.value)}
                 onBlur={() => saveDraft()}
                 className="w-full text-xl font-extrabold text-white bg-transparent outline-none"
-                placeholder="Título da anotação"
+                placeholder="TÃ­tulo da anotaÃ§Ã£o"
               />
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <select value={draft.type} onChange={e => applyNotebookType(e.target.value as NotebookEntry['type'])}
@@ -1349,7 +1349,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
               <button onClick={() => saveDraft()}
                 className="px-3 py-2 rounded-xl text-sm font-bold"
                 style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                Salvar anotação
+                Salvar anotaÃ§Ã£o
               </button>
               <button onClick={() => saveDraft({ content: notebookTemplate(draft.type), tags: notebookTags(draft.type) })}
                 className="px-3 py-2 rounded-xl text-sm font-bold"
@@ -1359,7 +1359,7 @@ Reescreva a resposta de forma melhor, mais organizada e pronta para uso. Use por
               <button onClick={() => deleteEntry(draft.id)}
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: 'rgba(255,71,87,0.08)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.16)' }}
-                title="Excluir anotação">
+                title="Excluir anotaÃ§Ã£o">
                 <TrashIcon className="w-4 h-4" />
               </button>
             </div>
@@ -1453,13 +1453,13 @@ function CredentialsVault() {
 
   const unlock = async () => {
     if (!crypto?.subtle) {
-      setPinError('Criptografia do navegador indisponível.')
+      setPinError('Criptografia do navegador indisponÃ­vel.')
       return
     }
     setVaultBusy(true)
     if (isSetup) {
-      if (pin.length < 4) { setPinError('PIN deve ter pelo menos 4 dígitos'); setVaultBusy(false); return }
-      if (pin !== confirmPin) { setPinError('PINs não coincidem'); setVaultBusy(false); return }
+      if (pin.length < 4) { setPinError('PIN deve ter pelo menos 4 dÃ­gitos'); setVaultBusy(false); return }
+      if (pin !== confirmPin) { setPinError('PINs nÃ£o coincidem'); setVaultBusy(false); return }
       await setVaultPin(pin)
       await saveVault([], pin)
       setCreds([])
@@ -1513,7 +1513,7 @@ function CredentialsVault() {
         </div>
         <div className="w-full max-w-xs space-y-3">
           <input
-            type="password" placeholder="PIN (mínimo 4 dígitos)" value={pin}
+            type="password" placeholder="PIN (mÃ­nimo 4 dÃ­gitos)" value={pin}
             onChange={e => { setPin(e.target.value); setPinError('') }}
             onKeyDown={e => e.key === 'Enter' && unlock()}
             className="w-full px-4 py-3 rounded-xl text-sm text-center text-white outline-none font-mono tracking-widest"
@@ -1534,7 +1534,7 @@ function CredentialsVault() {
           </button>
         </div>
         <p className="text-[10px] text-center max-w-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          🔒 Dados criptografados neste dispositivo com chave derivada do PIN. Nunca enviados ao servidor.
+          ðŸ”’ Dados criptografados neste dispositivo com chave derivada do PIN. Nunca enviados ao servidor.
         </p>
       </div>
     )
@@ -1546,7 +1546,7 @@ function CredentialsVault() {
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-xs">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'rgba(255,255,255,0.3)' }} />
-            <input type="text" placeholder="Buscar serviço, email..." value={search}
+            <input type="text" placeholder="Buscar serviÃ§o, email..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 rounded-xl text-sm text-white outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
@@ -1604,7 +1604,7 @@ function CredentialsVault() {
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                {c.url ? '🌐' : '🔑'}
+                {c.url ? 'ðŸŒ' : 'ðŸ”‘'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
@@ -1641,7 +1641,7 @@ function CredentialsVault() {
                     <span className="text-[10px] w-12 text-white/30 uppercase tracking-widest">Senha</span>
                     <code className="text-xs flex-1 truncate"
                       style={{ color: showPwd[c.id] ? '#F8A303' : 'rgba(255,255,255,0.3)' }}>
-                      {showPwd[c.id] ? c.password : '••••••••••••'}
+                      {showPwd[c.id] ? c.password : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
                     </code>
                     <button onClick={() => setShowPwd(p => ({ ...p, [c.id]: !p[c.id] }))}
                       className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1678,10 +1678,10 @@ function CredentialForm({ onAdd, onClose }: { onAdd: (c: Omit<Credential, 'id' |
       </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
         {[
-          { k: 'service',  p: 'Nome do serviço *', full: false },
+          { k: 'service',  p: 'Nome do serviÃ§o *', full: false },
           { k: 'category', p: 'Categoria',          full: false },
           { k: 'url',      p: 'URL (ex: gmail.com)',full: false },
-          { k: 'email',    p: 'Email / Usuário *',  full: false },
+          { k: 'email',    p: 'Email / UsuÃ¡rio *',  full: false },
         ].map(({ k, p, full }) => (
           <input key={k} type="text" placeholder={p} value={(form as any)[k]}
             onChange={e => set(k, e.target.value)}
@@ -1727,7 +1727,7 @@ function CredentialForm({ onAdd, onClose }: { onAdd: (c: Omit<Credential, 'id' |
   )
 }
 
-// ─── GAMIFICATION PANEL ───────────────────────────────────────
+// â”€â”€â”€ GAMIFICATION PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
   const doneTasks   = tasks.filter(t => t.status === 'done')
   const totalXp     = doneTasks.reduce((a, t) => a + (parseInt(t.xp as any) || 0), 0)
@@ -1739,12 +1739,12 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
   )
 
   const achievements = [
-    { label: 'Primeira tarefa',     done: doneTasks.length >= 1,  icon: '🌟', color: '#F8A303' },
-    { label: '5 tarefas concluídas',done: doneTasks.length >= 5,  icon: '🔥', color: '#FF6B35' },
-    { label: '10 tarefas concluídas',done: doneTasks.length >= 10, icon: '💎', color: '#4A9EFF' },
-    { label: 'Nível 5',             done: level >= 5,              icon: '⚡', color: '#8B5CF6' },
-    { label: '500 XP acumulados',   done: totalXp >= 500,          icon: '👑', color: '#F9C234' },
-    { label: '3 tarefas hoje',      done: doneToday >= 3,          icon: '🚀', color: '#0ABD78' },
+    { label: 'Primeira tarefa',     done: doneTasks.length >= 1,  icon: 'ðŸŒŸ', color: '#F8A303' },
+    { label: '5 tarefas concluÃ­das',done: doneTasks.length >= 5,  icon: 'ðŸ”¥', color: '#FF6B35' },
+    { label: '10 tarefas concluÃ­das',done: doneTasks.length >= 10, icon: 'ðŸ’Ž', color: '#4A9EFF' },
+    { label: 'NÃ­vel 5',             done: level >= 5,              icon: 'âš¡', color: '#8B5CF6' },
+    { label: '500 XP acumulados',   done: totalXp >= 500,          icon: 'ðŸ‘‘', color: '#F9C234' },
+    { label: '3 tarefas hoje',      done: doneToday >= 3,          icon: 'ðŸš€', color: '#0ABD78' },
   ]
 
   return (
@@ -1754,7 +1754,7 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
         style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.15)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs text-white/40 uppercase tracking-widest mb-0.5">Nível</p>
+            <p className="text-xs text-white/40 uppercase tracking-widest mb-0.5">NÃ­vel</p>
             <p className="text-4xl font-black" style={{ color: '#F8A303' }}>{level}</p>
           </div>
           <div className="text-center">
@@ -1768,7 +1768,7 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
         </div>
         <div>
           <div className="flex justify-between text-[10px] mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            <span>Nível {level}</span><span>{progress}/100 XP → Nível {level+1}</span>
+            <span>NÃ­vel {level}</span><span>{progress}/100 XP â†’ NÃ­vel {level+1}</span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
             <div className="h-full rounded-full transition-all duration-1000"
@@ -1796,7 +1796,7 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
       {/* Achievements */}
       <div className="rounded-2xl p-5"
         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-        <p className="text-sm font-bold text-white mb-4">🏆 Conquistas</p>
+        <p className="text-sm font-bold text-white mb-4">ðŸ† Conquistas</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {achievements.map(a => (
             <div key={a.label}
@@ -1816,7 +1816,7 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
   )
 }
 
-// ─── AI ASSISTANT PANEL ───────────────────────────────────────
+// â”€â”€â”€ AI ASSISTANT PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCreated, onWorkDayUpdated, onWorkspaceRefresh }: {
   tasks: PersonalTask[]
   workDay: WorkDay
@@ -1839,7 +1839,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   const [attachPreview, setAttachPreview] = useState<string>('') // emoji + filename label
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Voice state ────────────────────────────────────────────
+  // â”€â”€ Voice state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isListening, setIsListening]     = useState(false)
   const [isSpeaking, setIsSpeaking]       = useState(false)
   const [voiceEnabled, setVoiceEnabled]   = useState(false)
@@ -1896,11 +1896,11 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   }
 
   function getFileEmoji(file: File) {
-    if (file.type.startsWith('image/')) return '📷'
-    if (file.type.startsWith('audio/')) return '🎵'
-    if (file.type.startsWith('video/')) return '🎬'
-    if (file.type.includes('pdf')) return '📕'
-    return '📄'
+    if (file.type.startsWith('image/')) return 'ðŸ“·'
+    if (file.type.startsWith('audio/')) return 'ðŸŽµ'
+    if (file.type.startsWith('video/')) return 'ðŸŽ¬'
+    if (file.type.includes('pdf')) return 'ðŸ“•'
+    return 'ðŸ“„'
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1936,9 +1936,9 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
               body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
             })
             const data = await res.json()
-            resolve({ text: data.text ? `[AUDIO_TRANSCRIBED:${file.name}]\n${data.text}` : `[Áudio: ${file.name} — sem fala detectada]` })
+            resolve({ text: data.text ? `[AUDIO_TRANSCRIBED:${file.name}]\n${data.text}` : `[Ãudio: ${file.name} â€” sem fala detectada]` })
           } catch {
-            resolve({ text: `[Áudio: ${file.name}]` })
+            resolve({ text: `[Ãudio: ${file.name}]` })
           }
           return
         }
@@ -1952,15 +1952,15 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           })
           const data = await res.json()
           if (data.text) {
-            // Trunca para ~12000 chars (~3000 tokens) para não ultrapassar limite Groq free tier
+            // Trunca para ~12000 chars (~3000 tokens) para nÃ£o ultrapassar limite Groq free tier
             const MAX_CHARS = 12_000
             const rawText = data.text as string
             const truncated = rawText.length > MAX_CHARS
-              ? rawText.substring(0, MAX_CHARS) + '\n\n[... texto truncado — documento muito longo ...]'
+              ? rawText.substring(0, MAX_CHARS) + '\n\n[... texto truncado â€” documento muito longo ...]'
               : rawText
             resolve({ text: `[DOC_CONTENT:${file.name}]\n${truncated}` })
           } else {
-            resolve({ text: `[Arquivo: ${file.name} — não foi possível extrair texto]` })
+            resolve({ text: `[Arquivo: ${file.name} â€” nÃ£o foi possÃ­vel extrair texto]` })
           }
         } catch {
           resolve({ text: `[Arquivo: ${file.name}]` })
@@ -1974,8 +1974,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     const p = period.charAt(0).toUpperCase() + period.slice(1)
     const pending = tasks.filter(t => t.status !== 'done')
     if (pending.length > 0)
-      return `${p}, ${userName}! 👋 Tenho ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''} para você. Até que horas vai trabalhar hoje?`
-    return `${p}, ${userName}! 👋 Sou a Sofi. Sua lista está vazia — boa hora para planejar. Até que horas vai trabalhar hoje?`
+      return `${p}, ${userName}! ðŸ‘‹ Tenho ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''} para vocÃª. AtÃ© que horas vai trabalhar hoje?`
+    return `${p}, ${userName}! ðŸ‘‹ Sou a Sofi. Sua lista estÃ¡ vazia â€” boa hora para planejar. AtÃ© que horas vai trabalhar hoje?`
   }
 
   // Salva mensagens no localStorage sempre que mudam
@@ -1996,19 +1996,19 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed)
-          return // não cumprimenta de novo
+          return // nÃ£o cumprimenta de novo
         }
       }
     } catch {}
 
-    // Primeira vez — cumprimenta
+    // Primeira vez â€” cumprimenta
     setLoading(true)
     const h = new Date().getHours()
     const period = h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite'
     const pending = tasks.filter(t => t.status !== 'done')
     const promptCtx = pending.length > 0
       ? `Tenho ${pending.length} tarefas pendentes.`
-      : 'Minha lista está vazia.'
+      : 'Minha lista estÃ¡ vazia.'
     api.post('/ai/chat', {
       messages: [{ role: 'user', content: `${period}! ${promptCtx} Me cumprimente pelo nome (${userName}), se apresente como Sofi e pergunte ate que horas vou trabalhar hoje. Max 2 linhas.` }],
       context: { tasks, workDay, userName },
@@ -2032,7 +2032,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         const res = await api.post('/personal', action.data)
         const calendarPayload = calendarPayloadForTask(res.data)
         if (calendarPayload) await api.post('/calendar', calendarPayload).catch(() => null)
-        setMessages(p => [...p, { role: 'assistant', content: `✅ Tarefa criada e destacada: **${res.data?.title || action.data?.title || 'Nova tarefa'}**` }])
+        setMessages(p => [...p, { role: 'assistant', content: `âœ… Tarefa criada e destacada: **${res.data?.title || action.data?.title || 'Nova tarefa'}**` }])
         onTaskCreated?.()
       } else if (action.type === 'create_tasks') {
         const items = Array.isArray(action.data?.tasks) ? action.data.tasks : []
@@ -2045,7 +2045,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           created.push(res.data)
         }
         if (created.length) {
-          setMessages(p => [...p, { role: 'assistant', content: `✅ ${created.length} tarefas criadas e destacadas:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}` }])
+          setMessages(p => [...p, { role: 'assistant', content: `âœ… ${created.length} tarefas criadas e destacadas:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}` }])
           onTaskCreated?.()
         }
       } else if (action.type === 'create_event') {
@@ -2063,7 +2063,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         localStorage.setItem('aps_workday', JSON.stringify(updated))
         onWorkDayUpdated?.(updated)
 
-      // ── BUSCA NA INTERNET ──────────────────────────────────
+      // â”€â”€ BUSCA NA INTERNET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       } else if (action.type === 'web_search') {
         setLoading(true)
         try {
@@ -2073,28 +2073,28 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
             body: JSON.stringify({ query: action.data.query }),
           })
           const searchData = await res.json()
-          // Monta contexto de busca e pede à IA para resumir
+          // Monta contexto de busca e pede Ã  IA para resumir
           const searchContext = searchData.answer
             ? `Resposta direta: ${searchData.answer}\n\n`
             : ''
           const resultsText = (searchData.results || [])
             .map((r: any, i: number) => `${i+1}. ${r.title}: ${r.snippet}`)
             .join('\n')
-          const searchPrompt = `[RESULTADO DA BUSCA por "${action.data.query}"]\n${searchContext}${resultsText}\n\n---\nCom base nesses resultados, responda à pergunta original de forma clara e resumida em português.`
+          const searchPrompt = `[RESULTADO DA BUSCA por "${action.data.query}"]\n${searchContext}${resultsText}\n\n---\nCom base nesses resultados, responda Ã  pergunta original de forma clara e resumida em portuguÃªs.`
           const aiRes = await fetch('/api/gemini', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: searchPrompt }),
           })
           const aiData = await aiRes.json()
-          const summary = aiData.content || searchContext + resultsText || 'Não encontrei resultados relevantes.'
-          setMessages(p => [...p, { role: 'assistant', content: `🔍 **Pesquisa: "${action.data.query}"**\n\n${summary}` }])
+          const summary = aiData.content || searchContext + resultsText || 'NÃ£o encontrei resultados relevantes.'
+          setMessages(p => [...p, { role: 'assistant', content: `ðŸ” **Pesquisa: "${action.data.query}"**\n\n${summary}` }])
         } catch {
-          setMessages(p => [...p, { role: 'assistant', content: '❌ Não consegui pesquisar na internet agora.' }])
+          setMessages(p => [...p, { role: 'assistant', content: 'âŒ NÃ£o consegui pesquisar na internet agora.' }])
         }
         setLoading(false)
 
-      // ── GERAÇÃO DE IMAGENS ─────────────────────────────────
+      // â”€â”€ GERAÃ‡ÃƒO DE IMAGENS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       } else if (action.type === 'generate_image') {
         setLoading(true)
         try {
@@ -2109,18 +2109,18 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
             setMessages(p => [...p, {
               role: 'assistant',
               content: `[IMAGE:${imgSrc}]`,
-              display: `🎨 Imagem gerada!`,
+              display: `ðŸŽ¨ Imagem gerada!`,
             }])
           } else {
-            setMessages(p => [...p, { role: 'assistant', content: `❌ Não consegui gerar a imagem: ${imgData.error}` }])
+            setMessages(p => [...p, { role: 'assistant', content: `âŒ NÃ£o consegui gerar a imagem: ${imgData.error}` }])
           }
         } catch {
-          setMessages(p => [...p, { role: 'assistant', content: '❌ Erro ao gerar imagem.' }])
+          setMessages(p => [...p, { role: 'assistant', content: 'âŒ Erro ao gerar imagem.' }])
         }
         setLoading(false)
       }
     } catch (e) {
-      // falha silenciosa — mensagem já foi exibida
+      // falha silenciosa â€” mensagem jÃ¡ foi exibida
     }
   }
 
@@ -2139,15 +2139,15 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       if (processed.imageBase64) {
         imageBase64 = processed.imageBase64
         imageMimeType = processed.imageMimeType
-        finalText = baseText || 'Analise esta imagem detalhadamente e descreva o que vê. Se houver texto, leia-o. Se for um documento, extraia as informações principais.'
+        finalText = baseText || 'Analise esta imagem detalhadamente e descreva o que vÃª. Se houver texto, leia-o. Se for um documento, extraia as informaÃ§Ãµes principais.'
       } else if (processed.text) {
         const isAudio = processed.text.startsWith('[AUDIO_TRANSCRIBED:')
         const isDoc = processed.text.startsWith('[DOC_CONTENT:')
         let instruction = ''
         if (isAudio) {
-          instruction = `\n\n---\nSOFI, você recebeu a transcrição de um áudio do usuário. Analise o conteúdo transcrito: identifique o tema principal, pontos-chave e contexto. ${baseText ? 'O usuário também disse: ' + baseText : 'Responda de forma natural como se tivesse ouvido o áudio, resuma o conteúdo e pergunte se precisa de algo.'}`
+          instruction = `\n\n---\nSOFI, vocÃª recebeu a transcriÃ§Ã£o de um Ã¡udio do usuÃ¡rio. Analise o conteÃºdo transcrito: identifique o tema principal, pontos-chave e contexto. ${baseText ? 'O usuÃ¡rio tambÃ©m disse: ' + baseText : 'Responda de forma natural como se tivesse ouvido o Ã¡udio, resuma o conteÃºdo e pergunte se precisa de algo.'}`
         } else if (isDoc) {
-          instruction = `\n\n---\nSOFI, você acabou de receber e ler o conteúdo completo do documento acima. Faça uma análise profissional e inteligente: (1) Resumo executivo em 3-5 pontos principais, (2) Informações mais relevantes e dados importantes encontrados, (3) Pergunte se o usuário quer algo específico sobre o conteúdo. ${baseText ? 'O usuário também pediu: ' + baseText : ''} Responda como uma secretária profissional e eficiente.`
+          instruction = `\n\n---\nSOFI, vocÃª acabou de receber e ler o conteÃºdo completo do documento acima. FaÃ§a uma anÃ¡lise profissional e inteligente: (1) Resumo executivo em 3-5 pontos principais, (2) InformaÃ§Ãµes mais relevantes e dados importantes encontrados, (3) Pergunte se o usuÃ¡rio quer algo especÃ­fico sobre o conteÃºdo. ${baseText ? 'O usuÃ¡rio tambÃ©m pediu: ' + baseText : ''} Responda como uma secretÃ¡ria profissional e eficiente.`
         }
         finalText = processed.text + instruction
       }
@@ -2156,10 +2156,10 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
 
     if (!finalText) return
 
-    // Monta display visível no chat (mascara conteúdo de arquivos)
+    // Monta display visÃ­vel no chat (mascara conteÃºdo de arquivos)
     let displayText = baseText
     if (file) {
-      const icon = file.type.startsWith('image/') ? '🖼️' : file.type.startsWith('audio/') ? '🎵' : '📎'
+      const icon = file.type.startsWith('image/') ? 'ðŸ–¼ï¸' : file.type.startsWith('audio/') ? 'ðŸŽµ' : 'ðŸ“Ž'
       const fileChip = `${icon} ${file.name}`
       displayText = baseText ? `${fileChip}\n${baseText}` : fileChip
     }
@@ -2178,8 +2178,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
       const todayTasks = pending.filter(t => t.dueDate === today)
       const source = todayTasks.length ? todayTasks : pending
       const answer = source.length
-        ? `Você tem ${source.length} tarefa${source.length !== 1 ? 's' : ''} ${todayTasks.length ? 'para hoje' : 'pendente' + (source.length !== 1 ? 's' : '')}:\n${source.map((t, i) => `${i + 1}. ${t.title} (${fmtTime(t.duration)}${t.dueDate ? `, prazo: ${new Date(t.dueDate + 'T12:00').toLocaleDateString('pt-BR')}` : ''})`).join('\n')}`
-        : 'Sua lista de tarefas está vazia agora. Posso criar tarefas para você e elas vão aparecer em destaque aqui e no calendário da sua área.'
+        ? `VocÃª tem ${source.length} tarefa${source.length !== 1 ? 's' : ''} ${todayTasks.length ? 'para hoje' : 'pendente' + (source.length !== 1 ? 's' : '')}:\n${source.map((t, i) => `${i + 1}. ${t.title} (${fmtTime(t.duration)}${t.dueDate ? `, prazo: ${new Date(t.dueDate + 'T12:00').toLocaleDateString('pt-BR')}` : ''})`).join('\n')}`
+        : 'Sua lista de tarefas estÃ¡ vazia agora. Posso criar tarefas para vocÃª e elas vÃ£o aparecer em destaque aqui e no calendÃ¡rio da sua Ã¡rea.'
       setMessages(p => [...p, { role: 'assistant', content: answer }])
       speakText(answer)
       setLoading(false)
@@ -2198,12 +2198,12 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
             created.push(res.data)
           }
           window.dispatchEvent(new CustomEvent('personal_tasks_updated', { detail: { tasks: created } }))
-          const answer = `✅ ${created.length} tarefas criadas, destacadas e colocadas no calendário da sua área quando têm prazo:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}`
+          const answer = `âœ… ${created.length} tarefas criadas, destacadas e colocadas no calendÃ¡rio da sua Ã¡rea quando tÃªm prazo:\n${created.map((t, i) => `${i + 1}. ${t.title}`).join('\n')}`
           setMessages(p => [...p, { role: 'assistant', content: answer }])
           speakText(answer)
         } catch (err: any) {
           const msg = err?.response?.data?.error || err?.message || 'Erro ao criar tarefas'
-          setMessages(p => [...p, { role: 'assistant', content: `❌ ${msg}` }])
+          setMessages(p => [...p, { role: 'assistant', content: `âŒ ${msg}` }])
         }
         setLoading(false)
         return
@@ -2220,28 +2220,28 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           body: JSON.stringify({ prompt: finalText, imageBase64, imageMimeType }),
         })
         const visionData = await visionRes.json()
-        r = { data: { content: visionData.content || visionData.error || 'Não consegui analisar a imagem.' } }
+        r = { data: { content: visionData.content || visionData.error || 'NÃ£o consegui analisar a imagem.' } }
       } else {
-        // Envia no máx as últimas 12 mensagens; usa 'content' real (não 'display' mascarado)
+        // Envia no mÃ¡x as Ãºltimas 12 mensagens; usa 'content' real (nÃ£o 'display' mascarado)
         const trimmedMsgs = newMsgs.slice(-12).map(({ role, content }) => ({ role, content }))
         r = await api.post('/ai/chat', { messages: trimmedMsgs, context: { tasks, workDay, userName } })
       }
-      // Garante que content é sempre string (nunca objeto)
+      // Garante que content Ã© sempre string (nunca objeto)
       const rawContent = r.data?.content ?? r.data?.message ?? ''
       const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)
       const action = r.data?.action
       const rawErr = r.data?.error
       const errMsg = rawErr ? (typeof rawErr === 'string' ? rawErr : JSON.stringify(rawErr)) : ''
       const fallbackMsg = errMsg
-        ? `❌ Erro no servidor: ${errMsg}`
-        : 'Não obtive resposta. Pode reformular?'
+        ? `âŒ Erro no servidor: ${errMsg}`
+        : 'NÃ£o obtive resposta. Pode reformular?'
       const finalContent = content || fallbackMsg
       setMessages(p => [...p, { role: 'assistant', content: finalContent }])
       speakText(finalContent)
       if (action) await executeAction(action)
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || 'Erro de conexão'
-      setMessages(p => [...p, { role: 'assistant', content: `❌ ${msg}` }])
+      const msg = err?.response?.data?.error || err?.message || 'Erro de conexÃ£o'
+      setMessages(p => [...p, { role: 'assistant', content: `âŒ ${msg}` }])
     }
     setLoading(false)
   }
@@ -2264,11 +2264,11 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     }).finally(() => setLoading(false))
   }
 
-  const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Crie uma tarefa para amanhã', 'Como está a campanha?']
+  const QUICK = ['O que temos pra hoje?', 'Priorize minhas tarefas', 'Crie uma tarefa para amanhÃ£', 'Como estÃ¡ a campanha?']
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: 440 }}>
-      {/* Header com botão limpar */}
+      {/* Header com botÃ£o limpar */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.25)' }}>
           {messages.length > 0 ? `${messages.length} mensagens salvas` : 'Nova conversa'}
@@ -2276,7 +2276,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         {messages.length > 0 && (
           <button onClick={clearChat} className="text-[10px] px-2 py-1 rounded-lg transition-all"
             style={{ background: 'rgba(255,71,87,0.08)', color: 'rgba(255,71,87,0.6)', border: '1px solid rgba(255,71,87,0.15)' }}>
-            🗑 Nova conversa
+            ðŸ—‘ Nova conversa
           </button>
         )}
       </div>
@@ -2287,7 +2287,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
               style={{ background: 'linear-gradient(135deg,rgba(248,163,3,0.2),rgba(253,195,71,0.1))', border: '1px solid rgba(248,163,3,0.25)' }}>
-              🤖
+              ðŸ¤–
             </div>
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Iniciando Sofi...</p>
           </div>
@@ -2296,7 +2296,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {m.role === 'assistant' && (
               <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-sm mb-0.5"
-                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>🤖</div>
+                style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>ðŸ¤–</div>
             )}
             <div className="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap"
               style={m.role === 'user' ? {
@@ -2317,7 +2317,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
                   return (
                     <div>
                       <img src={src} alt="Imagem gerada pela Sofi" className="rounded-xl max-w-full" style={{ maxHeight: 320 }} />
-                      <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>🎨 Gerado pela Sofi</p>
+                      <p className="text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>ðŸŽ¨ Gerado pela Sofi</p>
                     </div>
                   )
                 }
@@ -2330,7 +2330,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
         {loading && (
           <div className="flex items-end gap-2">
             <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-sm"
-              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>🤖</div>
+              style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>ðŸ¤–</div>
             <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex gap-1">
                 {[0,1,2].map(i => (
@@ -2363,7 +2363,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs"
             style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', color: '#A78BFA' }}>
             <span>{attachPreview}</span>
-            <button onClick={clearAttachment} className="ml-1 hover:text-red-400 transition-colors" style={{ color: '#FF4757' }}>×</button>
+            <button onClick={clearAttachment} className="ml-1 hover:text-red-400 transition-colors" style={{ color: '#FF4757' }}>Ã—</button>
           </div>
         </div>
       )}
@@ -2375,7 +2375,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           <button
             onClick={toggleListening}
             disabled={!recognitionRef.current}
-            title={recognitionRef.current ? (isListening ? 'Parar gravação' : 'Falar para Sofi') : 'Voz não suportada neste navegador'}
+            title={recognitionRef.current ? (isListening ? 'Parar gravaÃ§Ã£o' : 'Falar para Sofi') : 'Voz nÃ£o suportada neste navegador'}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-30"
             style={{
               background: isListening ? 'rgba(255,71,87,0.15)' : 'rgba(255,255,255,0.05)',
@@ -2385,7 +2385,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
             {isListening ? (
               <><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Gravando...</>
             ) : (
-              <><span>🎤</span> Falar</>
+              <><span>ðŸŽ¤</span> Falar</>
             )}
           </button>
           <button
@@ -2397,17 +2397,17 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
               border: voiceEnabled ? '1px solid rgba(10,189,120,0.25)' : '1px solid rgba(255,255,255,0.08)',
               color: voiceEnabled ? '#0ABD78' : 'rgba(255,255,255,0.4)',
             }}>
-            {voiceEnabled ? '🔊 Voz ON' : '🔇 Voz OFF'}
+            {voiceEnabled ? 'ðŸ”Š Voz ON' : 'ðŸ”‡ Voz OFF'}
           </button>
           {isSpeaking && (
             <button onClick={stopSpeaking}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold animate-pulse"
               style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.25)', color: '#F8A303' }}>
-              ⏹ Parar fala
+              â¹ Parar fala
             </button>
           )}
           <span className="ml-auto text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>
-            {voiceEnabled ? '🎙️ Sofi falará as respostas' : 'Clique 🔇 para ativar voz'}
+            {voiceEnabled ? 'ðŸŽ™ï¸ Sofi falarÃ¡ as respostas' : 'Clique ðŸ”‡ para ativar voz'}
           </span>
         </div>
 
@@ -2430,11 +2430,11 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
               border: attachedFile ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
               color: attachedFile ? '#A78BFA' : 'rgba(255,255,255,0.4)',
             }}>
-            📎
+            ðŸ“Ž
           </button>
           <input type="text" value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder={isListening ? '🎤 Ouvindo...' : 'Pergunte sobre tarefas, agenda, campanha, promotores...'}
+            placeholder={isListening ? 'ðŸŽ¤ Ouvindo...' : 'Pergunte sobre tarefas, agenda, campanha, promotores...'}
             className="flex-1 px-4 py-3 rounded-xl text-sm text-white outline-none transition-all"
             style={{
               background: isListening ? 'rgba(255,71,87,0.06)' : 'rgba(255,255,255,0.06)',
@@ -2443,7 +2443,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
           <button onClick={() => send()} disabled={loading || (!input.trim() && !attachedFile)}
             className="px-5 py-3 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
             style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-            ➤
+            âž¤
           </button>
         </div>
       </div>
@@ -2451,7 +2451,7 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
   )
 }
 
-// ─── GOOGLE CALENDAR VIEW ─────────────────────────────────────
+// â”€â”€â”€ GOOGLE CALENDAR VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   const [gcalEvents, setGcalEvents] = useState<any[]>([])
   const [loadingCal, setLoadingCal] = useState(true)
@@ -2509,7 +2509,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
       ))
       setSel(s => s ? { ...s, title: editTitle, start: new Date(editStart).toISOString(), end: new Date(editEnd).toISOString(), description: editDesc, location: editLoc } : null)
       setEditMode(false)
-    } catch { alert('Erro ao salvar. Verifique se o Apps Script está atualizado.') }
+    } catch { alert('Erro ao salvar. Verifique se o Apps Script estÃ¡ atualizado.') }
     setSaving(false)
   }
 
@@ -2542,12 +2542,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
       const same = s.toDateString() === en.toDateString()
       return same
         ? s.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
-        : `${s.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – ${en.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+        : `${s.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} â€“ ${en.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
     }
     const date = s.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     const t1 = s.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     const t2 = en.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    return `${date} · ${t1} – ${t2}`
+    return `${date} Â· ${t1} â€“ ${t2}`
   }
 
   const getWeekDates = (d: Date) => {
@@ -2586,13 +2586,13 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="px-2.5 py-1.5 rounded-lg text-sm transition-all"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>←</button>
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>â†</button>
           <span className="text-xs font-semibold text-white">
-            {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} –{' '}
+            {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} â€“{' '}
             {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
           <button onClick={() => navigate(1)} className="px-2.5 py-1.5 rounded-lg text-sm transition-all"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>→</button>
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>â†’</button>
           <button onClick={() => setAnchor(new Date())}
             className="text-xs px-3 py-1.5 rounded-lg"
             style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
@@ -2601,12 +2601,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         </div>
         <div className="flex items-center gap-2">
           {loadingCal && (
-            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>⟳ Sincronizando...</span>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>âŸ³ Sincronizando...</span>
           )}
           <button onClick={fetchEvents}
             className="text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
             style={{ background: 'rgba(66,133,244,0.08)', color: '#4285F4', border: '1px solid rgba(66,133,244,0.2)' }}>
-            🔄 Atualizar
+            ðŸ”„ Atualizar
           </button>
         </div>
       </div>
@@ -2629,7 +2629,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         </div>
       )}
 
-      {/* ── TODAY SECTION ──────────────────────────────── */}
+      {/* â”€â”€ TODAY SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {(() => {
         const todayEvents = Array.isArray(gcalEvents) ? gcalOnDate(today) : []
         const todayTasks = Array.isArray(tasks) ? tasksOnDate(today) : []
@@ -2644,7 +2644,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         return (
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#F8A303' }}>📅 Hoje</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#F8A303' }}>ðŸ“… Hoje</span>
               <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
@@ -2656,7 +2656,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
             </div>
             {allToday.length === 0 ? (
               <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.25)' }}>
-                Nenhum compromisso para hoje 🎉
+                Nenhum compromisso para hoje ðŸŽ‰
               </div>
             ) : (
               <div className="space-y-1.5">
@@ -2675,10 +2675,10 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                         <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: color + '60' }} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{e.title}</p>
-                          {e.location && <p className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>📍 {e.location}</p>}
+                          {e.location && <p className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>ðŸ“ {e.location}</p>}
                           {e.calendarName && <p className="text-[10px]" style={{ color: color + 'AA' }}>{e.calendarName}</p>}
                         </div>
-                        <span className="text-[10px] flex-shrink-0" style={{ color: color + '99' }}>↗</span>
+                        <span className="text-[10px] flex-shrink-0" style={{ color: color + '99' }}>â†—</span>
                       </button>
                     )
                   } else {
@@ -2693,7 +2693,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                         <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: cat.color + '60' }} />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-semibold truncate ${t.status === 'done' ? 'line-through opacity-40' : ''}`} style={{ color: 'rgba(255,255,255,0.9)' }}>
-                            📋 {t.title}
+                            ðŸ“‹ {t.title}
                           </p>
                         </div>
                       </div>
@@ -2706,11 +2706,11 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         )
       })()}
 
-      {/* ── THIS WEEK SECTION ──────────────────────────────── */}
+      {/* â”€â”€ THIS WEEK SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>📆 Esta Semana</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>ðŸ“† Esta Semana</span>
         <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+          {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} â€“ {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
         </span>
       </div>
 
@@ -2747,7 +2747,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                       onClick={() => openEvent(e)}
                       className="w-full text-left text-[9px] px-1.5 py-1 rounded-md truncate leading-snug transition-all hover:brightness-125 active:scale-95"
                       style={{ background: color + '22', color: color, border: `1px solid ${color}44` }}
-                      title={`${e.title}${e.location ? ' • ' + e.location : ''} — clique para ver detalhes`}>
+                      title={`${e.title}${e.location ? ' â€¢ ' + e.location : ''} â€” clique para ver detalhes`}>
                       {timeLabel}{e.title}
                     </button>
                   )
@@ -2760,12 +2760,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                       className={`text-[9px] px-1.5 py-1 rounded-md truncate leading-snug ${t.status === 'done' ? 'opacity-40 line-through' : ''}`}
                       style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.color}33` }}
                       title={t.title}>
-                      📋 {t.title}
+                      ðŸ“‹ {t.title}
                     </div>
                   )
                 })}
                 {dayEvents.length === 0 && dayTasks.length === 0 && (
-                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.12)' }}>—</p>
+                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.12)' }}>â€”</p>
                 )}
               </div>
             </div>
@@ -2777,12 +2777,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
       {!loadingCal && gcalEvents.length === 0 && tasks.filter(t => t.dueDate).length === 0 && (
         <div className="text-center py-10 mt-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
           <CalendarDaysIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Nenhum evento encontrado nos próximos 90 dias</p>
+          <p className="text-sm">Nenhum evento encontrado nos prÃ³ximos 90 dias</p>
           <p className="text-xs mt-1 opacity-60">Verifique se autorizou o acesso ao Google Calendar no Apps Script</p>
         </div>
       )}
 
-      {/* ── EVENT DETAIL MODAL ────────────────────────────── */}
+      {/* â”€â”€ EVENT DETAIL MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {sel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
@@ -2809,18 +2809,18 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                   <button onClick={() => setEditMode(true)}
                     className="text-[10px] px-2.5 py-1 rounded-lg transition-all"
                     style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-                    ✏️ Editar
+                    âœï¸ Editar
                   </button>
                 )}
                 <a href={gcalWeekLink(new Date(sel.start))} target="_blank" rel="noreferrer"
                   className="text-[10px] px-2.5 py-1 rounded-lg transition-all"
                   style={{ background: 'rgba(66,133,244,0.1)', color: '#4285F4', border: '1px solid rgba(66,133,244,0.2)' }}>
-                  Abrir ↗
+                  Abrir â†—
                 </a>
                 <button onClick={closeModal}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all"
                   style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
-                  ✕
+                  âœ•
                 </button>
               </div>
             </div>
@@ -2839,12 +2839,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
               {/* date / time */}
               <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
                 <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  Data e Horário
+                  Data e HorÃ¡rio
                 </p>
                 {editMode ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Início</p>
+                      <p className="text-[9px] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>InÃ­cio</p>
                       <input type="datetime-local" value={editStart} onChange={e => setEditStart(e.target.value)}
                         className="w-full px-2 py-1.5 rounded-lg text-xs text-white outline-none"
                         style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }} />
@@ -2865,7 +2865,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
               {(editMode || sel.location) && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    📍 Local
+                    ðŸ“ Local
                   </p>
                   {editMode ? (
                     <input value={editLoc} onChange={e => setEditLoc(e.target.value)}
@@ -2882,11 +2882,11 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
               {(editMode || sel.description) && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                    📝 Descrição
+                    ðŸ“ DescriÃ§Ã£o
                   </p>
                   {editMode ? (
                     <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)}
-                      rows={3} placeholder="Adicione uma descrição..."
+                      rows={3} placeholder="Adicione uma descriÃ§Ã£o..."
                       className="w-full px-3 py-2 rounded-xl text-sm text-white outline-none resize-none"
                       style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
                   ) : (
@@ -2904,7 +2904,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                   <button onClick={saveEdit} disabled={saving}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold text-black disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
-                    {saving ? 'Salvando...' : '✅ Salvar alterações'}
+                    {saving ? 'Salvando...' : 'âœ… Salvar alteraÃ§Ãµes'}
                   </button>
                   <button onClick={() => setEditMode(false)}
                     className="px-4 py-2.5 rounded-xl text-sm"
@@ -2917,12 +2917,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                   <button onClick={() => setEditMode(true)}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                     style={{ background: 'rgba(248,163,3,0.1)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-                    ✏️ Editar evento
+                    âœï¸ Editar evento
                   </button>
                   <button onClick={() => deleteEvent(sel.id)} disabled={deleting}
                     className="px-4 py-2.5 rounded-xl text-sm disabled:opacity-50"
                     style={{ background: 'rgba(255,71,87,0.1)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.2)' }}>
-                    {deleting ? '...' : '🗑'}
+                    {deleting ? '...' : 'ðŸ—‘'}
                   </button>
                 </>
               )}
@@ -2935,7 +2935,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
   )
 }
 
-// ─── GOOGLE WORKSPACE PANEL ───────────────────────────────────
+// â”€â”€â”€ GOOGLE WORKSPACE PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
   const [emails, setEmails]   = useState<any[]>([])
   const [files, setFiles]     = useState<any[]>([])
@@ -2962,7 +2962,7 @@ function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
       <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center gap-2">
-            <span className="text-lg">📧</span>
+            <span className="text-lg">ðŸ“§</span>
             <span className="text-sm font-bold text-white">Gmail</span>
             {unread > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: '#FF4757', color: '#fff' }}>{unread}</span>
@@ -2972,11 +2972,11 @@ function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
             <button onClick={loadWorkspace}
               className="text-[10px] px-2 py-1 rounded-lg transition-all"
               style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              🔄
+              ðŸ”„
             </button>
             <a href="https://mail.google.com" target="_blank" rel="noreferrer"
               className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
-              Abrir →
+              Abrir â†’
             </a>
           </div>
         </div>
@@ -2984,7 +2984,7 @@ function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
           {loadingG ? <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>Carregando...</p>
           : emails.length === 0 ? (
             <div className="text-center py-4">
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>✅ Nenhum email não lido</p>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>âœ… Nenhum email nÃ£o lido</p>
             </div>
           ) : emails.map(e => (
             <a key={e.id}
@@ -3020,12 +3020,12 @@ function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
       <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center gap-2">
-            <span className="text-lg">📁</span>
+            <span className="text-lg">ðŸ“</span>
             <span className="text-sm font-bold text-white">Google Drive</span>
           </div>
           <a href="https://drive.google.com" target="_blank" rel="noreferrer"
             className="text-[10px] px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
-            Abrir →
+            Abrir â†’
           </a>
         </div>
         <div className="p-3 space-y-1.5">
@@ -3049,7 +3049,7 @@ function GoogleWorkspacePanel({ refreshKey }: { refreshKey?: number }) {
   )
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────
+// â”€â”€â”€ MAIN PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function MinhaAreaPage() {
   const router  = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -3103,8 +3103,8 @@ export default function MinhaAreaPage() {
       const pending = tasks.filter(t => t.status !== 'done')
       if (pending.length > 0) {
         sendNotif(
-          `📋 ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}`,
-          pending.slice(0, 3).map(t => `• ${t.title}`).join('\n')
+          `ðŸ“‹ ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}`,
+          pending.slice(0, 3).map(t => `â€¢ ${t.title}`).join('\n')
         )
       }
     }, 30 * 60 * 1000)
@@ -3139,7 +3139,7 @@ export default function MinhaAreaPage() {
       await api.put(`/personal/${id}`, upd)
       if (upd.status === 'done') {
         const t = tasks.find(x => x.id === id)
-        sendNotif('✅ Tarefa concluída!', `"${t?.title}" — +${t?.xp} XP`)
+        sendNotif('âœ… Tarefa concluÃ­da!', `"${t?.title}" â€” +${t?.xp} XP`)
       }
     } catch { loadTasks() }
   }
@@ -3151,7 +3151,7 @@ export default function MinhaAreaPage() {
 
   if (!mounted) return null
 
-  const greeting = user ? getGreeting(user.name?.split(' ')[0] || 'Vinicius') : { text: 'Olá!', emoji: '👋' }
+  const greeting = user ? getGreeting(user.name?.split(' ')[0] || 'Vinicius') : { text: 'OlÃ¡!', emoji: 'ðŸ‘‹' }
 
   const filteredTasks = tasks
     .filter(t => filterCat === 'all' || t.category === filterCat)
@@ -3188,7 +3188,7 @@ export default function MinhaAreaPage() {
 
   return (
     <AdminLayout>
-      {/* ── HEADER ─────────────────────────────────────────── */}
+      {/* â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-start justify-between mb-5 animate-fade-in">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -3197,7 +3197,7 @@ export default function MinhaAreaPage() {
           </div>
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            {' · '}Sua área pessoal e privada
+            {' Â· '}Sua Ã¡rea pessoal e privada
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -3205,7 +3205,7 @@ export default function MinhaAreaPage() {
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
             style={{ background: 'rgba(248,163,3,0.1)', border: '1px solid rgba(248,163,3,0.2)' }}>
             <StarSolid className="w-3.5 h-3.5" style={{ color: '#F8A303' }} />
-            <span className="text-xs font-bold" style={{ color: '#F8A303' }}>Nível {level} · {totalXp} XP</span>
+            <span className="text-xs font-bold" style={{ color: '#F8A303' }}>NÃ­vel {level} Â· {totalXp} XP</span>
           </div>
           {/* Notification button */}
           <button
@@ -3216,19 +3216,19 @@ export default function MinhaAreaPage() {
               border: `1px solid ${notifGranted ? 'rgba(10,189,120,0.25)' : 'rgba(255,255,255,0.09)'}`,
               color: notifGranted ? '#0ABD78' : 'rgba(255,255,255,0.4)',
             }}
-            title={notifGranted ? 'Notificações ativas' : 'Ativar notificações'}>
+            title={notifGranted ? 'NotificaÃ§Ãµes ativas' : 'Ativar notificaÃ§Ãµes'}>
             <BellIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* ── QUICK STATS ────────────────────────────────────── */}
+      {/* â”€â”€ QUICK STATS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 animate-fade-in-up">
         {[
-          { label: 'Pendentes',   value: pendingCount, color: '#F8A303', icon: '📋' },
-          { label: 'Feitas hoje', value: doneToday,    color: '#0ABD78', icon: '✅' },
-          { label: 'Total',       value: tasks.length, color: '#4A9EFF', icon: '📊' },
-          { label: 'XP Total',    value: totalXp,      color: '#8B5CF6', icon: '⚡' },
+          { label: 'Pendentes',   value: pendingCount, color: '#F8A303', icon: 'ðŸ“‹' },
+          { label: 'Feitas hoje', value: doneToday,    color: '#0ABD78', icon: 'âœ…' },
+          { label: 'Total',       value: tasks.length, color: '#4A9EFF', icon: 'ðŸ“Š' },
+          { label: 'XP Total',    value: totalXp,      color: '#8B5CF6', icon: 'âš¡' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-4 text-center"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -3239,9 +3239,9 @@ export default function MinhaAreaPage() {
         ))}
       </div>
 
-      {/* ══════════════════════════════════════════════════════
-           SEÇÃO 1 — CALENDÁRIO GOOGLE (destaque principal)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           SEÃ‡ÃƒO 1 â€” CALENDÃRIO GOOGLE (destaque principal)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {highlightedTasks.length > 0 && (
         <section className="mb-6 animate-fade-in-up">
           <div className="rounded-2xl p-4"
@@ -3250,7 +3250,7 @@ export default function MinhaAreaPage() {
               <div>
                 <p className="text-sm font-extrabold text-white">Tarefas em destaque</p>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  Sempre visíveis, mesmo quando filtros ou busca escondem a lista.
+                  Sempre visÃ­veis, mesmo quando filtros ou busca escondem a lista.
                 </p>
               </div>
               {filtersActive && (
@@ -3291,10 +3291,10 @@ export default function MinhaAreaPage() {
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
               style={{ background: 'rgba(66,133,244,0.15)', border: '1px solid rgba(66,133,244,0.25)' }}>
-              📅
+              ðŸ“…
             </div>
             <div>
-              <h2 className="text-sm font-extrabold text-white leading-none">Calendário Google</h2>
+              <h2 className="text-sm font-extrabold text-white leading-none">CalendÃ¡rio Google</h2>
               <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 Todos os seus compromissos sincronizados
               </p>
@@ -3307,22 +3307,22 @@ export default function MinhaAreaPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════
-           SEÇÃO 2 — SOFI IA + TAREFAS (lado a lado)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           SEÃ‡ÃƒO 2 â€” SOFI IA + TAREFAS (lado a lado)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6 animate-fade-in-up">
 
-        {/* ── SOFI IA ─────────────────────────────────────── */}
+        {/* â”€â”€ SOFI IA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
               style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 10px rgba(248,163,3,0.3)' }}>
-              🤖
+              ðŸ¤–
             </div>
             <div>
-              <p className="text-sm font-extrabold text-white leading-none">Sofi — IA Assistente</p>
+              <p className="text-sm font-extrabold text-white leading-none">Sofi â€” IA Assistente</p>
               <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                tarefas · agenda · gmail · drive
+                tarefas Â· agenda Â· gmail Â· drive
               </p>
             </div>
           </div>
@@ -3337,13 +3337,13 @@ export default function MinhaAreaPage() {
           />
         </div>
 
-        {/* ── TAREFAS ──────────────────────────────────────── */}
+        {/* â”€â”€ TAREFAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
                 style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.2)' }}>
-                📋
+                ðŸ“‹
               </div>
               <div>
                 <p className="text-sm font-extrabold text-white leading-none">
@@ -3354,7 +3354,7 @@ export default function MinhaAreaPage() {
                   )}
                 </p>
                 <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  {tasks.filter(t => t.status === 'done').length} concluídas · {tasks.length} total
+                  {tasks.filter(t => t.status === 'done').length} concluÃ­das Â· {tasks.length} total
                 </p>
               </div>
             </div>
@@ -3390,7 +3390,7 @@ export default function MinhaAreaPage() {
               <option value="all">Status</option>
               <option value="pending">Pendentes</option>
               <option value="in-progress">Em andamento</option>
-              <option value="done">Concluídas</option>
+              <option value="done">ConcluÃ­das</option>
             </select>
           </div>
 
@@ -3434,9 +3434,9 @@ export default function MinhaAreaPage() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════
-           SEÇÃO 3 — JORNADA DE TRABALHO
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           SEÃ‡ÃƒO 3 â€” JORNADA DE TRABALHO
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="mb-6 animate-fade-in-up">
         <WorkDayTimer tasks={tasks} workDay={workDay} onWorkDayUpdated={w => setWorkDay(w)} />
       </div>
@@ -3469,32 +3469,32 @@ export default function MinhaAreaPage() {
         <CredentialsVault />
       </section>
 
-      {/* ══════════════════════════════════════════════════════
-           SEÇÃO 4 — GOOGLE WORKSPACE (Gmail + Drive)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           SEÃ‡ÃƒO 4 â€” GOOGLE WORKSPACE (Gmail + Drive)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <section className="mb-6 animate-fade-in-up">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
             style={{ background: 'rgba(10,189,120,0.12)', border: '1px solid rgba(10,189,120,0.2)' }}>
-            🔗
+            ðŸ”—
           </div>
           <div>
             <h2 className="text-sm font-extrabold text-white leading-none">Google Workspace</h2>
-            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Gmail · Drive integrados</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Gmail Â· Drive integrados</p>
           </div>
         </div>
         <GoogleWorkspacePanel refreshKey={wsRefreshKey} />
       </section>
 
-      {/* ══════════════════════════════════════════════════════
-           SEÇÃO 5 — CONQUISTAS + CREDENCIAIS (lado a lado)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           SEÃ‡ÃƒO 5 â€” CONQUISTAS + CREDENCIAIS (lado a lado)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className="animate-fade-in-up">
         <section>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
               style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}>
-              🏆
+              ðŸ†
             </div>
             <h2 className="text-sm font-extrabold text-white">Conquistas & XP</h2>
           </div>
