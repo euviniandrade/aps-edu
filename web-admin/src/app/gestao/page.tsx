@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import AdminLayout from '@/components/layout/AdminLayout'
+import AdvancedSuite from '@/components/ops/AdvancedSuite'
 import api from '@/lib/api'
 import {
   ArrowPathIcon,
@@ -383,6 +384,8 @@ export default function GestaoPage() {
             )
           })}
         </section>
+
+        <AdvancedSuite />
 
         <section className="grid gap-5 xl:grid-cols-[1fr_1fr_1fr]">
           <Card className="p-5">

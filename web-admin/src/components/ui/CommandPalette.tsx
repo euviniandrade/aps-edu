@@ -15,6 +15,7 @@ interface Command {
 
 const NAV_COMMANDS = [
   { id: 'go-gestao',        label: 'Ir para Centro de Gestao', icon: 'G', path: '/gestao',        keywords: ['gestao', 'suite', 'plataforma', 'cockpit', 'operacao', 'educacao', 'minha area', 'sofi pessoal', 'central'] },
+  { id: 'go-suite-tools',   label: 'Ferramentas de Gestao', icon: 'F', path: '/gestao',        keywords: ['crm', 'matricula', 'financeiro', 'aprovacao', 'aprovacoes', 'formulario', 'okr', 'meta', 'documento', 'patrimonio', 'qr code', 'contrato', 'lead', 'funil'] },
   { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: 'D', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
   { id: 'go-tasks',         label: 'Ir para Tarefas',       icon: 'âœ…', path: '/tasks',         keywords: ['task', 'tarefa'] },
   { id: 'go-estoque',       label: 'Ir para Estoque',       icon: '??', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimonio', 'inventario', 'compras'] },
