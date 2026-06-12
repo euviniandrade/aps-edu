@@ -85,7 +85,7 @@ module.exports = async function (fastify) {
       const { suggestions = [] } = req.body || {}
       if (!suggestions.length) return reply.code(400).send({ error: 'Nenhuma sugestao' })
       const { execSync } = require('child_process')
-      const ROOT = path.resolve(__dirname, ''../../../../'')
+      const ROOT = path.resolve(__dirname, '../../../../')
       const roadmapPath = path.join(ROOT, 'ROADMAP-IA.md')
       if (!fs.existsSync(roadmapPath)) fs.writeFileSync(roadmapPath, '# Roadmap de Melhorias APS EDU CRM\n\nGerado pelo Agente IA.\n')
       for (const s of suggestions) fs.appendFileSync(roadmapPath, "\n## " + s.title + "\n**Categoria:** " + s.category + "\n**Impacto:** " + (s.impact||'N/A') + "\n**Descricao:** " + s.description + "\n**Data:** " + new Date().toLocaleDateString('pt-BR') + "\n")
