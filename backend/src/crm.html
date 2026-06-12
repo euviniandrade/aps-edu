@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APS-EDU CRM WhatsApp</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#0f1117;color:#e0e0e0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+/* HEADER */
+.header{background:#1a1d27;padding:10px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2a2d3a;flex-shrink:0}
+.header h1{font-size:16px;font-weight:700;color:#25D366;flex:1}
+.status-dot{width:9px;height:9px;border-radius:50%;background:#ccc;display:inline-block}
+.status-dot.online{background:#25D366;box-shadow:0 0 6px #25D366}
+#statusText{font-size:12px;color:#888}
+/* TABS */
+.tabs{display:flex;background:#1a1d27;border-bottom:1px solid #2a2d3a;flex-shrink:0;overflow-x:auto}
+.tab{padding:10px 14px;font-size:12px;cursor:pointer;color:#888;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab.active{color:#25D366;border-bottom-color:#25D366}
+.tab:hover{color:#e0e0e0}
+/* LAYOUT PRINCIPAL */
+.main{display:flex;flex:1;overflow:hidden}
+/* SIDEBAR CONVERSAS */
+.sidebar{width:280px;border-right:1px solid #2a2d3a;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-search{padding:8px;border-bottom:1px solid #2a2d3a}
+.sidebar-search input{width:100%;background:#0f1117;border:1px solid #2a2d3a;border-radius:6px;padding:7px 10px;color:#e0e0e0;font-size:12px;outline:none}
+.sidebar-search input:focus{border-color:#25D366}
+.chat-list{flex:1;overflow-y:auto}
+.chat-item{display:flex;align-items:center;padding:10px 12px;cursor:pointer;border-bottom:1px solid #1a1d27;transition:background .15s}
+.chat-item:hover,.chat-item.active{background:#1a1d27}
+.chat-avatar{width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;margin-right:10px;overflow:hidden}
+.chat-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.chat-info{flex:1;overflow:hidden}
+.chat-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-last{font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.unread-badge{background:#25D366;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;flex-shrink:0}
+/* CHAT WINDOW */
+.chat-window{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-header{background:#1a1d27;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #2a2d3a;flex-shrink:0}
+.chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
+.msg{max-width:70%;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;word-break:break-word}
+.msg.from-me{background:#005C4B;margin-left:auto;border-bottom-right-radius:2px}
+.msg.from-them{background:#1a1d27;border-bottom-left-radius:2px}
+.msg-time{font-size:10px;color:#888;margin-top:3px;text-align:right}
+.chat-input-area{border-top:1px solid #2a2d3a;padding:10px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;background:#1a1d27}
+.chat-input-area textarea{flex:1;background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:8px 12px;color:#e0e0e0;font-size:13px;resize:none;outline:none;min-height:38px;max-height:100px}
+.chat-input-area textarea:focus{border-color:#25D366}
+.btn-icon{background:#25D366;border:none;border-radius:8px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:16px;flex-shrink:0}
+.btn-icon:hover{background:#1da851}
+/* PANEL GENÉRICO */
+.panel{display:none;padding:16px;overflow-y:auto;height:100%}
+.panel.active{display:block}
+/* UTILS */
+.btn{border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:#25D366;color:#fff}
+.btn-primary:hover{background:#1da851}
+.btn-primary:disabled{background:#444;cursor:not-allowed}
+.btn-secondary{background:#2a2d3a;color:#e0e0e0}
+.btn-secondary:hover{background:#3a3d4a}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-danger:hover{background:#c0392b}
+.section-title{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.card{background:#1a1d27;border-radius:8px;padding:14px;margin-bottom:10px;border:1px solid #2a2d3a}
+textarea,input[type=text],input[type=datetime-local],input[type=number],select{background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;padding:8px 10px;color:#e0e0e0;font-size:13px;outline:none}
+textarea:focus,input:focus,select:focus{border-color:#25D366}
+.empty{text-align:center;padding:40px 20px;color:#555;font-size:13px}
+.empty .icon{font-size:36px;margin-bottom:10px}
+/* ENVIO EM MASSA */
+.contact-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #2a2d3a;cursor:pointer;transition:background .15s}
+.contact-item:hover{background:#1e2130}
+.contact-item input[type=checkbox]{margin-right:10px;accent-color:#25D366}
+/* PIPELINE */
+.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.pipeline-col{min-width:180px;background:#1a1d27;border-radius:8px;padding:10px}
+.pipeline-col-title{font-size:12px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+.pipeline-card{background:#0f1117;border-radius:6px;padding:8px;margin-bottom:6px;cursor:pointer;border-left:3px solid #25D366;font-size:12px}
+.pipeline-card .pname{font-weight:600;margin-bottom:4px}
+.pipeline-card .ptag{background:#2a2d3a;border-radius:4px;padding:1px 6px;font-size:10px;display:inline-block;margin-top:4px}
+/* ANALYTICS */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:#1a1d27;border-radius:8px;padding:14px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:#25D366}
+.stat-label{font-size:11px;color:#888;margin-top:4px}
+/* TEMPLATES */
+.tpl-item{background:#1a1d27;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.tpl-shortcut{background:#25D366;color:#fff;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;flex-shrink:0}
+.tpl-text{flex:1;font-size:12px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* BOT */
+.rule-item{background:#1a1d27;border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.rule-keyword{background:#2a2d3a;border-radius:4px;padding:2px 8px;font-size:11px;color:#25D366;flex-shrink:0}
+/* AGENDAMENTO */
+.sched-item{background:#1a1d27;border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+/* QR */
+#qrCode{display:flex;justify-content:center;margin:20px 0}
+/* TOGGLE */
+.toggle{position:relative;width:42px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#2a2d3a;border-radius:22px;transition:.3s}
+.toggle-slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.toggle-slider{background:#25D366}
+.toggle input:checked+.toggle-slider:before{transform:translateX(20px)}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#0f1117}
+::-webkit-scrollbar-thumb{background:#2a2d3a;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🟢 APS-EDU CRM WhatsApp</h1>
+  <span class="status-dot" id="statusDot"></span>
+  <span id="statusText">Conectando...</span>
+  <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="loadChats()">↺ Atualizar</button>
+  <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="window.location='#qr'" id="btnQR">📱 QR</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="chat">💬 Conversas</div>
+  <div class="tab" data-tab="bulk">📢 Massa</div>
+  <div class="tab" data-tab="schedule">⏰ Agendar</div>
+  <div class="tab" data-tab="templates">⚡ Templates</div>
+  <div class="tab" data-tab="analytics">📊 Analytics</div>
+  <div class="tab" data-tab="pipeline">🏷️ Pipeline</div>
+  <div class="tab" data-tab="bot">🤖 Bot</div>
+  <div class="tab" data-tab="qr">📱 Conectar</div>
+</div>
+
+<!-- =================== ABA CHAT =================== -->
+<div class="main" id="tab-chat">
+  <div class="sidebar">
+    <div class="sidebar-search">
+      <input type="text" id="searchChats" placeholder="🔍 Buscar conversa...">
+    </div>
+    <div class="chat-list" id="chatList">
+      <div class="empty"><div class="icon">💬</div>Carregando...</div>
+    </div>
+  </div>
+  <div class="chat-window">
+    <div class="chat-header" id="chatHeader">
+      <div class="chat-avatar" id="chatAvatar">?</div>
+      <div><div style="font-size:14px;font-weight:600" id="chatName">Selecione uma conversa</div><div style="font-size:11px;color:#888" id="chatSub"></div></div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="empty"><div class="icon">👈</div>Selecione uma conversa à esquerda</div>
+    </div>
+    <div class="chat-input-area" id="chatInputArea" style="display:none">
+      <textarea id="msgInput" placeholder="Digite uma mensagem... (use /atalho para templates)" rows="1" onkeydown="handleMsgKey(event)" oninput="handleTemplateHint(this)"></textarea>
+      <button class="btn-icon" onclick="sendMessage()" title="Enviar">▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== ABA ENVIO EM MASSA =================== -->
+<div class="panel" id="tab-bulk">
+  <div class="section-title">Mensagem para enviar</div>
+  <textarea id="bulkText" style="width:100%;min-height:80px;resize:vertical;margin-bottom:10px" placeholder="Olá {{nome}}! Tudo bem?&#10;Use {{nome}}, {{data}}, {{hora}}..."></textarea>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="section-title" style="margin-bottom:0">Destinatários <span id="bulkCount" style="background:#25D366;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px">0</span></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="searchBulk" placeholder="🔍 Buscar..." style="font-size:11px;padding:5px 8px;width:140px">
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="toggleSelectAll()">Selecionar todos</button>
+    </div>
+  </div>
+
+  <div style="max-height:220px;overflow-y:auto;background:#1a1d27;border:1px solid #2a2d3a;border-radius:8px;margin-bottom:10px" id="bulkContactList">
+    <div class="empty" style="padding:20px">Clique em "Carregar" para ver contatos</div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <button class="btn btn-secondary" onclick="loadBulkContacts()">↺ Carregar contatos</button>
+    <button class="btn btn-primary" id="btnSendBulk" onclick="sendBulk()">📢 Enviar em massa</button>
+  </div>
+  <div id="bulkProgressBar" style="background:#2a2d3a;border-radius:4px;height:6px;display:none"><div id="bulkFill" style="background:#25D366;height:100%;width:0;transition:width .3s;border-radius:4px"></div></div>
+  <div id="bulkProgressText" style="font-size:11px;color:#888;margin-top:4px;text-align:center"></div>
+
+  <div style="margin-top:16px" id="campaignHistory">
+    <div class="section-title">Histórico de campanhas</div>
+    <div id="campaignList"><div class="empty" style="padding:10px;font-size:12px">Nenhuma campanha ainda</div></div>
+  </div>
+</div>
+
+<!-- =================== ABA AGENDAR =================== -->
+<div class="panel" id="tab-schedule">
+  <div class="card">
+    <div class="section-title">Nova mensagem agendada</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Contato (chatId)</label>
+        <input type="text" id="schedChatId" style="width:100%" placeholder="556199999999@s.whatsapp.net">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Data/Hora</label>
+        <input type="datetime-local" id="schedTime" style="width:100%">
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">Mensagem</label>
+      <textarea id="schedText" style="width:100%;min-height:70px" placeholder="Olá {{nome}}! Sua consulta é amanhã às {{hora}}."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="addScheduled()">⏰ Agendar mensagem</button>
+  </div>
+
+  <div class="section-title">Mensagens agendadas</div>
+  <div id="scheduledList"><div class="empty"><div class="icon">⏰</div>Nenhuma mensagem agendada</div></div>
+</div>
+
+<!-- =================== ABA TEMPLATES =================== -->
+<div class="panel" id="tab-templates">
+  <div class="card">
+    <div class="section-title">Novo template</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="text" id="tplShortcut" placeholder="/atalho" style="width:120px">
+      <input type="text" id="tplText" style="flex:1" placeholder="Mensagem com {{nome}}, {{data}}, {{hora}}">
+    </div>
+    <button class="btn btn-primary" onclick="addTemplate()">➕ Criar template</button>
+  </div>
+  <div class="section-title">Templates salvos</div>
+  <div id="templateList"><div class="empty"><div class="icon">⚡</div>Nenhum template</div></div>
+</div>
+
+<!-- =================== ABA ANALYTICS =================== -->
+<div class="panel" id="tab-analytics">
+  <div class="stat-grid" id="analyticsStats">
+    <div class="stat-card"><div class="stat-val" id="statSent">-</div><div class="stat-label">Enviadas</div></div>
+    <div class="stat-card"><div class="stat-val" id="statReceived">-</div><div class="stat-label">Recebidas</div></div>
+    <div class="stat-card"><div class="stat-val" id="statBulk">-</div><div class="stat-label">Em Massa</div></div>
+    <div class="stat-card"><div class="stat-val" id="statAuto">-</div><div class="stat-label">Auto-Reply</div></div>
+    <div class="stat-card"><div class="stat-val" id="statTodaySent">-</div><div class="stat-label">Hoje (enviadas)</div></div>
+    <div class="stat-card"><div class="stat-val" id="statTodayReceived">-</div><div class="stat-label">Hoje (recebidas)</div></div>
+  </div>
+  <div class="section-title">Campanhas recentes</div>
+  <div id="analyticscampaigns"><div class="empty" style="padding:10px">Nenhuma campanha ainda</div></div>
+  <div style="margin-top:12px;text-align:right">
+    <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
+  </div>
+</div>
+
+<!-- =================== ABA PIPELINE =================== -->
+<div class="panel" id="tab-pipeline">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:0">Pipeline CRM</div>
+    <button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="openAddContact()">➕ Adicionar lead</button>
+  </div>
+  <div class="pipeline-board" id="pipelineBoard">
+    <div class="empty"><div class="icon">🏷️</div>Carregando pipeline...</div>
+  </div>
+
+  <!-- Modal adicionar -->
+  <div id="addContactModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:99;align-items:center;justify-content:center">
+    <div style="background:#1a1d27;border-radius:12px;padding:20px;width:340px;border:1px solid #2a2d3a">
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px">Adicionar ao Pipeline</div>
+      <input type="text" id="newContactId" placeholder="chatId (556199999999@s.whatsapp.net)" style="width:100%;margin-bottom:8px">
+      <input type="text" id="newContactName" placeholder="Nome do lead" style="width:100%;margin-bottom:8px">
+      <select id="newContactStage" style="width:100%;margin-bottom:12px"></select>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="document.getElementById('addContactModal').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveNewContact()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== ABA BOT =================== -->
+<div class="panel" id="tab-bot">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-size:13px;font-weight:600">Bot ativo</div>
+        <div style="font-size:11px;color:#888">Responde automaticamente por palavra-chave</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="botEnabled" onchange="saveBotConfig()"><span class="toggle-slider"></span></label>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;font-weight:600">IA automática (Gemini)</div>
+        <div style="font-size:11px;color:#888">Usa IA para responder quando nenhuma regra bate</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="aiEnabled" onchange="saveBotConfig()"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Nova regra</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="text" id="ruleKeyword" placeholder="palavra-chave" style="width:130px">
+      <input type="text" id="ruleResponse" style="flex:1" placeholder="Resposta com {{nome}}">
+    </div>
+    <button class="btn btn-primary" onclick="addBotRule()">➕ Adicionar regra</button>
+  </div>
+
+  <div class="section-title">Regras ativas</div>
+  <div id="botRulesList"><div class="empty"><div class="icon">🤖</div>Nenhuma regra</div></div>
+</div>
+
+<!-- =================== ABA QR / CONECTAR =================== -->
+<div class="panel" id="tab-qr">
+  <div style="text-align:center;padding:20px">
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">Conectar WhatsApp</div>
+    <div style="font-size:12px;color:#888;margin-bottom:20px">Abra o WhatsApp no celular → Aparelhos Conectados → Conectar aparelho</div>
+    <div id="qrCode"><div class="empty"><div class="icon">📱</div>Aguardando QR Code...</div></div>
+    <div id="qrStatus" style="font-size:12px;color:#888;margin-top:10px"></div>
+    <button class="btn btn-secondary" style="margin-top:12px" onclick="checkStatus()">↺ Verificar status</button>
+  </div>
+</div>
+
+<script>
+const K = 'aps-edu-whatsapp'
+const H = { 'x-wa-key': K }
+const HJ = { 'x-wa-key': K, 'Content-Type': 'application/json' }
+const API = '/api/whatsapp'
+
+let curChatId = null
+let curChatName = ''
+let allChats = []
+let bulkSelected = new Set()
+let bulkContacts = []
+let pipeline = { stages: [], contacts: {} }
+let templates = []
+let botConfig = { enabled: false, aiEnabled: false, rules: [] }
+
+// =================== TABS ===================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+    tab.classList.add('active')
+    const id = 'tab-' + tab.dataset.tab
+    document.querySelectorAll('.main,[id^=tab-]').forEach(p => {
+      if (p.id === 'tab-chat') p.style.display = tab.dataset.tab === 'chat' ? 'flex' : 'none'
+      else if (p.classList.contains('panel')) { p.classList.remove('active'); if (p.id === id) p.classList.add('active') }
+    })
+    if (tab.dataset.tab === 'bulk') loadBulkContacts()
+    if (tab.dataset.tab === 'analytics') loadAnalytics()
+    if (tab.dataset.tab === 'pipeline') loadPipeline()
+    if (tab.dataset.tab === 'templates') loadTemplates()
+    if (tab.dataset.tab === 'schedule') loadScheduled()
+    if (tab.dataset.tab === 'bot') loadBotConfig()
+    if (tab.dataset.tab === 'qr') checkStatus()
+  })
+})
+// Mostrar aba chat por padrão
+document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+
+// =================== STATUS + SSE ===================
+async function checkStatus() {
+  try {
+    const r = await fetch(API + '/status', { headers: H })
+    const d = await r.json()
+    const dot = document.getElementById('statusDot')
+    const txt = document.getElementById('statusText')
+    if (d.connected || d.ready) {
+      dot.className = 'status-dot online'; txt.textContent = 'Conectado'
+      document.getElementById('qrCode').innerHTML = '<div class="empty" style="color:#25D366">✅ WhatsApp conectado!</div>'
+    } else {
+      dot.className = 'status-dot'; txt.textContent = 'Desconectado'
+      if (d.qrDataUrl) {
+        document.getElementById('qrCode').innerHTML = '<img src="'+d.qrDataUrl+'" style="max-width:220px;border-radius:8px">'
+        document.getElementById('qrStatus').textContent = 'Escaneie o QR Code acima'
+      }
+    }
+  } catch (e) {
+    document.getElementById('statusDot').className = 'status-dot'
+    document.getElementById('statusText').textContent = 'Offline'
+  }
+}
+checkStatus()
+
+let sseConn = null
+function connectSSE() {
+  if (sseConn) sseConn.close()
+  sseConn = new EventSource(API + '/events?key=' + K)
+  sseConn.addEventListener('wa-event', e => {
+    try {
+      const d = JSON.parse(e.data)
+      if (d.type === 'qr' && d.qrDataUrl) {
+        document.getElementById('qrCode').innerHTML = '<img src="'+d.qrDataUrl+'" style="max-width:220px;border-radius:8px">'
+      }
+      if (d.type === 'ready' || d.type === 'connection') checkStatus()
+      if (d.type === 'message' && d.chatId === curChatId) loadMessages(curChatId)
+      if (d.type === 'message') updateChatPreview(d)
+    } catch {}
+  })
+  sseConn.onerror = () => setTimeout(connectSSE, 5000)
+}
+connectSSE()
+
+// =================== CONVERSAS ===================
+async function loadChats() {
+  const r = await fetch(API + '/chats?limit=200', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  allChats = await r.json()
+  if (!Array.isArray(allChats)) allChats = allChats.chats || []
+  renderChats(allChats)
+}
+loadChats()
+
+function renderChats(chats) {
+  const list = document.getElementById('chatList')
+  if (!chats.length) { list.innerHTML = '<div class="empty">Nenhuma conversa</div>'; return }
+  list.innerHTML = chats.map(c => {
+    const id = c.id || c.jid
+    const name = escHtml(c.name || c.pushName || id.split('@')[0])
+    const init = name.substring(0, 2).toUpperCase()
+    const last = escHtml(c.lastMessage || c.last_message || '')
+    return `<div class="chat-item${id===curChatId?' active':''}" onclick="openChat('${id}','${name}')">
+      <div class="contact-avatar chat-avatar" id="av_${id.replace(/[^a-z0-9]/gi,'_')}">
+        <span>${init}</span>
+      </div>
+      <div class="chat-info">
+        <div class="chat-name">${name}</div>
+        <div class="chat-last">${last}</div>
+      </div>
+      ${c.unreadCount > 0 ? '<span class="unread-badge">'+c.unreadCount+'</span>' : ''}
+    </div>`
+  }).join('')
+  // Carregar fotos
+  chats.forEach(c => loadAvatar(c.id || c.jid))
+}
+
+async function loadAvatar(chatId) {
+  try {
+    const r = await fetch(API + '/avatar?chatId=' + encodeURIComponent(chatId), { headers: H })
+    if (!r.ok) return
+    const d = await r.json()
+    if (!d.url) return
+    const key = chatId.replace(/[^a-z0-9]/gi, '_')
+    const el = document.getElementById('av_' + key)
+    if (el) el.innerHTML = '<img src="' + d.url + '">'
+  } catch {}
+}
+
+document.getElementById('searchChats').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase()
+  renderChats(allChats.filter(c => (c.name || c.pushName || c.id || '').toLowerCase().includes(q)))
+})
+
+async function openChat(chatId, name) {
+  curChatId = chatId; curChatName = name
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'))
+  document.querySelectorAll('.chat-item').forEach(el => { if (el.onclick && el.onclick.toString().includes(chatId)) el.classList.add('active') })
+  document.getElementById('chatName').textContent = name
+  document.getElementById('chatSub').textContent = chatId
+  document.getElementById('chatAvatar').innerHTML = name.substring(0,2).toUpperCase()
+  document.getElementById('chatInputArea').style.display = 'flex'
+  loadMessages(chatId)
+  loadAvatar(chatId).then(() => {
+    const key = chatId.replace(/[^a-z0-9]/gi,'_')
+    const el = document.getElementById('av_'+key)
+    if (el) document.getElementById('chatAvatar').innerHTML = el.innerHTML
+  })
+}
+
+async function loadMessages(chatId) {
+  document.getElementById('chatMessages').innerHTML = '<div class="empty" style="padding:20px">Carregando...</div>'
+  const r = await fetch(API + '/messages?chatId=' + encodeURIComponent(chatId) + '&limit=80', { headers: H }).catch(() => null)
+  if (!r || !r.ok) { document.getElementById('chatMessages').innerHTML = '<div class="empty">Erro ao carregar</div>'; return }
+  const msgs = await r.json()
+  const arr = Array.isArray(msgs) ? msgs : (msgs.messages || [])
+  const box = document.getElementById('chatMessages')
+  if (!arr.length) { box.innerHTML = '<div class="empty"><div class="icon">💬</div>Sem mensagens</div>'; return }
+  box.innerHTML = arr.map(m => {
+    const body = escHtml(m.body || m.text || m.message || '[mídia]')
+    const ts = m.timestamp ? new Date(m.timestamp * (m.timestamp < 1e12 ? 1000 : 1)).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : ''
+    return `<div class="msg ${m.fromMe ? 'from-me' : 'from-them'}">${body}<div class="msg-time">${ts}</div></div>`
+  }).join('')
+  box.scrollTop = box.scrollHeight
+}
+
+function updateChatPreview(msg) {
+  const chatId = msg.chatId || msg.from
+  const idx = allChats.findIndex(c => (c.id || c.jid) === chatId)
+  if (idx >= 0) {
+    allChats[idx].lastMessage = msg.body || msg.text || '[mídia]'
+    renderChats(allChats)
+  }
+}
+
+// Enviar mensagem individual
+async function sendMessage() {
+  const text = document.getElementById('msgInput').value.trim()
+  if (!text || !curChatId) return
+  document.getElementById('msgInput').value = ''
+  await fetch(API + '/send', { method: 'POST', headers: HJ, body: JSON.stringify({ chatId: curChatId, text }) })
+  loadMessages(curChatId)
+  trackAnalytics('sent', { chatId: curChatId })
+}
+
+function handleMsgKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+}
+
+// Sugestão de template no input
+function handleTemplateHint(el) {
+  const text = el.value
+  if (text.startsWith('/')) {
+    const match = templates.find(t => t.shortcut === text.split(' ')[0])
+    if (match) {
+      el.value = applyVars(match.text)
+    }
+  }
+}
+
+function applyVars(text) {
+  const now = new Date()
+  return text
+    .replace(/{{nome}}/g, curChatName || '')
+    .replace(/{{data}}/g, now.toLocaleDateString('pt-BR'))
+    .replace(/{{hora}}/g, now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}))
+    .replace(/{{chatId}}/g, curChatId || '')
+}
+
+// =================== ENVIO EM MASSA ===================
+async function loadBulkContacts() {
+  document.getElementById('bulkContactList').innerHTML = '<div class="empty" style="padding:20px">Carregando...</div>'
+  const r = await fetch(API + '/chats?limit=500', { headers: H }).catch(() => null)
+  if (!r || !r.ok) { document.getElementById('bulkContactList').innerHTML = '<div class="empty">Erro</div>'; return }
+  bulkContacts = await r.json()
+  if (!Array.isArray(bulkContacts)) bulkContacts = bulkContacts.chats || []
+  renderBulkContacts(bulkContacts)
+}
+
+function renderBulkContacts(contacts) {
+  const list = document.getElementById('bulkContactList')
+  if (!contacts.length) { list.innerHTML = '<div class="empty" style="padding:20px">Nenhum contato</div>'; return }
+  list.innerHTML = contacts.map(c => {
+    const id = c.id || c.jid
+    const name = escHtml(c.name || c.pushName || id.split('@')[0])
+    return `<div class="contact-item" onclick="toggleBulk('${id}',this)">
+      <input type="checkbox" ${bulkSelected.has(id)?'checked':''} onclick="event.stopPropagation();toggleBulk('${id}',this.parentElement)">
+      <div class="chat-avatar" style="width:28px;height:28px;font-size:10px;margin-right:8px">${name.substring(0,2).toUpperCase()}</div>
+      <span style="font-size:12px">${name}</span>
+    </div>`
+  }).join('')
+  document.getElementById('bulkCount').textContent = bulkSelected.size
+}
+
+function toggleBulk(id, el) {
+  const cb = el.querySelector('input[type=checkbox]')
+  if (bulkSelected.has(id)) { bulkSelected.delete(id); if (cb) cb.checked = false }
+  else { bulkSelected.add(id); if (cb) cb.checked = true }
+  document.getElementById('bulkCount').textContent = bulkSelected.size
+}
+
+function toggleSelectAll() {
+  const all = bulkContacts.every(c => bulkSelected.has(c.id || c.jid))
+  bulkContacts.forEach(c => { const id = c.id || c.jid; all ? bulkSelected.delete(id) : bulkSelected.add(id) })
+  renderBulkContacts(bulkContacts)
+}
+
+document.getElementById('searchBulk').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase()
+  renderBulkContacts(bulkContacts.filter(c => (c.name || c.pushName || c.id || '').toLowerCase().includes(q)))
+})
+
+async function sendBulk() {
+  const text = document.getElementById('bulkText').value.trim()
+  if (!text) { alert('Digite uma mensagem'); return }
+  if (!bulkSelected.size) { alert('Selecione ao menos um contato'); return }
+  if (!confirm('Enviar para ' + bulkSelected.size + ' contato(s)?')) return
+
+  const contacts = Array.from(bulkSelected)
+  const bar = document.getElementById('bulkProgressBar')
+  const fill = document.getElementById('bulkFill')
+  const txtEl = document.getElementById('bulkProgressText')
+  bar.style.display = 'block'
+  document.getElementById('btnSendBulk').disabled = true
+  let ok = 0
+  for (let i = 0; i < contacts.length; i++) {
+    const chatId = contacts[i]
+    const name = (bulkContacts.find(c => (c.id||c.jid) === chatId) || {}).name || chatId.split('@')[0]
+    const finalText = text.replace(/{{nome}}/g, name).replace(/{{data}}/g, new Date().toLocaleDateString('pt-BR')).replace(/{{hora}}/g, new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}))
+    try {
+      const r = await fetch(API + '/send', { method: 'POST', headers: HJ, body: JSON.stringify({ chatId, text: finalText }) })
+      if (r.ok) ok++
+    } catch {}
+    fill.style.width = ((i + 1) / contacts.length * 100) + '%'
+    txtEl.textContent = (i + 1) + ' / ' + contacts.length + ' enviados...'
+    await new Promise(r => setTimeout(r, 1200))
+  }
+  txtEl.textContent = '✅ ' + ok + ' / ' + contacts.length + ' enviados com sucesso!'
+  document.getElementById('btnSendBulk').disabled = false
+  // Salvar campanha
+  const campaign = { date: new Date().toLocaleString('pt-BR'), total: contacts.length, ok, text: text.substring(0, 60) }
+  await fetch(API + '/analytics/campaign', { method: 'POST', headers: HJ, body: JSON.stringify(campaign) })
+  trackAnalytics('bulk_sent', { count: contacts.length, ok })
+  loadCampaignHistory()
+}
+
+async function loadCampaignHistory() {
+  const r = await fetch(API + '/analytics', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  const d = await r.json()
+  const list = document.getElementById('campaignList')
+  const camps = d.campaigns || []
+  if (!camps.length) { list.innerHTML = '<div class="empty" style="padding:10px;font-size:12px">Nenhuma campanha ainda</div>'; return }
+  list.innerHTML = camps.slice(0, 5).map(c => `
+    <div class="card" style="padding:8px 12px;font-size:12px">
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:#888">${c.date || ''}</span>
+        <span style="color:#25D366">${c.ok||0}/${c.total||0} enviados</span>
+      </div>
+      <div style="color:#ccc;margin-top:4px">${escHtml(c.text || '')}</div>
+    </div>
+  `).join('')
+}
+
+// =================== AGENDAMENTO ===================
+async function addScheduled() {
+  const chatId = document.getElementById('schedChatId').value.trim()
+  const text = document.getElementById('schedText').value.trim()
+  const sendAt = document.getElementById('schedTime').value
+  if (!chatId || !text || !sendAt) { alert('Preencha todos os campos'); return }
+  const r = await fetch(API + '/schedule', { method: 'POST', headers: HJ, body: JSON.stringify({ chatId, text, sendAt }) })
+  if (r.ok) {
+    document.getElementById('schedChatId').value = ''
+    document.getElementById('schedText').value = ''
+    loadScheduled()
+  }
+}
+
+async function loadScheduled() {
+  const r = await fetch(API + '/scheduled', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  const list = await r.json()
+  const el = document.getElementById('scheduledList')
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="icon">⏰</div>Nenhuma mensagem agendada</div>'; return }
+  el.innerHTML = list.map(s => `
+    <div class="sched-item">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600">${escHtml(s.contactName||s.chatId)}</div>
+        <div style="font-size:11px;color:#888">${new Date(s.sendAt).toLocaleString('pt-BR')} · ${escHtml(s.text.substring(0,50))}</div>
+      </div>
+      <span style="background:${s.status==='sent'?'#25D366':'#2a2d3a'};color:#fff;border-radius:4px;padding:2px 7px;font-size:10px">${s.status}</span>
+      <button class="btn btn-danger" style="font-size:10px;padding:4px 8px" onclick="cancelScheduled('${s.id}')">✕</button>
+    </div>
+  `).join('')
+}
+
+async function cancelScheduled(id) {
+  await fetch(API + '/scheduled/' + id, { method: 'DELETE', headers: H })
+  loadScheduled()
+}
+
+// =================== TEMPLATES ===================
+async function loadTemplates() {
+  const r = await fetch(API + '/templates', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  templates = await r.json()
+  const el = document.getElementById('templateList')
+  if (!templates.length) { el.innerHTML = '<div class="empty"><div class="icon">⚡</div>Nenhum template</div>'; return }
+  el.innerHTML = templates.map(t => `
+    <div class="tpl-item">
+      <span class="tpl-shortcut">${escHtml(t.shortcut)}</span>
+      <span class="tpl-text">${escHtml(t.text)}</span>
+      <button class="btn btn-secondary" style="font-size:10px;padding:3px 8px" onclick="useTemplate('${t.id}')">Usar</button>
+      <button class="btn btn-danger" style="font-size:10px;padding:3px 8px" onclick="deleteTemplate('${t.id}')">✕</button>
+    </div>
+  `).join('')
+}
+
+async function addTemplate() {
+  const shortcut = document.getElementById('tplShortcut').value.trim()
+  const text = document.getElementById('tplText').value.trim()
+  if (!shortcut || !text) { alert('Preencha atalho e mensagem'); return }
+  const r = await fetch(API + '/templates', { method: 'POST', headers: HJ, body: JSON.stringify({ shortcut, text }) })
+  if (r.ok) { document.getElementById('tplShortcut').value = ''; document.getElementById('tplText').value = ''; loadTemplates() }
+}
+
+async function deleteTemplate(id) {
+  await fetch(API + '/templates/' + id, { method: 'DELETE', headers: H }); loadTemplates()
+}
+
+function useTemplate(id) {
+  const t = templates.find(t => t.id === id); if (!t) return
+  document.querySelector('[data-tab=chat]').click()
+  document.getElementById('msgInput').value = applyVars(t.text)
+  document.getElementById('msgInput').focus()
+}
+loadTemplates()
+
+// =================== ANALYTICS ===================
+async function loadAnalytics() {
+  const r = await fetch(API + '/analytics', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  const d = await r.json()
+  document.getElementById('statSent').textContent = d.total_sent || 0
+  document.getElementById('statReceived').textContent = d.total_received || 0
+  document.getElementById('statBulk').textContent = d.total_bulk || 0
+  document.getElementById('statAuto').textContent = d.total_auto || 0
+  document.getElementById('statTodaySent').textContent = d.today_sent || 0
+  document.getElementById('statTodayReceived').textContent = d.today_received || 0
+  const camps = d.campaigns || []
+  const campsEl = document.getElementById('analyticscamp​aigns') || document.getElementById('analyticscamp​aigns')
+  const campsElReal = document.getElementById('analyticscamp' + 'aigns')
+  if (campsElReal) {
+    campsElReal.innerHTML = camps.length ? camps.slice(0,5).map(c => `<div class="card" style="font-size:12px;padding:8px 12px"><span style="color:#888">${c.date||''}</span> — <span style="color:#25D366">${c.ok||0}/${c.total||0}</span> enviados · ${escHtml(c.text||'')}</div>`).join('') : '<div class="empty" style="padding:10px">Nenhuma campanha</div>'
+  }
+}
+
+function trackAnalytics(type, data) {
+  fetch(API + '/analytics/event', { method: 'POST', headers: HJ, body: JSON.stringify({ type, ...data }) }).catch(() => {})
+}
+
+function exportCSV() {
+  fetch(API + '/analytics', { headers: H }).then(r => r.json()).then(d => {
+    const rows = [['Tipo','Data','ChatId','Detalhe']]
+    const a = document.createElement('a')
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(r => r.join(',')).join('\n'))
+    a.download = 'crm-analytics-' + new Date().toISOString().slice(0,10) + '.csv'
+    a.click()
+  })
+}
+
+// =================== PIPELINE ===================
+async function loadPipeline() {
+  const r = await fetch(API + '/pipeline', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  pipeline = await r.json()
+  renderPipeline()
+  // Preencher select
+  const sel = document.getElementById('newContactStage')
+  sel.innerHTML = pipeline.stages.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('')
+}
+
+function renderPipeline() {
+  const board = document.getElementById('pipelineBoard')
+  const contacts = Object.values(pipeline.contacts || {})
+  board.innerHTML = pipeline.stages.map(stage => {
+    const cards = contacts.filter(c => c.stage === stage)
+    return `<div class="pipeline-col">
+      <div class="pipeline-col-title"><span>${escHtml(stage)}</span><span style="color:#25D366">${cards.length}</span></div>
+      ${cards.map(c => `
+        <div class="pipeline-card" draggable="true">
+          <div class="pname">${escHtml(c.name||c.chatId)}</div>
+          <div style="font-size:10px;color:#888">${escHtml(c.chatId)}</div>
+          ${(c.tags||[]).map(t => `<span class="ptag">${escHtml(t)}</span>`).join('')}
+          <div style="margin-top:6px;display:flex;gap:4px">
+            <select style="font-size:10px;padding:2px 4px;flex:1" onchange="moveContact('${c.chatId}',this.value)">
+              ${pipeline.stages.map(s => `<option value="${escHtml(s)}"${s===stage?' selected':''}>${escHtml(s)}</option>`).join('')}
+            </select>
+            <button class="btn btn-danger" style="font-size:9px;padding:2px 5px" onclick="removeContact('${c.chatId}')">✕</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`
+  }).join('')
+}
+
+async function moveContact(chatId, stage) {
+  await fetch(API + '/pipeline/contact/' + encodeURIComponent(chatId), { method: 'PATCH', headers: HJ, body: JSON.stringify({ stage }) })
+  pipeline.contacts[chatId].stage = stage; renderPipeline()
+}
+
+async function removeContact(chatId) {
+  await fetch(API + '/pipeline/contact/' + encodeURIComponent(chatId), { method: 'DELETE', headers: H })
+  delete pipeline.contacts[chatId]; renderPipeline()
+}
+
+function openAddContact() {
+  document.getElementById('addContactModal').style.display = 'flex'
+}
+
+async function saveNewContact() {
+  const chatId = document.getElementById('newContactId').value.trim()
+  const name = document.getElementById('newContactName').value.trim()
+  const stage = document.getElementById('newContactStage').value
+  if (!chatId) { alert('ChatId obrigatório'); return }
+  await fetch(API + '/pipeline/contact', { method: 'POST', headers: HJ, body: JSON.stringify({ chatId, name, stage }) })
+  document.getElementById('addContactModal').style.display = 'none'
+  loadPipeline()
+}
+
+// =================== BOT ===================
+async function loadBotConfig() {
+  const r = await fetch(API + '/bot/rules', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  botConfig = await r.json()
+  document.getElementById('botEnabled').checked = botConfig.enabled
+  document.getElementById('aiEnabled').checked = botConfig.aiEnabled
+  renderBotRules()
+}
+
+function renderBotRules() {
+  const el = document.getElementById('botRulesList')
+  const rules = botConfig.rules || []
+  if (!rules.length) { el.innerHTML = '<div class="empty"><div class="icon">🤖</div>Nenhuma regra</div>'; return }
+  el.innerHTML = rules.map(r => `
+    <div class="rule-item">
+      <span class="rule-keyword">${escHtml(r.keyword)}</span>
+      <span style="flex:1;font-size:12px;color:#ccc">${escHtml(r.response)}</span>
+      <button class="btn btn-danger" style="font-size:10px;padding:3px 8px" onclick="deleteBotRule('${r.id}')">✕</button>
+    </div>
+  `).join('')
+}
+
+async function saveBotConfig() {
+  botConfig.enabled = document.getElementById('botEnabled').checked
+  botConfig.aiEnabled = document.getElementById('aiEnabled').checked
+  await fetch(API + '/bot/rules', { method: 'POST', headers: HJ, body: JSON.stringify({ enabled: botConfig.enabled, aiEnabled: botConfig.aiEnabled }) })
+}
+
+async function addBotRule() {
+  const keyword = document.getElementById('ruleKeyword').value.trim()
+  const response = document.getElementById('ruleResponse').value.trim()
+  if (!keyword || !response) { alert('Preencha palavra-chave e resposta'); return }
+  const r = await fetch(API + '/bot/rules', { method: 'POST', headers: HJ, body: JSON.stringify({ rule: { keyword, response, active: true } }) })
+  if (r.ok) {
+    document.getElementById('ruleKeyword').value = ''
+    document.getElementById('ruleResponse').value = ''
+    loadBotConfig()
+  }
+}
+
+async function deleteBotRule(id) {
+  await fetch(API + '/bot/rules/' + id, { method: 'DELETE', headers: H }); loadBotConfig()
+}
+
+// =================== UTILS ===================
+function escHtml(str) {
+  if (!str) return ''
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+// Carregar analytics e histórico de campanhas ao iniciar
+loadAnalytics()
+loadCampaignHistory()
+
+// Auto-refresh status a cada 30s
+setInterval(checkStatus, 30000)
+</script>
+</body>
+</html>
