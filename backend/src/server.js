@@ -21,10 +21,16 @@ fastify.register(require('@fastify/multipart'), {
   limits: { fileSize: 20 * 1024 * 1024 } // 20MB
 })
 
-// Servir arquivos enviados pelos usuÃ¡rios (fotos, documentos)
+// Servir arquivos enviados pelos usuários (fotos, documentos)
 fastify.register(require('@fastify/static'), {
   root: uploadsDir,
   prefix: '/uploads/',
+})
+
+// Servir arquivos estáticos da pasta src (crm.html, etc.)
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname),
+  prefix: '/static/',
   decorateReply: false,
 })
 
@@ -51,6 +57,12 @@ fastify.register(require('./modules/feedback/feedback.routes'), { prefix: '/api/
 fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles' })
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
+fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
+
+// Serve crm.html at /crm
+fastify.get('/crm', async (request, reply) => {
+  return reply.sendFile('crm.html', path.join(__dirname))
+})
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
