@@ -52,12 +52,8 @@ fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units'
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
 
-// Serve crm.html at /crm
-fastify.get('/crm', async (request, reply) => {
-  const fs = require('fs')
-  const html = fs.readFileSync(path.join(__dirname, 'crm.html'), 'utf8')
-  return reply.type('text/html').send(html)
-})
+// CRM shortcut
+fastify.get('/crm', async (req, reply) => reply.redirect('/api/whatsapp/crm'))
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

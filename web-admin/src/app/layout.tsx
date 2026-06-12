@@ -18,22 +18,23 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Educação Adventista — Departamento de Educação - APS',
-  description: 'Painel Administrativo | Associação Paulista Sul — Educação Adventista',
+  description: 'Painel administrativo | Associação Paulista Sul — Educação Adventista',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'APS EDU',
-    startupImage: [
-      '/icons/icon-512x512.png',
-    ],
+    startupImage: ['/aps30-logo.png'],
   },
   icons: {
     icon: [
+      { url: '/aps30-logo.png', type: 'image/png' },
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
+    shortcut: ['/aps30-logo.png'],
     apple: [
+      { url: '/aps30-logo.png', type: 'image/png' },
       { url: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
     ],
@@ -51,7 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#F8A303" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
+        <link rel="icon" href="/aps30-logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/aps30-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/aps30-logo.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
       </head>
       <body className={`${inter.variable} font-sans`}>

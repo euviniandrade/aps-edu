@@ -10,7 +10,7 @@ import {
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
-  UserGroupIcon, RocketLaunchIcon, ArchiveBoxIcon,
+  UserGroupIcon, RocketLaunchIcon, ArchiveBoxIcon, Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
@@ -24,7 +24,7 @@ import {
   ArchiveBoxIcon as ArchiveBoxIconSolid,
 } from '@heroicons/react/24/solid'
 
-// Nav principal enxuto; telas especificas ficam acessiveis pelo Centro de Gestao e pela busca.
+// Nav principal enxuto; telas específicas ficam acessíveis pelo Centro de Gestão e pela busca.
 const navSections = [
   {
     label: 'Centro',
@@ -34,11 +34,11 @@ const navSections = [
     ],
   },
   {
-    label: 'Operacao',
+    label: 'Operação',
     items: [
       { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
       { href: '/estoque',       label: 'Estoque',      icon: ArchiveBoxIcon,             iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
-      { href: '/reports',       label: 'Relatorios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
+      { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
     ],
   },
   {
@@ -49,10 +49,10 @@ const navSections = [
     ],
   },
   {
-    label: 'Inteligencia',
+    label: 'Inteligência',
     items: [
       { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
-      { href: '/automacoes',    label: 'Automacoes',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
+      { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
     ],
   },
 ]
@@ -62,11 +62,11 @@ const hiddenNavItems = [
   { href: '/events',        label: 'Eventos',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#8B5CF6', roles: [] },
   { href: '/announcements', label: 'Mural',        icon: MegaphoneIcon,              iconSolid: MegaphoneIconSolid, color: '#29ABE2', roles: [] },
   { href: '/feedback',      label: 'Feedback',     icon: ChatBubbleLeftEllipsisIcon, iconSolid: ChatIconSolid,      color: '#FF4757', roles: [] },
-  { href: '/gamification',  label: 'Gamificacao',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
+  { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
   { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
   { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
-  { href: '/inovacao',      label: 'Inovacao IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
-  { href: '/notificacoes',  label: 'Notificacoes', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
+  { href: '/inovacao',      label: 'Inovação IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
+  { href: '/notificacoes',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
   { href: '/minha-area',    label: 'Minha Central', icon: KeyIcon,                   iconSolid: KeyIconSolid,       color: '#FDC347', roles: [] },
 ]
 
@@ -113,14 +113,14 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
   }, [open, onClose])
   if (!open) return null
   const shortcuts = [
-    { key: 'âŒ˜K / Ctrl+K', desc: 'Abrir buscador / Sofi IA' },
+    { key: 'Cmd+K / Ctrl+K', desc: 'Abrir buscador / Sofi IA' },
     { key: '?',            desc: 'Ver atalhos de teclado' },
     { key: 'Esc',          desc: 'Fechar modal / painel' },
     { key: 'G + D',        desc: 'Ir para Dashboard' },
-    { key: 'G + G',        desc: 'Ir para Centro de Gestao' },
+    { key: 'G + G',        desc: 'Ir para Centro de Gestão' },
     { key: 'G + T',        desc: 'Ir para Tarefas' },
     { key: 'G + E',        desc: 'Ir para Eventos' },
-    { key: 'G + N',        desc: 'Ir para NotificaÃ§Ãµes' },
+    { key: 'G + N',        desc: 'Ir para Notificações' },
     { key: 'G + A',        desc: 'Ir para Analytics IA' },
     { key: 'G + M',        desc: 'Ir para Minha Central' },
   ]
@@ -132,7 +132,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-bold text-white">Atalhos de teclado</h3>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">âœ•</button>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">x</button>
         </div>
         <div className="space-y-2">
           {shortcuts.map(s => (
@@ -277,13 +277,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">
-              EducaÃ§Ã£o Adventista
+              Educação Adventista
             </p>
             <p
               className="text-[10px] font-semibold tracking-[0.16em] truncate mt-0.5 uppercase"
               style={{ color: 'var(--gold)', opacity: 0.8 }}
             >
-              AssociaÃ§Ã£o Paulista Sul
+              Associação Paulista Sul
             </p>
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           {item.href === '/analytics' && !isActive && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                               style={{ background: 'rgba(249,194,52,0.15)', color: '#F9C234' }}>
-                              âœ¨
+                              IA
                             </span>
                           )}
                           {isActive && (
@@ -389,9 +389,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all hover:bg-white/5 group"
           >
-            <span style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.35)', fontSize: 16, lineHeight: '17px' }}>âš™ï¸</span>
+            <Cog6ToothIcon style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.35)' }} />
             <span className="text-sm font-medium group-hover:text-white/70 transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              ConfiguraÃ§Ãµes
+              Configurações
             </span>
           </Link>
 
@@ -455,7 +455,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className="text-xs hidden sm:block"
                 style={{ color: 'rgba(255,255,255,0.25)' }}
               >
-                EducaÃ§Ã£o Adventista
+                Educação Adventista
               </span>
               {currentPage && (
                 <>
@@ -490,7 +490,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-xs">Buscar...</span>
               <kbd className="text-[10px] px-1.5 py-0.5 rounded font-mono"
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                âŒ˜K
+                Ctrl+K
               </kbd>
             </button>
             {/* Mobile search */}
@@ -515,7 +515,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/notificacoes"
               className="relative p-2 rounded-xl transition-all hover:bg-white/5"
               style={{ color: 'rgba(255,255,255,0.4)' }}
-              title="NotificaÃ§Ãµes"
+              title="Notificações"
             >
               <BellIcon className="w-5 h-5" />
               <span
@@ -575,8 +575,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {[
           { href: '/gestao',       icon: 'G', label: 'Centro' },
           { href: '/meu-dia',      icon: 'D', label: 'Dia' },
-          { href: '/tasks',        icon: 'âœ…', label: 'Tarefas' },
-          { href: '/estoque',      icon: 'ðŸ“¦', label: 'Estoque' },
+          { href: '/tasks',        icon: 'T', label: 'Tarefas' },
+          { href: '/estoque',      icon: 'E', label: 'Estoque' },
           { href: '/reports',      icon: 'R', label: 'Relat.' },
         ].map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')

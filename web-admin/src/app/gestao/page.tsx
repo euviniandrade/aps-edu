@@ -92,9 +92,9 @@ type QuickAnnouncementForm = {
 const INVENTORY_KEY = 'aps_edu_inventory_v1'
 
 const initialInventory: InventoryItem[] = [
-  { id: 'EST-001', name: 'Kits de matricula', category: 'Secretaria', location: 'Secretaria APS', quantity: 42, min: 60, unit: 'APS', updatedAt: 'Hoje' },
-  { id: 'EST-002', name: 'Projetores multimidia', category: 'Tecnologia', location: 'Sala de Recursos', quantity: 4, min: 5, unit: 'CAEA', updatedAt: 'Ontem' },
-  { id: 'EST-003', name: 'Materiais de limpeza', category: 'Operacao', location: 'Almoxarifado Central', quantity: 22, min: 25, unit: 'CAIS', updatedAt: 'Hoje' },
+  { id: 'EST-001', name: 'Kits de matrícula', category: 'Secretaria', location: 'Secretaria APS', quantity: 42, min: 60, unit: 'APS', updatedAt: 'Hoje' },
+  { id: 'EST-002', name: 'Projetores multimídia', category: 'Tecnologia', location: 'Sala de Recursos', quantity: 4, min: 5, unit: 'CAEA', updatedAt: 'Ontem' },
+  { id: 'EST-003', name: 'Materiais de limpeza', category: 'Operação', location: 'Almoxarifado Central', quantity: 22, min: 25, unit: 'CAIS', updatedAt: 'Hoje' },
 ]
 
 function todayPlus(days: number) {
@@ -107,10 +107,10 @@ function statusLabel(status?: string) {
   const map: Record<string, string> = {
     pending: 'Pendente',
     in_progress: 'Em andamento',
-    completed: 'Concluida',
+    completed: 'Concluída',
     planned: 'Planejado',
     ongoing: 'Em andamento',
-    done: 'Concluido',
+    done: 'Concluído',
   }
   return map[status || ''] || status || 'Aberto'
 }
@@ -220,7 +220,7 @@ export default function GestaoPage() {
       if (unitRes.status === 'fulfilled') setUnits(unitRes.value.data?.units || unitRes.value.data || [])
 
       const failures = [dashRes, taskRes, eventRes, announcementRes, userRes, unitRes].filter(item => item.status === 'rejected')
-      if (failures.length) setError('Alguns dados nao carregaram. As ferramentas locais continuam disponiveis.')
+      if (failures.length) setError('Alguns dados não carregaram. As ferramentas locais continuam disponíveis.')
     } finally {
       setLoading(false)
     }
@@ -248,7 +248,7 @@ export default function GestaoPage() {
       { label: 'Tarefas abertas', value: tasks.filter(task => task.status !== 'completed').length, color: '#0ABD78', icon: CheckCircleIcon },
       { label: 'Atrasos', value: overdue, color: overdue ? '#FF4757' : '#0ABD78', icon: BellAlertIcon },
       { label: 'Eventos ativos', value: events.length, color: '#8B5CF6', icon: CalendarDaysIcon },
-      { label: 'Estoque critico', value: lowStock, color: lowStock ? '#F8A303' : '#0ABD78', icon: CubeIcon },
+      { label: 'Estoque crítico', value: lowStock, color: lowStock ? '#F8A303' : '#0ABD78', icon: CubeIcon },
       { label: 'Pessoas', value: users.length || dashboard?.totalActiveUsers || 0, color: '#4A9EFF', icon: UserGroupIcon },
       { label: 'Avisos novos', value: unread, color: '#F9C234', icon: MegaphoneIcon },
     ]
@@ -341,21 +341,21 @@ export default function GestaoPage() {
 
   return (
     <AdminLayout>
-      <div className="min-h-full p-4 lg:p-8 space-y-6">
-        <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div className="min-h-full space-y-8 p-0 lg:p-2">
+        <header className="flex flex-col gap-5 rounded-lg p-5 xl:flex-row xl:items-end xl:justify-between" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div>
-            <div className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.35)' }}>Educacao Adventista / Centro operacional</div>
-            <h1 className="mt-3 text-3xl font-black text-white lg:text-5xl">Centro de Gestao APS EDU</h1>
+            <div className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.35)' }}>Educação Adventista / Centro operacional</div>
+            <h1 className="mt-3 max-w-4xl text-3xl font-black leading-tight text-white lg:text-4xl">Centro de Gestão APS EDU</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: 'rgba(255,255,255,0.52)' }}>
-              Criar, acompanhar e resolver trabalho real da rede em uma unica tela.
+              Criar, acompanhar e resolver o trabalho real da rede em uma única tela, com módulos profissionais para operação escolar.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={loadData} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
               <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
             </button>
-            <Link href="/minha-area" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-black" style={{ background: '#F8A303' }}>
-              <SparklesIcon className="h-4 w-4" /> Minha central
+            <Link href="/tasks" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-black" style={{ background: '#F8A303' }}>
+              <SparklesIcon className="h-4 w-4" /> Nova tarefa
             </Link>
           </div>
         </header>
@@ -366,7 +366,7 @@ export default function GestaoPage() {
           </div>
         )}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {metrics.map(metric => {
             const Icon = metric.icon
             return (
@@ -387,6 +387,11 @@ export default function GestaoPage() {
 
         <AdvancedSuite />
 
+        <div>
+          <h2 className="text-xl font-black text-white">Execução rápida</h2>
+          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Atalhos para criar tarefas, eventos e comunicados sem sair do centro de gestão.</p>
+        </div>
+
         <section className="grid gap-5 xl:grid-cols-[1fr_1fr_1fr]">
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
@@ -394,28 +399,28 @@ export default function GestaoPage() {
               <ClipboardDocumentCheckIcon className="h-5 w-5 text-white/35" />
             </div>
             <form onSubmit={createTask} className="mt-4 space-y-3">
-              <Field label="Titulo"><TextInput value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Ex: Revisar campanha de matriculas" /></Field>
-              <Field label="Descricao"><TextArea value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} placeholder="Contexto, objetivo e entrega esperada" /></Field>
+              <Field label="Título"><TextInput value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Ex: Revisar campanha de matrículas" /></Field>
+              <Field label="Descrição"><TextArea value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} placeholder="Contexto, objetivo e entrega esperada" /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Prioridade">
                   <Select value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value as QuickTaskForm['priority'] })}>
                     <option value="low">Baixa</option>
-                    <option value="medium">Media</option>
+                    <option value="medium">Média</option>
                     <option value="high">Alta</option>
                   </Select>
                 </Field>
                 <Field label="Prazo"><TextInput type="date" value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} /></Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Responsavel">
+                <Field label="Responsável">
                   <Select value={taskForm.assignedToId} onChange={e => setTaskForm({ ...taskForm, assignedToId: e.target.value })}>
-                    <option value="">Sem responsavel</option>
+                    <option value="">Sem responsável</option>
                     {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                   </Select>
                 </Field>
                 <Field label="Unidade">
                   <Select value={taskForm.unitId} onChange={e => setTaskForm({ ...taskForm, unitId: e.target.value })}>
-                    <option value="">Padrao</option>
+                    <option value="">Padrão</option>
                     {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                   </Select>
                 </Field>
@@ -433,7 +438,7 @@ export default function GestaoPage() {
             </div>
             <form onSubmit={createEvent} className="mt-4 space-y-3">
               <Field label="Nome"><TextInput value={eventForm.name} onChange={e => setEventForm({ ...eventForm, name: e.target.value })} placeholder="Ex: Encontro de coordenadores" /></Field>
-              <Field label="Descricao"><TextArea value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} placeholder="Objetivo, publico e entregas" /></Field>
+              <Field label="Descrição"><TextArea value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} placeholder="Objetivo, público e entregas" /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Inicio"><TextInput type="date" value={eventForm.startDate} onChange={e => setEventForm({ ...eventForm, startDate: e.target.value })} /></Field>
                 <Field label="Fim"><TextInput type="date" value={eventForm.endDate} onChange={e => setEventForm({ ...eventForm, endDate: e.target.value })} /></Field>
@@ -442,7 +447,7 @@ export default function GestaoPage() {
                 <Field label="Local"><TextInput value={eventForm.location} onChange={e => setEventForm({ ...eventForm, location: e.target.value })} placeholder="Local" /></Field>
                 <Field label="Unidade">
                   <Select value={eventForm.unitId} onChange={e => setEventForm({ ...eventForm, unitId: e.target.value })}>
-                    <option value="">Padrao</option>
+                    <option value="">Padrão</option>
                     {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                   </Select>
                 </Field>
@@ -459,12 +464,12 @@ export default function GestaoPage() {
               <MegaphoneIcon className="h-5 w-5 text-white/35" />
             </div>
             <form onSubmit={publishAnnouncement} className="mt-4 space-y-3">
-              <Field label="Titulo"><TextInput value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Ex: Prazo de relatorios" /></Field>
+              <Field label="Título"><TextInput value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Ex: Prazo de relatórios" /></Field>
               <Field label="Mensagem"><TextArea value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} placeholder="Mensagem para a rede" /></Field>
               <Field label="Tipo">
                 <Select value={announcementForm.type} onChange={e => setAnnouncementForm({ ...announcementForm, type: e.target.value as QuickAnnouncementForm['type'] })}>
-                  <option value="info">Informacao</option>
-                  <option value="warning">Atencao</option>
+                  <option value="info">Informação</option>
+                  <option value="warning">Atenção</option>
                   <option value="urgent">Urgente</option>
                 </Select>
               </Field>
@@ -491,7 +496,7 @@ export default function GestaoPage() {
                   <div className="min-w-0">
                     <p className="font-bold text-white">{task.title}</p>
                     <p className="mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.42)' }}>
-                      {task.assignedTo?.name || 'Sem responsavel'} · {task.unit?.name || 'Sem unidade'} · {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
+                      {task.assignedTo?.name || 'Sem responsável'} · {task.unit?.name || 'Sem unidade'} · {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -508,7 +513,7 @@ export default function GestaoPage() {
             <div className="flex items-center justify-between border-b p-5" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
               <div>
                 <h2 className="text-lg font-black text-white">Agenda e mural</h2>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Proximos eventos e comunicados ativos.</p>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Próximos eventos e comunicados ativos.</p>
               </div>
               <Link href="/events" className="rounded-lg px-3 py-2 text-xs font-black" style={{ background: 'rgba(255,255,255,0.06)', color: 'white' }}>Eventos</Link>
             </div>
@@ -548,7 +553,7 @@ export default function GestaoPage() {
               <Field label="Local"><TextInput value={inventoryForm.location} onChange={e => setInventoryForm({ ...inventoryForm, location: e.target.value })} placeholder="Almoxarifado, sala..." /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Quantidade"><TextInput type="number" value={inventoryForm.quantity} onChange={e => setInventoryForm({ ...inventoryForm, quantity: Number(e.target.value) })} /></Field>
-                <Field label="Minimo"><TextInput type="number" value={inventoryForm.min} onChange={e => setInventoryForm({ ...inventoryForm, min: Number(e.target.value) })} /></Field>
+              <Field label="Mínimo"><TextInput type="number" value={inventoryForm.min} onChange={e => setInventoryForm({ ...inventoryForm, min: Number(e.target.value) })} /></Field>
               </div>
               <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-black text-black" style={{ background: '#F8A303' }}>
                 <PlusIcon className="h-4 w-4" /> Adicionar item
@@ -560,7 +565,7 @@ export default function GestaoPage() {
             <div className="flex flex-col gap-3 border-b p-5 md:flex-row md:items-center md:justify-between" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
               <div>
                 <h2 className="text-lg font-black text-white">Estoque operacional</h2>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Entradas e saidas salvas neste painel.</p>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.42)' }}>Entradas e saídas salvas neste painel.</p>
               </div>
               <TextInput value={inventoryQuery} onChange={e => setInventoryQuery(e.target.value)} placeholder="Buscar estoque..." className="md:w-64" />
             </div>
@@ -573,7 +578,7 @@ export default function GestaoPage() {
                     <th className="px-5 py-3">Qtd</th>
                     <th className="px-5 py-3">Min</th>
                     <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Acoes</th>
+                    <th className="px-5 py-3">Ações</th>
                   </tr>
                 </thead>
                 <tbody>

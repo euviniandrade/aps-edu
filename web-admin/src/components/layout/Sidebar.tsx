@@ -17,13 +17,13 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/gestao',        icon: 'G', label: 'Centro' },
   { href: '/meu-dia',       icon: 'D', label: 'Meu Dia' },
-  { href: '/tasks',         icon: 'âœ…', label: 'Tarefas' },
-  { href: '/estoque',       icon: '??', label: 'Estoque' },
-  { href: '/reports',       icon: 'ðŸ“Š', label: 'RelatÃ³rios', leaderOnly: true },
+  { href: '/tasks',         icon: 'T', label: 'Tarefas' },
+  { href: '/estoque',       icon: 'E', label: 'Estoque' },
+  { href: '/reports',       icon: 'R', label: 'Relatórios', leaderOnly: true },
   { href: '/users',         icon: 'P', label: 'Pessoas',   adminOnly: true },
-  { href: '/units',         icon: 'ðŸ«', label: 'Unidades',   adminOnly: true },
+  { href: '/units',         icon: 'U', label: 'Unidades',   adminOnly: true },
   { href: '/analytics',     icon: 'A', label: 'Analytics IA' },
-  { href: '/automacoes',    icon: 'Z', label: 'Automacoes' },
+  { href: '/automacoes',    icon: 'Z', label: 'Automações' },
 ]
 
 function getRoleFromUser(user: any): string {
@@ -67,7 +67,7 @@ export default function Sidebar() {
     router.push('/login')
   }
 
-  const userName  = user?.name || 'UsuÃ¡rio'
+  const userName  = user?.name || 'Usuário'
   const userInitial = userName[0]?.toUpperCase() || 'U'
 
   return (
@@ -88,13 +88,13 @@ export default function Sidebar() {
             boxShadow: '0 4px 12px rgba(248,163,3,0.3)',
           }}
         >
-          ðŸŽ“
+          A
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
             <div className="text-white font-bold text-sm leading-tight whitespace-nowrap">APS EDU</div>
             <div className="text-xs whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              {admin ? 'Administrador' : leader ? 'LideranÃ§a' : 'Colaborador'}
+              {admin ? 'Administrador' : leader ? 'Liderança' : 'Colaborador'}
             </div>
           </div>
         )}
@@ -104,7 +104,7 @@ export default function Sidebar() {
           style={{ color: 'rgba(255,255,255,0.2)' }}
           title={collapsed ? 'Expandir' : 'Recolher'}
         >
-          {collapsed ? 'â€º' : 'â€¹'}
+          {collapsed ? '>' : '<'}
         </button>
       </div>
 
@@ -148,18 +148,18 @@ export default function Sidebar() {
       <div className="p-2 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Link
           href="/configuracoes"
-          title={collapsed ? 'ConfiguraÃ§Ãµes' : undefined}
+          title={collapsed ? 'Configurações' : undefined}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-blue-200/60 hover:text-white hover:bg-white/5"
         >
-          <span className="text-base flex-shrink-0">âš™ï¸</span>
-          {!collapsed && <span>ConfiguraÃ§Ãµes</span>}
+          <span className="text-base flex-shrink-0">C</span>
+          {!collapsed && <span>Configurações</span>}
         </Link>
         <button
           onClick={logout}
           title={collapsed ? 'Sair' : undefined}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-blue-200/60 hover:text-white hover:bg-white/5"
         >
-          <span className="text-base flex-shrink-0">ðŸšª</span>
+          <span className="text-base flex-shrink-0">S</span>
           {!collapsed && <span>Sair</span>}
         </button>
         {!collapsed && user && (
