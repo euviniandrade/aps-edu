@@ -107,7 +107,7 @@ function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 function PrimaryButton({ children, color = '#F8A303' }: { children: React.ReactNode; color?: string }) {
-  return <button className="h-10 rounded-lg px-4 text-sm font-black text-black" style={{ background: color }}>{children}</button>
+  return <button className="h-10 w-full rounded-lg px-4 text-sm font-black text-black sm:w-auto" style={{ background: color }}>{children}</button>
 }
 
 function EmptyHint({ children }: { children: React.ReactNode }) {
@@ -208,25 +208,25 @@ export default function AdvancedSuite() {
 
   return (
     <section className="space-y-5">
-      <Card className="p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-black uppercase tracking-wide" style={{ color: active.color }}>Suite operacional integrada</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Ferramentas estratégicas da APS EDU</h2>
+      <Card className="p-5 lg:p-6">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wide" style={{ color: active.color }}>Suíte operacional integrada</p>
+            <h2 className="mt-1 text-2xl font-black leading-tight text-white lg:text-3xl">Ferramentas estratégicas da APS EDU</h2>
             <p className="mt-2 text-sm leading-6" style={{ color: 'rgba(255,255,255,0.52)' }}>
               Áreas separadas para trabalhar com profundidade: matrículas, financeiro, aprovações, formulários, metas, documentos e patrimônio.
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-lg px-4 py-3" style={{ background: `${active.color}12`, border: `1px solid ${active.color}30` }}>
-            <ActiveIcon className="h-6 w-6" style={{ color: active.color }} />
-            <div>
+          <div className="flex min-h-24 items-center gap-4 rounded-lg px-5 py-4" style={{ background: `${active.color}12`, border: `1px solid ${active.color}30` }}>
+            <ActiveIcon className="h-7 w-7 flex-shrink-0" style={{ color: active.color }} />
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.42)' }}>Módulo ativo</p>
-              <p className="text-sm font-black text-white">{active.label}</p>
+              <p className="mt-1 text-lg font-black leading-tight text-white">{active.label}</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {tabs.map(tab => {
             const Icon = tab.icon
             const selected = activeTab === tab.id
@@ -234,11 +234,11 @@ export default function AdvancedSuite() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex min-h-16 items-center gap-3 rounded-lg px-3 py-3 text-left transition-all"
+                className="flex min-h-20 items-center justify-center gap-2 rounded-lg px-3 py-3 text-center transition-all"
                 style={{ background: selected ? `${tab.color}18` : 'rgba(255,255,255,0.035)', border: `1px solid ${selected ? `${tab.color}55` : 'rgba(255,255,255,0.06)'}` }}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" style={{ color: selected ? tab.color : 'rgba(255,255,255,0.42)' }} />
-                <span className="text-sm font-black leading-tight" style={{ color: selected ? 'white' : 'rgba(255,255,255,0.62)' }}>{tab.label}</span>
+                <span className="max-w-[8rem] text-sm font-black leading-tight" style={{ color: selected ? 'white' : 'rgba(255,255,255,0.62)' }}>{tab.label}</span>
               </button>
             )
           })}
@@ -255,9 +255,9 @@ export default function AdvancedSuite() {
       </section>
 
       {activeTab === 'crm' && (
-        <section className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
-          <Card className="p-5">
-            <h3 className="text-lg font-black text-white">Novo interesse de matrícula</h3>
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
+            <h3 className="text-xl font-black leading-tight text-white">Novo interesse de matrícula</h3>
             <form onSubmit={addLead} className="mt-4 space-y-3">
               <Field label="Família"><Input value={leadForm.family} onChange={e => setLeadForm({ ...leadForm, family: e.target.value })} placeholder="Ex: Família Oliveira" /></Field>
               <Field label="Aluno e série"><Input value={leadForm.student} onChange={e => setLeadForm({ ...leadForm, student: e.target.value })} placeholder="Ex: Ana Oliveira - 3º ano" /></Field>
@@ -269,7 +269,7 @@ export default function AdvancedSuite() {
               <PrimaryButton color="#0ABD78">Adicionar ao funil</PrimaryButton>
             </form>
           </Card>
-          <Card>
+          <Card className="min-w-0">
             <PanelHeader title="Pipeline de matrículas" subtitle="Acompanhamento de origem, etapa, valor e próxima ação." />
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-sm">
@@ -282,8 +282,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'financeiro' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Lançamento financeiro</h3>
             <form onSubmit={addFinance} className="mt-4 space-y-3">
               <Field label="Descrição"><Input value={financeForm.description} onChange={e => setFinanceForm({ ...financeForm, description: e.target.value })} /></Field>
@@ -299,8 +299,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'aprovacoes' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Nova aprovação</h3>
             <form onSubmit={addApproval} className="mt-4 space-y-3">
               <Field label="Solicitação"><Input value={approvalForm.title} onChange={e => setApprovalForm({ ...approvalForm, title: e.target.value })} /></Field>
@@ -316,8 +316,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'formularios' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Criar formulário operacional</h3>
             <form onSubmit={addForm} className="mt-4 space-y-3">
               <Field label="Título"><Input value={formForm.title} onChange={e => setFormForm({ ...formForm, title: e.target.value })} /></Field>
@@ -332,8 +332,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'metas' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Nova meta ou OKR</h3>
             <form onSubmit={addGoal} className="mt-4 space-y-3">
               <Field label="Objetivo"><Input value={goalForm.title} onChange={e => setGoalForm({ ...goalForm, title: e.target.value })} /></Field>
@@ -351,8 +351,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'documentos' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Novo documento controlado</h3>
             <form onSubmit={addDoc} className="mt-4 space-y-3">
               <Field label="Título"><Input value={docForm.title} onChange={e => setDocForm({ ...docForm, title: e.target.value })} /></Field>
@@ -367,8 +367,8 @@ export default function AdvancedSuite() {
       )}
 
       {activeTab === 'patrimonio' && (
-        <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-          <Card className="p-5">
+        <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
+          <Card className="p-5 lg:p-6">
             <h3 className="text-lg font-black text-white">Cadastrar patrimônio</h3>
             <form onSubmit={addAsset} className="mt-4 space-y-3">
               <Field label="Ativo"><Input value={assetForm.name} onChange={e => setAssetForm({ ...assetForm, name: e.target.value })} /></Field>
