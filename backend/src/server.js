@@ -50,11 +50,6 @@ fastify.register(require('./modules/feedback/feedback.routes'), { prefix: '/api/
 fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles' })
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
-// eslint-disable-next-line
-fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
-
-// CRM shortcut — DO NOT REMOVE
-fastify.get('/crm', async (req, reply) => reply.redirect('/api/whatsapp/crm'))
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
