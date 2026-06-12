@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import AdminLayout from '@/components/layout/AdminLayout'
 import AdvancedSuite from '@/components/ops/AdvancedSuite'
+import OperatingSystemCockpit from '@/components/ops/OperatingSystemCockpit'
 import api from '@/lib/api'
 import {
   ArrowPathIcon,
@@ -384,6 +385,13 @@ export default function GestaoPage() {
             )
           })}
         </section>
+
+        <OperatingSystemCockpit />
+
+        <div>
+          <h2 className="text-xl font-black text-white">Ferramentas profundas</h2>
+          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Módulos especializados para executar cada área com mais detalhe.</p>
+        </div>
 
         <AdvancedSuite />
 
