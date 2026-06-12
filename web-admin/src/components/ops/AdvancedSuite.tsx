@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BanknotesIcon,
   CheckBadgeIcon,
@@ -138,19 +138,6 @@ export default function AdvancedSuite() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }, [data])
 
-  const summary = useMemo(() => {
-    const pipeline = data.leads.reduce((sum, item) => sum + Number(item.value || 0), 0)
-    const balance = data.finance.reduce((sum, item) => sum + (item.type === 'Receita' ? item.amount : -item.amount), 0)
-    const pendingApprovals = data.approvals.filter(item => item.status !== 'Aprovado').length
-    const assetsInReview = data.assets.filter(item => item.condition !== 'Bom').length
-    return [
-      { label: 'Pipeline de matrículas', value: money.format(pipeline), color: '#0ABD78' },
-      { label: 'Saldo previsto', value: money.format(balance), color: '#4A9EFF' },
-      { label: 'Aprovações pendentes', value: pendingApprovals, color: '#F8A303' },
-      { label: 'Patrimônio em atenção', value: assetsInReview, color: '#E07B39' },
-    ]
-  }, [data])
-
   function addLead(e: React.FormEvent) {
     e.preventDefault()
     if (!leadForm.family.trim()) return
@@ -225,19 +212,6 @@ export default function AdvancedSuite() {
             </div>
           </div>
         </div>
-
-        <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summary.map(item => (
-            <div
-              key={item.label}
-              className="min-h-28 rounded-lg p-4"
-              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</p>
-              <p className="mt-3 text-2xl font-black lg:text-3xl" style={{ color: item.color }}>{item.value}</p>
-            </div>
-          ))}
-        </section>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {tabs.map(tab => {
