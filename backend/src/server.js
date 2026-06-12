@@ -27,13 +27,6 @@ fastify.register(require('@fastify/static'), {
   prefix: '/uploads/',
 })
 
-// Servir arquivos estáticos da pasta src (crm.html, etc.)
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname),
-  prefix: '/static/',
-  decorateReply: false,
-})
-
 // Swagger docs
 fastify.register(require('@fastify/swagger'), {
   openapi: {
@@ -61,7 +54,9 @@ fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/
 
 // Serve crm.html at /crm
 fastify.get('/crm', async (request, reply) => {
-  return reply.sendFile('crm.html', path.join(__dirname))
+  const fs = require('fs')
+  const html = fs.readFileSync(path.join(__dirname, 'crm.html'), 'utf8')
+  return reply.type('text/html').send(html)
 })
 
 // Health check
@@ -70,8 +65,8 @@ fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOS
 const start = async () => {
   try {
     await fastify.listen({ port: process.env.PORT || 3000, host: '0.0.0.0' })
-    console.log(`\nðŸš€ APS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
-    console.log(`ðŸ“š DocumentaÃ§Ã£o em http://localhost:${process.env.PORT || 3000}/docs\n`)
+    console.log(`\nAPS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
+    console.log(`Documentação em http://localhost:${process.env.PORT || 3000}/docs\n`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
