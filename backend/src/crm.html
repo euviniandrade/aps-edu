@@ -28,7 +28,7 @@ body{background:#0f1117;color:#e0e0e0;height:100vh;display:flex;flex-direction:c
 .chat-list{flex:1;overflow-y:auto}
 .chat-item{display:flex;align-items:center;padding:10px 12px;cursor:pointer;border-bottom:1px solid #1a1d27;transition:background .15s}
 .chat-item:hover,.chat-item.active{background:#1a1d27}
-.chat-avatar{width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;margin-right:10px;overflow:hidden}
+.chat-avatar{width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;margin-right:10px;overflow:visible;position:relative}
 .chat-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .chat-info{flex:1;overflow:hidden}
 .chat-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -307,6 +307,7 @@ textarea:focus,input:focus,select:focus{border-color:#25D366}
 
 <script>
 const K = 'aps-edu-whatsapp'
+const WA_KEY = K
 const H = { 'x-wa-key': K }
 const HJ = { 'x-wa-key': K, 'Content-Type': 'application/json' }
 const API = '/api/whatsapp'
@@ -386,8 +387,29 @@ function connectSSE() {
 connectSSE()
 
 // =================== CONVERSAS ===================
+// Detectar tipo de conversa pelo chatId
+function chatType(id) {
+  if (!id) return 'contact'
+  if (id.endsWith('@newsletter')) return 'channel'
+  if (id.endsWith('@g.us')) return 'group'
+  if (id.endsWith('@lid')) return 'contact'
+  return 'contact'
+}
+function chatTypeIcon(id) {
+  const t = chatType(id)
+  if (t === 'channel') return '📢'
+  if (t === 'group') return '👥'
+  return '👤'
+}
+function chatTypeColor(id) {
+  const t = chatType(id)
+  if (t === 'channel') return '#9b59b6'
+  if (t === 'group') return '#e67e22'
+  return '#25D366'
+}
+
 async function loadChats() {
-  const r = await fetch(API + '/chats?limit=200', { headers: H }).catch(() => null)
+  const r = await fetch(API + '/chats?limit=500', { headers: H }).catch(() => null)
   if (!r || !r.ok) return
   allChats = await r.json()
   if (!Array.isArray(allChats)) allChats = allChats.chats || []
@@ -403,9 +425,13 @@ function renderChats(chats) {
     const name = escHtml(c.name || c.pushName || id.split('@')[0])
     const init = name.substring(0, 2).toUpperCase()
     const last = escHtml(c.lastMessage || c.last_message || '')
-    return `<div class="chat-item${id===curChatId?' active':''}" onclick="openChat('${id}','${name}')">
-      <div class="contact-avatar chat-avatar" id="av_${id.replace(/[^a-z0-9]/gi,'_')}">
+    const color = chatTypeColor(id)
+    const icon = chatTypeIcon(id)
+    const key = id.replace(/[^a-z0-9]/gi,'_')
+    return `<div class="chat-item${id===curChatId?' active':''}" data-chatid="${id}" onclick="openChat('${id}','${name.replace(/'/g,"\\'")}')">
+      <div class="contact-avatar chat-avatar" id="av_${key}" style="background:${color}">
         <span>${init}</span>
+        <span class="chat-type-badge" style="position:absolute;bottom:-2px;right:-2px;font-size:10px;background:#0f1117;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center">${icon}</span>
       </div>
       <div class="chat-info">
         <div class="chat-name">${name}</div>
@@ -414,20 +440,31 @@ function renderChats(chats) {
       ${c.unreadCount > 0 ? '<span class="unread-badge">'+c.unreadCount+'</span>' : ''}
     </div>`
   }).join('')
-  // Carregar fotos
-  chats.forEach(c => loadAvatar(c.id || c.jid))
+  // Carregar fotos (só contatos e grupos, canais raramente têm)
+  chats.forEach(c => { const id = c.id||c.jid; if (chatType(id) !== 'channel') loadAvatar(id) })
 }
 
+// Cache de avatares para não repetir requisições
+const avatarCache = {}
 async function loadAvatar(chatId) {
+  if (avatarCache[chatId] === 'none') return
+  if (avatarCache[chatId]) {
+    applyAvatar(chatId, avatarCache[chatId]); return
+  }
   try {
     const r = await fetch(API + '/avatar?chatId=' + encodeURIComponent(chatId), { headers: H })
-    if (!r.ok) return
+    if (!r.ok) { avatarCache[chatId] = 'none'; return }
     const d = await r.json()
-    if (!d.url) return
-    const key = chatId.replace(/[^a-z0-9]/gi, '_')
-    const el = document.getElementById('av_' + key)
-    if (el) el.innerHTML = '<img src="' + d.url + '">'
-  } catch {}
+    if (!d.url) { avatarCache[chatId] = 'none'; return }
+    avatarCache[chatId] = d.url
+    applyAvatar(chatId, d.url)
+  } catch { avatarCache[chatId] = 'none' }
+}
+function applyAvatar(chatId, url) {
+  const key = chatId.replace(/[^a-z0-9]/gi, '_')
+  const el = document.getElementById('av_' + key)
+  if (el) el.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+  if (chatId === curChatId) document.getElementById('chatAvatar').innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
 }
 
 document.getElementById('searchChats').addEventListener('input', e => {
@@ -435,20 +472,35 @@ document.getElementById('searchChats').addEventListener('input', e => {
   renderChats(allChats.filter(c => (c.name || c.pushName || c.id || '').toLowerCase().includes(q)))
 })
 
+let msgRefreshTimer = null
+
 async function openChat(chatId, name) {
   curChatId = chatId; curChatName = name
+  // Parar refresh anterior
+  if (msgRefreshTimer) { clearInterval(msgRefreshTimer); msgRefreshTimer = null }
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'))
-  document.querySelectorAll('.chat-item').forEach(el => { if (el.onclick && el.onclick.toString().includes(chatId)) el.classList.add('active') })
+  const activeEl = document.querySelector(`.chat-item[data-chatid="${chatId}"]`)
+  if (activeEl) activeEl.classList.add('active')
+  const type = chatType(chatId)
+  const typeLabel = type === 'group' ? ' 👥 Grupo' : type === 'channel' ? ' 📢 Canal' : ''
   document.getElementById('chatName').textContent = name
-  document.getElementById('chatSub').textContent = chatId
+  document.getElementById('chatSub').textContent = chatId + typeLabel
   document.getElementById('chatAvatar').innerHTML = name.substring(0,2).toUpperCase()
+  document.getElementById('chatAvatar').style.background = chatTypeColor(chatId)
   document.getElementById('chatInputArea').style.display = 'flex'
-  loadMessages(chatId)
-  loadAvatar(chatId).then(() => {
-    const key = chatId.replace(/[^a-z0-9]/gi,'_')
-    const el = document.getElementById('av_'+key)
-    if (el) document.getElementById('chatAvatar').innerHTML = el.innerHTML
-  })
+  await loadMessages(chatId)
+  loadAvatar(chatId)
+  // Auto-refresh a cada 5s
+  msgRefreshTimer = setInterval(() => { if (curChatId === chatId) refreshMessages(chatId) }, 5000)
+}
+
+let lastMsgCount = 0
+async function refreshMessages(chatId) {
+  const r = await fetch(API + '/messages?chatId=' + encodeURIComponent(chatId) + '&limit=80', { headers: H }).catch(() => null)
+  if (!r || !r.ok) return
+  const msgs = await r.json()
+  const arr = Array.isArray(msgs) ? msgs : (msgs.messages || [])
+  if (arr.length !== lastMsgCount) { lastMsgCount = arr.length; renderMessages(arr) }
 }
 
 async function loadMessages(chatId) {
@@ -457,14 +509,89 @@ async function loadMessages(chatId) {
   if (!r || !r.ok) { document.getElementById('chatMessages').innerHTML = '<div class="empty">Erro ao carregar</div>'; return }
   const msgs = await r.json()
   const arr = Array.isArray(msgs) ? msgs : (msgs.messages || [])
+  lastMsgCount = arr.length
+  renderMessages(arr)
+}
+
+function renderMessages(arr) {
   const box = document.getElementById('chatMessages')
+  const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60
   if (!arr.length) { box.innerHTML = '<div class="empty"><div class="icon">💬</div>Sem mensagens</div>'; return }
-  box.innerHTML = arr.map(m => {
-    const body = escHtml(m.body || m.text || m.message || '[mídia]')
-    const ts = m.timestamp ? new Date(m.timestamp * (m.timestamp < 1e12 ? 1000 : 1)).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : ''
-    return `<div class="msg ${m.fromMe ? 'from-me' : 'from-them'}">${body}<div class="msg-time">${ts}</div></div>`
-  }).join('')
-  box.scrollTop = box.scrollHeight
+  box.innerHTML = arr.map(m => renderMsg(m)).join('')
+  if (wasAtBottom) box.scrollTop = box.scrollHeight
+}
+
+function renderMsg(m) {
+  const msgId = m.id || m.key?.id || ''
+  const fromMe = m.fromMe || m.key?.fromMe || false
+  const ts = m.timestamp ? new Date(m.timestamp * (m.timestamp < 1e12 ? 1000 : 1)).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : ''
+  const sender = (!fromMe && (m.pushName || m.notifyName)) ? `<div style="font-size:10px;color:#25D366;margin-bottom:2px">${escHtml(m.pushName||m.notifyName)}</div>` : ''
+  const cls = `msg ${fromMe ? 'from-me' : 'from-them'}`
+
+  // Tipo da mensagem
+  const type = m.type || m.messageType || detectMsgType(m)
+
+  // Sticker
+  if (type === 'sticker') {
+    const src = msgId ? `${API}/media?id=${encodeURIComponent(msgId)}&chatId=${encodeURIComponent(curChatId)}&key=${WA_KEY}` : ''
+    return `<div class="${cls}">${sender}<img src="${src}" style="width:80px;height:80px;object-fit:contain" onerror="this.outerHTML='🎭 Figurinha'"><div class="msg-time">${ts}</div></div>`
+  }
+  // Imagem
+  if (type === 'image') {
+    const src = msgId ? `${API}/media?id=${encodeURIComponent(msgId)}&chatId=${encodeURIComponent(curChatId)}&key=${WA_KEY}` : ''
+    const cap = m.caption ? `<div style="font-size:12px;margin-top:4px">${escHtml(m.caption)}</div>` : ''
+    return `<div class="${cls}">${sender}<img src="${src}" style="max-width:220px;max-height:220px;border-radius:8px;display:block;cursor:pointer" onclick="window.open(this.src)" onerror="this.outerHTML='🖼️ Imagem'">${cap}<div class="msg-time">${ts}</div></div>`
+  }
+  // Video
+  if (type === 'video') {
+    const src = msgId ? `${API}/media?id=${encodeURIComponent(msgId)}&chatId=${encodeURIComponent(curChatId)}&key=${WA_KEY}` : ''
+    return `<div class="${cls}">${sender}<video src="${src}" controls style="max-width:220px;border-radius:8px" onerror="this.outerHTML='🎥 Vídeo'"></video><div class="msg-time">${ts}</div></div>`
+  }
+  // Áudio / PTT
+  if (type === 'audio' || type === 'ptt') {
+    const src = msgId ? `${API}/media?id=${encodeURIComponent(msgId)}&chatId=${encodeURIComponent(curChatId)}&key=${WA_KEY}` : ''
+    const icon = type === 'ptt' ? '🎤' : '🎵'
+    return `<div class="${cls}">${sender}${icon} <audio src="${src}" controls style="max-width:200px;vertical-align:middle" onerror="this.outerHTML='${icon} Áudio'"></audio><div class="msg-time">${ts}</div></div>`
+  }
+  // Documento
+  if (type === 'document') {
+    const src = msgId ? `${API}/media?id=${encodeURIComponent(msgId)}&chatId=${encodeURIComponent(curChatId)}&key=${WA_KEY}` : ''
+    const fname = escHtml(m.fileName || m.filename || 'documento')
+    return `<div class="${cls}">${sender}📄 <a href="${src}" download="${fname}" style="color:#25D366">${fname}</a><div class="msg-time">${ts}</div></div>`
+  }
+  // Localização
+  if (type === 'location') {
+    const lat = m.lat || m.latitude, lng = m.lng || m.longitude
+    return `<div class="${cls}">${sender}📍 <a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" style="color:#25D366">Ver localização</a><div class="msg-time">${ts}</div></div>`
+  }
+  // Contato
+  if (type === 'contact' || type === 'vcard') {
+    return `<div class="${cls}">${sender}👤 Contato compartilhado<div class="msg-time">${ts}</div></div>`
+  }
+  // Texto (padrão)
+  const body = escHtml(m.body || m.text || m.message || m.extendedTextMessage?.text || '')
+  if (!body) return `<div class="${cls}">${sender}<span style="color:#666;font-style:italic">📎 Mídia</span><div class="msg-time">${ts}</div></div>`
+  return `<div class="${cls}">${sender}${body}<div class="msg-time">${ts}</div></div>`
+}
+
+function detectMsgType(m) {
+  if (m.message) {
+    if (m.message.stickerMessage) return 'sticker'
+    if (m.message.imageMessage) return 'image'
+    if (m.message.videoMessage) return 'video'
+    if (m.message.audioMessage) return m.message.audioMessage.ptt ? 'ptt' : 'audio'
+    if (m.message.documentMessage) return 'document'
+    if (m.message.locationMessage) return 'location'
+    if (m.message.contactMessage || m.message.contactsArrayMessage) return 'contact'
+  }
+  if (m.mimetype) {
+    if (m.mimetype.startsWith('image/')) return 'image'
+    if (m.mimetype.startsWith('video/')) return 'video'
+    if (m.mimetype.startsWith('audio/')) return 'audio'
+    if (m.mimetype === 'image/webp') return 'sticker'
+    return 'document'
+  }
+  return 'text'
 }
 
 function updateChatPreview(msg) {
