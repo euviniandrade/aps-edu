@@ -226,6 +226,19 @@ export default function AdvancedSuite() {
           </div>
         </div>
 
+        <section className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {summary.map(item => (
+            <div
+              key={item.label}
+              className="min-h-28 rounded-lg p-4"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</p>
+              <p className="mt-3 text-2xl font-black lg:text-3xl" style={{ color: item.color }}>{item.value}</p>
+            </div>
+          ))}
+        </section>
+
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {tabs.map(tab => {
             const Icon = tab.icon
@@ -244,15 +257,6 @@ export default function AdvancedSuite() {
           })}
         </div>
       </Card>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {summary.map(item => (
-          <Card key={item.label} className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</p>
-            <p className="mt-2 text-2xl font-black" style={{ color: item.color }}>{item.value}</p>
-          </Card>
-        ))}
-      </section>
 
       {activeTab === 'crm' && (
         <section className="grid gap-5 xl:grid-cols-[minmax(360px,0.42fr)_minmax(0,1fr)]">
