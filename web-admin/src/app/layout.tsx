@@ -17,8 +17,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Educação Adventista — Departamento de Educação - APS',
-  description: 'Painel administrativo | Associação Paulista Sul — Educação Adventista',
+  title: 'Educação Adventista - Departamento de Educação APS',
+  description: 'Painel administrativo | Associação Paulista Sul - Educação Adventista',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
