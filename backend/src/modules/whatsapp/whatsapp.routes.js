@@ -219,4 +219,66 @@ module.exports = async function (fastify) {
     try { return { variations: await svc.generateVariations(req.body.message) } }
     catch (e) { return reply.code(500).send({ error: e.message }) }
   })
+
+  // ===== SYNC CRM EXTERNO (HubSpot / Pipedrive) =====
+  fastify.post('/sync/hubspot', { preHandler: auth }, async (req, reply) => {
+    const { token } = req.body || {}
+    if (!token) return reply.code(400).send({ error: 'token obrigatorio' })
+    try {
+      const r = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=100&properties=firstname,lastname,phone,email', {
+        headers: { Authorization: 'Bearer ' + token }
+      })
+      if (!r.ok) return reply.code(400).send({ error: 'Token HubSpot invalido' })
+      const d = await r.json()
+      const contacts = (d.results || []).map(c => ({
+        name: [c.properties.firstname, c.properties.lastname].filter(Boolean).join(' ') || 'Sem nome',
+        phone: c.properties.phone || '',
+        email: c.properties.email || '',
+        source: 'hubspot', hsId: c.id
+      }))
+      // Importar para pipeline
+      const pipeline = readStore('pipeline') || { stages: ['Novo Lead','Em Contato','Proposta Enviada','Negociando','Fechado','Perdido'], contacts: {} }
+      let imported = 0
+      contacts.forEach(c => {
+        if (!c.phone) return
+        const chatId = c.phone.replace(/\D/g,'') + '@s.whatsapp.net'
+        if (!pipeline.contacts[chatId]) { pipeline.contacts[chatId] = { chatId, name: c.name, stage: 'Novo Lead', tags: ['hubspot'], email: c.email }; imported++ }
+      })
+      writeStore('pipeline', pipeline)
+      return { ok: true, total: contacts.length, imported }
+    } catch (e) { return reply.code(500).send({ error: e.message }) }
+  })
+
+  fastify.post('/sync/pipedrive', { preHandler: auth }, async (req, reply) => {
+    const { token } = req.body || {}
+    if (!token) return reply.code(400).send({ error: 'token obrigatorio' })
+    try {
+      const r = await fetch(`https://api.pipedrive.com/v1/persons?api_token=${token}&limit=100`)
+      if (!r.ok) return reply.code(400).send({ error: 'Token Pipedrive invalido' })
+      const d = await r.json()
+      const contacts = (d.data || []).map(c => ({
+        name: c.name || 'Sem nome',
+        phone: (c.phone || []).find(p => p.value)?.value || '',
+        email: (c.email || []).find(e => e.value)?.value || '',
+        source: 'pipedrive', pdId: c.id
+      }))
+      const pipeline = readStore('pipeline') || { stages: ['Novo Lead','Em Contato','Proposta Enviada','Negociando','Fechado','Perdido'], contacts: {} }
+      let imported = 0
+      contacts.forEach(c => {
+        if (!c.phone) return
+        const chatId = c.phone.replace(/\D/g,'') + '@s.whatsapp.net'
+        if (!pipeline.contacts[chatId]) { pipeline.contacts[chatId] = { chatId, name: c.name, stage: 'Novo Lead', tags: ['pipedrive'], email: c.email }; imported++ }
+      })
+      writeStore('pipeline', pipeline)
+      return { ok: true, total: contacts.length, imported }
+    } catch (e) { return reply.code(500).send({ error: e.message }) }
+  })
+
+  fastify.get('/sync/config', { preHandler: auth }, async () => {
+    return readStore('sync-config') || { hubspotToken: '', pipedriveToken: '' }
+  })
+  fastify.post('/sync/config', { preHandler: auth }, async (req) => {
+    writeStore('sync-config', req.body)
+    return { ok: true }
+  })
 }

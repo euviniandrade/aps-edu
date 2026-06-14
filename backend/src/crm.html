@@ -143,6 +143,7 @@ input:focus,textarea:focus,select:focus{border-color:#25D366}
   <div class="tab" data-tab="analytics">📊 Analytics</div>
   <div class="tab" data-tab="pipeline">🏷️ Pipeline</div>
   <div class="tab" data-tab="bot">🤖 Bot</div>
+  <div class="tab" data-tab="sync">🔗 Sync CRM</div>
   <div class="tab" data-tab="qr">📱 Conectar</div>
 </div>
 
@@ -342,6 +343,42 @@ input:focus,textarea:focus,select:focus{border-color:#25D366}
   <div id="ruleList"><div class="empty"><div class="ic">🤖</div>Nenhuma</div></div>
 </div>
 
+<!-- ======= ABA SYNC CRM ======= -->
+<div class="panel" id="tab-sync">
+  <div class="card">
+    <div class="stitle">🟠 HubSpot</div>
+    <div style="font-size:11px;color:#888;margin-bottom:9px">Importe contatos do HubSpot direto para o Pipeline CRM</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="password" id="hsToken" placeholder="Bearer token do HubSpot" style="flex:1">
+      <button class="btn bp" onclick="syncHS()">🔄 Importar</button>
+    </div>
+    <div id="hsResult" style="font-size:12px;color:#888"></div>
+  </div>
+
+  <div class="card">
+    <div class="stitle">🟢 Pipedrive</div>
+    <div style="font-size:11px;color:#888;margin-bottom:9px">Importe contatos do Pipedrive direto para o Pipeline CRM</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="password" id="pdToken" placeholder="API Token do Pipedrive" style="flex:1">
+      <button class="btn bp" onclick="syncPD()">🔄 Importar</button>
+    </div>
+    <div id="pdResult" style="font-size:12px;color:#888"></div>
+  </div>
+
+  <div class="card">
+    <div class="stitle">💾 Salvar tokens</div>
+    <div style="font-size:11px;color:#888;margin-bottom:9px">Salve para não precisar redigitar</div>
+    <button class="btn bs" onclick="saveSyncCfg()">💾 Salvar configuração</button>
+    <span id="syncSaved" style="font-size:11px;color:#25D366;margin-left:10px"></span>
+  </div>
+
+  <div class="card">
+    <div class="stitle">📤 Exportar contatos do WhatsApp</div>
+    <div style="font-size:11px;color:#888;margin-bottom:9px">Exporte todos os contatos/grupos do CRM para CSV</div>
+    <button class="btn bs" onclick="exportAllContacts()">⬇ Exportar todos os contatos CSV</button>
+  </div>
+</div>
+
 <!-- ======= ABA QR ======= -->
 <div class="panel" id="tab-qr">
   <div style="text-align:center;padding:20px">
@@ -380,6 +417,7 @@ function goTab(name) {
   if (name === 'templates') loadTemplates()
   if (name === 'schedule') loadSched()
   if (name === 'bot') loadBotCfg()
+  if (name === 'sync') loadSyncCfg()
   if (name === 'qr') checkStatus()
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => goTab(t.dataset.tab)))
@@ -1047,6 +1085,61 @@ function dlCSV(rows, name) {
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'))
   a.download=name+'-'+new Date().toISOString().slice(0,10)+'.csv'
   a.click()
+}
+
+// ===== SYNC CRM =====
+async function loadSyncCfg() {
+  const r = await fetch(API+'/sync/config',{headers:H}).catch(()=>null)
+  if (!r||!r.ok) return
+  const d = await r.json()
+  if (d.hubspotToken) document.getElementById('hsToken').value = d.hubspotToken
+  if (d.pipedriveToken) document.getElementById('pdToken').value = d.pipedriveToken
+}
+
+async function syncHS() {
+  const token = document.getElementById('hsToken').value.trim()
+  if (!token) { alert('Digite o token do HubSpot'); return }
+  const el = document.getElementById('hsResult')
+  el.textContent = '🔄 Importando...'
+  const r = await fetch(API+'/sync/hubspot',{method:'POST',headers:HJ,body:JSON.stringify({token})}).catch(()=>null)
+  if (!r||!r.ok) { el.textContent = '❌ Erro: token inválido ou sem conexão'; el.style.color='#e74c3c'; return }
+  const d = await r.json()
+  el.textContent = `✅ ${d.imported} novos de ${d.total} contatos importados para o Pipeline!`
+  el.style.color = '#25D366'
+}
+
+async function syncPD() {
+  const token = document.getElementById('pdToken').value.trim()
+  if (!token) { alert('Digite o token do Pipedrive'); return }
+  const el = document.getElementById('pdResult')
+  el.textContent = '🔄 Importando...'
+  const r = await fetch(API+'/sync/pipedrive',{method:'POST',headers:HJ,body:JSON.stringify({token})}).catch(()=>null)
+  if (!r||!r.ok) { el.textContent = '❌ Erro: token inválido ou sem conexão'; el.style.color='#e74c3c'; return }
+  const d = await r.json()
+  el.textContent = `✅ ${d.imported} novos de ${d.total} contatos importados para o Pipeline!`
+  el.style.color = '#25D366'
+}
+
+async function saveSyncCfg() {
+  const hubspotToken = document.getElementById('hsToken').value.trim()
+  const pipedriveToken = document.getElementById('pdToken').value.trim()
+  await fetch(API+'/sync/config',{method:'POST',headers:HJ,body:JSON.stringify({hubspotToken,pipedriveToken})})
+  const el = document.getElementById('syncSaved')
+  el.textContent = '✅ Salvo!'
+  setTimeout(()=>el.textContent='',3000)
+}
+
+async function exportAllContacts() {
+  const r = await fetch(API+'/chats?limit=2000',{headers:H}).catch(()=>null)
+  if (!r||!r.ok) return
+  let data = await r.json()
+  const chats = Array.isArray(data)?data:(data.chats||[])
+  const rows = [['Nome','Telefone','ChatId','Tipo']]
+  chats.forEach(c => {
+    const id=c.id||c.jid, nm=c.name||c.pushName||'', phone=id.split('@')[0]
+    rows.push([nm,phone,id,chatType(id)])
+  })
+  dlCSV(rows,'contatos-whatsapp')
 }
 
 // ===== INIT =====
