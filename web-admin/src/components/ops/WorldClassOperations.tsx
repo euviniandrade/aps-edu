@@ -14,7 +14,6 @@ import {
   CubeIcon,
   DocumentTextIcon,
   EnvelopeIcon,
-  LightBulbIcon,
   PlayIcon,
   PlusIcon,
   RocketLaunchIcon,
@@ -56,7 +55,7 @@ const modules = [
   { id: 'automacoes', title: 'Automacoes e IA', eyebrow: 'Agentes', description: 'Regras, gatilhos, assistentes, alertas, planos e triagem automatica.', color: '#14B8A6', icon: BoltIcon, score: 88, inspiredBy: ['Reclaim AI', 'Motion', 'Zapier', 'Gemini'] },
 ] as const
 
-const marketRadar = ['Linear', 'Notion', 'Coda', 'ClickUp', 'monday.com', 'Asana', 'Jira', 'Trello', 'Wrike', 'Smartsheet', 'Motion', 'Reclaim AI', 'Sunsama', 'Todoist', 'Superhuman', 'Grammarly', 'PowerSchool', 'Blackbaud', 'Veracross', 'Classter', 'Canvas LMS', 'Moodle', 'Google Classroom', 'Workday', 'HiBob', 'Lattice', 'Culture Amp', 'NetSuite', 'Odoo', 'Zoho Inventory']
+const MANAGEMENT_CACHE_KEY = 'aps_edu_management_state_v2'
 
 const fallbackState: ManagementState = {
   work: [
@@ -126,14 +125,40 @@ export default function WorldClassOperations() {
   const active = useMemo(() => modules.find(item => item.id === activeModule) || modules[0], [activeModule])
   const ActiveIcon = active.icon
 
+  function readLocalState() {
+    try {
+      const raw = localStorage.getItem(MANAGEMENT_CACHE_KEY)
+      if (!raw) return fallbackState
+      return { ...fallbackState, ...JSON.parse(raw) }
+    } catch {
+      return fallbackState
+    }
+  }
+
+  function saveLocalState(next: ManagementState) {
+    try {
+      localStorage.setItem(MANAGEMENT_CACHE_KEY, JSON.stringify(next))
+    } catch {}
+  }
+
+  function updateLocal(updater: (current: ManagementState) => ManagementState) {
+    setState(current => {
+      const next = updater(current)
+      saveLocalState(next)
+      return next
+    })
+    setSource('local')
+  }
+
   async function loadManagement() {
     setLoading(true)
     try {
       const res = await api.get('/management')
       setState({ ...fallbackState, ...res.data })
+      saveLocalState({ ...fallbackState, ...res.data })
       setSource('api')
     } catch {
-      setState(fallbackState)
+      setState(readLocalState())
       setSource('local')
     } finally {
       setLoading(false)
@@ -145,7 +170,9 @@ export default function WorldClassOperations() {
   }, [])
 
   function applyState(next: ManagementState) {
-    setState({ ...fallbackState, ...next })
+    const hydrated = { ...fallbackState, ...next }
+    setState(hydrated)
+    saveLocalState(hydrated)
     setSource('api')
   }
 
@@ -172,7 +199,7 @@ export default function WorldClassOperations() {
       const res = await api.post('/management/work', payload)
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, work: [{ id: `T-${Date.now()}`, ...payload, stage: 'Novo', priority: 'Alta' }, ...prev.work] as WorkItem[] }))
+      updateLocal(prev => ({ ...prev, work: [{ id: `T-${Date.now()}`, ...payload, stage: 'Novo', priority: 'Alta' }, ...prev.work] as WorkItem[] }))
     }
   }
 
@@ -182,7 +209,7 @@ export default function WorldClassOperations() {
       applyState(res.data)
     } catch {
       const map: Record<string, string> = { Novo: 'Planejado', Planejado: 'Em andamento', 'Em andamento': 'Em revisao', 'Aguardando aprovacao': 'Em andamento', Hoje: 'Em andamento', 'Em revisao': 'Concluido' }
-      setState(prev => ({ ...prev, work: prev.work.map(item => item.id === id ? { ...item, stage: map[item.stage] || 'Em andamento' } : item) }))
+      updateLocal(prev => ({ ...prev, work: prev.work.map(item => item.id === id ? { ...item, stage: map[item.stage] || 'Em andamento' } : item) }))
     }
   }
 
@@ -191,7 +218,7 @@ export default function WorldClassOperations() {
       const res = await api.post('/management/admissions', {})
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, admissions: [{ id: `MAT-${Date.now()}`, family: 'Nova familia', student: 'Aluno em qualificacao', stage: 'Contato inicial', value: 1500, next: 'Agendar visita pedagogica' }, ...prev.admissions] }))
+      updateLocal(prev => ({ ...prev, admissions: [{ id: `MAT-${Date.now()}`, family: 'Nova familia', student: 'Aluno em qualificacao', stage: 'Contato inicial', value: 1500, next: 'Agendar visita pedagogica' }, ...prev.admissions] }))
     }
   }
 
@@ -200,7 +227,7 @@ export default function WorldClassOperations() {
       const res = await api.post('/management/finance', { type })
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, finance: [{ id: `F-${Date.now()}`, label: type === 'Receita' ? 'Nova receita escolar' : 'Nova despesa operacional', type, amount: type === 'Receita' ? 1200 : 450, status: 'Previsto', due: 'Esta semana' }, ...prev.finance] }))
+      updateLocal(prev => ({ ...prev, finance: [{ id: `F-${Date.now()}`, label: type === 'Receita' ? 'Nova receita escolar' : 'Nova despesa operacional', type, amount: type === 'Receita' ? 1200 : 450, status: 'Previsto', due: 'Esta semana' }, ...prev.finance] }))
     }
   }
 
@@ -209,7 +236,7 @@ export default function WorldClassOperations() {
       const res = await api.patch(`/management/assets/${id}/adjust`, { delta })
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, assets: prev.assets.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item) }))
+      updateLocal(prev => ({ ...prev, assets: prev.assets.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta), status: Math.max(0, item.qty + delta) <= item.min ? 'Repor' : 'Ok' } : item) }))
     }
   }
 
@@ -218,7 +245,7 @@ export default function WorldClassOperations() {
       const res = await api.post('/management/knowledge', { type })
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, knowledge: [{ id: `K-${Date.now()}`, title: type === 'E-mail' ? 'Novo rascunho de e-mail executivo' : 'Nova nota operacional', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev.knowledge] }))
+      updateLocal(prev => ({ ...prev, knowledge: [{ id: `K-${Date.now()}`, title: type === 'E-mail' ? 'Novo rascunho de e-mail executivo' : 'Nova nota operacional', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev.knowledge] }))
     }
   }
 
@@ -227,7 +254,7 @@ export default function WorldClassOperations() {
       const res = await api.patch(`/management/automations/${id}/toggle`)
       applyState(res.data)
     } catch {
-      setState(prev => ({ ...prev, automations: prev.automations.map(item => item.id === id ? { ...item, status: item.status === 'Ativa' ? 'Rascunho' : 'Ativa' } : item) }))
+      updateLocal(prev => ({ ...prev, automations: prev.automations.map(item => item.id === id ? { ...item, status: item.status === 'Ativa' ? 'Rascunho' : 'Ativa' } : item) }))
     }
   }
 
@@ -328,10 +355,6 @@ export default function WorldClassOperations() {
             <TextArea value={command} onChange={e => setCommand(e.target.value)} className="mt-4" />
             <button onClick={generatePlan} disabled={loadingAi} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#F8A303] text-sm font-black text-black disabled:opacity-60">{loadingAi ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : <RocketLaunchIcon className="h-4 w-4" />}{loadingAi ? 'Analisando...' : 'Gerar plano com IA'}</button>
             {aiPlan && <div className="mt-4 max-h-72 overflow-y-auto rounded-3xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-4 text-sm leading-6 text-white/78">{aiPlan}</div>}
-          </Surface>
-          <Surface className="p-5 lg:p-6">
-            <div className="flex items-center gap-3"><LightBulbIcon className="h-6 w-6 text-[#29ABE2]" /><div><h2 className="text-lg font-black text-white">Radar de inovacao</h2><p className="text-sm text-white/42">30 referencias usadas como benchmark.</p></div></div>
-            <div className="mt-4 flex max-h-48 flex-wrap gap-2 overflow-y-auto">{marketRadar.map((item, index) => <span key={item} className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs font-bold text-white/58">{index + 1}. {item}</span>)}</div>
           </Surface>
         </div>
       </section>
