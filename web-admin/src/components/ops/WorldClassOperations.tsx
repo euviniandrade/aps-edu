@@ -304,8 +304,11 @@ export default function WorldClassOperations() {
               <div><p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: active.color }}>{active.eyebrow}</p><h2 className="text-xl font-black text-white">{active.title}</h2></div>
             </div>
             <p className="mt-4 text-sm leading-6 text-white/54">{active.description}</p>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full" style={{ width: `${active.score}%`, background: `linear-gradient(90deg, ${active.color}, rgba(255,255,255,0.82))` }} /></div>
-            <div className="mt-4 flex flex-wrap gap-2">{active.inspiredBy.map(item => <span key={item} className="rounded-full bg-white/[0.055] px-3 py-1 text-xs font-bold text-white/58">{item}</span>)}</div>
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {['Dados', 'Fluxo', 'IA'].map(item => (
+                <span key={item} className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-center text-xs font-black text-white/58">{item}</span>
+              ))}
+            </div>
             {loading && <p className="mt-4 text-xs font-bold text-white/40">Carregando dados operacionais...</p>}
           </Surface>
         </div>
@@ -316,8 +319,8 @@ export default function WorldClassOperations() {
           const Icon = item.icon
           const selected = item.id === activeModule
           return (
-            <button key={item.id} onClick={() => setActiveModule(item.id as ModuleId)} className="group min-h-36 rounded-[1.35rem] border p-4 text-left transition duration-200 hover:-translate-y-0.5" style={{ background: selected ? `${item.color}16` : 'rgba(255,255,255,0.035)', borderColor: selected ? `${item.color}66` : 'rgba(255,255,255,0.08)' }}>
-              <div className="flex items-start justify-between gap-3"><Icon className="h-6 w-6" style={{ color: selected ? item.color : 'rgba(255,255,255,0.42)' }} /><span className="text-xs font-black" style={{ color: item.color }}>{item.score}</span></div>
+            <button key={item.id} onClick={() => setActiveModule(item.id as ModuleId)} className="group min-h-32 rounded-3xl border p-4 text-left transition duration-200 hover:-translate-y-0.5" style={{ background: selected ? `${item.color}16` : 'rgba(255,255,255,0.035)', borderColor: selected ? `${item.color}66` : 'rgba(255,255,255,0.08)' }}>
+              <div className="flex items-start justify-between gap-3"><Icon className="h-6 w-6" style={{ color: selected ? item.color : 'rgba(255,255,255,0.42)' }} /><span className="h-2.5 w-2.5 rounded-full" style={{ background: selected ? item.color : 'rgba(255,255,255,0.20)' }} /></div>
               <p className="mt-4 text-sm font-black leading-tight text-white">{item.title}</p>
               <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/42">{item.description}</p>
             </button>
@@ -369,7 +372,31 @@ function CommandView({ state, onAdvance }: { state: ManagementState; onAdvance: 
 
 function ProjectsView({ work, onAdvance }: { work: WorkItem[]; onAdvance: (id: string) => void }) {
   const lanes = ['Novo', 'Planejado', 'Em andamento', 'Aguardando aprovacao', 'Em revisao', 'Concluido']
-  return <div className="grid gap-4 xl:grid-cols-3">{lanes.map(lane => <div key={lane} className="min-h-64 rounded-3xl border border-white/10 bg-black/15 p-4"><div className="flex items-center justify-between"><h3 className="font-black text-white">{lane}</h3><span className="rounded-full bg-white/[0.055] px-2 py-1 text-xs font-black text-white/48">{work.filter(item => item.stage === lane).length}</span></div><div className="mt-4 space-y-3">{work.filter(item => item.stage === lane).map(item => <TaskCard key={item.id} item={item} onAdvance={onAdvance} />)}</div></div>)}</div>
+  return (
+    <div className="-mx-2 overflow-x-auto px-2 pb-2">
+      <div className="grid min-w-[1120px] grid-cols-6 gap-3">
+        {lanes.map(lane => {
+          const laneItems = work.filter(item => item.stage === lane)
+          return (
+            <section key={lane} className="min-h-[420px] rounded-3xl border border-white/10 bg-black/15 p-3">
+              <div className="flex min-h-11 items-center justify-between gap-3">
+                <h3 className="text-sm font-black leading-tight text-white">{lane}</h3>
+                <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/[0.065] px-2 text-xs font-black text-white/58">{laneItems.length}</span>
+              </div>
+              <div className="mt-3 space-y-3">
+                {laneItems.map(item => <TaskCard key={item.id} item={item} onAdvance={onAdvance} />)}
+                {laneItems.length === 0 && (
+                  <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-white/10 text-xs font-bold text-white/28">
+                    Sem itens
+                  </div>
+                )}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function SchoolView({ admissions, onAdd }: { admissions: Admission[]; onAdd: () => void }) {
@@ -405,5 +432,24 @@ function WorkList({ work, onAdvance }: { work: WorkItem[]; onAdvance: (id: strin
 }
 
 function TaskCard({ item, onAdvance }: { item: WorkItem; onAdvance: (id: string) => void }) {
-  return <button onClick={() => onAdvance(item.id)} className="w-full rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition hover:bg-white/[0.07]"><div className="flex items-start justify-between gap-3"><p className="text-sm font-black text-white">{item.title}</p><PriorityBadge value={item.priority} /></div><p className="mt-3 text-xs text-white/42">{item.owner} - {item.area}</p><div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/38"><CalendarDaysIcon className="h-4 w-4" /> {item.due}</div></button>
+  const priorityColor = item.priority === 'Alta' ? '#FF4757' : item.priority === 'Media' ? '#F8A303' : '#0ABD78'
+  return (
+    <button onClick={() => onAdvance(item.id)} className="group w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] text-left transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07]">
+      <div className="h-1" style={{ background: priorityColor }} />
+      <div className="p-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <p className="line-clamp-3 text-sm font-black leading-5 text-white">{item.title}</p>
+          <PriorityBadge value={item.priority} />
+        </div>
+        <div className="mt-3 rounded-xl bg-black/15 px-3 py-2">
+          <p className="truncate text-xs font-bold text-white/58">{item.owner}</p>
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-white/32">{item.area}</p>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-2 text-xs font-bold text-white/42">
+          <span className="inline-flex min-w-0 items-center gap-2"><CalendarDaysIcon className="h-4 w-4 flex-shrink-0" /> <span className="truncate">{item.due}</span></span>
+          <span className="text-[11px] text-white/28 group-hover:text-white/52">Avancar</span>
+        </div>
+      </div>
+    </button>
+  )
 }
