@@ -505,22 +505,22 @@ let bulkMediaFile = null
 let bulkMediaBase64 = null
 
 // ===== API =====
-async function api(path, opts = {}) {
+async function api(path, opts = {}, timeoutMs = 12000) {
   try {
-    const r = await fetch(API + path, {
-      ...opts,
-      headers: { ...H, ...(opts.headers || {}) }
-    })
+    const ctrl = new AbortController()
+    const tid = setTimeout(() => ctrl.abort(), timeoutMs)
+    const r = await fetch(API + path, { ...opts, signal: ctrl.signal, headers: { ...H, ...(opts.headers || {}) } })
+    clearTimeout(tid)
     return await r.json()
   } catch(e) { return { error: e.message } }
 }
 
 async function apiJ(path, data, method = 'POST') {
   try {
-    const r = await fetch(API + path, {
-      method, headers: HJ,
-      body: JSON.stringify(data)
-    })
+    const ctrl = new AbortController()
+    const tid = setTimeout(() => ctrl.abort(), 20000)
+    const r = await fetch(API + path, { method, headers: HJ, body: JSON.stringify(data), signal: ctrl.signal })
+    clearTimeout(tid)
     return await r.json()
   } catch(e) { return { error: e.message } }
 }
@@ -1256,6 +1256,11 @@ function connectSSE() {
 checkStatus()
 loadChats()
 connectSSE()
+
+// Auto-retry: se após 15s os chats ainda não carregaram, tenta de novo
+setTimeout(() => { if (!allChats.length) loadChats() }, 15000)
+// Atualiza status a cada 30s
+setInterval(checkStatus, 30000)
 </script>
 </body>
 </html>
