@@ -51,10 +51,6 @@ fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles'
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 fastify.register(require('./modules/management/management.routes'), { prefix: '/api/management' })
-fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
-
-// CRM redirect
-fastify.get('/crm', async (req, reply) => reply.redirect('/api/whatsapp/crm'))
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
