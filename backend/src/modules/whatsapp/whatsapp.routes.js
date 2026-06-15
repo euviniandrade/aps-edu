@@ -1,10 +1,11 @@
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
 const svc = require('./whatsapp.service')
 const WA_KEY = process.env.WHATSAPP_API_KEY
 
 // ===== STORES =====
-const STORE_DIR = path.join(__dirname, '../../../../.whatsapp_data')
+const STORE_DIR = path.join(os.homedir(), '.whatsapp_data')
 const MEDIA_DIR = path.join(STORE_DIR, 'media-cache')
 fs.mkdirSync(STORE_DIR, { recursive: true })
 fs.mkdirSync(MEDIA_DIR, { recursive: true })

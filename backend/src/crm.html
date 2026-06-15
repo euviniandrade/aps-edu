@@ -919,7 +919,8 @@ async function startBulkSend() {
     : [document.getElementById('bulkMsg').value.trim()]
   const hasPtt = !!(pttBase64)
   const hasMedia = !!(bulkMediaBase64)
-  if (!parts.length && !parts[0] && !hasPtt && !hasMedia) return alert('Digite uma mensagem, grave um áudio ou anexe um arquivo!')
+  const hasText = parts.some(p => p.length > 0)
+  if (!hasText && !hasPtt && !hasMedia) return alert('Digite uma mensagem, grave um áudio ou anexe um arquivo!')
 
   const contacts = [...selectedContacts]
   const interval = (parseInt(document.getElementById('bulkInterval').value) || 3) * 1000
