@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import api from '@/lib/api'
 import { XMarkIcon, PaperAirplaneIcon, MicrophoneIcon, SpeakerWaveIcon, SpeakerXMarkIcon, PaperClipIcon, StopCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
@@ -10,12 +11,12 @@ interface Message {
 }
 
 const QUICK_PROMPTS = [
-  { label: '📊 Análise do dia',     text: 'Faça uma análise rápida do meu dia e me dê um resumo do que preciso fazer agora.' },
-  { label: '📋 Tarefas urgentes',   text: 'Quais são as tarefas mais urgentes da rede? O que precisa de atenção imediata?' },
-  { label: '👥 Engajamento',        text: 'Como está o engajamento dos colaboradores? Dê dicas práticas para melhorar.' },
-  { label: '🚀 Plano da semana',    text: 'Sugira um plano de ação para essa semana com base nos dados da plataforma.' },
-  { label: '🧭 Radar de unidade',   text: 'Monte um Radar de Unidade: riscos, prioridades e próximos passos para a Associação Paulista Sul.' },
-  { label: '📝 Ata + tarefas',      text: 'Ajude a transformar uma reunião em ata, decisões, responsáveis e tarefas de acompanhamento.' },
+  { label: 'Analise do dia', text: 'Faca uma analise rapida do meu dia e me de um resumo do que preciso fazer agora.' },
+  { label: 'Tarefas urgentes', text: 'Quais sao as tarefas mais urgentes da rede? O que precisa de atencao imediata?' },
+  { label: 'Engajamento', text: 'Como esta o engajamento dos colaboradores? De dicas praticas para melhorar.' },
+  { label: 'Plano da semana', text: 'Sugira um plano de acao para esta semana com base nos dados da plataforma.' },
+  { label: 'Riscos e prioridades', text: 'Liste riscos operacionais, prioridades e proximos passos para a Associacao Paulista Sul.' },
+  { label: 'Ata + tarefas', text: 'Ajude a transformar uma reuniao em ata, decisoes, responsaveis e tarefas de acompanhamento.' },
 ]
 
 const TRANSCRIBE_INTENT = /transcrev|transcri[cç][aã]o|degrav|texto do [aá]udio|s[oó] transcri/i
@@ -118,6 +119,7 @@ export default function AiAssistant() {
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [transcriptionPreview, setTranscriptionPreview] = useState('')
   const [errorText, setErrorText] = useState('')
+  const [mounted, setMounted] = useState(false)
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
@@ -128,6 +130,10 @@ export default function AiAssistant() {
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Init greeter
   useEffect(() => {
     if (messages.length === 0) {
@@ -135,7 +141,7 @@ export default function AiAssistant() {
       const g = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
       setMessages([{
         role: 'assistant',
-        content: `${g}! 👋 Sou a **Sofi**, sua assistente de IA.\n\nPosso criar tarefas, buscar na internet, gerar imagens, gerenciar seus e-mails, e muito mais. Como posso te ajudar agora?`,
+        content: `${g}! Sou a **Sofi**, sua assistente de IA.\n\nPosso criar tarefas, buscar na internet, gerar imagens, gerenciar seus e-mails e apoiar a gestao da APS EDU. Como posso te ajudar agora?`,
       }])
     }
   }, [])
@@ -153,6 +159,17 @@ export default function AiAssistant() {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
+
+  useEffect(() => {
+    const handleOpenSofi = (event: Event) => {
+      const detail = (event as CustomEvent<{ prompt?: string }>).detail
+      if (detail?.prompt) setInput(detail.prompt)
+      setOpen(true)
+    }
+
+    window.addEventListener('aps:open-sofi', handleOpenSofi as EventListener)
+    return () => window.removeEventListener('aps:open-sofi', handleOpenSofi as EventListener)
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -470,13 +487,13 @@ Entregue uma resposta clara, acionável e de alto nível.`
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
-  return (
+  const assistantContent = (
     <>
       {/* ── FLOATING BUTTON ─────────────────────────────────── */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl
+          className="fixed bottom-5 right-4 z-50 flex items-center gap-2.5 rounded-2xl px-4 py-3 sm:bottom-6 sm:right-6
                      shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group"
           style={{
             background: 'linear-gradient(135deg, #F8A303, #FDC347)',
@@ -502,10 +519,10 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/* ── PANEL ───────────────────────────────────────────── */}
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-50 flex flex-col"
+          className="fixed bottom-4 right-3 z-50 flex flex-col sm:bottom-6 sm:right-6"
           style={{
-            width: 400,
-            height: 600,
+            width: 'min(400px, calc(100vw - 24px))',
+            height: 'min(600px, calc(100vh - 32px))',
             background: 'rgba(7,9,22,0.98)',
             backdropFilter: 'blur(28px)',
             WebkitBackdropFilter: 'blur(28px)',
@@ -706,4 +723,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       `}</style>
     </>
   )
+
+  if (!mounted) return null
+  return createPortal(assistantContent, document.body)
 }

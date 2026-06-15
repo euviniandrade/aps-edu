@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import {
   AcademicCapIcon,
-  ArrowPathIcon,
   BanknotesIcon,
   BoltIcon,
   CalendarDaysIcon,
@@ -97,32 +96,17 @@ function MiniCard({ children, className = '' }: { children: React.ReactNode; cla
 
 export default function OperatingSystemCockpit() {
   const [activeCenter, setActiveCenter] = useState(centers[0].id)
-  const [prompt, setPrompt] = useState('Organize minha semana com foco em tarefas atrasadas, matrículas, equipe e eventos críticos.')
-  const [aiPlan, setAiPlan] = useState('')
-  const [loading, setLoading] = useState(false)
   const [actions, setActions] = useState(defaultActions)
 
   const selected = useMemo(() => centers.find(center => center.id === activeCenter) || centers[0], [activeCenter])
   const SelectedIcon = selected.icon
 
-  async function generatePlan() {
-    setLoading(true)
-    setAiPlan('')
-    try {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `Você é a Sofi, IA gestora da APS EDU. Gere um plano executivo curto, com prioridades, riscos, responsáveis e próximos passos. Contexto: ${prompt}`,
-        }),
-      })
-      const data = await res.json()
-      setAiPlan(data.content || 'Plano gerado, mas sem retorno textual do provedor.')
-    } catch {
-      setAiPlan('Não consegui acionar a IA agora. Priorize: 1. pendências críticas; 2. responsáveis; 3. prazos; 4. comunicado de alinhamento.')
-    } finally {
-      setLoading(false)
-    }
+  function openSofi() {
+    window.dispatchEvent(new CustomEvent('aps:open-sofi', {
+      detail: {
+        prompt: `Atue como Sofi IA gestora da APS EDU. Organize o centro "${selected.title}" com prioridades, riscos, responsaveis, calendario, e-mails e proximas acoes.`,
+      },
+    }))
   }
 
   function toggleAction(id: string) {
@@ -182,31 +166,19 @@ export default function OperatingSystemCockpit() {
               <SparklesIcon className="h-5 w-5" style={{ color: '#F8A303' }} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Sofi IA gestora</h3>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Planejamento, risco e próximos passos.</p>
+              <h3 className="text-lg font-black text-white">Sofi IA</h3>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Chat inteligente para planejamento, risco e proximos passos.</p>
             </div>
           </div>
 
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            className="mt-4 min-h-28 w-full rounded-lg px-3 py-3 text-sm text-white outline-none"
-            style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}
-          />
           <button
-            onClick={generatePlan}
-            disabled={loading}
-            className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-black text-black disabled:opacity-60"
+            onClick={openSofi}
+            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-black text-black"
             style={{ background: '#F8A303' }}
           >
-            {loading ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : <BoltIcon className="h-4 w-4" />}
-            {loading ? 'Analisando...' : 'Gerar plano executivo'}
+            <BoltIcon className="h-4 w-4" />
+            Abrir chat da Sofi
           </button>
-          {aiPlan && (
-            <div className="mt-4 max-h-56 overflow-y-auto rounded-lg p-4 text-sm leading-6" style={{ background: 'rgba(248,163,3,0.08)', border: '1px solid rgba(248,163,3,0.18)', color: 'rgba(255,255,255,0.78)' }}>
-              {aiPlan}
-            </div>
-          )}
         </MiniCard>
       </div>
 

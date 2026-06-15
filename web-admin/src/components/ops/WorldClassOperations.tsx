@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '@/lib/api'
 import {
   AcademicCapIcon,
-  ArrowPathIcon,
   BanknotesIcon,
   BoltIcon,
   CalendarDaysIcon,
@@ -16,8 +15,6 @@ import {
   EnvelopeIcon,
   PlayIcon,
   PlusIcon,
-  RocketLaunchIcon,
-  SparklesIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
@@ -102,10 +99,6 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`h-11 w-full rounded-2xl px-3 text-sm text-white outline-none transition focus:border-white/25 ${props.className || ''}`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', ...props.style }} />
 }
 
-function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`min-h-28 w-full rounded-2xl px-3 py-3 text-sm text-white outline-none ${props.className || ''}`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', ...props.style }} />
-}
-
 function PriorityBadge({ value }: { value: Priority }) {
   const color = value === 'Alta' ? '#FF4757' : value === 'Media' ? '#F8A303' : '#0ABD78'
   return <span className="rounded-full px-2.5 py-1 text-[11px] font-black" style={{ color, background: `${color}18`, border: `1px solid ${color}22` }}>{value === 'Media' ? 'Media' : value}</span>
@@ -116,9 +109,6 @@ export default function WorldClassOperations() {
   const [state, setState] = useState<ManagementState>(fallbackState)
   const [source, setSource] = useState<'api' | 'local'>('local')
   const [loading, setLoading] = useState(true)
-  const [command, setCommand] = useState('Analise a semana da APS EDU, priorize matriculas, atrasos, estoque critico, treinamento de pessoas e financeiro.')
-  const [aiPlan, setAiPlan] = useState('')
-  const [loadingAi, setLoadingAi] = useState(false)
   const [quickTitle, setQuickTitle] = useState('')
   const [quickOwner, setQuickOwner] = useState('Sofi IA')
 
@@ -258,24 +248,6 @@ export default function WorldClassOperations() {
     }
   }
 
-  async function generatePlan() {
-    setLoadingAi(true)
-    setAiPlan('')
-    try {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Voce e a Sofi IA, gestora operacional da APS EDU. Responda em portugues do Brasil com plano executivo, riscos, responsaveis, calendario, e-mails sugeridos e automacoes. Contexto: ${command}. Dados: tarefas=${state.work.length}, admissoes=${state.admissions.length}, ativos criticos=${state.assets.filter(item => item.qty <= item.min).length}.` }),
-      })
-      const data = await res.json()
-      setAiPlan(data.content || 'Plano gerado, mas o provedor nao retornou texto.')
-    } catch {
-      setAiPlan('Plano executivo: 1. resolver prioridades criticas hoje; 2. confirmar visitas de matricula; 3. pedir aprovacao dos ativos abaixo do minimo; 4. preparar e-mail de alinhamento para responsaveis; 5. bloquear agenda para treinamento de coordenadores.')
-    } finally {
-      setLoadingAi(false)
-    }
-  }
-
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#080A12] p-5 shadow-2xl lg:p-7">
@@ -328,16 +300,22 @@ export default function WorldClassOperations() {
         })}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
+      <section>
         <Surface className="overflow-hidden">
           <div className="border-b border-white/10 p-5 lg:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Workbench ativo</p><h2 className="mt-1 text-2xl font-black text-white">{active.title}</h2><p className="mt-1 text-sm text-white/45">{active.description}</p></div>
-              <form onSubmit={addQuickWork} className="grid gap-2 sm:grid-cols-[minmax(240px,1fr)_150px_44px]">
-                <Input value={quickTitle} onChange={e => setQuickTitle(e.target.value)} placeholder="Criar acao rapida..." />
-                <Input value={quickOwner} onChange={e => setQuickOwner(e.target.value)} placeholder="Responsavel" />
-                <button className="flex h-11 items-center justify-center rounded-2xl bg-[#F8A303] text-black"><PlusIcon className="h-5 w-5" /></button>
-              </form>
+            <div className="grid gap-5 xl:grid-cols-[minmax(260px,360px)_minmax(0,1fr)] xl:items-center">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Workbench ativo</p>
+                <h2 className="mt-1 text-2xl font-black leading-tight text-white md:text-3xl">{active.title}</h2>
+                <p className="mt-2 max-w-md text-sm leading-6 text-white/45">{active.description}</p>
+              </div>
+              <div className="grid gap-3 lg:items-center">
+                <form onSubmit={addQuickWork} className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_160px_44px]">
+                  <Input value={quickTitle} onChange={e => setQuickTitle(e.target.value)} placeholder="Criar acao rapida..." />
+                  <Input value={quickOwner} onChange={e => setQuickOwner(e.target.value)} placeholder="Responsavel" />
+                  <button className="flex h-11 items-center justify-center rounded-2xl bg-[#F8A303] text-black"><PlusIcon className="h-5 w-5" /></button>
+                </form>
+              </div>
             </div>
           </div>
           <div className="p-5 lg:p-6">
@@ -351,15 +329,6 @@ export default function WorldClassOperations() {
             {activeModule === 'automacoes' && <AutomationView automations={state.automations} onToggle={toggleAutomation} />}
           </div>
         </Surface>
-
-        <div className="space-y-5">
-          <Surface className="p-5 lg:p-6">
-            <div className="flex items-center gap-3"><div className="rounded-2xl border border-[#F8A303]/30 bg-[#F8A303]/14 p-3"><SparklesIcon className="h-6 w-6 text-[#F8A303]" /></div><div><h2 className="text-lg font-black text-white">Sofi IA gestora</h2><p className="text-sm text-white/45">Planeja, prioriza, escreve e automatiza.</p></div></div>
-            <TextArea value={command} onChange={e => setCommand(e.target.value)} className="mt-4" />
-            <button onClick={generatePlan} disabled={loadingAi} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#F8A303] text-sm font-black text-black disabled:opacity-60">{loadingAi ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : <RocketLaunchIcon className="h-4 w-4" />}{loadingAi ? 'Analisando...' : 'Gerar plano com IA'}</button>
-            {aiPlan && <div className="mt-4 max-h-72 overflow-y-auto rounded-3xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-4 text-sm leading-6 text-white/78">{aiPlan}</div>}
-          </Surface>
-        </div>
       </section>
     </div>
   )
