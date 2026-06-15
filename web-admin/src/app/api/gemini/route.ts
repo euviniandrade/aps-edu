@@ -40,7 +40,11 @@ function truncatePrompt(prompt: string) {
     : `${prompt.substring(0, MAX_PROMPT_CHARS)}\n\n[... conteúdo truncado ...]`
 }
 
-function providerOrder(seed: string, providers: ProviderConfig[]) {
+function providerOrder(seed: string, providers: ProviderConfig[], preferredProvider?: string) {
+  if (preferredProvider) {
+    const selected = providers.find(provider => provider.id === preferredProvider)
+    if (selected) return [selected, ...providers.filter(provider => provider.id !== preferredProvider)]
+  }
   if (providers.length <= 1) return providers
   const index = Math.abs([...seed].reduce((acc, char) => acc + char.charCodeAt(0), 0)) % providers.length
   return [...providers.slice(index), ...providers.slice(0, index)]
@@ -233,7 +237,7 @@ function getProviders(): ProviderConfig[] {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { prompt, imageBase64, imageMimeType } = body
+    const { prompt, imageBase64, imageMimeType, preferredProvider } = body
 
     if (!prompt) return NextResponse.json({ error: 'prompt obrigatório' }, { status: 400 })
 
@@ -250,7 +254,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    for (const provider of providerOrder(safePrompt, providers)) {
+    for (const provider of providerOrder(safePrompt, providers, preferredProvider)) {
       const models = imageBase64 && imageMimeType && provider.visionModels ? provider.visionModels : provider.models
       for (const model of models) {
         const result = await callProvider(provider, safePrompt, model, imageBase64, imageMimeType)
