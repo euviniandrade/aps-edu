@@ -34,9 +34,15 @@ const MICROSOFT_SCOPES = [
   'Files.ReadWrite.All',
 ]
 
+function cleanEnv(value?: string) {
+  return value?.replace(/^\uFEFF/, '').trim()
+}
+
 export function getOrigin(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_SITE_URL
-    || process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  const siteUrl = cleanEnv(process.env.NEXT_PUBLIC_SITE_URL)
+  const productionUrl = cleanEnv(process.env.VERCEL_PROJECT_PRODUCTION_URL)
+  return siteUrl
+    || productionUrl && `https://${productionUrl}`
     || request.nextUrl.origin
 }
 
@@ -45,8 +51,8 @@ export function getOAuthConfig(provider: string): OAuthConfig | null {
     return {
       provider: 'google',
       label: 'Google Workspace',
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: cleanEnv(process.env.GOOGLE_CLIENT_ID),
+      clientSecret: cleanEnv(process.env.GOOGLE_CLIENT_SECRET),
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
       tokenUrl: 'https://oauth2.googleapis.com/token',
       scopes: GOOGLE_SCOPES,
@@ -55,12 +61,12 @@ export function getOAuthConfig(provider: string): OAuthConfig | null {
   }
 
   if (provider === 'microsoft') {
-    const tenant = process.env.MICROSOFT_TENANT_ID || 'common'
+    const tenant = cleanEnv(process.env.MICROSOFT_TENANT_ID) || 'common'
     return {
       provider: 'microsoft',
       label: 'Microsoft 365',
-      clientId: process.env.MICROSOFT_CLIENT_ID,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+      clientId: cleanEnv(process.env.MICROSOFT_CLIENT_ID),
+      clientSecret: cleanEnv(process.env.MICROSOFT_CLIENT_SECRET),
       authorizeUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
       tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
       scopes: MICROSOFT_SCOPES,
@@ -86,4 +92,3 @@ export function setupRedirect(request: NextRequest, provider: string, reason = '
   url.searchParams.set('setup', reason)
   return NextResponse.redirect(url)
 }
-
