@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import api from '@/lib/api'
 import {
   AcademicCapIcon,
   ArrowPathIcon,
@@ -23,18 +24,6 @@ import {
 
 type ModuleId = 'comando' | 'projetos' | 'escola' | 'pessoas' | 'financeiro' | 'ativos' | 'conhecimento' | 'automacoes'
 type Priority = 'Alta' | 'Media' | 'Baixa'
-
-type Module = {
-  id: ModuleId
-  title: string
-  eyebrow: string
-  description: string
-  color: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  score: number
-  inspiredBy: string[]
-}
-
 type WorkItem = { id: string; title: string; owner: string; area: string; stage: string; priority: Priority; due: string }
 type Admission = { id: string; family: string; student: string; stage: string; value: number; next: string }
 type Person = { id: string; name: string; role: string; pulse: number; training: string; nextReview: string }
@@ -43,66 +32,63 @@ type Asset = { id: string; name: string; location: string; qty: number; min: num
 type KnowledgeItem = { id: string; title: string; type: string; owner: string; status: string }
 type Automation = { id: string; trigger: string; action: string; status: 'Ativa' | 'Rascunho' }
 
+type ManagementState = {
+  work: WorkItem[]
+  admissions: Admission[]
+  people: Person[]
+  finance: FinanceLine[]
+  assets: Asset[]
+  knowledge: KnowledgeItem[]
+  automations: Automation[]
+  updatedAt?: string
+}
+
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
-const modules: Module[] = [
-  { id: 'comando', title: 'Comando executivo', eyebrow: 'Visão 360', description: 'Prioridades, riscos, metas, agenda, decisões e IA em uma camada de comando.', color: '#F8A303', icon: ChartBarIcon, score: 92, inspiredBy: ['Linear', 'Asana', 'monday.com', 'Motion'] },
-  { id: 'projetos', title: 'Projetos e tarefas', eyebrow: 'Execução', description: 'Kanban, SLA, responsáveis, prazos, dependências, automações e status executivo.', color: '#0ABD78', icon: CheckCircleIcon, score: 86, inspiredBy: ['ClickUp', 'Jira', 'Trello', 'Wrike'] },
-  { id: 'escola', title: 'Gestão escolar', eyebrow: 'SIS + CRM', description: 'Matrículas, famílias, ocorrências, calendário escolar e acompanhamento pedagógico.', color: '#29ABE2', icon: AcademicCapIcon, score: 81, inspiredBy: ['PowerSchool', 'Blackbaud', 'Classter', 'Proesc'] },
+const modules = [
+  { id: 'comando', title: 'Comando executivo', eyebrow: 'Visao 360', description: 'Prioridades, riscos, metas, agenda, decisoes e IA em uma camada de comando.', color: '#F8A303', icon: ChartBarIcon, score: 92, inspiredBy: ['Linear', 'Asana', 'monday.com', 'Motion'] },
+  { id: 'projetos', title: 'Projetos e tarefas', eyebrow: 'Execucao', description: 'Kanban, SLA, responsaveis, prazos, dependencias, automacoes e status executivo.', color: '#0ABD78', icon: CheckCircleIcon, score: 86, inspiredBy: ['ClickUp', 'Jira', 'Trello', 'Wrike'] },
+  { id: 'escola', title: 'Gestao escolar', eyebrow: 'SIS + CRM', description: 'Matriculas, familias, ocorrencias, calendario escolar e acompanhamento pedagogico.', color: '#29ABE2', icon: AcademicCapIcon, score: 81, inspiredBy: ['PowerSchool', 'Blackbaud', 'Classter', 'Proesc'] },
   { id: 'pessoas', title: 'Pessoas e cultura', eyebrow: 'RH inteligente', description: 'Performance, clima, feedback, treinamentos, organograma e desenvolvimento.', color: '#8B5CF6', icon: UserGroupIcon, score: 78, inspiredBy: ['Workday', 'HiBob', 'Lattice', 'Culture Amp'] },
-  { id: 'financeiro', title: 'Financeiro escolar', eyebrow: 'Receitas e aprovações', description: 'Fluxo previsto, despesas, aprovações, contratos, inadimplência e orçamento.', color: '#4A9EFF', icon: BanknotesIcon, score: 83, inspiredBy: ['NetSuite', 'Odoo', 'Omie', 'FACTS'] },
-  { id: 'ativos', title: 'Estoque e patrimônio', eyebrow: 'Operação física', description: 'Reposição, ativos críticos, compras, inventário e manutenção preventiva.', color: '#E07B39', icon: CubeIcon, score: 80, inspiredBy: ['Zoho Inventory', 'Sortly', 'ERPNext', 'TOTVS'] },
-  { id: 'conhecimento', title: 'Notas, e-mail e documentos', eyebrow: 'Conhecimento vivo', description: 'Atas, políticas, e-mails, resumos, documentos controlados e biblioteca operacional.', color: '#F9C234', icon: DocumentTextIcon, score: 84, inspiredBy: ['Notion', 'Coda', 'Superhuman', 'Google Workspace'] },
-  { id: 'automacoes', title: 'Automações e IA', eyebrow: 'Agentes', description: 'Regras, gatilhos, assistentes, alertas, planos e triagem automática.', color: '#14B8A6', icon: BoltIcon, score: 88, inspiredBy: ['Reclaim AI', 'Motion', 'Zapier', 'Gemini'] },
-]
+  { id: 'financeiro', title: 'Financeiro escolar', eyebrow: 'Receitas e aprovacoes', description: 'Fluxo previsto, despesas, aprovacoes, contratos, inadimplencia e orcamento.', color: '#4A9EFF', icon: BanknotesIcon, score: 83, inspiredBy: ['NetSuite', 'Odoo', 'Omie', 'FACTS'] },
+  { id: 'ativos', title: 'Estoque e patrimonio', eyebrow: 'Operacao fisica', description: 'Reposicao, ativos criticos, compras, inventario e manutencao preventiva.', color: '#E07B39', icon: CubeIcon, score: 80, inspiredBy: ['Zoho Inventory', 'Sortly', 'ERPNext', 'TOTVS'] },
+  { id: 'conhecimento', title: 'Notas, e-mail e documentos', eyebrow: 'Conhecimento vivo', description: 'Atas, politicas, e-mails, resumos, documentos controlados e biblioteca operacional.', color: '#F9C234', icon: DocumentTextIcon, score: 84, inspiredBy: ['Notion', 'Coda', 'Superhuman', 'Google Workspace'] },
+  { id: 'automacoes', title: 'Automacoes e IA', eyebrow: 'Agentes', description: 'Regras, gatilhos, assistentes, alertas, planos e triagem automatica.', color: '#14B8A6', icon: BoltIcon, score: 88, inspiredBy: ['Reclaim AI', 'Motion', 'Zapier', 'Gemini'] },
+] as const
 
 const marketRadar = ['Linear', 'Notion', 'Coda', 'ClickUp', 'monday.com', 'Asana', 'Jira', 'Trello', 'Wrike', 'Smartsheet', 'Motion', 'Reclaim AI', 'Sunsama', 'Todoist', 'Superhuman', 'Grammarly', 'PowerSchool', 'Blackbaud', 'Veracross', 'Classter', 'Canvas LMS', 'Moodle', 'Google Classroom', 'Workday', 'HiBob', 'Lattice', 'Culture Amp', 'NetSuite', 'Odoo', 'Zoho Inventory']
 
-const initialWork: WorkItem[] = [
-  { id: 'T-1024', title: 'Fechar roteiro de matrículas 2026', owner: 'Secretaria', area: 'Escola', stage: 'Em andamento', priority: 'Alta', due: 'Hoje' },
-  { id: 'T-1025', title: 'Revisar compras de tecnologia', owner: 'Operação', area: 'Ativos', stage: 'Aguardando aprovação', priority: 'Alta', due: 'Amanhã' },
-  { id: 'T-1026', title: 'Preparar treinamento de coordenadores', owner: 'Pessoas', area: 'Treinamento', stage: 'Planejado', priority: 'Media', due: '17/06' },
-  { id: 'T-1027', title: 'Consolidar indicadores por unidade', owner: 'Direção', area: 'Comando', stage: 'Hoje', priority: 'Alta', due: 'Hoje' },
-]
-
-const initialAdmissions: Admission[] = [
-  { id: 'MAT-2041', family: 'Família Silva', student: 'Pedro Silva - 6º ano', stage: 'Visita pedagógica', value: 1850, next: 'Confirmar presença da família' },
-  { id: 'MAT-2042', family: 'Família Andrade', student: 'Lívia Andrade - 1º ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentação' },
-  { id: 'MAT-2043', family: 'Família Costa', student: 'Rafael Costa - 9º ano', stage: 'Bolsa em análise', value: 2100, next: 'Aprovar condição comercial' },
-]
-
-const initialPeople: Person[] = [
-  { id: 'P-1', name: 'Coordenação pedagógica', role: 'Liderança escolar', pulse: 86, training: 'Avaliação formativa', nextReview: '20/06' },
-  { id: 'P-2', name: 'Secretaria escolar', role: 'Atendimento e matrícula', pulse: 78, training: 'Jornada da família', nextReview: '18/06' },
-  { id: 'P-3', name: 'Operação e suporte', role: 'Processos internos', pulse: 72, training: 'SLA e rotina visual', nextReview: '21/06' },
-]
-
-const initialFinance: FinanceLine[] = [
-  { id: 'F-1', label: 'Matrículas previstas', type: 'Receita', amount: 3470, status: 'Previsto', due: 'Hoje' },
-  { id: 'F-2', label: 'Compra de materiais pedagógicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanhã' },
-  { id: 'F-3', label: 'Campanha escolar', type: 'Despesa', amount: 2600, status: 'Contrato em revisão', due: '19/06' },
-]
-
-const initialAssets: Asset[] = [
-  { id: 'A-1', name: 'Kits de matrícula', location: 'Secretaria APS', qty: 42, min: 60, status: 'Repor' },
-  { id: 'A-2', name: 'Projetores multimídia', location: 'Sala de recursos', qty: 4, min: 5, status: 'Crítico' },
-  { id: 'A-3', name: 'Materiais de limpeza', location: 'Almoxarifado', qty: 22, min: 25, status: 'Monitorar' },
-]
-
-const initialKnowledge: KnowledgeItem[] = [
-  { id: 'D-1', title: 'Política de matrícula 2026', type: 'Documento', owner: 'Secretaria', status: 'Revisão' },
-  { id: 'D-2', title: 'Ata do comitê executivo', type: 'Nota', owner: 'Direção', status: 'Publicada' },
-  { id: 'D-3', title: 'E-mail de follow-up para famílias', type: 'E-mail', owner: 'Sofi IA', status: 'Rascunho' },
-]
-
-const initialAutomations: Automation[] = [
-  { id: 'AU-1', trigger: 'Tarefa vence hoje', action: 'Notificar responsável e resumir risco para a direção', status: 'Ativa' },
-  { id: 'AU-2', trigger: 'Estoque abaixo do mínimo', action: 'Criar solicitação de compra e pedir aprovação', status: 'Ativa' },
-  { id: 'AU-3', trigger: 'Nova família no funil', action: 'Gerar checklist de matrícula e próximo contato', status: 'Rascunho' },
-]
-
-function uid(prefix: string) {
-  return `${prefix}-${Date.now().toString().slice(-5)}`
+const fallbackState: ManagementState = {
+  work: [
+    { id: 'T-1024', title: 'Fechar roteiro de matriculas 2026', owner: 'Secretaria', area: 'Escola', stage: 'Em andamento', priority: 'Alta', due: 'Hoje' },
+    { id: 'T-1025', title: 'Revisar compras de tecnologia', owner: 'Operacao', area: 'Ativos', stage: 'Aguardando aprovacao', priority: 'Alta', due: 'Amanha' },
+    { id: 'T-1026', title: 'Preparar treinamento de coordenadores', owner: 'Pessoas', area: 'Treinamento', stage: 'Planejado', priority: 'Media', due: '17/06' },
+  ],
+  admissions: [
+    { id: 'MAT-2041', family: 'Familia Silva', student: 'Pedro Silva - 6 ano', stage: 'Visita pedagogica', value: 1850, next: 'Confirmar presenca da familia' },
+    { id: 'MAT-2042', family: 'Familia Andrade', student: 'Livia Andrade - 1 ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentacao' },
+  ],
+  people: [
+    { id: 'P-1', name: 'Coordenacao pedagogica', role: 'Lideranca escolar', pulse: 86, training: 'Avaliacao formativa', nextReview: '20/06' },
+    { id: 'P-2', name: 'Secretaria escolar', role: 'Atendimento e matricula', pulse: 78, training: 'Jornada da familia', nextReview: '18/06' },
+    { id: 'P-3', name: 'Operacao e suporte', role: 'Processos internos', pulse: 72, training: 'SLA e rotina visual', nextReview: '21/06' },
+  ],
+  finance: [
+    { id: 'F-1', label: 'Matriculas previstas', type: 'Receita', amount: 3470, status: 'Previsto', due: 'Hoje' },
+    { id: 'F-2', label: 'Compra de materiais pedagogicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanha' },
+  ],
+  assets: [
+    { id: 'A-1', name: 'Kits de matricula', location: 'Secretaria APS', qty: 42, min: 60, status: 'Repor' },
+    { id: 'A-2', name: 'Projetores multimidia', location: 'Sala de recursos', qty: 4, min: 5, status: 'Critico' },
+  ],
+  knowledge: [
+    { id: 'D-1', title: 'Politica de matricula 2026', type: 'Documento', owner: 'Secretaria', status: 'Revisao' },
+    { id: 'D-2', title: 'Ata do comite executivo', type: 'Nota', owner: 'Direcao', status: 'Publicada' },
+  ],
+  automations: [
+    { id: 'AU-1', trigger: 'Tarefa vence hoje', action: 'Notificar responsavel e resumir risco para a direcao', status: 'Ativa' },
+    { id: 'AU-2', trigger: 'Estoque abaixo do minimo', action: 'Criar solicitacao de compra e pedir aprovacao', status: 'Ativa' },
+  ],
 }
 
 function Surface({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -123,19 +109,15 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 
 function PriorityBadge({ value }: { value: Priority }) {
   const color = value === 'Alta' ? '#FF4757' : value === 'Media' ? '#F8A303' : '#0ABD78'
-  return <span className="rounded-full px-2.5 py-1 text-[11px] font-black" style={{ color, background: `${color}18`, border: `1px solid ${color}22` }}>{value === 'Media' ? 'Média' : value}</span>
+  return <span className="rounded-full px-2.5 py-1 text-[11px] font-black" style={{ color, background: `${color}18`, border: `1px solid ${color}22` }}>{value === 'Media' ? 'Media' : value}</span>
 }
 
 export default function WorldClassOperations() {
   const [activeModule, setActiveModule] = useState<ModuleId>('comando')
-  const [work, setWork] = useState(initialWork)
-  const [admissions, setAdmissions] = useState(initialAdmissions)
-  const [people] = useState(initialPeople)
-  const [finance, setFinance] = useState(initialFinance)
-  const [assets, setAssets] = useState(initialAssets)
-  const [knowledge, setKnowledge] = useState(initialKnowledge)
-  const [automations, setAutomations] = useState(initialAutomations)
-  const [command, setCommand] = useState('Analise a semana da APS EDU, priorize matrículas, atrasos, estoque crítico, treinamento de pessoas e financeiro.')
+  const [state, setState] = useState<ManagementState>(fallbackState)
+  const [source, setSource] = useState<'api' | 'local'>('local')
+  const [loading, setLoading] = useState(true)
+  const [command, setCommand] = useState('Analise a semana da APS EDU, priorize matriculas, atrasos, estoque critico, treinamento de pessoas e financeiro.')
   const [aiPlan, setAiPlan] = useState('')
   const [loadingAi, setLoadingAi] = useState(false)
   const [quickTitle, setQuickTitle] = useState('')
@@ -144,30 +126,109 @@ export default function WorldClassOperations() {
   const active = useMemo(() => modules.find(item => item.id === activeModule) || modules[0], [activeModule])
   const ActiveIcon = active.icon
 
-  const metrics = useMemo(() => {
-    const revenue = finance.filter(item => item.type === 'Receita').reduce((sum, item) => sum + item.amount, 0)
-    const expense = finance.filter(item => item.type === 'Despesa').reduce((sum, item) => sum + item.amount, 0)
-    const criticalAssets = assets.filter(item => item.qty <= item.min).length
-    const highPriority = work.filter(item => item.priority === 'Alta').length
-    return [
-      { label: 'Saúde operacional', value: '87%', detail: 'acima do alvo', color: '#0ABD78' },
-      { label: 'Prioridades críticas', value: highPriority.toString(), detail: 'na fila executiva', color: '#FF4757' },
-      { label: 'Pipeline escolar', value: money.format(admissions.reduce((sum, item) => sum + item.value, 0)), detail: `${admissions.length} famílias`, color: '#29ABE2' },
-      { label: 'Saldo previsto', value: money.format(revenue - expense), detail: 'receita menos despesas', color: '#4A9EFF' },
-      { label: 'Ativos em atenção', value: criticalAssets.toString(), detail: 'abaixo do mínimo', color: '#E07B39' },
-    ]
-  }, [admissions, assets, finance, work])
-
-  function addQuickWork(e: React.FormEvent) {
-    e.preventDefault()
-    if (!quickTitle.trim()) return
-    setWork(prev => [{ id: uid('T'), title: quickTitle, owner: quickOwner || 'Sofi IA', area: active.title, stage: 'Novo', priority: 'Alta', due: 'Hoje' }, ...prev])
-    setQuickTitle('')
+  async function loadManagement() {
+    setLoading(true)
+    try {
+      const res = await api.get('/management')
+      setState({ ...fallbackState, ...res.data })
+      setSource('api')
+    } catch {
+      setState(fallbackState)
+      setSource('local')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function advanceWork(id: string) {
-    const nextStage: Record<string, string> = { Novo: 'Planejado', Planejado: 'Em andamento', 'Em andamento': 'Em revisão', 'Aguardando aprovação': 'Em andamento', Hoje: 'Em andamento', 'Em revisão': 'Concluído', 'Concluído': 'Concluído' }
-    setWork(prev => prev.map(item => item.id === id ? { ...item, stage: nextStage[item.stage] || 'Em andamento' } : item))
+  useEffect(() => {
+    loadManagement()
+  }, [])
+
+  function applyState(next: ManagementState) {
+    setState({ ...fallbackState, ...next })
+    setSource('api')
+  }
+
+  const metrics = useMemo(() => {
+    const revenue = state.finance.filter(item => item.type === 'Receita').reduce((sum, item) => sum + item.amount, 0)
+    const expense = state.finance.filter(item => item.type === 'Despesa').reduce((sum, item) => sum + item.amount, 0)
+    const criticalAssets = state.assets.filter(item => item.qty <= item.min).length
+    const highPriority = state.work.filter(item => item.priority === 'Alta').length
+    return [
+      { label: 'Saude operacional', value: '87%', detail: source === 'api' ? 'dados persistidos' : 'modo local', color: '#0ABD78' },
+      { label: 'Prioridades criticas', value: highPriority.toString(), detail: 'na fila executiva', color: '#FF4757' },
+      { label: 'Pipeline escolar', value: money.format(state.admissions.reduce((sum, item) => sum + item.value, 0)), detail: `${state.admissions.length} familias`, color: '#29ABE2' },
+      { label: 'Saldo previsto', value: money.format(revenue - expense), detail: 'receita menos despesas', color: '#4A9EFF' },
+      { label: 'Ativos em atencao', value: criticalAssets.toString(), detail: 'abaixo do minimo', color: '#E07B39' },
+    ]
+  }, [source, state])
+
+  async function addQuickWork(e: React.FormEvent) {
+    e.preventDefault()
+    if (!quickTitle.trim()) return
+    const payload = { title: quickTitle, owner: quickOwner || 'Sofi IA', area: active.title, priority: 'Alta', due: 'Hoje' }
+    setQuickTitle('')
+    try {
+      const res = await api.post('/management/work', payload)
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, work: [{ id: `T-${Date.now()}`, ...payload, stage: 'Novo', priority: 'Alta' }, ...prev.work] as WorkItem[] }))
+    }
+  }
+
+  async function advanceWork(id: string) {
+    try {
+      const res = await api.patch(`/management/work/${id}/advance`)
+      applyState(res.data)
+    } catch {
+      const map: Record<string, string> = { Novo: 'Planejado', Planejado: 'Em andamento', 'Em andamento': 'Em revisao', 'Aguardando aprovacao': 'Em andamento', Hoje: 'Em andamento', 'Em revisao': 'Concluido' }
+      setState(prev => ({ ...prev, work: prev.work.map(item => item.id === id ? { ...item, stage: map[item.stage] || 'Em andamento' } : item) }))
+    }
+  }
+
+  async function addAdmission() {
+    try {
+      const res = await api.post('/management/admissions', {})
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, admissions: [{ id: `MAT-${Date.now()}`, family: 'Nova familia', student: 'Aluno em qualificacao', stage: 'Contato inicial', value: 1500, next: 'Agendar visita pedagogica' }, ...prev.admissions] }))
+    }
+  }
+
+  async function addFinance(type: FinanceLine['type']) {
+    try {
+      const res = await api.post('/management/finance', { type })
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, finance: [{ id: `F-${Date.now()}`, label: type === 'Receita' ? 'Nova receita escolar' : 'Nova despesa operacional', type, amount: type === 'Receita' ? 1200 : 450, status: 'Previsto', due: 'Esta semana' }, ...prev.finance] }))
+    }
+  }
+
+  async function adjustAsset(id: string, delta: number) {
+    try {
+      const res = await api.patch(`/management/assets/${id}/adjust`, { delta })
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, assets: prev.assets.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item) }))
+    }
+  }
+
+  async function addKnowledge(type: string) {
+    try {
+      const res = await api.post('/management/knowledge', { type })
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, knowledge: [{ id: `K-${Date.now()}`, title: type === 'E-mail' ? 'Novo rascunho de e-mail executivo' : 'Nova nota operacional', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev.knowledge] }))
+    }
+  }
+
+  async function toggleAutomation(id: string) {
+    try {
+      const res = await api.patch(`/management/automations/${id}/toggle`)
+      applyState(res.data)
+    } catch {
+      setState(prev => ({ ...prev, automations: prev.automations.map(item => item.id === id ? { ...item, status: item.status === 'Ativa' ? 'Rascunho' : 'Ativa' } : item) }))
+    }
   }
 
   async function generatePlan() {
@@ -177,12 +238,12 @@ export default function WorldClassOperations() {
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Você é a Sofi IA, gestora operacional da APS EDU. Responda em português do Brasil com plano executivo, riscos, responsáveis, calendário, e-mails sugeridos e automações. Contexto: ${command}. Dados: tarefas=${work.length}, admissões=${admissions.length}, ativos críticos=${assets.filter(item => item.qty <= item.min).length}.` }),
+        body: JSON.stringify({ prompt: `Voce e a Sofi IA, gestora operacional da APS EDU. Responda em portugues do Brasil com plano executivo, riscos, responsaveis, calendario, e-mails sugeridos e automacoes. Contexto: ${command}. Dados: tarefas=${state.work.length}, admissoes=${state.admissions.length}, ativos criticos=${state.assets.filter(item => item.qty <= item.min).length}.` }),
       })
       const data = await res.json()
-      setAiPlan(data.content || 'Plano gerado, mas o provedor não retornou texto.')
+      setAiPlan(data.content || 'Plano gerado, mas o provedor nao retornou texto.')
     } catch {
-      setAiPlan('Plano executivo: 1. resolver prioridades críticas hoje; 2. confirmar visitas de matrícula; 3. pedir aprovação dos ativos abaixo do mínimo; 4. preparar e-mail de alinhamento para responsáveis; 5. bloquear agenda para treinamento de coordenadores.')
+      setAiPlan('Plano executivo: 1. resolver prioridades criticas hoje; 2. confirmar visitas de matricula; 3. pedir aprovacao dos ativos abaixo do minimo; 4. preparar e-mail de alinhamento para responsaveis; 5. bloquear agenda para treinamento de coordenadores.')
     } finally {
       setLoadingAi(false)
     }
@@ -196,10 +257,10 @@ export default function WorldClassOperations() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-[#F8A303]/30 bg-[#F8A303]/12 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#F8A303]">APS EDU OS 2026</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-xs font-bold text-white/52">Pesquisa aplicada de 30 plataformas globais</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-xs font-bold text-white/52">{source === 'api' ? 'API de gestao conectada' : 'Modo local ate autenticar'}</span>
             </div>
             <h1 className="mt-5 max-w-5xl text-4xl font-black leading-[0.95] text-white lg:text-6xl">Um centro de comando escolar com IA, fluxo e profundidade real.</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-white/58">Estrutura inspirada nos melhores padrões atuais: execução rápida da Linear, bases flexíveis do Notion, automações do monday.com, agenda inteligente do Motion, gestão escolar de PowerSchool e controle operacional de Odoo/NetSuite.</p>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-white/58">Estrutura inspirada nos melhores padroes atuais: execucao rapida da Linear, bases flexiveis do Notion, automacoes do monday.com, agenda inteligente do Motion, gestao escolar de PowerSchool e controle operacional de Odoo/NetSuite.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {metrics.map(metric => (
                 <div key={metric.label} className="rounded-3xl border border-white/10 bg-white/[0.055] p-4">
@@ -218,6 +279,7 @@ export default function WorldClassOperations() {
             <p className="mt-4 text-sm leading-6 text-white/54">{active.description}</p>
             <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full" style={{ width: `${active.score}%`, background: `linear-gradient(90deg, ${active.color}, rgba(255,255,255,0.82))` }} /></div>
             <div className="mt-4 flex flex-wrap gap-2">{active.inspiredBy.map(item => <span key={item} className="rounded-full bg-white/[0.055] px-3 py-1 text-xs font-bold text-white/58">{item}</span>)}</div>
+            {loading && <p className="mt-4 text-xs font-bold text-white/40">Carregando dados operacionais...</p>}
           </Surface>
         </div>
       </section>
@@ -227,7 +289,7 @@ export default function WorldClassOperations() {
           const Icon = item.icon
           const selected = item.id === activeModule
           return (
-            <button key={item.id} onClick={() => setActiveModule(item.id)} className="group min-h-36 rounded-[1.35rem] border p-4 text-left transition duration-200 hover:-translate-y-0.5" style={{ background: selected ? `${item.color}16` : 'rgba(255,255,255,0.035)', borderColor: selected ? `${item.color}66` : 'rgba(255,255,255,0.08)' }}>
+            <button key={item.id} onClick={() => setActiveModule(item.id as ModuleId)} className="group min-h-36 rounded-[1.35rem] border p-4 text-left transition duration-200 hover:-translate-y-0.5" style={{ background: selected ? `${item.color}16` : 'rgba(255,255,255,0.035)', borderColor: selected ? `${item.color}66` : 'rgba(255,255,255,0.08)' }}>
               <div className="flex items-start justify-between gap-3"><Icon className="h-6 w-6" style={{ color: selected ? item.color : 'rgba(255,255,255,0.42)' }} /><span className="text-xs font-black" style={{ color: item.color }}>{item.score}</span></div>
               <p className="mt-4 text-sm font-black leading-tight text-white">{item.title}</p>
               <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/42">{item.description}</p>
@@ -242,21 +304,21 @@ export default function WorldClassOperations() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div><p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Workbench ativo</p><h2 className="mt-1 text-2xl font-black text-white">{active.title}</h2><p className="mt-1 text-sm text-white/45">{active.description}</p></div>
               <form onSubmit={addQuickWork} className="grid gap-2 sm:grid-cols-[minmax(240px,1fr)_150px_44px]">
-                <Input value={quickTitle} onChange={e => setQuickTitle(e.target.value)} placeholder="Criar ação rápida..." />
-                <Input value={quickOwner} onChange={e => setQuickOwner(e.target.value)} placeholder="Responsável" />
+                <Input value={quickTitle} onChange={e => setQuickTitle(e.target.value)} placeholder="Criar acao rapida..." />
+                <Input value={quickOwner} onChange={e => setQuickOwner(e.target.value)} placeholder="Responsavel" />
                 <button className="flex h-11 items-center justify-center rounded-2xl bg-[#F8A303] text-black"><PlusIcon className="h-5 w-5" /></button>
               </form>
             </div>
           </div>
           <div className="p-5 lg:p-6">
-            {activeModule === 'comando' && <CommandView work={work} admissions={admissions} assets={assets} finance={finance} onAdvance={advanceWork} />}
-            {activeModule === 'projetos' && <ProjectsView work={work} onAdvance={advanceWork} />}
-            {activeModule === 'escola' && <SchoolView admissions={admissions} onAdd={() => setAdmissions(prev => [{ id: uid('MAT'), family: 'Nova família', student: 'Aluno em qualificação', stage: 'Contato inicial', value: 1500, next: 'Agendar visita pedagógica' }, ...prev])} />}
-            {activeModule === 'pessoas' && <PeopleView people={people} />}
-            {activeModule === 'financeiro' && <FinanceView finance={finance} onAdd={type => setFinance(prev => [{ id: uid('F'), label: type === 'Receita' ? 'Nova receita escolar' : 'Nova despesa operacional', type, amount: type === 'Receita' ? 1200 : 450, status: 'Previsto', due: 'Esta semana' }, ...prev])} />}
-            {activeModule === 'ativos' && <AssetsView assets={assets} onAdjust={(id, delta) => setAssets(prev => prev.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta), status: item.qty + delta <= item.min ? 'Repor' : 'Ok' } : item))} />}
-            {activeModule === 'conhecimento' && <KnowledgeView items={knowledge} onAdd={type => setKnowledge(prev => [{ id: uid('K'), title: type === 'E-mail' ? 'Novo rascunho de e-mail executivo' : 'Nova nota operacional', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev])} />}
-            {activeModule === 'automacoes' && <AutomationView automations={automations} onToggle={id => setAutomations(prev => prev.map(item => item.id === id ? { ...item, status: item.status === 'Ativa' ? 'Rascunho' : 'Ativa' } : item))} />}
+            {activeModule === 'comando' && <CommandView state={state} onAdvance={advanceWork} />}
+            {activeModule === 'projetos' && <ProjectsView work={state.work} onAdvance={advanceWork} />}
+            {activeModule === 'escola' && <SchoolView admissions={state.admissions} onAdd={addAdmission} />}
+            {activeModule === 'pessoas' && <PeopleView people={state.people} />}
+            {activeModule === 'financeiro' && <FinanceView finance={state.finance} onAdd={addFinance} />}
+            {activeModule === 'ativos' && <AssetsView assets={state.assets} onAdjust={adjustAsset} />}
+            {activeModule === 'conhecimento' && <KnowledgeView items={state.knowledge} onAdd={addKnowledge} />}
+            {activeModule === 'automacoes' && <AutomationView automations={state.automations} onToggle={toggleAutomation} />}
           </div>
         </Surface>
 
@@ -268,12 +330,8 @@ export default function WorldClassOperations() {
             {aiPlan && <div className="mt-4 max-h-72 overflow-y-auto rounded-3xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-4 text-sm leading-6 text-white/78">{aiPlan}</div>}
           </Surface>
           <Surface className="p-5 lg:p-6">
-            <div className="flex items-center gap-3"><LightBulbIcon className="h-6 w-6 text-[#29ABE2]" /><div><h2 className="text-lg font-black text-white">Radar de inovação</h2><p className="text-sm text-white/42">30 referências usadas como benchmark.</p></div></div>
+            <div className="flex items-center gap-3"><LightBulbIcon className="h-6 w-6 text-[#29ABE2]" /><div><h2 className="text-lg font-black text-white">Radar de inovacao</h2><p className="text-sm text-white/42">30 referencias usadas como benchmark.</p></div></div>
             <div className="mt-4 flex max-h-48 flex-wrap gap-2 overflow-y-auto">{marketRadar.map((item, index) => <span key={item} className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs font-bold text-white/58">{index + 1}. {item}</span>)}</div>
-          </Surface>
-          <Surface className="p-5 lg:p-6">
-            <h2 className="text-lg font-black text-white">Padrões aplicados</h2>
-            <div className="mt-4 space-y-3">{[['IA no fluxo', 'A IA entra no contexto do trabalho, não em uma página isolada.'], ['Tempo + tarefas', 'Agenda, prazo e fila executiva aparecem juntos.'], ['Módulos profundos', 'Cada área tem ação, lista, status e decisão.'], ['Design escaneável', 'Hierarquia visual, chips, cartões e estados claros.']].map(([title, text]) => <div key={title} className="rounded-3xl border border-white/10 bg-white/[0.035] p-4"><p className="font-black text-white">{title}</p><p className="mt-1 text-sm leading-5 text-white/45">{text}</p></div>)}</div>
           </Surface>
         </div>
       </section>
@@ -281,53 +339,38 @@ export default function WorldClassOperations() {
   )
 }
 
-function CommandView({ work, admissions, assets, finance, onAdvance }: { work: WorkItem[]; admissions: Admission[]; assets: Asset[]; finance: FinanceLine[]; onAdvance: (id: string) => void }) {
-  const agenda = [{ time: '09:00', title: 'Revisão das prioridades críticas', area: 'Comando' }, { time: '10:30', title: 'Follow-up de famílias em visita', area: 'Matrículas' }, { time: '14:00', title: 'Aprovações financeiras e estoque', area: 'Operação' }, { time: '16:30', title: 'Resumo executivo para líderes', area: 'IA' }]
-  return (
-    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          <InsightCard icon={AcademicCapIcon} label="Matrículas" value={admissions.length.toString()} detail="famílias no funil" color="#29ABE2" />
-          <InsightCard icon={CubeIcon} label="Estoque crítico" value={assets.filter(item => item.qty <= item.min).length.toString()} detail="itens em atenção" color="#E07B39" />
-          <InsightCard icon={BanknotesIcon} label="Financeiro" value={money.format(finance.reduce((sum, item) => sum + (item.type === 'Receita' ? item.amount : -item.amount), 0))} detail="saldo previsto" color="#4A9EFF" />
-        </div>
-        <WorkList work={work} onAdvance={onAdvance} />
-      </div>
-      <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
-        <h3 className="text-lg font-black text-white">Agenda inteligente</h3><p className="mt-1 text-sm text-white/42">Blocos sugeridos pelo centro de comando.</p>
-        <div className="mt-4 space-y-3">{agenda.map(item => <div key={item.time} className="grid grid-cols-[54px_1fr] gap-3 rounded-2xl bg-white/[0.035] p-3"><span className="text-xs font-black text-[#F8A303]">{item.time}</span><div><p className="text-sm font-bold text-white">{item.title}</p><p className="text-xs text-white/35">{item.area}</p></div></div>)}</div>
-      </div>
-    </div>
-  )
+function CommandView({ state, onAdvance }: { state: ManagementState; onAdvance: (id: string) => void }) {
+  const agenda = [{ time: '09:00', title: 'Revisao das prioridades criticas', area: 'Comando' }, { time: '10:30', title: 'Follow-up de familias em visita', area: 'Matriculas' }, { time: '14:00', title: 'Aprovacoes financeiras e estoque', area: 'Operacao' }, { time: '16:30', title: 'Resumo executivo para lideres', area: 'IA' }]
+  return <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]"><div className="space-y-4"><div className="grid gap-3 md:grid-cols-3"><InsightCard icon={AcademicCapIcon} label="Matriculas" value={state.admissions.length.toString()} detail="familias no funil" color="#29ABE2" /><InsightCard icon={CubeIcon} label="Estoque critico" value={state.assets.filter(item => item.qty <= item.min).length.toString()} detail="itens em atencao" color="#E07B39" /><InsightCard icon={BanknotesIcon} label="Financeiro" value={money.format(state.finance.reduce((sum, item) => sum + (item.type === 'Receita' ? item.amount : -item.amount), 0))} detail="saldo previsto" color="#4A9EFF" /></div><WorkList work={state.work} onAdvance={onAdvance} /></div><div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4"><h3 className="text-lg font-black text-white">Agenda inteligente</h3><p className="mt-1 text-sm text-white/42">Blocos sugeridos pelo centro de comando.</p><div className="mt-4 space-y-3">{agenda.map(item => <div key={item.time} className="grid grid-cols-[54px_1fr] gap-3 rounded-2xl bg-white/[0.035] p-3"><span className="text-xs font-black text-[#F8A303]">{item.time}</span><div><p className="text-sm font-bold text-white">{item.title}</p><p className="text-xs text-white/35">{item.area}</p></div></div>)}</div></div></div>
 }
 
 function ProjectsView({ work, onAdvance }: { work: WorkItem[]; onAdvance: (id: string) => void }) {
-  const lanes = ['Novo', 'Planejado', 'Em andamento', 'Aguardando aprovação', 'Em revisão', 'Concluído']
+  const lanes = ['Novo', 'Planejado', 'Em andamento', 'Aguardando aprovacao', 'Em revisao', 'Concluido']
   return <div className="grid gap-4 xl:grid-cols-3">{lanes.map(lane => <div key={lane} className="min-h-64 rounded-3xl border border-white/10 bg-black/15 p-4"><div className="flex items-center justify-between"><h3 className="font-black text-white">{lane}</h3><span className="rounded-full bg-white/[0.055] px-2 py-1 text-xs font-black text-white/48">{work.filter(item => item.stage === lane).length}</span></div><div className="mt-4 space-y-3">{work.filter(item => item.stage === lane).map(item => <TaskCard key={item.id} item={item} onAdvance={onAdvance} />)}</div></div>)}</div>
 }
 
 function SchoolView({ admissions, onAdd }: { admissions: Admission[]; onAdd: () => void }) {
-  return <div className="space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-xl font-black text-white">CRM escolar e jornada da família</h3><p className="text-sm text-white/42">Funil com valor, etapa e próxima ação.</p></div><button onClick={onAdd} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#29ABE2] px-4 text-sm font-black text-black"><PlusIcon className="h-4 w-4" /> Nova família</button></div><div className="overflow-x-auto rounded-3xl border border-white/10"><table className="w-full min-w-[760px]"><thead className="bg-white/[0.035] text-left text-xs uppercase tracking-[0.12em] text-white/34"><tr><th className="px-5 py-3">Família</th><th className="px-5 py-3">Etapa</th><th className="px-5 py-3">Valor</th><th className="px-5 py-3">Próxima ação</th></tr></thead><tbody>{admissions.map(item => <tr key={item.id} className="border-t border-white/10"><td className="px-5 py-4"><p className="font-black text-white">{item.family}</p><p className="text-xs text-white/38">{item.student}</p></td><td className="px-5 py-4 text-sm text-white/65">{item.stage}</td><td className="px-5 py-4 text-sm font-black text-[#0ABD78]">{money.format(item.value)}</td><td className="px-5 py-4 text-sm text-white/55">{item.next}</td></tr>)}</tbody></table></div></div>
+  return <div className="space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-xl font-black text-white">CRM escolar e jornada da familia</h3><p className="text-sm text-white/42">Funil com valor, etapa e proxima acao.</p></div><button onClick={onAdd} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#29ABE2] px-4 text-sm font-black text-black"><PlusIcon className="h-4 w-4" /> Nova familia</button></div><div className="overflow-x-auto rounded-3xl border border-white/10"><table className="w-full min-w-[760px]"><thead className="bg-white/[0.035] text-left text-xs uppercase tracking-[0.12em] text-white/34"><tr><th className="px-5 py-3">Familia</th><th className="px-5 py-3">Etapa</th><th className="px-5 py-3">Valor</th><th className="px-5 py-3">Proxima acao</th></tr></thead><tbody>{admissions.map(item => <tr key={item.id} className="border-t border-white/10"><td className="px-5 py-4"><p className="font-black text-white">{item.family}</p><p className="text-xs text-white/38">{item.student}</p></td><td className="px-5 py-4 text-sm text-white/65">{item.stage}</td><td className="px-5 py-4 text-sm font-black text-[#0ABD78]">{money.format(item.value)}</td><td className="px-5 py-4 text-sm text-white/55">{item.next}</td></tr>)}</tbody></table></div></div>
 }
 
 function PeopleView({ people }: { people: Person[] }) {
-  return <div className="grid gap-4 xl:grid-cols-3">{people.map(item => <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-black text-white">{item.name}</h3><p className="mt-1 text-sm text-white/42">{item.role}</p></div><span className="rounded-full bg-[#8B5CF6]/15 px-3 py-1 text-xs font-black text-[#A78BFA]">{item.pulse}%</span></div><div className="mt-5 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#8B5CF6]" style={{ width: `${item.pulse}%` }} /></div><div className="mt-5 rounded-2xl bg-white/[0.04] p-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Trilha sugerida</p><p className="mt-1 text-sm font-bold text-white">{item.training}</p><p className="mt-1 text-xs text-white/40">Próxima avaliação: {item.nextReview}</p></div></div>)}</div>
+  return <div className="grid gap-4 xl:grid-cols-3">{people.map(item => <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-black text-white">{item.name}</h3><p className="mt-1 text-sm text-white/42">{item.role}</p></div><span className="rounded-full bg-[#8B5CF6]/15 px-3 py-1 text-xs font-black text-[#A78BFA]">{item.pulse}%</span></div><div className="mt-5 h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-[#8B5CF6]" style={{ width: `${item.pulse}%` }} /></div><div className="mt-5 rounded-2xl bg-white/[0.04] p-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Trilha sugerida</p><p className="mt-1 text-sm font-bold text-white">{item.training}</p><p className="mt-1 text-xs text-white/40">Proxima avaliacao: {item.nextReview}</p></div></div>)}</div>
 }
 
 function FinanceView({ finance, onAdd }: { finance: FinanceLine[]; onAdd: (type: FinanceLine['type']) => void }) {
-  return <div className="space-y-4"><div className="flex flex-wrap gap-2"><button onClick={() => onAdd('Receita')} className="rounded-2xl bg-[#0ABD78] px-4 py-2 text-sm font-black text-black">Nova receita</button><button onClick={() => onAdd('Despesa')} className="rounded-2xl bg-[#FF4757] px-4 py-2 text-sm font-black text-white">Nova despesa</button></div><div className="grid gap-3">{finance.map(item => <div key={item.id} className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-black text-white">{item.label}</p><p className="mt-1 text-sm text-white/42">{item.status} · {item.due}</p></div><span className="text-xl font-black" style={{ color: item.type === 'Receita' ? '#0ABD78' : '#FF4757' }}>{money.format(item.amount)}</span></div>)}</div></div>
+  return <div className="space-y-4"><div className="flex flex-wrap gap-2"><button onClick={() => onAdd('Receita')} className="rounded-2xl bg-[#0ABD78] px-4 py-2 text-sm font-black text-black">Nova receita</button><button onClick={() => onAdd('Despesa')} className="rounded-2xl bg-[#FF4757] px-4 py-2 text-sm font-black text-white">Nova despesa</button></div><div className="grid gap-3">{finance.map(item => <div key={item.id} className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-black text-white">{item.label}</p><p className="mt-1 text-sm text-white/42">{item.status} - {item.due}</p></div><span className="text-xl font-black" style={{ color: item.type === 'Receita' ? '#0ABD78' : '#FF4757' }}>{money.format(item.amount)}</span></div>)}</div></div>
 }
 
 function AssetsView({ assets, onAdjust }: { assets: Asset[]; onAdjust: (id: string, delta: number) => void }) {
-  return <div className="grid gap-4 xl:grid-cols-3">{assets.map(item => { const critical = item.qty <= item.min; return <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-black text-white">{item.name}</h3><p className="mt-1 text-sm text-white/42">{item.location}</p></div><span className="rounded-full px-3 py-1 text-xs font-black" style={{ color: critical ? '#FF4757' : '#0ABD78', background: critical ? 'rgba(255,71,87,0.14)' : 'rgba(10,189,120,0.14)' }}>{item.status}</span></div><p className="mt-5 text-4xl font-black text-white">{item.qty}</p><p className="text-sm text-white/40">mínimo operacional: {item.min}</p><div className="mt-5 flex gap-2"><button onClick={() => onAdjust(item.id, -1)} className="h-10 flex-1 rounded-2xl bg-white/[0.06] font-black text-white">-1</button><button onClick={() => onAdjust(item.id, 1)} className="h-10 flex-1 rounded-2xl bg-[#E07B39] font-black text-black">+1</button></div></div> })}</div>
+  return <div className="grid gap-4 xl:grid-cols-3">{assets.map(item => { const critical = item.qty <= item.min; return <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-black text-white">{item.name}</h3><p className="mt-1 text-sm text-white/42">{item.location}</p></div><span className="rounded-full px-3 py-1 text-xs font-black" style={{ color: critical ? '#FF4757' : '#0ABD78', background: critical ? 'rgba(255,71,87,0.14)' : 'rgba(10,189,120,0.14)' }}>{item.status}</span></div><p className="mt-5 text-4xl font-black text-white">{item.qty}</p><p className="text-sm text-white/40">minimo operacional: {item.min}</p><div className="mt-5 flex gap-2"><button onClick={() => onAdjust(item.id, -1)} className="h-10 flex-1 rounded-2xl bg-white/[0.06] font-black text-white">-1</button><button onClick={() => onAdjust(item.id, 1)} className="h-10 flex-1 rounded-2xl bg-[#E07B39] font-black text-black">+1</button></div></div> })}</div>
 }
 
 function KnowledgeView({ items, onAdd }: { items: KnowledgeItem[]; onAdd: (type: string) => void }) {
-  return <div className="space-y-4"><div className="grid gap-3 md:grid-cols-3"><button onClick={() => onAdd('Nota')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><ClipboardDocumentListIcon className="h-6 w-6 text-[#F9C234]" /><p className="mt-3 font-black text-white">Nova nota</p></button><button onClick={() => onAdd('E-mail')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><EnvelopeIcon className="h-6 w-6 text-[#29ABE2]" /><p className="mt-3 font-black text-white">Rascunho de e-mail</p></button><button onClick={() => onAdd('Documento')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><DocumentTextIcon className="h-6 w-6 text-[#8B5CF6]" /><p className="mt-3 font-black text-white">Documento controlado</p></button></div><div className="grid gap-3">{items.map(item => <div key={item.id} className="flex flex-col gap-2 rounded-3xl border border-white/10 bg-white/[0.035] p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-black text-white">{item.title}</p><p className="mt-1 text-sm text-white/42">{item.type} · {item.owner}</p></div><span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/58">{item.status}</span></div>)}</div></div>
+  return <div className="space-y-4"><div className="grid gap-3 md:grid-cols-3"><button onClick={() => onAdd('Nota')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><ClipboardDocumentListIcon className="h-6 w-6 text-[#F9C234]" /><p className="mt-3 font-black text-white">Nova nota</p></button><button onClick={() => onAdd('E-mail')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><EnvelopeIcon className="h-6 w-6 text-[#29ABE2]" /><p className="mt-3 font-black text-white">Rascunho de e-mail</p></button><button onClick={() => onAdd('Documento')} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left"><DocumentTextIcon className="h-6 w-6 text-[#8B5CF6]" /><p className="mt-3 font-black text-white">Documento controlado</p></button></div><div className="grid gap-3">{items.map(item => <div key={item.id} className="flex flex-col gap-2 rounded-3xl border border-white/10 bg-white/[0.035] p-4 md:flex-row md:items-center md:justify-between"><div><p className="font-black text-white">{item.title}</p><p className="mt-1 text-sm text-white/42">{item.type} - {item.owner}</p></div><span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/58">{item.status}</span></div>)}</div></div>
 }
 
 function AutomationView({ automations, onToggle }: { automations: Automation[]; onToggle: (id: string) => void }) {
-  return <div className="space-y-3">{automations.map(item => <button key={item.id} onClick={() => onToggle(item.id)} className="grid w-full gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-left md:grid-cols-[1fr_44px_1fr_90px] md:items-center"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Gatilho</p><p className="mt-1 font-bold text-white">{item.trigger}</p></div><PlayIcon className="hidden h-5 w-5 text-[#14B8A6] md:block" /><div><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Ação</p><p className="mt-1 font-bold text-white">{item.action}</p></div><span className="w-fit rounded-full px-3 py-1 text-xs font-black" style={{ color: item.status === 'Ativa' ? '#0ABD78' : '#F8A303', background: item.status === 'Ativa' ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.14)' }}>{item.status}</span></button>)}</div>
+  return <div className="space-y-3">{automations.map(item => <button key={item.id} onClick={() => onToggle(item.id)} className="grid w-full gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-left md:grid-cols-[1fr_44px_1fr_90px] md:items-center"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Gatilho</p><p className="mt-1 font-bold text-white">{item.trigger}</p></div><PlayIcon className="hidden h-5 w-5 text-[#14B8A6] md:block" /><div><p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Acao</p><p className="mt-1 font-bold text-white">{item.action}</p></div><span className="w-fit rounded-full px-3 py-1 text-xs font-black" style={{ color: item.status === 'Ativa' ? '#0ABD78' : '#F8A303', background: item.status === 'Ativa' ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.14)' }}>{item.status}</span></button>)}</div>
 }
 
 function InsightCard({ icon: Icon, label, value, detail, color }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; label: string; value: string; detail: string; color: string }) {
@@ -335,9 +378,9 @@ function InsightCard({ icon: Icon, label, value, detail, color }: { icon: React.
 }
 
 function WorkList({ work, onAdvance }: { work: WorkItem[]; onAdvance: (id: string) => void }) {
-  return <div className="rounded-3xl border border-white/10 bg-white/[0.025]"><div className="border-b border-white/10 p-4"><h3 className="text-lg font-black text-white">Fila executiva</h3></div><div className="divide-y divide-white/10">{work.map(item => <div key={item.id} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><p className="font-black text-white">{item.title}</p><p className="mt-1 text-sm text-white/42">{item.owner} · {item.area} · {item.due}</p></div><div className="flex flex-wrap items-center gap-2"><PriorityBadge value={item.priority} /><span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/55">{item.stage}</span><button onClick={() => onAdvance(item.id)} className="rounded-full bg-[#F8A303] px-3 py-1 text-xs font-black text-black">Avançar</button></div></div>)}</div></div>
+  return <div className="rounded-3xl border border-white/10 bg-white/[0.025]"><div className="border-b border-white/10 p-4"><h3 className="text-lg font-black text-white">Fila executiva</h3></div><div className="divide-y divide-white/10">{work.map(item => <div key={item.id} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><p className="font-black text-white">{item.title}</p><p className="mt-1 text-sm text-white/42">{item.owner} - {item.area} - {item.due}</p></div><div className="flex flex-wrap items-center gap-2"><PriorityBadge value={item.priority} /><span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/55">{item.stage}</span><button onClick={() => onAdvance(item.id)} className="rounded-full bg-[#F8A303] px-3 py-1 text-xs font-black text-black">Avancar</button></div></div>)}</div></div>
 }
 
 function TaskCard({ item, onAdvance }: { item: WorkItem; onAdvance: (id: string) => void }) {
-  return <button onClick={() => onAdvance(item.id)} className="w-full rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition hover:bg-white/[0.07]"><div className="flex items-start justify-between gap-3"><p className="text-sm font-black text-white">{item.title}</p><PriorityBadge value={item.priority} /></div><p className="mt-3 text-xs text-white/42">{item.owner} · {item.area}</p><div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/38"><CalendarDaysIcon className="h-4 w-4" /> {item.due}</div></button>
+  return <button onClick={() => onAdvance(item.id)} className="w-full rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left transition hover:bg-white/[0.07]"><div className="flex items-start justify-between gap-3"><p className="text-sm font-black text-white">{item.title}</p><PriorityBadge value={item.priority} /></div><p className="mt-3 text-xs text-white/42">{item.owner} - {item.area}</p><div className="mt-3 flex items-center gap-2 text-xs font-bold text-white/38"><CalendarDaysIcon className="h-4 w-4" /> {item.due}</div></button>
 }
