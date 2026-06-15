@@ -1,4 +1,4 @@
-﻿require('dotenv').config()
+require('dotenv').config()
 const path = require('path')
 const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
@@ -50,7 +50,6 @@ fastify.register(require('./modules/feedback/feedback.routes'), { prefix: '/api/
 fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles' })
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
-fastify.register(require('./modules/management/management.routes'), { prefix: '/api/management' })
 fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
 
 // CRM redirect
