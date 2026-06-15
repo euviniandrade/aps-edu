@@ -25,6 +25,26 @@ type ProviderStatus = {
   configured: boolean
 }
 
+type IntegrationConnection = {
+  id: 'google' | 'microsoft' | 'icloud'
+  name: string
+  services: string[]
+  envReady: boolean
+  connected: boolean
+  setup: string[]
+  scopes: string[]
+  connectUrl: string | null
+  note?: string
+}
+
+type IntegrationStatus = {
+  providers: IntegrationConnection[]
+  tokenVault: {
+    ready: boolean
+    detail: string
+  }
+}
+
 type CenterTab = 'operacao' | 'artefatos' | 'sobre'
 
 type AgentId = 'orquestradora' | 'scanner' | 'agenda' | 'documentos' | 'matriculas' | 'financeiro' | 'pessoas' | 'estoque' | 'qualidade' | 'automacao'
@@ -212,13 +232,19 @@ const WORKFLOWS: Workflow[] = [
 ]
 
 const INTEGRATIONS = [
-  { name: 'Google Workspace', detail: 'Gmail, Agenda, Drive, Docs, Sheets e Meet.', status: 'Pronto para conectar', icon: CloudIcon, color: '#29ABE2' },
-  { name: 'Microsoft 365', detail: 'Outlook, Teams, SharePoint, Planner e Power Automate.', status: 'Pronto para conectar', icon: CloudIcon, color: '#4A9EFF' },
+  { name: 'Google Workspace', detail: 'Gmail, Agenda, Drive, Docs, Sheets e Meet.', status: 'OAuth oficial', icon: CloudIcon, color: '#29ABE2' },
+  { name: 'Microsoft 365', detail: 'Outlook, OneDrive, SharePoint, Planner e Power Automate.', status: 'OAuth oficial', icon: CloudIcon, color: '#4A9EFF' },
   { name: 'Banco operacional APS', detail: 'Tarefas, pessoas, estoque, financeiro e unidades.', status: 'Ativo na plataforma', icon: CpuChipIcon, color: '#0ABD78' },
   { name: 'Documentos e conhecimento', detail: 'Atas, PDFs, politicas, checklists e contratos.', status: 'Base local pronta', icon: DocumentTextIcon, color: '#A78BFA' },
-  { name: 'E-mail inteligente', detail: 'Triagem, rascunhos, follow-ups e comunicados.', status: 'Aguardando conector', icon: EnvelopeIcon, color: '#F8A303' },
+  { name: 'E-mail inteligente', detail: 'Triagem, rascunhos, follow-ups e comunicados.', status: 'Gmail/Outlook conectaveis', icon: EnvelopeIcon, color: '#F8A303' },
   { name: 'AgentOps', detail: 'Permissoes, logs, dono, risco e aprovacao humana.', status: 'Governanca local', icon: ShieldCheckIcon, color: '#14B8A6' },
 ]
+
+const INTEGRATION_COLORS: Record<IntegrationConnection['id'], string> = {
+  google: '#29ABE2',
+  microsoft: '#4A9EFF',
+  icloud: '#A78BFA',
+}
 
 const TOOL_TEMPLATES: ToolTemplate[] = [
   { id: 'task-priority', agentId: 'orquestradora', type: 'Tarefa', title: 'Criar pacote de tarefas', description: 'Transforma objetivo em tarefas com dono, prazo, risco e prioridade.', icon: BoltIcon, prompt: 'Crie um pacote de tarefas para a APS EDU com titulo, dono, prazo, prioridade, dependencia, risco e criterio de conclusao.' },
@@ -259,6 +285,7 @@ export default function AiIntelligenceCenter() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [logs, setLogs] = useState<AgentLog[]>([])
+  const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus | null>(null)
   const [selectedProviderId, setSelectedProviderId] = useState('auto')
   const [activeToolId, setActiveToolId] = useState(TOOL_TEMPLATES[0].id)
   const [scannerGoal, setScannerGoal] = useState('Pesquisar as melhores IAs e agentes para gestao escolar, tarefas, pessoas, financeiro, agenda e documentos.')
@@ -275,10 +302,20 @@ export default function AiIntelligenceCenter() {
   const effectiveProvider = selectedProviderId === 'auto' ? selectedAgent.preferredProvider : selectedProviderId
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === 'sobre' || params.get('integration')) setActiveTab('sobre')
+    if (params.get('connected') === '1') setNotice('Conector autorizado. A Sofi ja pode reconhecer esta integracao na Central IA.')
+    if (params.get('setup')) setNotice('Ainda falta configurar as credenciais OAuth deste conector na Vercel.')
+
     fetch('/api/ai/status')
       .then(res => res.json())
       .then(data => setProviders(data.providers || []))
       .catch(() => setProviders([]))
+
+    fetch('/api/integrations/status')
+      .then(res => res.json())
+      .then(data => setIntegrationStatus(data))
+      .catch(() => setIntegrationStatus(null))
 
     try {
       setPlaybooks(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'))
@@ -435,6 +472,28 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
     setNotice('Playbook salvo na central local.')
   }
 
+  function refreshIntegrations() {
+    fetch('/api/integrations/status')
+      .then(res => res.json())
+      .then(data => {
+        setIntegrationStatus(data)
+        setNotice('Status dos conectores atualizado.')
+      })
+      .catch(() => setNotice('Nao consegui atualizar os conectores agora.'))
+  }
+
+  function connectIntegration(item: IntegrationConnection) {
+    if (item.id === 'icloud') {
+      openSofi('Configure o iCloud na APS EDU com Apple ID, senha especifica de app, CalDAV/CardDAV, calendario, contatos e regras de seguranca. Quero um passo a passo operacional.')
+      return
+    }
+    if (!item.envReady) {
+      setNotice(`Para conectar ${item.name}, configure na Vercel: ${item.setup.join(', ')}.`)
+      return
+    }
+    window.location.href = item.connectUrl || `/api/integrations/oauth/start?provider=${item.id}`
+  }
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#080A12] p-5 shadow-2xl lg:p-7">
@@ -476,6 +535,78 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
           </button>
         ))}
       </section>
+
+      {activeTab === 'sobre' && <Card className="p-5 lg:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Conectores oficiais</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Google, Microsoft, Gmail, Drive, OneDrive, calendarios e iCloud</h2>
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-white/48">Aqui ficam somente integracoes que a plataforma pode usar de verdade. Google e Microsoft usam OAuth oficial; iCloud entra por senha especifica de app e protocolos de calendario/contatos.</p>
+          </div>
+          <button onClick={refreshIntegrations} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white">
+            <ArrowPathIcon className="h-4 w-4" />
+            Atualizar status
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-3">
+          {(integrationStatus?.providers || []).map(item => {
+            const color = INTEGRATION_COLORS[item.id]
+            return (
+              <div key={item.id} className="rounded-3xl border border-white/10 bg-black/15 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-lg font-black text-white">{item.name}</p>
+                    <p className="mt-1 text-xs font-bold text-white/35">{item.services.join(' - ')}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full px-3 py-1 text-[11px] font-black" style={{ color: item.connected ? '#0ABD78' : item.envReady ? color : '#F8A303', background: item.connected ? 'rgba(10,189,120,0.14)' : item.envReady ? `${color}18` : 'rgba(248,163,3,0.14)' }}>
+                    {item.connected ? 'Conectado' : item.envReady ? 'Pronto' : 'Configurar'}
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {item.services.map(service => (
+                    <span key={service} className="rounded-full bg-white/[0.055] px-3 py-1 text-[11px] font-bold text-white/55">{service}</span>
+                  ))}
+                </div>
+                {!item.envReady && item.id !== 'icloud' && (
+                  <p className="mt-4 rounded-2xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-3 text-xs leading-5 text-[#F8A303]">
+                    Falta configurar: {item.setup.join(', ')}
+                  </p>
+                )}
+                {item.note && <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-xs leading-5 text-white/45">{item.note}</p>}
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button onClick={() => connectIntegration(item)} className="h-10 rounded-2xl px-3 text-xs font-black text-black" style={{ background: item.connected ? '#0ABD78' : color }}>
+                    {item.connected ? 'Reconectar' : item.id === 'icloud' ? 'Ver setup' : 'Conectar'}
+                  </button>
+                  <button onClick={() => openSofi(`Use a integracao ${item.name} na APS EDU. Servicos: ${item.services.join(', ')}. Crie acoes reais para agenda, e-mail, arquivos e automacoes.`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-xs font-black text-white">
+                    Usar com Sofi
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+
+          {!integrationStatus && (
+            <div className="rounded-3xl border border-dashed border-white/10 p-5 text-sm text-white/42">
+              Carregando conectores...
+            </div>
+          )}
+        </div>
+
+        {integrationStatus && (
+          <div className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-black text-white">Cofre de tokens e memoria operacional</p>
+                <p className="mt-1 text-xs leading-5 text-white/42">{integrationStatus.tokenVault.detail}</p>
+              </div>
+              <span className="rounded-full px-3 py-1 text-[11px] font-black" style={{ color: integrationStatus.tokenVault.ready ? '#0ABD78' : '#F8A303', background: integrationStatus.tokenVault.ready ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.14)' }}>
+                {integrationStatus.tokenVault.ready ? 'Vault detectado' : 'Vault pendente'}
+              </span>
+            </div>
+          </div>
+        )}
+      </Card>}
 
       {activeTab === 'sobre' && <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {providers.map(provider => (
