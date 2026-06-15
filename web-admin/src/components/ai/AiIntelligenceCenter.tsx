@@ -45,7 +45,7 @@ type IntegrationStatus = {
   }
 }
 
-type CenterTab = 'operacao' | 'artefatos' | 'sobre'
+type CenterTab = 'operacao' | 'agentes' | 'integracoes' | 'logs'
 
 type AgentId = 'orquestradora' | 'scanner' | 'agenda' | 'documentos' | 'matriculas' | 'financeiro' | 'pessoas' | 'estoque' | 'qualidade' | 'automacao'
 
@@ -231,15 +231,6 @@ const WORKFLOWS: Workflow[] = [
   { id: 'w6', title: 'Pesquisa profunda de mercado', trigger: 'Solicitacao de scanner', result: 'Comparar referencias, extrair padroes e propor implementacao.', owner: 'Sofi Scanner', agentId: 'scanner' },
 ]
 
-const INTEGRATIONS = [
-  { name: 'Google Workspace', detail: 'Gmail, Agenda, Drive, Docs, Sheets e Meet.', status: 'OAuth oficial', icon: CloudIcon, color: '#29ABE2' },
-  { name: 'Microsoft 365', detail: 'Outlook, OneDrive, SharePoint, Planner e Power Automate.', status: 'OAuth oficial', icon: CloudIcon, color: '#4A9EFF' },
-  { name: 'Banco operacional APS', detail: 'Tarefas, pessoas, estoque, financeiro e unidades.', status: 'Ativo na plataforma', icon: CpuChipIcon, color: '#0ABD78' },
-  { name: 'Documentos e conhecimento', detail: 'Atas, PDFs, politicas, checklists e contratos.', status: 'Base local pronta', icon: DocumentTextIcon, color: '#A78BFA' },
-  { name: 'E-mail inteligente', detail: 'Triagem, rascunhos, follow-ups e comunicados.', status: 'Gmail/Outlook conectaveis', icon: EnvelopeIcon, color: '#F8A303' },
-  { name: 'AgentOps', detail: 'Permissoes, logs, dono, risco e aprovacao humana.', status: 'Governanca local', icon: ShieldCheckIcon, color: '#14B8A6' },
-]
-
 const INTEGRATION_COLORS: Record<IntegrationConnection['id'], string> = {
   google: '#29ABE2',
   microsoft: '#4A9EFF',
@@ -299,11 +290,15 @@ export default function AiIntelligenceCenter() {
   const activeTool = useMemo(() => TOOL_TEMPLATES.find(tool => tool.id === activeToolId) || TOOL_TEMPLATES[0], [activeToolId])
   const visibleTools = useMemo(() => TOOL_TEMPLATES.filter(tool => tool.agentId === selectedAgentId || selectedAgentId === 'orquestradora'), [selectedAgentId])
   const configuredCount = providers.filter(item => item.configured).length
+  const connectedIntegrations = integrationStatus?.providers.filter(item => item.connected).length || 0
+  const readyIntegrations = integrationStatus?.providers.filter(item => item.envReady).length || 0
+  const googleConnected = Boolean(integrationStatus?.providers.find(item => item.id === 'google')?.connected)
+  const microsoftReady = Boolean(integrationStatus?.providers.find(item => item.id === 'microsoft')?.envReady)
   const effectiveProvider = selectedProviderId === 'auto' ? selectedAgent.preferredProvider : selectedProviderId
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('tab') === 'sobre' || params.get('integration')) setActiveTab('sobre')
+    if (params.get('tab') === 'sobre' || params.get('tab') === 'integracoes' || params.get('integration')) setActiveTab('integracoes')
     if (params.get('connected') === '1') setNotice('Conector autorizado. A Sofi ja pode reconhecer esta integracao na Central IA.')
     if (params.get('setup')) setNotice('Ainda falta configurar as credenciais OAuth deste conector na Vercel.')
 
@@ -496,105 +491,94 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#080A12] p-5 shadow-2xl lg:p-7">
-        <div className="absolute inset-0 opacity-70" style={{ background: 'radial-gradient(circle at 14% 0%, rgba(248,163,3,0.20), transparent 34%), radial-gradient(circle at 82% 4%, rgba(41,171,226,0.18), transparent 32%), linear-gradient(135deg, rgba(255,255,255,0.06), transparent 55%)' }} />
-        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-end">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#F8A303]">Centro de Inteligencia IA</p>
-            <h1 className="mt-4 max-w-5xl text-4xl font-black leading-[0.95] text-white lg:text-6xl">Sofi como orquestradora multi-IA da APS EDU.</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-white/58">Agentes especializados, provedores conectaveis, automacoes, scanner profundo, documentos, agenda, pessoas, financeiro, escola e governanca em uma unica arquitetura.</p>
-          </div>
-          <Card className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-[#0ABD78]/30 bg-[#0ABD78]/12 p-3">
-                <CheckCircleIcon className="h-7 w-7 text-[#0ABD78]" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-white">Status dos provedores</p>
-                <p className="text-xs font-semibold text-white/42">{configuredCount} de {providers.length || 9} conectados por chave segura</p>
-              </div>
+      <section className="rounded-[1.35rem] border border-white/10 bg-[#080A12] p-4 shadow-2xl">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          {[
+            { label: 'IAs', value: `${configuredCount}/${providers.length || 9}`, detail: 'provedores', color: '#0ABD78' },
+            { label: 'Google', value: googleConnected ? 'Conectado' : 'Pronto', detail: 'Workspace', color: googleConnected ? '#0ABD78' : '#29ABE2' },
+            { label: 'Microsoft', value: microsoftReady ? 'Pronto' : 'Pendente', detail: '365', color: microsoftReady ? '#4A9EFF' : '#F8A303' },
+            { label: 'Conectores', value: `${connectedIntegrations}/${integrationStatus?.providers.length || 3}`, detail: `${readyIntegrations} configurados`, color: '#A78BFA' },
+            { label: 'Agentes', value: String(Object.values(activeAgents).filter(Boolean).length), detail: `${AGENTS.length} disponiveis`, color: '#F8A303' },
+            { label: 'Logs', value: String(logs.length), detail: 'execucoes', color: '#14B8A6' },
+          ].map(metric => (
+            <div key={metric.label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/35">{metric.label}</p>
+              <p className="mt-1 truncate text-lg font-black" style={{ color: metric.color }}>{metric.value}</p>
+              <p className="mt-0.5 text-[11px] font-semibold text-white/38">{metric.detail}</p>
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              <div className="rounded-2xl bg-white/[0.045] p-3"><p className="text-2xl font-black text-[#F8A303]">{AGENTS.length}</p><p className="text-[11px] font-bold text-white/42">agentes</p></div>
-              <div className="rounded-2xl bg-white/[0.045] p-3"><p className="text-2xl font-black text-[#29ABE2]">{WORKFLOWS.length}</p><p className="text-[11px] font-bold text-white/42">playbooks</p></div>
-              <div className="rounded-2xl bg-white/[0.045] p-3"><p className="text-2xl font-black text-[#0ABD78]">{Object.values(activeAgents).filter(Boolean).length}</p><p className="text-[11px] font-bold text-white/42">ativos</p></div>
-            </div>
-          </Card>
+          ))}
         </div>
+        {notice && <p className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-semibold text-white/48">{notice}</p>}
       </section>
 
-      <section className="grid gap-2 rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-2 md:grid-cols-3">
+      <section className="grid gap-2 rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-1.5 md:grid-cols-4">
         {[
-          { id: 'operacao', label: 'Operacao com IA', detail: 'Agentes, ferramentas e scanner' },
-          { id: 'artefatos', label: 'Artefatos e logs', detail: 'Tudo que foi criado e auditado' },
-          { id: 'sobre', label: 'Sobre a ferramenta', detail: 'Provedores, integracoes e status' },
+          { id: 'operacao', label: 'Operacao' },
+          { id: 'agentes', label: 'Agentes' },
+          { id: 'integracoes', label: 'Integracoes' },
+          { id: 'logs', label: 'Logs' },
         ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as CenterTab)} className="rounded-2xl p-4 text-left transition" style={{ background: activeTab === tab.id ? 'rgba(248,163,3,0.14)' : 'transparent', border: activeTab === tab.id ? '1px solid rgba(248,163,3,0.35)' : '1px solid transparent' }}>
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as CenterTab)} className="rounded-2xl px-4 py-3 text-center transition" style={{ background: activeTab === tab.id ? 'rgba(248,163,3,0.14)' : 'transparent', border: activeTab === tab.id ? '1px solid rgba(248,163,3,0.35)' : '1px solid transparent' }}>
             <p className="text-sm font-black text-white">{tab.label}</p>
-            <p className="mt-1 text-xs text-white/40">{tab.detail}</p>
           </button>
         ))}
       </section>
 
-      {activeTab === 'sobre' && <Card className="p-5 lg:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {activeTab === 'integracoes' && <Card className="overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Conectores oficiais</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Google, Microsoft, Gmail, Drive, OneDrive, calendarios e iCloud</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-white/48">Aqui ficam somente integracoes que a plataforma pode usar de verdade. Google e Microsoft usam OAuth oficial; iCloud entra por senha especifica de app e protocolos de calendario/contatos.</p>
+            <h2 className="text-lg font-black text-white">Integracoes</h2>
+            <p className="mt-1 text-xs font-semibold text-white/40">Conexoes externas, permissoes e prontidao operacional.</p>
           </div>
-          <button onClick={refreshIntegrations} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white">
+          <button onClick={refreshIntegrations} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-xs font-black text-white">
             <ArrowPathIcon className="h-4 w-4" />
             Atualizar status
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        <div className="divide-y divide-white/10">
           {(integrationStatus?.providers || []).map(item => {
             const color = INTEGRATION_COLORS[item.id]
             return (
-              <div key={item.id} className="rounded-3xl border border-white/10 bg-black/15 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-lg font-black text-white">{item.name}</p>
-                    <p className="mt-1 text-xs font-bold text-white/35">{item.services.join(' - ')}</p>
+              <div key={item.id} className="grid gap-4 p-4 xl:grid-cols-[220px_minmax(0,1fr)_150px_220px] xl:items-center">
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full" style={{ background: item.connected ? '#0ABD78' : item.envReady ? color : '#F8A303' }} />
+                  <div>
+                    <p className="text-sm font-black text-white">{item.name}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-white/35">{item.id === 'icloud' ? 'CalDAV/CardDAV' : 'OAuth oficial'}</p>
                   </div>
-                  <span className="shrink-0 rounded-full px-3 py-1 text-[11px] font-black" style={{ color: item.connected ? '#0ABD78' : item.envReady ? color : '#F8A303', background: item.connected ? 'rgba(10,189,120,0.14)' : item.envReady ? `${color}18` : 'rgba(248,163,3,0.14)' }}>
-                    {item.connected ? 'Conectado' : item.envReady ? 'Pronto' : 'Configurar'}
-                  </span>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="flex min-w-0 flex-wrap gap-2">
                   {item.services.map(service => (
                     <span key={service} className="rounded-full bg-white/[0.055] px-3 py-1 text-[11px] font-bold text-white/55">{service}</span>
                   ))}
                 </div>
-                {!item.envReady && item.id !== 'icloud' && (
-                  <p className="mt-4 rounded-2xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-3 text-xs leading-5 text-[#F8A303]">
-                    Falta configurar: {item.setup.join(', ')}
-                  </p>
-                )}
-                {item.note && <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-xs leading-5 text-white/45">{item.note}</p>}
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button onClick={() => connectIntegration(item)} className="h-10 rounded-2xl px-3 text-xs font-black text-black" style={{ background: item.connected ? '#0ABD78' : color }}>
+                <span className="w-fit rounded-full px-3 py-1 text-[11px] font-black" style={{ color: item.connected ? '#0ABD78' : item.envReady ? color : '#F8A303', background: item.connected ? 'rgba(10,189,120,0.14)' : item.envReady ? `${color}18` : 'rgba(248,163,3,0.14)' }}>
+                  {item.connected ? 'Conectado' : item.envReady ? 'Pronto' : 'Configurar'}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => connectIntegration(item)} className="h-9 rounded-2xl px-3 text-xs font-black text-black" style={{ background: item.connected ? '#0ABD78' : color }}>
                     {item.connected ? 'Reconectar' : item.id === 'icloud' ? 'Ver setup' : 'Conectar'}
                   </button>
-                  <button onClick={() => openSofi(`Use a integracao ${item.name} na APS EDU. Servicos: ${item.services.join(', ')}. Crie acoes reais para agenda, e-mail, arquivos e automacoes.`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-xs font-black text-white">
-                    Usar com Sofi
+                  <button onClick={() => openSofi(`Use a integracao ${item.name} na APS EDU. Servicos: ${item.services.join(', ')}. Crie acoes reais para agenda, e-mail, arquivos e automacoes.`)} className="h-9 rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-xs font-black text-white">
+                    Sofi
                   </button>
                 </div>
+                {!item.envReady && item.id !== 'icloud' && <p className="xl:col-start-2 xl:col-span-3 rounded-2xl border border-[#F8A303]/20 bg-[#F8A303]/10 p-3 text-xs leading-5 text-[#F8A303]">Falta configurar: {item.setup.join(', ')}</p>}
+                {item.note && <p className="xl:col-start-2 xl:col-span-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-xs leading-5 text-white/45">{item.note}</p>}
               </div>
             )
           })}
 
           {!integrationStatus && (
-            <div className="rounded-3xl border border-dashed border-white/10 p-5 text-sm text-white/42">
+            <div className="p-5 text-sm text-white/42">
               Carregando conectores...
             </div>
           )}
         </div>
 
         {integrationStatus && (
-          <div className="mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+          <div className="border-t border-white/10 bg-white/[0.025] p-4">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-black text-white">Cofre de tokens e memoria operacional</p>
@@ -608,13 +592,18 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         )}
       </Card>}
 
-      {activeTab === 'sobre' && <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {activeTab === 'integracoes' && <Card className="overflow-hidden">
+        <div className="border-b border-white/10 p-4">
+          <h2 className="text-lg font-black text-white">Provedores IA</h2>
+          <p className="mt-1 text-xs font-semibold text-white/40">Modelos disponiveis para roteamento da Sofi.</p>
+        </div>
+        <div className="grid gap-px bg-white/10 md:grid-cols-2 xl:grid-cols-3">
         {providers.map(provider => (
-          <Card key={provider.id} className="p-4">
+          <div key={provider.id} className="bg-[#10121A] p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-black text-white">{provider.name}</p>
-                <p className="mt-1 text-sm leading-5 text-white/45">{provider.role}</p>
+                <p className="text-sm font-black text-white">{provider.name}</p>
+                <p className="mt-1 text-xs leading-5 text-white/45">{provider.role}</p>
               </div>
               <span className="rounded-full px-3 py-1 text-[11px] font-black" style={{ color: provider.configured ? '#0ABD78' : '#F8A303', background: provider.configured ? 'rgba(10,189,120,0.14)' : 'rgba(248,163,3,0.14)' }}>
                 {provider.configured ? 'Conectado' : 'Configurar'}
@@ -624,9 +613,10 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
               <button onClick={() => { setSelectedProviderId(provider.id); setNotice(`${provider.name} selecionado como provedor de trabalho.`) }} className="rounded-2xl bg-white/[0.06] px-3 py-2 text-xs font-black text-white">Usar provedor</button>
               <button onClick={() => openSofi(`Explique como usar ${provider.name} na APS EDU e quais tarefas ele deve executar dentro da plataforma.`)} className="rounded-2xl border border-white/10 px-3 py-2 text-xs font-black text-white/70">Perguntar a Sofi</button>
             </div>
-          </Card>
+          </div>
         ))}
-      </section>}
+        </div>
+      </Card>}
 
       {activeTab === 'operacao' && <Card className="p-5 lg:p-6">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
@@ -642,7 +632,7 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         </div>
       </Card>}
 
-      {activeTab === 'operacao' && <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      {(activeTab === 'operacao' || activeTab === 'agentes') && <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Card className="overflow-hidden">
           <div className="border-b border-white/10 p-5">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Familia de agentes</p>
@@ -774,25 +764,7 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         </Card>
       </section>}
 
-      {activeTab === 'sobre' && <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {INTEGRATIONS.map(item => {
-          const Icon = item.icon
-          return (
-            <Card key={item.name} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-2xl p-3" style={{ background: `${item.color}18`, border: `1px solid ${item.color}30` }}><Icon className="h-6 w-6" style={{ color: item.color }} /></div>
-                <div>
-                  <p className="font-black text-white">{item.name}</p>
-                  <p className="mt-1 text-sm leading-5 text-white/45">{item.detail}</p>
-                  <p className="mt-3 text-xs font-black" style={{ color: item.color }}>{item.status}</p>
-                </div>
-              </div>
-            </Card>
-          )
-        })}
-      </section>}
-
-      {(activeTab === 'operacao' || activeTab === 'artefatos') && <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {activeTab === 'logs' && <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="p-5 lg:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -837,7 +809,7 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         </Card>
       </section>}
 
-      {(activeTab === 'operacao' || activeTab === 'artefatos') && <Card className="p-5 lg:p-6">
+      {(activeTab === 'operacao' || activeTab === 'logs') && <Card className="p-5 lg:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#F8A303]">Saida da Sofi</p>
