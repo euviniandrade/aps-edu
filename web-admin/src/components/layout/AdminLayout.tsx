@@ -51,6 +51,7 @@ const navSections = [
   {
     label: 'Inteligência',
     items: [
+      { href: '/inovacao',      label: 'Central IA',   icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
       { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
       { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
     ],
@@ -65,7 +66,6 @@ const hiddenNavItems = [
   { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
   { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
   { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
-  { href: '/inovacao',      label: 'Inovação IA',  icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
   { href: '/notificacoes',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
   { href: '/minha-area',    label: 'Minha Central', icon: KeyIcon,                   iconSolid: KeyIconSolid,       color: '#FDC347', roles: [] },
 ]

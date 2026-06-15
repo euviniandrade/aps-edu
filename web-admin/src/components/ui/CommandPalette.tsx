@@ -29,7 +29,7 @@ const NAV_COMMANDS = [
   { id: 'go-announcements', label: 'Ir para Mural',         icon: 'M', path: '/announcements', keywords: ['mural', 'aviso', 'comunicado'] },
   { id: 'go-notif',         label: 'Notificações',          icon: 'N', path: '/notificacoes',  keywords: ['notif', 'alerta'] },
   { id: 'go-sofi',          label: 'Ferramentas pessoais',  icon: 'S', path: '/minha-area',    keywords: ['ia', 'ai', 'assistente', 'chat', 'cofre', 'notas', 'caderno'] },
-  { id: 'go-inovacao',      label: 'Central de Inovação IA', icon: 'I', path: '/inovacao',      keywords: ['inovacao', 'ia', 'agentes', 'marketing', 'saas', 'dados'] },
+  { id: 'go-inovacao',      label: 'Central IA',             icon: 'I', path: '/inovacao',      keywords: ['inovacao', 'ia', 'agentes', 'scanner', 'gpt', 'gemini', 'claude', 'grok', 'perplexity', 'dados'] },
   { id: 'go-config',        label: 'Configurações',         icon: 'C', path: '/configuracoes', keywords: ['config', 'perfil', 'senha'] },
 ]
 
