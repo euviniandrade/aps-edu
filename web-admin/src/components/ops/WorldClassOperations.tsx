@@ -259,17 +259,11 @@ export default function WorldClassOperations() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#080A12] p-5 shadow-2xl lg:p-7">
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#080A12] p-4 shadow-2xl lg:p-5">
         <div className="absolute inset-0 opacity-70" style={{ background: 'radial-gradient(circle at 20% 10%, rgba(248,163,3,0.18), transparent 32%), radial-gradient(circle at 80% 0%, rgba(41,171,226,0.16), transparent 28%), linear-gradient(135deg, rgba(255,255,255,0.06), transparent 55%)' }} />
-        <div className="relative grid gap-6 2xl:grid-cols-[minmax(0,1fr)_430px]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[#F8A303]/30 bg-[#F8A303]/12 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#F8A303]">APS EDU OS 2026</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-xs font-bold text-white/52">{source === 'api' ? 'API de gestao conectada' : 'Modo local ate autenticar'}</span>
-            </div>
-            <h1 className="mt-5 max-w-5xl text-4xl font-black leading-[0.95] text-white lg:text-6xl">Um centro de comando escolar com IA, fluxo e profundidade real.</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-white/58">Estrutura inspirada nos melhores padroes atuais: execucao rapida da Linear, bases flexiveis do Notion, automacoes do monday.com, agenda inteligente do Motion, gestao escolar de PowerSchool e controle operacional de Odoo/NetSuite.</p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="relative grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {metrics.map(metric => (
                 <div key={metric.label} className="rounded-3xl border border-white/10 bg-white/[0.055] p-4">
                   <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/35">{metric.label}</p>
@@ -279,18 +273,21 @@ export default function WorldClassOperations() {
               ))}
             </div>
           </div>
-          <Surface className="p-5">
+          <Surface className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl p-3" style={{ background: `${active.color}18`, border: `1px solid ${active.color}35` }}><ActiveIcon className="h-7 w-7" style={{ color: active.color }} /></div>
-              <div><p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: active.color }}>{active.eyebrow}</p><h2 className="text-xl font-black text-white">{active.title}</h2></div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: active.color }}>{active.eyebrow}</p>
+                <h2 className="text-lg font-black leading-tight text-white">{active.title}</h2>
+              </div>
             </div>
-            <p className="mt-4 text-sm leading-6 text-white/54">{active.description}</p>
-            <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-3 gap-2">
               {['Dados', 'Fluxo', 'IA'].map(item => (
                 <span key={item} className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-center text-xs font-black text-white/58">{item}</span>
               ))}
             </div>
-            {loading && <p className="mt-4 text-xs font-bold text-white/40">Carregando dados operacionais...</p>}
+            <p className="mt-3 text-xs font-bold text-white/38">{source === 'api' ? 'API de gestao conectada' : 'Modo local ate autenticar'}</p>
+            {loading && <p className="mt-2 text-xs font-bold text-white/40">Carregando dados operacionais...</p>}
           </Surface>
         </div>
       </section>
