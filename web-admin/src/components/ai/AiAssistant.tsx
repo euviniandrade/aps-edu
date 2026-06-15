@@ -10,6 +10,11 @@ interface Message {
   display?: string
 }
 
+const SOFI_MEMORY_KEY = 'aps_edu_sofi_global_messages_v1'
+const SOFI_MEMORY_SUMMARY_KEY = 'aps_edu_sofi_memory_summary_v1'
+const SOFI_MEMORY_RECORDS_KEY = 'aps_edu_sofi_memory_records_v1'
+const SOFI_MAX_MESSAGES = 260
+
 const QUICK_PROMPTS = [
   { label: 'Analise do dia', text: 'Faca uma analise rapida do meu dia e me de um resumo do que preciso fazer agora.' },
   { label: 'Tarefas urgentes', text: 'Quais sao as tarefas mais urgentes da rede? O que precisa de atencao imediata?' },
@@ -120,6 +125,7 @@ export default function AiAssistant() {
   const [transcriptionPreview, setTranscriptionPreview] = useState('')
   const [errorText, setErrorText] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [memoryLoaded, setMemoryLoaded] = useState(false)
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
@@ -132,11 +138,16 @@ export default function AiAssistant() {
 
   useEffect(() => {
     setMounted(true)
+    try {
+      const saved = localStorage.getItem(SOFI_MEMORY_KEY)
+      if (saved) setMessages(JSON.parse(saved))
+    } catch {}
+    setMemoryLoaded(true)
   }, [])
 
   // Init greeter
   useEffect(() => {
-    if (messages.length === 0) {
+    if (memoryLoaded && messages.length === 0) {
       const h = new Date().getHours()
       const g = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
       setMessages([{
@@ -144,7 +155,17 @@ export default function AiAssistant() {
         content: `${g}! Sou a **Sofi**, sua assistente de IA.\n\nPosso criar tarefas, buscar na internet, gerar imagens, gerenciar seus e-mails e apoiar a gestao da APS EDU. Como posso te ajudar agora?`,
       }])
     }
-  }, [])
+  }, [memoryLoaded, messages.length])
+
+  useEffect(() => {
+    if (!memoryLoaded) return
+    try {
+      const compact = messages.slice(-SOFI_MAX_MESSAGES)
+      localStorage.setItem(SOFI_MEMORY_KEY, JSON.stringify(compact))
+      const summary = compact.slice(-40).map(msg => `${msg.role === 'user' ? 'Usuario' : 'Sofi'}: ${msg.content.substring(0, 500)}`).join('\n')
+      localStorage.setItem(SOFI_MEMORY_SUMMARY_KEY, summary)
+    } catch {}
+  }, [messages, memoryLoaded])
 
   // Pulse animation periodically when closed
   useEffect(() => {
@@ -322,8 +343,48 @@ export default function AiAssistant() {
         }
       } else if (action.type === 'create_event') {
         await api.post('/calendar', action.data)
+        window.dispatchEvent(new CustomEvent('sofi_action_completed', { detail: { type: action.type, data: action.data } }))
+        addMsg('assistant', `✅ Evento criado: **${action.data?.title || 'Novo evento'}**`)
       } else if (action.type === 'send_email') {
         await api.post('/gmail', action.data)
+        addMsg('assistant', `✅ E-mail preparado/enviado: **${action.data?.subject || 'Mensagem'}**`)
+      } else if (action.type === 'create_ai_artifact') {
+        const current = JSON.parse(localStorage.getItem('aps_edu_ai_center_artifacts') || '[]')
+        const artifact = {
+          id: `art-${Date.now()}`,
+          type: action.data?.type || 'Documento',
+          title: action.data?.title || 'Artefato criado pela Sofi',
+          owner: action.data?.owner || 'Sofi IA',
+          status: action.data?.status || 'Rascunho',
+          createdAt: new Date().toLocaleString('pt-BR'),
+          content: action.data?.content || action.data?.description || '',
+        }
+        localStorage.setItem('aps_edu_ai_center_artifacts', JSON.stringify([artifact, ...current].slice(0, 32)))
+        window.dispatchEvent(new CustomEvent('ai_artifacts_updated', { detail: { artifact } }))
+        addMsg('assistant', `✅ Artefato criado na Central IA: **${artifact.title}**`)
+      } else if (action.type === 'create_management_work') {
+        const saved = localStorage.getItem('aps_edu_management_state_v2')
+        const current = saved ? JSON.parse(saved) : {}
+        const work = Array.isArray(current.work) ? current.work : []
+        const item = {
+          id: `T-${Date.now()}`,
+          title: action.data?.title || 'Nova tarefa criada pela Sofi',
+          owner: action.data?.owner || 'Sofi IA',
+          area: action.data?.area || 'Centro',
+          stage: action.data?.stage || 'Novo',
+          priority: action.data?.priority || 'Alta',
+          due: action.data?.due || 'Hoje',
+        }
+        const next = { ...current, work: [item, ...work] }
+        localStorage.setItem('aps_edu_management_state_v2', JSON.stringify(next))
+        window.dispatchEvent(new CustomEvent('management_state_updated', { detail: next }))
+        addMsg('assistant', `✅ Tarefa criada no Centro de Gestão: **${item.title}**`)
+      } else if (action.type === 'create_note') {
+        const current = JSON.parse(localStorage.getItem('aps_edu_sofi_notes') || '[]')
+        const note = { id: `note-${Date.now()}`, title: action.data?.title || 'Nota da Sofi', content: action.data?.content || '', createdAt: new Date().toLocaleString('pt-BR') }
+        localStorage.setItem('aps_edu_sofi_notes', JSON.stringify([note, ...current].slice(0, 100)))
+        window.dispatchEvent(new CustomEvent('sofi_notes_updated', { detail: { note } }))
+        addMsg('assistant', `✅ Nota salva: **${note.title}**`)
       } else if (action.type === 'web_search') {
         setLoading(true)
         const res = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: action.data.query }) })
@@ -353,7 +414,11 @@ export default function AiAssistant() {
       } else if (action.type === 'drive_create_folder') {
         await api.post('/drive', action.data)
       } else if (action.type === 'save_memory') {
-        await api.post('/memory', action.data)
+        const current = JSON.parse(localStorage.getItem(SOFI_MEMORY_RECORDS_KEY) || '[]')
+        const memory = { id: `mem-${Date.now()}`, ...action.data, createdAt: new Date().toLocaleString('pt-BR') }
+        localStorage.setItem(SOFI_MEMORY_RECORDS_KEY, JSON.stringify([memory, ...(Array.isArray(current) ? current : [])].slice(0, 500)))
+        await api.post('/memory', action.data).catch(() => null)
+        addMsg('assistant', '✅ Memória salva para as próximas conversas.')
       } else if (action.type === 'save_to_kb') {
         await api.post('/knowledge', action.data)
       } else if (action.type === 'generate_ata') {
@@ -439,17 +504,40 @@ export default function AiAssistant() {
         rawContent = d.content || ''
       } else {
         const trimmed = newMessages.slice(-12).map(({ role, content }) => ({ role, content }))
+        const pageContext = typeof window !== 'undefined' ? window.location.pathname : ''
+        const persistentMemory = typeof window !== 'undefined' ? localStorage.getItem(SOFI_MEMORY_SUMMARY_KEY) || '' : ''
+        const savedRecords = typeof window !== 'undefined' ? localStorage.getItem(SOFI_MEMORY_RECORDS_KEY) || '[]' : '[]'
         try {
-          const res = await api.post('/ai/chat', { messages: trimmed, context: { userName: 'Vinicius' } })
+          const res = await api.post('/ai/chat', { messages: trimmed, context: { userName: 'Vinicius', page: pageContext, persistentMemory, savedRecords } })
           rawContent = res.data?.content ?? res.data?.message ?? ''
           rawAction  = res.data?.action ?? null
         } catch {
           const fallbackPrompt = `Você é a Sofi, assistente virtual do Departamento de Educação da Associação Paulista Sul (APS).
 Responda em português do Brasil com padrão executivo, prático e humano.
 Quando houver transcrição de áudio ou conteúdo de documento, trate como fonte principal.
-Não invente tarefas existentes. Se o usuário pedir para criar várias tarefas, devolva uma ação JSON create_tasks com data.tasks.
-Formato de lote:
+Você tem memória persistente entre páginas. Use o contexto abaixo para manter continuidade e não reiniciar a conversa.
+Página atual: ${pageContext}
+Memória persistente recente:
+${persistentMemory || 'Sem memória persistente ainda.'}
+Registros salvos:
+${savedRecords}
+
+Você pode executar ações reais na plataforma quando o usuário pedir. Se a intenção for modificar o site, devolva junto da resposta um JSON com action.
+Ações disponíveis:
+- create_tasks: cria tarefas pessoais.
+- create_task: cria uma tarefa pessoal.
+- create_event: cria evento/calendário.
+- create_ai_artifact: cria artefato na Central IA. Campos: type, title, owner, status, content.
+- create_management_work: cria tarefa no Centro de Gestão. Campos: title, owner, area, stage, priority, due.
+- create_note: salva nota da Sofi. Campos: title, content.
+- save_memory: salva memória estruturada. Campos livres.
+- web_search: pesquisa web. Campo: query.
+
+Formato de lote de tarefas:
 {"content":"✅ Vou criar as tarefas agora.","action":{"type":"create_tasks","data":{"tasks":[{"title":"...","priority":"high|medium|low","duration":30,"category":"trabalho|campanha|pessoal","dueDate":"YYYY-MM-DD","notes":"..."}]}}}
+
+Formato de artefato:
+{"content":"✅ Vou criar o artefato agora.","action":{"type":"create_ai_artifact","data":{"type":"Documento","title":"...","owner":"Sofi IA","status":"Rascunho","content":"..."}}}
 
 Histórico recente:
 ${trimmed.map(m => `${m.role === 'user' ? 'Usuário' : 'Sofi'}: ${m.content}`).join('\n\n')}

@@ -159,6 +159,15 @@ export default function WorldClassOperations() {
     loadManagement()
   }, [])
 
+  useEffect(() => {
+    const handleManagementUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<ManagementState>).detail
+      if (detail) setState({ ...fallbackState, ...detail })
+    }
+    window.addEventListener('management_state_updated', handleManagementUpdate as EventListener)
+    return () => window.removeEventListener('management_state_updated', handleManagementUpdate as EventListener)
+  }, [])
+
   function applyState(next: ManagementState) {
     const hydrated = { ...fallbackState, ...next }
     setState(hydrated)

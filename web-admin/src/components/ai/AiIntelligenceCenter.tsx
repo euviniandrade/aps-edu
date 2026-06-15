@@ -25,6 +25,8 @@ type ProviderStatus = {
   configured: boolean
 }
 
+type CenterTab = 'operacao' | 'artefatos' | 'sobre'
+
 type AgentId = 'orquestradora' | 'scanner' | 'agenda' | 'documentos' | 'matriculas' | 'financeiro' | 'pessoas' | 'estoque' | 'qualidade' | 'automacao'
 
 type Agent = {
@@ -249,6 +251,7 @@ function openSofi(prompt: string) {
 }
 
 export default function AiIntelligenceCenter() {
+  const [activeTab, setActiveTab] = useState<CenterTab>('operacao')
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [selectedAgentId, setSelectedAgentId] = useState<AgentId>('orquestradora')
   const [selectedWorkflow, setSelectedWorkflow] = useState(WORKFLOWS[0].id)
@@ -288,6 +291,16 @@ export default function AiIntelligenceCenter() {
       setArtifacts([])
       setLogs([])
     }
+  }, [])
+
+  useEffect(() => {
+    const handleArtifactsUpdated = () => {
+      try {
+        setArtifacts(JSON.parse(localStorage.getItem(ARTIFACT_STORAGE_KEY) || '[]'))
+      } catch {}
+    }
+    window.addEventListener('ai_artifacts_updated', handleArtifactsUpdated)
+    return () => window.removeEventListener('ai_artifacts_updated', handleArtifactsUpdated)
   }, [])
 
   useEffect(() => {
@@ -451,7 +464,20 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-2 rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-2 md:grid-cols-3">
+        {[
+          { id: 'operacao', label: 'Operacao com IA', detail: 'Agentes, ferramentas e scanner' },
+          { id: 'artefatos', label: 'Artefatos e logs', detail: 'Tudo que foi criado e auditado' },
+          { id: 'sobre', label: 'Sobre a ferramenta', detail: 'Provedores, integracoes e status' },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as CenterTab)} className="rounded-2xl p-4 text-left transition" style={{ background: activeTab === tab.id ? 'rgba(248,163,3,0.14)' : 'transparent', border: activeTab === tab.id ? '1px solid rgba(248,163,3,0.35)' : '1px solid transparent' }}>
+            <p className="text-sm font-black text-white">{tab.label}</p>
+            <p className="mt-1 text-xs text-white/40">{tab.detail}</p>
+          </button>
+        ))}
+      </section>
+
+      {activeTab === 'sobre' && <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {providers.map(provider => (
           <Card key={provider.id} className="p-4">
             <div className="flex items-start justify-between gap-3">
@@ -463,11 +489,15 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
                 {provider.configured ? 'Conectado' : 'Configurar'}
               </span>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => { setSelectedProviderId(provider.id); setNotice(`${provider.name} selecionado como provedor de trabalho.`) }} className="rounded-2xl bg-white/[0.06] px-3 py-2 text-xs font-black text-white">Usar provedor</button>
+              <button onClick={() => openSofi(`Explique como usar ${provider.name} na APS EDU e quais tarefas ele deve executar dentro da plataforma.`)} className="rounded-2xl border border-white/10 px-3 py-2 text-xs font-black text-white/70">Perguntar a Sofi</button>
+            </div>
           </Card>
         ))}
-      </section>
+      </section>}
 
-      <Card className="p-5 lg:p-6">
+      {activeTab === 'operacao' && <Card className="p-5 lg:p-6">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#A78BFA]">Roteador multi-IA</p>
@@ -479,9 +509,9 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
             {providers.filter(provider => provider.configured).map(provider => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
           </select>
         </div>
-      </Card>
+      </Card>}
 
-      <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      {activeTab === 'operacao' && <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Card className="overflow-hidden">
           <div className="border-b border-white/10 p-5">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#29ABE2]">Familia de agentes</p>
@@ -573,9 +603,9 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
             </div>
           </Card>
         </div>
-      </section>
+      </section>}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {activeTab === 'operacao' && <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="p-5 lg:p-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -611,9 +641,9 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
             ))}
           </div>
         </Card>
-      </section>
+      </section>}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {activeTab === 'sobre' && <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {INTEGRATIONS.map(item => {
           const Icon = item.icon
           return (
@@ -629,9 +659,9 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
             </Card>
           )
         })}
-      </section>
+      </section>}
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {(activeTab === 'operacao' || activeTab === 'artefatos') && <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="p-5 lg:p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -674,9 +704,9 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
             ))}
           </div>
         </Card>
-      </section>
+      </section>}
 
-      <Card className="p-5 lg:p-6">
+      {(activeTab === 'operacao' || activeTab === 'artefatos') && <Card className="p-5 lg:p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#F8A303]">Saida da Sofi</p>
@@ -688,7 +718,7 @@ Entregue um artefato operacional pronto para uso, em portugues do Brasil, com:
         <div className="mt-5 min-h-48 whitespace-pre-wrap rounded-3xl border border-white/10 bg-black/20 p-5 text-sm leading-7 text-white/72">
           {busy ? 'Sofi esta trabalhando...' : output || 'Escolha um agente, rode um scanner ou gere um playbook para ver o resultado aqui.'}
         </div>
-      </Card>
+      </Card>}
     </div>
   )
 }
