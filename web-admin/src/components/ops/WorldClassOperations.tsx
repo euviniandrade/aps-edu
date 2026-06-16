@@ -4,21 +4,20 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '@/lib/api'
 import {
   AcademicCapIcon,
-  BanknotesIcon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
-  CheckCircleIcon,
   ClipboardDocumentListIcon,
   ClockIcon,
   CubeIcon,
   EnvelopeIcon,
+  FolderOpenIcon,
   PlusIcon,
   ShieldCheckIcon,
   SparklesIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
-type HubTab = 'agenda' | 'escola' | 'pessoas'
+type HubTab = 'centro' | 'trabalho' | 'escola' | 'pessoas'
 type Priority = 'Alta' | 'Media' | 'Baixa'
 type WorkItem = { id: string; title: string; owner: string; area: string; stage: string; priority: Priority; due: string }
 type Admission = { id: string; family: string; student: string; stage: string; value: number; next: string }
@@ -69,12 +68,16 @@ type ManagementState = {
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const MANAGEMENT_CACHE_KEY = 'aps_edu_management_state_v2'
+const stageOrder = ['Novo', 'Planejado', 'Em andamento', 'Aguardando aprovação', 'Em revisão', 'Concluído']
+const admissionStages = ['Contato inicial', 'Visita pedagógica', 'Proposta enviada', 'Documentação', 'Matriculado']
 
 const fallbackState: ManagementState = {
   work: [
     { id: 'T-1024', title: 'Fechar roteiro de matrículas 2026', owner: 'Secretaria', area: 'Escola', stage: 'Em andamento', priority: 'Alta', due: 'Hoje' },
     { id: 'T-1025', title: 'Revisar compras de tecnologia', owner: 'Operação', area: 'Ativos', stage: 'Aguardando aprovação', priority: 'Alta', due: 'Amanhã' },
     { id: 'T-1026', title: 'Preparar treinamento de coordenadores', owner: 'Pessoas', area: 'Treinamento', stage: 'Planejado', priority: 'Media', due: '17/06' },
+    { id: 'T-1027', title: 'Atualizar política de atendimento familiar', owner: 'Direção', area: 'Centro', stage: 'Novo', priority: 'Media', due: 'Esta semana' },
+    { id: 'T-1028', title: 'Concluir relatório mensal de desempenho', owner: 'Gestão', area: 'Projetos', stage: 'Em revisão', priority: 'Alta', due: '18/06' },
   ],
   admissions: [
     { id: 'MAT-2041', family: 'Família Silva', student: 'Pedro Silva - 6º ano', stage: 'Visita pedagógica', value: 1850, next: 'Confirmar presença da família' },
@@ -105,14 +108,12 @@ const fallbackState: ManagementState = {
 }
 
 const agendaBase = [
-  { time: '08:30', title: 'Abertura e prioridades do dia', area: 'Comando', color: '#F8A303' },
-  { time: '09:30', title: 'Famílias em matrícula e visitas', area: 'Escola', color: '#29ABE2' },
+  { time: '08:30', title: 'Abertura e prioridades do dia', area: 'Centro', color: '#F8A303' },
+  { time: '09:30', title: 'Famílias em matrícula e visitas', area: 'Gestão escolar', color: '#29ABE2' },
   { time: '11:00', title: 'Despachos financeiros pendentes', area: 'Financeiro', color: '#4A9EFF' },
   { time: '14:00', title: 'Compras, estoque e patrimônio', area: 'Operação', color: '#E07B39' },
   { time: '16:00', title: 'Pessoas, treinamento e acompanhamento', area: 'Pessoas', color: '#8B5CF6' },
 ]
-
-const stageOrder = ['Novo', 'Contato inicial', 'Visita pedagógica', 'Proposta enviada', 'Documentação', 'Matriculado']
 
 function Surface({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <section className={`rounded-[1.2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/20 ${className}`}>{children}</section>
@@ -150,13 +151,13 @@ function hydratedState(raw: Partial<ManagementState>) {
 }
 
 export default function WorldClassOperations() {
-  const [tab, setTab] = useState<HubTab>('agenda')
+  const [tab, setTab] = useState<HubTab>('centro')
   const [state, setState] = useState<ManagementState>(fallbackState)
   const [source, setSource] = useState<'api' | 'local'>('local')
   const [loading, setLoading] = useState(true)
   const [quickTitle, setQuickTitle] = useState('')
   const [quickOwner, setQuickOwner] = useState('Vinicius')
-  const [chatPrompt, setChatPrompt] = useState('Analise minha agenda, tarefas, escola, financeiro, estoque e pessoas. Diga o que eu preciso resolver agora.')
+  const [chatPrompt, setChatPrompt] = useState('Analise agenda, tarefas, projetos, escola, financeiro, estoque e pessoas. Diga o que precisa acontecer agora.')
 
   const totals = useMemo(() => {
     const revenue = state.finance.filter(item => item.type === 'Receita').reduce((sum, item) => sum + item.amount, 0)
@@ -169,7 +170,7 @@ export default function WorldClassOperations() {
 
   const sofiContext = useMemo(() => {
     const base = {
-      tarefas: state.work.map(item => ({ titulo: item.title, dono: item.owner, area: item.area, status: item.stage, prioridade: item.priority, prazo: item.due })),
+      tarefas: state.work,
       matriculas: state.admissions,
       financeiro: state.finance,
       pessoas: state.people,
@@ -177,9 +178,10 @@ export default function WorldClassOperations() {
       documentos: state.knowledge,
       automacoes: state.automations,
     }
-    if (tab === 'agenda') return `Sofi, organize minha agenda executiva, encontre gargalos, sugira blocos de foco e execute um plano do dia. Contexto: ${JSON.stringify(base)}`
-    if (tab === 'escola') return `Sofi, atue como diretora escolar, controller financeiro e gestora de estoque. Analise matrículas, receitas, despesas, compras, documentos e aprovações. Contexto: ${JSON.stringify(base)}`
-    return `Sofi, atue como gestora de pessoas. Avalie desempenho, clima, sobrecarga, avaliações, treinamentos e próximas conversas individuais. Contexto: ${JSON.stringify(base)}`
+    if (tab === 'centro') return `Sofi, atue como chefe de gabinete operacional. Organize agenda, prioridades, tarefas e decisões do dia. Contexto: ${JSON.stringify(base)}`
+    if (tab === 'trabalho') return `Sofi, atue como PMO executivo. Organize tarefas, projetos, etapas, riscos, dependências e responsáveis. Contexto: ${JSON.stringify(base)}`
+    if (tab === 'escola') return `Sofi, atue como diretora escolar e controller financeiro. Analise matrículas, receitas, despesas, documentos e estoque. Contexto: ${JSON.stringify(base)}`
+    return `Sofi, atue como gestora de pessoas. Analise desempenho, carga, avaliações, riscos, desenvolvimento e liderança. Contexto: ${JSON.stringify(base)}`
   }, [state, tab])
 
   function readLocalState() {
@@ -238,7 +240,13 @@ export default function WorldClassOperations() {
   async function addQuickWork(e: React.FormEvent) {
     e.preventDefault()
     if (!quickTitle.trim()) return
-    const payload = { title: quickTitle, owner: quickOwner || 'Sofi IA', area: tab === 'agenda' ? 'Comando' : tab === 'escola' ? 'Escola' : 'Pessoas', priority: 'Alta' as Priority, due: 'Hoje' }
+    const areaMap: Record<HubTab, string> = {
+      centro: 'Centro',
+      trabalho: 'Projetos',
+      escola: 'Escola',
+      pessoas: 'Pessoas',
+    }
+    const payload = { title: quickTitle, owner: quickOwner || 'Sofi IA', area: areaMap[tab], priority: 'Alta' as Priority, due: 'Hoje' }
     setQuickTitle('')
     try {
       const res = await api.post('/management/work', payload)
@@ -253,7 +261,13 @@ export default function WorldClassOperations() {
       const res = await api.patch(`/management/work/${id}/advance`)
       applyState(res.data)
     } catch {
-      const map: Record<string, string> = { Novo: 'Planejado', Planejado: 'Em andamento', 'Em andamento': 'Em revisão', 'Aguardando aprovação': 'Em andamento', 'Em revisão': 'Concluído' }
+      const map: Record<string, string> = {
+        Novo: 'Planejado',
+        Planejado: 'Em andamento',
+        'Em andamento': 'Em revisão',
+        'Aguardando aprovação': 'Em andamento',
+        'Em revisão': 'Concluído',
+      }
       updateLocal(prev => ({ ...prev, work: prev.work.map(item => item.id === id ? { ...item, stage: map[item.stage] || 'Em andamento' } : item) }))
     }
   }
@@ -281,11 +295,18 @@ export default function WorldClassOperations() {
       const res = await api.patch(`/management/assets/${id}/adjust`, { delta })
       applyState(res.data)
     } catch {
-      updateLocal(prev => ({ ...prev, assets: prev.assets.map(item => {
-        const qty = Math.max(0, item.qty + delta)
-        return item.id === id ? { ...item, qty, status: qty <= item.min ? 'Repor' : 'Ok', lastMove: 'Agora' } : item
-      }) }))
+      updateLocal(prev => ({
+        ...prev,
+        assets: prev.assets.map(item => {
+          const qty = Math.max(0, item.qty + delta)
+          return item.id === id ? { ...item, qty, status: qty <= item.min ? 'Repor' : 'Ok', lastMove: 'Agora' } : item
+        }),
+      }))
     }
+  }
+
+  function addKnowledge(type: string) {
+    updateLocal(prev => ({ ...prev, knowledge: [{ id: `D-${Date.now()}`, title: type === 'E-mail' ? 'Rascunho executivo criado pela Sofi' : 'Documento operacional em revisão', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev.knowledge] }))
   }
 
   function createAssetPurchase(asset: Asset) {
@@ -295,15 +316,10 @@ export default function WorldClassOperations() {
       work: [{ id: `T-${Date.now()}`, title: `Comprar ${missing + 10} un. de ${asset.name}`, owner: asset.owner || 'Operação', area: 'Ativos', stage: 'Aguardando aprovação', priority: 'Alta', due: 'Hoje' }, ...prev.work],
       finance: [{ id: `F-${Date.now()}`, label: `Reposição: ${asset.name}`, type: 'Despesa', amount: (asset.unitCost || 100) * (missing + 10), status: 'A aprovar', due: 'Hoje' }, ...prev.finance],
     }))
-    openSofi(`Sofi, prepare a justificativa de compra para ${asset.name}. Quantidade atual ${asset.qty}, mínimo ${asset.min}, fornecedor ${asset.supplier}.`)
   }
 
   function createPeopleAction(person: Person, title: string) {
     updateLocal(prev => ({ ...prev, work: [{ id: `T-${Date.now()}`, title, owner: person.name, area: 'Pessoas', stage: 'Novo', priority: person.workload && person.workload > 84 ? 'Alta' : 'Media', due: person.nextReview }, ...prev.work] }))
-  }
-
-  function addKnowledge(type: string) {
-    updateLocal(prev => ({ ...prev, knowledge: [{ id: `D-${Date.now()}`, title: type === 'E-mail' ? 'Rascunho executivo criado pela Sofi' : 'Documento operacional em revisão', type, owner: 'Sofi IA', status: 'Rascunho' }, ...prev.knowledge] }))
   }
 
   const agendaEvents = useMemo(() => [
@@ -314,18 +330,19 @@ export default function WorldClassOperations() {
   return (
     <div className="space-y-5">
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Hoje" value={state.work.filter(item => item.due === 'Hoje').length.toString()} detail="tarefas na agenda" color="#F8A303" />
+        <MetricCard label="Hoje" value={state.work.filter(item => item.due === 'Hoje').length.toString()} detail="tarefas do dia" color="#F8A303" />
         <MetricCard label="Prioridade" value={totals.highPriority.toString()} detail="itens críticos" color="#FF4757" />
         <MetricCard label="Matrículas" value={money.format(state.admissions.reduce((sum, item) => sum + item.value, 0))} detail={`${state.admissions.length} famílias`} color="#29ABE2" />
         <MetricCard label="Estoque" value={totals.criticalAssets.toString()} detail="itens em atenção" color="#E07B39" />
         <MetricCard label="Pessoas" value={`${totals.peoplePulse}%`} detail="pulso médio" color="#8B5CF6" />
       </section>
 
-      <section className="grid gap-2 rounded-[1.2rem] border border-white/10 bg-white/[0.035] p-1.5 md:grid-cols-3">
+      <section className="grid gap-2 rounded-[1.2rem] border border-white/10 bg-white/[0.035] p-1.5 md:grid-cols-4">
         {[
-          { id: 'agenda', label: 'Agenda e comando', icon: CalendarDaysIcon, color: '#F8A303' },
-          { id: 'escola', label: 'Escola, financeiro e estoque', icon: AcademicCapIcon, color: '#29ABE2' },
-          { id: 'pessoas', label: 'Pessoas e desempenho', icon: UserGroupIcon, color: '#8B5CF6' },
+          { id: 'centro', label: 'Centro', icon: CalendarDaysIcon, color: '#F8A303' },
+          { id: 'trabalho', label: 'Tarefas e projetos', icon: FolderOpenIcon, color: '#0ABD78' },
+          { id: 'escola', label: 'Escola e financeiro', icon: AcademicCapIcon, color: '#29ABE2' },
+          { id: 'pessoas', label: 'Pessoas', icon: UserGroupIcon, color: '#8B5CF6' },
         ].map(item => {
           const Icon = item.icon
           const active = tab === item.id
@@ -344,8 +361,8 @@ export default function WorldClassOperations() {
             <SparklesIcon className="h-5 w-5 text-[#F8A303]" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-black text-white">Sofi opera esta tela inteira</p>
-            <p className="truncate text-xs font-semibold text-white/42">Cada botão contextual abre a conversa com dados reais do módulo.</p>
+            <p className="text-sm font-black text-white">Sofi integrada em todo o Centro</p>
+            <p className="truncate text-xs font-semibold text-white/42">Agenda, tarefas, projetos, escola, financeiro, estoque e pessoas no mesmo contexto.</p>
           </div>
         </div>
         <button onClick={() => openSofi(sofiContext)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-sm font-black text-black">Abrir Sofi com contexto</button>
@@ -357,7 +374,8 @@ export default function WorldClassOperations() {
         <button className="flex h-11 items-center justify-center rounded-2xl bg-[#F8A303] text-black"><PlusIcon className="h-5 w-5" /></button>
       </form>
 
-      {tab === 'agenda' && <AgendaWorkspace state={state} events={agendaEvents} chatPrompt={chatPrompt} setChatPrompt={setChatPrompt} onAdvance={advanceWork} loading={loading} source={source} onAddKnowledge={addKnowledge} />}
+      {tab === 'centro' && <CenterWorkspace state={state} events={agendaEvents} chatPrompt={chatPrompt} setChatPrompt={setChatPrompt} onAdvance={advanceWork} loading={loading} source={source} onAddKnowledge={addKnowledge} />}
+      {tab === 'trabalho' && <WorkProjectsWorkspace work={state.work} onAdvance={advanceWork} />}
       {tab === 'escola' && <SchoolFinanceWorkspace state={state} totals={totals} onAddAdmission={addAdmission} onAddFinance={addFinance} onAdjustAsset={adjustAsset} onCreatePurchase={createAssetPurchase} onAddKnowledge={addKnowledge} />}
       {tab === 'pessoas' && <PeopleWorkspace people={state.people} work={state.work.filter(item => item.area === 'Pessoas' || item.area === 'Treinamento')} onAdvance={advanceWork} onCreateAction={createPeopleAction} />}
     </div>
@@ -389,7 +407,7 @@ function SectionTitle({ icon: Icon, eyebrow, title, action }: { icon: typeof Cal
   )
 }
 
-function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, loading, source, onAddKnowledge }: { state: ManagementState; events: typeof agendaBase; chatPrompt: string; setChatPrompt: (value: string) => void; onAdvance: (id: string) => void; loading: boolean; source: string; onAddKnowledge: (type: string) => void }) {
+function CenterWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, loading, source, onAddKnowledge }: { state: ManagementState; events: typeof agendaBase; chatPrompt: string; setChatPrompt: (value: string) => void; onAdvance: (id: string) => void; loading: boolean; source: string; onAddKnowledge: (type: string) => void }) {
   const today = new Date()
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(today)
@@ -400,7 +418,7 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
   return (
     <section className="grid gap-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
       <Surface className="overflow-hidden">
-        <SectionTitle icon={CalendarDaysIcon} eyebrow="Agenda completa" title={today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} action={<span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-black text-white/45">{loading ? 'Sincronizando...' : source === 'api' ? 'API conectada' : 'Modo local'}</span>} />
+        <SectionTitle icon={CalendarDaysIcon} eyebrow="Centro operacional" title={today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} action={<span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-black text-white/45">{loading ? 'Sincronizando...' : source === 'api' ? 'API conectada' : 'Modo local'}</span>} />
         <div className="grid gap-px bg-white/10 lg:grid-cols-7">
           {days.map(day => (
             <div key={day.toISOString()} className="min-h-28 bg-[#10121A] p-3">
@@ -424,8 +442,8 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
             ))}
           </div>
           <div className="space-y-3">
-            <CommandTile icon={ClockIcon} label="Foco protegido" value="10:00 - 11:00" detail="sem reuniões, resolver aprovações" />
-            <CommandTile icon={ShieldCheckIcon} label="Risco do dia" value="Estoque crítico" detail="2 itens abaixo do mínimo" />
+            <CommandTile icon={ClockIcon} label="Foco protegido" value="10:00 - 11:00" detail="resolver aprovações e pendências críticas" />
+            <CommandTile icon={ShieldCheckIcon} label="Risco do dia" value="Estoque crítico" detail="2 itens abaixo do mínimo operacional" />
             <CommandTile icon={EnvelopeIcon} label="Comunicações" value="3 rascunhos" detail="famílias, equipe e financeiro" />
           </div>
         </div>
@@ -437,7 +455,7 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
             <div className="rounded-2xl border border-[#F8A303]/30 bg-[#F8A303]/12 p-3"><SparklesIcon className="h-6 w-6 text-[#F8A303]" /></div>
             <div>
               <h3 className="font-black text-white">Chat Sofi</h3>
-              <p className="text-xs font-semibold text-white/38">Comando rápido do dia</p>
+              <p className="text-xs font-semibold text-white/38">Comando executivo do dia</p>
             </div>
           </div>
           <textarea value={chatPrompt} onChange={event => setChatPrompt(event.target.value)} className="mt-4 min-h-36 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none" />
@@ -448,9 +466,77 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
         </Surface>
 
         <Surface className="overflow-hidden">
-          <SectionTitle icon={ClipboardDocumentListIcon} title="Tarefas de hoje" />
+          <SectionTitle icon={ClipboardDocumentListIcon} title="Tarefas do Centro" />
           <div className="divide-y divide-white/10">
             {state.work.slice(0, 6).map(item => <TaskRow key={item.id} item={item} onAdvance={onAdvance} />)}
+          </div>
+        </Surface>
+      </div>
+    </section>
+  )
+}
+
+function WorkProjectsWorkspace({ work, onAdvance }: { work: WorkItem[]; onAdvance: (id: string) => void }) {
+  const columns = stageOrder.map(stage => ({ stage, items: work.filter(item => item.stage === stage) }))
+  const highPriority = work.filter(item => item.priority === 'Alta')
+
+  return (
+    <section className="space-y-5">
+      <div className="grid gap-3 md:grid-cols-4">
+        <MetricCard label="Backlog" value={work.filter(item => item.stage === 'Novo').length.toString()} detail="novas demandas" color="#F8A303" />
+        <MetricCard label="Em progresso" value={work.filter(item => item.stage === 'Em andamento').length.toString()} detail="execução ativa" color="#0ABD78" />
+        <MetricCard label="Aprovação" value={work.filter(item => item.stage === 'Aguardando aprovação').length.toString()} detail="fila executiva" color="#FF4757" />
+        <MetricCard label="Projetos" value={new Set(work.map(item => item.area)).size.toString()} detail="frentes ativas" color="#29ABE2" />
+      </div>
+
+      <Surface className="overflow-hidden">
+        <SectionTitle icon={FolderOpenIcon} eyebrow="PMO" title="Tarefas e projetos dentro do Centro" action={<button onClick={() => openSofi(`Sofi, priorize esta fila de trabalho: ${JSON.stringify(work)}`)} className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-sm font-black text-black">Priorizar com Sofi</button>} />
+        <div className="grid gap-4 p-5 xl:grid-cols-3 2xl:grid-cols-6">
+          {columns.map(column => (
+            <div key={column.stage} className="min-h-72 rounded-3xl border border-white/10 bg-black/10 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-black text-white">{column.stage}</h3>
+                <span className="rounded-full bg-white/[0.07] px-2 py-1 text-xs font-black text-white/55">{column.items.length}</span>
+              </div>
+              <div className="mt-3 space-y-3">
+                {column.items.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-4 text-center text-xs font-bold text-white/30">Sem itens</p>}
+                {column.items.map(item => (
+                  <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="font-black text-white">{item.title}</p>
+                    <p className="mt-1 text-xs text-white/38">{item.owner} - {item.area}</p>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <PriorityBadge value={item.priority} />
+                      <button onClick={() => onAdvance(item.id)} className="rounded-full bg-[#F8A303] px-3 py-1 text-xs font-black text-black">Avançar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Surface>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <Surface className="overflow-hidden">
+          <SectionTitle icon={ClipboardDocumentListIcon} title="Fila crítica" />
+          <div className="divide-y divide-white/10">
+            {highPriority.map(item => <TaskRow key={item.id} item={item} onAdvance={onAdvance} />)}
+          </div>
+        </Surface>
+        <Surface className="p-5">
+          <h3 className="font-black text-white">Projetos por área</h3>
+          <div className="mt-4 space-y-3">
+            {Array.from(new Set(work.map(item => item.area))).map(area => {
+              const count = work.filter(item => item.area === area).length
+              return (
+                <div key={area} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-black text-white">{area}</p>
+                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/55">{count} itens</span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </Surface>
       </div>
@@ -461,7 +547,7 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
 function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, onAdjustAsset, onCreatePurchase, onAddKnowledge }: { state: ManagementState; totals: { revenue: number; expense: number; balance: number; criticalAssets: number }; onAddAdmission: () => void; onAddFinance: (type: FinanceLine['type']) => void; onAdjustAsset: (id: string, delta: number) => void; onCreatePurchase: (asset: Asset) => void; onAddKnowledge: (type: string) => void }) {
   const [assetQuery, setAssetQuery] = useState('')
   const [assetFilter, setAssetFilter] = useState<'Todos' | 'Criticos' | 'Ok'>('Todos')
-  const pipeline = stageOrder.map(stage => ({ stage, items: state.admissions.filter(item => item.stage === stage) }))
+  const pipeline = admissionStages.map(stage => ({ stage, items: state.admissions.filter(item => item.stage === stage) }))
   const filteredAssets = state.assets.filter(item => {
     const haystack = `${item.name} ${item.category} ${item.location} ${item.supplier} ${item.owner}`.toLowerCase()
     const matchesQuery = haystack.includes(assetQuery.toLowerCase())
@@ -482,7 +568,7 @@ function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, o
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.15fr)_minmax(480px,0.85fr)]">
         <Surface className="overflow-hidden">
           <SectionTitle icon={AcademicCapIcon} eyebrow="CRM escolar" title="Matrículas e jornada da família" action={<button onClick={onAddAdmission} className="flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#29ABE2] px-4 text-sm font-black text-black"><PlusIcon className="h-4 w-4" /> Nova família</button>} />
-          <div className="grid gap-3 p-5 lg:grid-cols-3">
+          <div className="grid gap-3 p-5 lg:grid-cols-5">
             {pipeline.map(column => (
               <div key={column.stage} className="min-h-48 rounded-3xl border border-white/10 bg-black/10 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -490,7 +576,7 @@ function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, o
                   <span className="rounded-full bg-white/[0.07] px-2 py-1 text-xs font-black text-white/55">{column.items.length}</span>
                 </div>
                 <div className="mt-3 space-y-3">
-                  {column.items.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-4 text-center text-xs font-bold text-white/30">Sem famílias nesta etapa</p>}
+                  {column.items.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-4 text-center text-xs font-bold text-white/30">Sem famílias</p>}
                   {column.items.map(item => (
                     <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                       <p className="font-black text-white">{item.family}</p>
@@ -527,21 +613,29 @@ function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, o
               <button onClick={() => onAddKnowledge('Documento')} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-white">Novo</button>
             </div>
             <div className="mt-4 space-y-3">
-              {state.knowledge.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3"><div><p className="text-sm font-black text-white">{item.title}</p><p className="text-xs text-white/35">{item.type} - {item.owner}</p></div><span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/55">{item.status}</span></div>)}
+              {state.knowledge.map(item => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                  <div>
+                    <p className="text-sm font-black text-white">{item.title}</p>
+                    <p className="text-xs text-white/35">{item.type} - {item.owner}</p>
+                  </div>
+                  <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/55">{item.status}</span>
+                </div>
+              ))}
             </div>
           </Surface>
         </div>
       </div>
 
       <Surface className="overflow-hidden">
-        <SectionTitle icon={CubeIcon} eyebrow="Almoxarifado e patrimônio" title="Controle de estoque profissional" />
+        <SectionTitle icon={CubeIcon} eyebrow="Almoxarifado e patrimônio" title="Controle de estoque profissional" action={<button onClick={() => openSofi(`Sofi, audite este estoque e defina reposições: ${JSON.stringify(state.assets)}`)} className="h-10 rounded-2xl bg-[#E07B39] px-4 text-sm font-black text-black">Auditar com Sofi</button>} />
         <div className="grid gap-4 border-b border-white/10 p-5 xl:grid-cols-[minmax(260px,1fr)_360px]">
           <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_240px]">
             <Input value={assetQuery} onChange={event => setAssetQuery(event.target.value)} placeholder="Buscar item, local, fornecedor..." />
             <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
               {(['Todos', 'Criticos', 'Ok'] as const).map(item => (
                 <button key={item} onClick={() => setAssetFilter(item)} className="h-9 rounded-xl text-xs font-black transition" style={{ background: assetFilter === item ? '#E07B39' : 'transparent', color: assetFilter === item ? '#05070D' : 'rgba(255,255,255,0.55)' }}>
-                  {item === 'Criticos' ? 'CrÃ­ticos' : item}
+                  {item === 'Criticos' ? 'Críticos' : item}
                 </button>
               ))}
             </div>
@@ -552,6 +646,7 @@ function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, o
           {filteredAssets.map(item => <AssetCard key={item.id} item={item} onAdjustAsset={onAdjustAsset} onCreatePurchase={onCreatePurchase} />)}
         </div>
       </Surface>
+
       <InventoryBackOffice assets={state.assets} onCreatePurchase={onCreatePurchase} />
     </section>
   )
@@ -563,7 +658,7 @@ function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: 
   const average = Math.round(people.reduce((sum, item) => sum + item.pulse, 0) / Math.max(1, people.length))
   const overload = people.filter(item => (item.workload || 0) >= 84).length
   const filteredPeople = people.filter(item => {
-    const haystack = `${item.name} ${item.role} ${item.unit} ${item.training} ${item.strengths?.join(' ')}`.toLowerCase()
+    const haystack = `${item.name} ${item.role} ${item.unit} ${item.training} ${(item.strengths || []).join(' ')}`.toLowerCase()
     const matchesQuery = haystack.includes(peopleQuery.toLowerCase())
     const attention = item.pulse < 75 || (item.workload || 0) >= 84
     const high = (item.score || 0) >= 4.5 && item.pulse >= 80
@@ -582,13 +677,13 @@ function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: 
 
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <Surface className="overflow-hidden">
-          <SectionTitle icon={UserGroupIcon} eyebrow="Equipe APS" title="Profissionais, fotos, avaliação e desenvolvimento" />
+          <SectionTitle icon={UserGroupIcon} eyebrow="Equipe Sofi" title="Profissionais, fotos, avaliação e desenvolvimento" action={<button onClick={() => openSofi(`Sofi, gere um plano de desenvolvimento para esta equipe: ${JSON.stringify(people)}`)} className="h-10 rounded-2xl bg-[#8B5CF6] px-4 text-sm font-black text-white">Plano com Sofi</button>} />
           <div className="grid gap-3 border-b border-white/10 p-5 md:grid-cols-[minmax(220px,1fr)_360px]">
-            <Input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Buscar profissional, setor, competencia..." />
+            <Input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Buscar profissional, setor, competência..." />
             <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
               {(['Todos', 'Atencao', 'Alta performance'] as const).map(item => (
                 <button key={item} onClick={() => setPeopleFilter(item)} className="h-9 rounded-xl text-[11px] font-black transition" style={{ background: peopleFilter === item ? '#8B5CF6' : 'transparent', color: peopleFilter === item ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-                  {item === 'Atencao' ? 'AtenÃ§Ã£o' : item}
+                  {item === 'Atencao' ? 'Atenção' : item}
                 </button>
               ))}
             </div>
@@ -623,6 +718,7 @@ function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: 
           </Surface>
         </div>
       </div>
+
       <PeopleOperatingSystem people={people} onCreateAction={onCreateAction} />
     </section>
   )
@@ -663,7 +759,7 @@ function InventorySummary({ assets }: { assets: Asset[] }) {
   return (
     <div className="grid grid-cols-3 gap-2">
       <MiniStat label="Valor" value={money.format(totalValue)} />
-      <MiniStat label="Criticos" value={critical.toString()} />
+      <MiniStat label="Críticos" value={critical.toString()} />
       <MiniStat label="Categorias" value={categories.toString()} />
     </div>
   )
@@ -671,40 +767,34 @@ function InventorySummary({ assets }: { assets: Asset[] }) {
 
 function InventoryBackOffice({ assets, onCreatePurchase }: { assets: Asset[]; onCreatePurchase: (asset: Asset) => void }) {
   const criticalAssets = assets.filter(item => item.qty <= item.min)
-  const movements = assets.map(item => ({
-    id: item.id,
-    label: item.name,
-    description: `${item.location} - ${item.lastMove || 'sem movimento'}`,
-    delta: item.qty <= item.min ? 'Reposicao pendente' : 'Saldo saudavel',
-  }))
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
       <Surface className="overflow-hidden">
-        <SectionTitle icon={ClipboardDocumentListIcon} eyebrow="Compras e auditoria" title="Fila operacional de reposicao" />
+        <SectionTitle icon={ClipboardDocumentListIcon} eyebrow="Compras e auditoria" title="Fila operacional de reposição" />
         <div className="divide-y divide-white/10">
-          {criticalAssets.length === 0 && <p className="p-5 text-sm font-semibold text-white/42">Nenhum item abaixo do minimo.</p>}
+          {criticalAssets.length === 0 && <p className="p-5 text-sm font-semibold text-white/42">Nenhum item abaixo do mínimo.</p>}
           {criticalAssets.map(item => (
             <div key={item.id} className="grid gap-3 p-5 lg:grid-cols-[1fr_160px_160px] lg:items-center">
               <div>
                 <p className="font-black text-white">{item.name}</p>
                 <p className="mt-1 text-sm text-white/42">{item.nextAction}</p>
               </div>
-              <div className="text-sm font-bold text-white/55">Faltam {Math.max(item.min - item.qty, 0)} para minimo</div>
+              <div className="text-sm font-bold text-white/55">Faltam {Math.max(item.min - item.qty, 0)} para o mínimo</div>
               <button onClick={() => onCreatePurchase(item)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Gerar compra</button>
             </div>
           ))}
         </div>
       </Surface>
       <Surface className="p-5">
-        <h3 className="font-black text-white">Movimentacoes recentes</h3>
+        <h3 className="font-black text-white">Movimentações recentes</h3>
         <div className="mt-4 space-y-3">
-          {movements.map(item => (
+          {assets.map(item => (
             <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-white">{item.label}</p>
-                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.delta}</span>
+                <p className="text-sm font-black text-white">{item.name}</p>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.status}</span>
               </div>
-              <p className="mt-1 text-xs text-white/38">{item.description}</p>
+              <p className="mt-1 text-xs text-white/38">{item.location} - última movimentação em {item.lastMove}</p>
             </div>
           ))}
         </div>
@@ -750,11 +840,11 @@ function PeopleOperatingSystem({ people, onCreateAction }: { people: Person[]; o
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
       <Surface className="overflow-hidden">
-        <SectionTitle icon={UserGroupIcon} eyebrow="RH operacional" title="Diretorio, avaliacao e proxima conversa" />
+        <SectionTitle icon={UserGroupIcon} eyebrow="RH operacional" title="Diretório, avaliação e próxima conversa" />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
             <thead className="bg-white/[0.035] text-left text-xs uppercase tracking-[0.12em] text-white/34">
-              <tr><th className="px-5 py-3">Profissional</th><th className="px-5 py-3">Setor</th><th className="px-5 py-3">Avaliacao</th><th className="px-5 py-3">Carga</th><th className="px-5 py-3">Proxima acao</th></tr>
+              <tr><th className="px-5 py-3">Profissional</th><th className="px-5 py-3">Setor</th><th className="px-5 py-3">Avaliação</th><th className="px-5 py-3">Carga</th><th className="px-5 py-3">Próxima ação</th></tr>
             </thead>
             <tbody>
               {people.map(item => (
@@ -771,7 +861,7 @@ function PeopleOperatingSystem({ people, onCreateAction }: { people: Person[]; o
         </div>
       </Surface>
       <Surface className="p-5">
-        <h3 className="font-black text-white">Fila de lideranca</h3>
+        <h3 className="font-black text-white">Fila de liderança</h3>
         <div className="mt-4 space-y-3">
           {reviewQueue.map(item => (
             <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
@@ -814,7 +904,7 @@ function PersonCard({ person, onCreateAction }: { person: Person; onCreateAction
         <Progress label="Carga de trabalho" value={workload} color={workload > 84 ? '#FF4757' : '#F8A303'} />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {person.strengths?.map(item => <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/55">{item}</span>)}
+        {(person.strengths || []).map(item => <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/55">{item}</span>)}
       </div>
       <div className="mt-4 rounded-2xl bg-white/[0.04] p-3">
         <p className="text-xs font-black uppercase tracking-[0.12em] text-white/35">Próxima ação</p>

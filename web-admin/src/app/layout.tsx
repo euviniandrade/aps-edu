@@ -17,13 +17,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Educação Adventista - Departamento de Educação APS',
-  description: 'Painel administrativo | Associação Paulista Sul - Educação Adventista',
+  title: 'Gestão Educacional - Sofi',
+  description: 'Centro operacional, escolar, financeiro e de pessoas com Sofi IA integrada.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'APS EDU',
+    title: 'Gestão Educacional - Sofi',
     startupImage: ['/aps30-logo.png'],
   },
   icons: {
@@ -45,10 +45,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <head>
-        <meta name="application-name" content="APS EDU" />
+        <meta name="application-name" content="Gestão Educacional - Sofi" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="APS EDU" />
+        <meta name="apple-mobile-web-app-title" content="Gestão Educacional - Sofi" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#F8A303" />
         <meta name="msapplication-tap-highlight" content="no" />

@@ -1,7 +1,7 @@
 {
-  "name": "APS EDU — Educação Adventista",
-  "short_name": "APS EDU",
-  "description": "Painel administrativo da Rede Adventista de Educação — Associação Paulista Sul",
+  "name": "Gestão Educacional - Sofi",
+  "short_name": "Sofi",
+  "description": "Plataforma de gestão educacional com centro operacional, escolar, financeiro, estoque e pessoas.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#06070F",

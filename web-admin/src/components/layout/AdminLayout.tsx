@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Cookies from 'js-cookie'
 import CommandPalette from '@/components/ui/CommandPalette'
 import {
-  HomeIcon, UsersIcon, CheckCircleIcon, CalendarDaysIcon,
+  HomeIcon, UsersIcon, CalendarDaysIcon,
   MegaphoneIcon, TrophyIcon, ChartBarIcon,
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
@@ -15,7 +15,7 @@ import {
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
   HomeIcon as HomeIconSolid, UsersIcon as UsersIconSolid,
-  CheckCircleIcon as CheckIconSolid, CalendarDaysIcon as CalendarIconSolid,
+  CalendarDaysIcon as CalendarIconSolid,
   MegaphoneIcon as MegaphoneIconSolid, TrophyIcon as TrophyIconSolid,
   ChartBarIcon as ChartIconSolid,
   ChatBubbleLeftEllipsisIcon as ChatIconSolid,
@@ -24,7 +24,7 @@ import {
   ArchiveBoxIcon as ArchiveBoxIconSolid,
 } from '@heroicons/react/24/solid'
 
-// Nav principal enxuto; telas específicas ficam acessíveis pelo Centro de Gestão e pela busca.
+// Nav principal enxuto; fluxos detalhados vivem dentro do Centro e da busca.
 const navSections = [
   {
     label: 'Centro',
@@ -36,7 +36,6 @@ const navSections = [
   {
     label: 'Operação',
     items: [
-      { href: '/tasks',         label: 'Tarefas',      icon: CheckCircleIcon,            iconSolid: CheckIconSolid,     color: '#0ABD78', roles: [] },
       { href: '/estoque',       label: 'Estoque',      icon: ArchiveBoxIcon,             iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
       { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
     ],
@@ -118,7 +117,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
     { key: 'Esc',          desc: 'Fechar modal / painel' },
     { key: 'G + D',        desc: 'Ir para Dashboard' },
     { key: 'G + G',        desc: 'Ir para Centro de Gestão' },
-    { key: 'G + T',        desc: 'Ir para Tarefas' },
+    { key: 'G + T',        desc: 'Ir para Central de Tarefas' },
     { key: 'G + E',        desc: 'Ir para Eventos' },
     { key: 'G + N',        desc: 'Ir para Notificações' },
     { key: 'G + A',        desc: 'Ir para Analytics IA' },
@@ -277,13 +276,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="min-w-0">
             <p className="text-white font-bold text-sm leading-tight truncate">
-              Educação Adventista
+              Gestão Educacional
             </p>
             <p
               className="text-[10px] font-semibold tracking-[0.16em] truncate mt-0.5 uppercase"
               style={{ color: 'var(--gold)', opacity: 0.8 }}
             >
-              Associação Paulista Sul
+              Sofi
             </p>
           </div>
         </div>
@@ -455,7 +454,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className="text-xs hidden sm:block"
                 style={{ color: 'rgba(255,255,255,0.25)' }}
               >
-                Educação Adventista
+                Gestão Educacional - Sofi
               </span>
               {currentPage && (
                 <>
@@ -575,7 +574,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {[
           { href: '/gestao',       icon: 'G', label: 'Centro' },
           { href: '/meu-dia',      icon: 'D', label: 'Dia' },
-          { href: '/tasks',        icon: 'T', label: 'Tarefas' },
           { href: '/estoque',      icon: 'E', label: 'Estoque' },
           { href: '/reports',      icon: 'R', label: 'Relat.' },
         ].map(item => {

@@ -14,10 +14,10 @@ interface Command {
 }
 
 const NAV_COMMANDS = [
-  { id: 'go-gestao',        label: 'Ir para Centro de Gestão', icon: 'G', path: '/gestao',        keywords: ['gestao', 'suite', 'plataforma', 'cockpit', 'operacao', 'educacao', 'minha area', 'sofi pessoal', 'central'] },
-  { id: 'go-suite-tools',   label: 'Ferramentas de Gestão', icon: 'F', path: '/gestao',        keywords: ['crm', 'matricula', 'financeiro', 'aprovacao', 'aprovacoes', 'formulario', 'okr', 'meta', 'documento', 'patrimonio', 'qr code', 'contrato', 'lead', 'funil'] },
+  { id: 'go-gestao',        label: 'Ir para Centro Sofi', icon: 'G', path: '/gestao',        keywords: ['gestao', 'suite', 'plataforma', 'cockpit', 'operacao', 'educacao', 'central', 'sofi'] },
+  { id: 'go-suite-tools',   label: 'Ferramentas do Centro', icon: 'F', path: '/gestao',        keywords: ['crm', 'matricula', 'financeiro', 'aprovacao', 'aprovacoes', 'formulario', 'okr', 'meta', 'documento', 'patrimonio', 'qr code', 'contrato', 'lead', 'funil', 'tarefas', 'projetos'] },
   { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: 'D', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
-  { id: 'go-tasks',         label: 'Ir para Tarefas',       icon: 'T', path: '/tasks',         keywords: ['task', 'tarefa'] },
+  { id: 'go-tasks',         label: 'Ir para Central de Tarefas', icon: 'T', path: '/tasks',     keywords: ['task', 'tarefa', 'projeto', 'kanban'] },
   { id: 'go-estoque',       label: 'Ir para Estoque',       icon: '??', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimonio', 'inventario', 'compras'] },
   { id: 'go-reports',       label: 'Ir para Relatórios',    icon: 'R', path: '/reports',       keywords: ['relatorio', 'grafico'] },
   { id: 'go-users',         label: 'Ir para Pessoas',       icon: 'P', path: '/users',         keywords: ['usuario', 'pessoa', 'membro', 'equipe'] },
