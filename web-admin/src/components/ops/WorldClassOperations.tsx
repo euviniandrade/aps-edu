@@ -459,7 +459,16 @@ function AgendaWorkspace({ state, events, chatPrompt, setChatPrompt, onAdvance, 
 }
 
 function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, onAdjustAsset, onCreatePurchase, onAddKnowledge }: { state: ManagementState; totals: { revenue: number; expense: number; balance: number; criticalAssets: number }; onAddAdmission: () => void; onAddFinance: (type: FinanceLine['type']) => void; onAdjustAsset: (id: string, delta: number) => void; onCreatePurchase: (asset: Asset) => void; onAddKnowledge: (type: string) => void }) {
+  const [assetQuery, setAssetQuery] = useState('')
+  const [assetFilter, setAssetFilter] = useState<'Todos' | 'Criticos' | 'Ok'>('Todos')
   const pipeline = stageOrder.map(stage => ({ stage, items: state.admissions.filter(item => item.stage === stage) }))
+  const filteredAssets = state.assets.filter(item => {
+    const haystack = `${item.name} ${item.category} ${item.location} ${item.supplier} ${item.owner}`.toLowerCase()
+    const matchesQuery = haystack.includes(assetQuery.toLowerCase())
+    const critical = item.qty <= item.min
+    const matchesFilter = assetFilter === 'Todos' || (assetFilter === 'Criticos' ? critical : !critical)
+    return matchesQuery && matchesFilter
+  })
 
   return (
     <section className="space-y-5">
@@ -526,17 +535,41 @@ function SchoolFinanceWorkspace({ state, totals, onAddAdmission, onAddFinance, o
 
       <Surface className="overflow-hidden">
         <SectionTitle icon={CubeIcon} eyebrow="Almoxarifado e patrimônio" title="Controle de estoque profissional" />
+        <div className="grid gap-4 border-b border-white/10 p-5 xl:grid-cols-[minmax(260px,1fr)_360px]">
+          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_240px]">
+            <Input value={assetQuery} onChange={event => setAssetQuery(event.target.value)} placeholder="Buscar item, local, fornecedor..." />
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
+              {(['Todos', 'Criticos', 'Ok'] as const).map(item => (
+                <button key={item} onClick={() => setAssetFilter(item)} className="h-9 rounded-xl text-xs font-black transition" style={{ background: assetFilter === item ? '#E07B39' : 'transparent', color: assetFilter === item ? '#05070D' : 'rgba(255,255,255,0.55)' }}>
+                  {item === 'Criticos' ? 'CrÃ­ticos' : item}
+                </button>
+              ))}
+            </div>
+          </div>
+          <InventorySummary assets={state.assets} />
+        </div>
         <div className="grid gap-4 p-5 xl:grid-cols-3">
-          {state.assets.map(item => <AssetCard key={item.id} item={item} onAdjustAsset={onAdjustAsset} onCreatePurchase={onCreatePurchase} />)}
+          {filteredAssets.map(item => <AssetCard key={item.id} item={item} onAdjustAsset={onAdjustAsset} onCreatePurchase={onCreatePurchase} />)}
         </div>
       </Surface>
+      <InventoryBackOffice assets={state.assets} onCreatePurchase={onCreatePurchase} />
     </section>
   )
 }
 
 function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: Person[]; work: WorkItem[]; onAdvance: (id: string) => void; onCreateAction: (person: Person, title: string) => void }) {
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [peopleFilter, setPeopleFilter] = useState<'Todos' | 'Atencao' | 'Alta performance'>('Todos')
   const average = Math.round(people.reduce((sum, item) => sum + item.pulse, 0) / Math.max(1, people.length))
   const overload = people.filter(item => (item.workload || 0) >= 84).length
+  const filteredPeople = people.filter(item => {
+    const haystack = `${item.name} ${item.role} ${item.unit} ${item.training} ${item.strengths?.join(' ')}`.toLowerCase()
+    const matchesQuery = haystack.includes(peopleQuery.toLowerCase())
+    const attention = item.pulse < 75 || (item.workload || 0) >= 84
+    const high = (item.score || 0) >= 4.5 && item.pulse >= 80
+    const matchesFilter = peopleFilter === 'Todos' || (peopleFilter === 'Atencao' ? attention : high)
+    return matchesQuery && matchesFilter
+  })
 
   return (
     <section className="space-y-5">
@@ -550,8 +583,18 @@ function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: 
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <Surface className="overflow-hidden">
           <SectionTitle icon={UserGroupIcon} eyebrow="Equipe APS" title="Profissionais, fotos, avaliação e desenvolvimento" />
+          <div className="grid gap-3 border-b border-white/10 p-5 md:grid-cols-[minmax(220px,1fr)_360px]">
+            <Input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Buscar profissional, setor, competencia..." />
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-1">
+              {(['Todos', 'Atencao', 'Alta performance'] as const).map(item => (
+                <button key={item} onClick={() => setPeopleFilter(item)} className="h-9 rounded-xl text-[11px] font-black transition" style={{ background: peopleFilter === item ? '#8B5CF6' : 'transparent', color: peopleFilter === item ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                  {item === 'Atencao' ? 'AtenÃ§Ã£o' : item}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid gap-4 p-5 xl:grid-cols-3">
-            {people.map(item => <PersonCard key={item.id} person={item} onCreateAction={onCreateAction} />)}
+            {filteredPeople.map(item => <PersonCard key={item.id} person={item} onCreateAction={onCreateAction} />)}
           </div>
         </Surface>
 
@@ -580,6 +623,7 @@ function PeopleWorkspace({ people, work, onAdvance, onCreateAction }: { people: 
           </Surface>
         </div>
       </div>
+      <PeopleOperatingSystem people={people} onCreateAction={onCreateAction} />
     </section>
   )
 }
@@ -612,6 +656,63 @@ function FinanceRow({ item }: { item: FinanceLine }) {
   )
 }
 
+function InventorySummary({ assets }: { assets: Asset[] }) {
+  const totalValue = assets.reduce((sum, item) => sum + item.qty * (item.unitCost || 0), 0)
+  const critical = assets.filter(item => item.qty <= item.min).length
+  const categories = new Set(assets.map(item => item.category || 'Geral')).size
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <MiniStat label="Valor" value={money.format(totalValue)} />
+      <MiniStat label="Criticos" value={critical.toString()} />
+      <MiniStat label="Categorias" value={categories.toString()} />
+    </div>
+  )
+}
+
+function InventoryBackOffice({ assets, onCreatePurchase }: { assets: Asset[]; onCreatePurchase: (asset: Asset) => void }) {
+  const criticalAssets = assets.filter(item => item.qty <= item.min)
+  const movements = assets.map(item => ({
+    id: item.id,
+    label: item.name,
+    description: `${item.location} - ${item.lastMove || 'sem movimento'}`,
+    delta: item.qty <= item.min ? 'Reposicao pendente' : 'Saldo saudavel',
+  }))
+  return (
+    <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <Surface className="overflow-hidden">
+        <SectionTitle icon={ClipboardDocumentListIcon} eyebrow="Compras e auditoria" title="Fila operacional de reposicao" />
+        <div className="divide-y divide-white/10">
+          {criticalAssets.length === 0 && <p className="p-5 text-sm font-semibold text-white/42">Nenhum item abaixo do minimo.</p>}
+          {criticalAssets.map(item => (
+            <div key={item.id} className="grid gap-3 p-5 lg:grid-cols-[1fr_160px_160px] lg:items-center">
+              <div>
+                <p className="font-black text-white">{item.name}</p>
+                <p className="mt-1 text-sm text-white/42">{item.nextAction}</p>
+              </div>
+              <div className="text-sm font-bold text-white/55">Faltam {Math.max(item.min - item.qty, 0)} para minimo</div>
+              <button onClick={() => onCreatePurchase(item)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Gerar compra</button>
+            </div>
+          ))}
+        </div>
+      </Surface>
+      <Surface className="p-5">
+        <h3 className="font-black text-white">Movimentacoes recentes</h3>
+        <div className="mt-4 space-y-3">
+          {movements.map(item => (
+            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-white">{item.label}</p>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.delta}</span>
+              </div>
+              <p className="mt-1 text-xs text-white/38">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </Surface>
+    </section>
+  )
+}
+
 function AssetCard({ item, onAdjustAsset, onCreatePurchase }: { item: Asset; onAdjustAsset: (id: string, delta: number) => void; onCreatePurchase: (asset: Asset) => void }) {
   const critical = item.qty <= item.min
   const coverage = Math.min(100, Math.round((item.qty / Math.max(1, item.min)) * 100))
@@ -641,6 +742,52 @@ function AssetCard({ item, onAdjustAsset, onCreatePurchase }: { item: Asset; onA
         <button onClick={() => onCreatePurchase(item)} className="h-10 rounded-xl bg-[#F8A303] px-3 text-xs font-black text-black">Comprar / aprovar</button>
       </div>
     </div>
+  )
+}
+
+function PeopleOperatingSystem({ people, onCreateAction }: { people: Person[]; onCreateAction: (person: Person, title: string) => void }) {
+  const reviewQueue = [...people].sort((a, b) => (b.workload || 0) - (a.workload || 0))
+  return (
+    <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <Surface className="overflow-hidden">
+        <SectionTitle icon={UserGroupIcon} eyebrow="RH operacional" title="Diretorio, avaliacao e proxima conversa" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px]">
+            <thead className="bg-white/[0.035] text-left text-xs uppercase tracking-[0.12em] text-white/34">
+              <tr><th className="px-5 py-3">Profissional</th><th className="px-5 py-3">Setor</th><th className="px-5 py-3">Avaliacao</th><th className="px-5 py-3">Carga</th><th className="px-5 py-3">Proxima acao</th></tr>
+            </thead>
+            <tbody>
+              {people.map(item => (
+                <tr key={item.id} className="border-t border-white/10">
+                  <td className="px-5 py-4"><p className="font-black text-white">{item.name}</p><p className="text-xs text-white/38">{item.role}</p></td>
+                  <td className="px-5 py-4 text-sm text-white/60">{item.unit}</td>
+                  <td className="px-5 py-4 text-sm font-black text-[#F8A303]">{item.score?.toFixed(1)}</td>
+                  <td className="px-5 py-4 text-sm font-black" style={{ color: (item.workload || 0) > 84 ? '#FF4757' : '#0ABD78' }}>{item.workload}%</td>
+                  <td className="px-5 py-4 text-sm text-white/55">{item.nextAction}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Surface>
+      <Surface className="p-5">
+        <h3 className="font-black text-white">Fila de lideranca</h3>
+        <div className="mt-4 space-y-3">
+          {reviewQueue.map(item => (
+            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-white">{item.name}</p>
+                  <p className="mt-1 text-xs text-white/38">{item.risks?.join(', ') || 'sem risco registrado'}</p>
+                </div>
+                <span className="rounded-full bg-[#8B5CF6]/15 px-3 py-1 text-xs font-black text-[#A78BFA]">{item.nextReview}</span>
+              </div>
+              <button onClick={() => onCreateAction(item, `Registrar feedback e plano de desenvolvimento de ${item.name}`)} className="mt-3 h-9 w-full rounded-xl bg-[#8B5CF6] px-3 text-xs font-black text-white">Criar feedback</button>
+            </div>
+          ))}
+        </div>
+      </Surface>
+    </section>
   )
 }
 
