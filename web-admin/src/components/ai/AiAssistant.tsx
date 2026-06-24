@@ -47,6 +47,10 @@ const SOFI_QUICK_ACTIONS = [
 
 const TRANSCRIBE_INTENT = /transcrev|transcri[cç][aã]o|degrav|texto do [aá]udio|s[oó] transcri/i
 
+interface AiAssistantProps {
+  embedded?: boolean
+}
+
 function formatSeconds(total: number) {
   const min = Math.floor(total / 60).toString().padStart(2, '0')
   const sec = (total % 60).toString().padStart(2, '0')
@@ -131,8 +135,8 @@ function parseAction(response: string): { content: string; action: any | null } 
   return { content: contentFinal || response, action: actionFinal }
 }
 
-export default function AiAssistant() {
-  const [open, setOpen]           = useState(false)
+export default function AiAssistant({ embedded = false }: AiAssistantProps = {}) {
+  const [open, setOpen]           = useState(embedded)
   const [messages, setMessages]   = useState<Message[]>([])
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
@@ -149,7 +153,7 @@ export default function AiAssistant() {
   const [mounted, setMounted] = useState(false)
   const [memoryLoaded, setMemoryLoaded] = useState(false)
   const pathname = usePathname()
-  const dockLeft = pathname?.startsWith('/gestao') || pathname?.startsWith('/pessoas') || pathname?.startsWith('/escolar-financeiro')
+  const dockLeft = !embedded && (pathname?.startsWith('/gestao') || pathname?.startsWith('/pessoas') || pathname?.startsWith('/escolar-financeiro'))
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
@@ -605,7 +609,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className={`fixed bottom-5 z-50 flex items-center gap-2.5 rounded-2xl px-4 py-3 sm:bottom-6 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group ${dockLeft ? 'left-4 md:left-[21rem]' : 'right-4 sm:right-6'}`}
+          className={`fixed bottom-5 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group sm:bottom-6 ${dockLeft ? 'left-4 md:left-[21rem]' : 'right-4 sm:right-6'}`}
           style={{
             background: 'linear-gradient(135deg, #F8A303, #FDC347)',
             boxShadow: '0 8px 32px rgba(248,163,3,0.5), 0 0 0 1px rgba(248,163,3,0.2)',
@@ -613,26 +617,23 @@ Entregue uma resposta clara, acionável e de alto nível.`
           }}
           title="Conversar com Sofi"
         >
-          <div className="relative">
+          <div className="relative flex h-full w-full items-center justify-center">
             <SparklesIcon size={20} />
             {unread > 0 && (
-              <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
-                style={{ background: '#FF4757', color: 'white' }}>
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF4757] text-[10px] font-bold text-white">
                 {unread}
               </span>
             )}
           </div>
-          <span className="text-sm font-extrabold text-black">Sofi IA</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-black/30 animate-pulse" />
         </button>
       )}
 
       {/* ── PANEL ───────────────────────────────────────────── */}
       {open && (
         <div
-          className={`fixed inset-y-3 z-50 flex overflow-hidden rounded-[28px] border border-white/10 bg-[#060814]/95 shadow-[0_40px_120px_rgba(0,0,0,0.78)] backdrop-blur-2xl ${dockLeft ? 'left-3 md:left-[21rem]' : 'right-3 sm:right-6'} w-[min(980px,calc(100vw-24px))]`}
+          className={`fixed z-50 flex overflow-hidden border border-white/10 bg-[#060814]/95 shadow-[0_40px_120px_rgba(0,0,0,0.78)] backdrop-blur-2xl ${embedded ? 'inset-0 rounded-none' : `inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[21rem]' : 'right-3 sm:right-6'} w-[min(980px,calc(100vw-24px))]`}`}
           style={{
-            height: 'calc(100vh - 24px)',
+            height: embedded ? '100vh' : 'calc(100vh - 24px)',
             boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
             animation: 'scaleIn 0.18s ease',
           }}

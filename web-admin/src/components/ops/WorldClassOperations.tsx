@@ -1675,7 +1675,7 @@ function KanbanColumn({
 
   return (
     <div
-      className="w-[316px] shrink-0 rounded-[1.55rem] border border-white/10 bg-white/[0.02] p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
+      className="w-[300px] shrink-0 rounded-[1.45rem] border border-white/10 bg-white/[0.025] p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
       onDragOver={event => event.preventDefault()}
       onDrop={() => {
         if (draggingColumnId) onDropColumn(draggingColumnId, column.id)
@@ -1684,7 +1684,7 @@ function KanbanColumn({
       style={{ opacity: isColumnDragging ? 0.72 : 1 }}
     >
       <div
-        className="rounded-[1.1rem] border border-white/10 bg-[#10141C] p-3"
+        className="rounded-[1.1rem] border border-white/10 bg-white/[0.035] p-3 backdrop-blur-sm"
         style={{ boxShadow: `inset 0 2px 0 ${column.color}, 0 0 0 1px ${column.color}10` }}
       >
         <div className="flex items-start gap-2.5">
@@ -1704,12 +1704,13 @@ function KanbanColumn({
               value={title}
               onChange={event => setTitle(event.target.value)}
               onBlur={() => onRename(column.id, title)}
-              className="h-10 rounded-xl border-white/10 bg-transparent px-2 text-sm font-black tracking-wide"
+              className="h-10 rounded-2xl border-white/10 bg-white/[0.04] px-3 text-sm font-black tracking-wide"
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="rounded-full px-2.5 py-1 text-[11px] font-black text-white" style={{ background: `${column.color}18`, color: column.color }}>
                 Selo
               </span>
+              <span className="h-2 w-2 rounded-full" style={{ background: column.color }} />
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/28">Arraste a etapa ou os cards</p>
             </div>
           </div>
@@ -1731,8 +1732,8 @@ function KanbanColumn({
         </div>
       </div>
 
-      <div className="mt-3 space-y-2.5">
-        {items.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-center text-xs font-bold text-white/28">Solte um card aqui</p>}
+      <div className="mt-3 space-y-3">
+        {items.length === 0 && <p className="rounded-[1.15rem] border border-dashed border-white/10 bg-black/10 p-4 text-center text-xs font-bold text-white/28">Solte um card aqui</p>}
         {items.map(item => {
           const accent = priorityColor(item.priority)
           return (
@@ -1742,9 +1743,10 @@ function KanbanColumn({
               onDragStart={() => onDragStart(item.id)}
               onDragEnd={onDragEnd}
               onClick={() => onOpenItem(item)}
-              className="group w-full rounded-[1.15rem] border border-white/10 bg-[#10141C] p-3 text-left transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-[#131823]"
+              className="group w-full rounded-[1.2rem] border border-white/10 bg-white/[0.035] p-3 text-left transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.05]"
               style={{ boxShadow: `0 0 0 1px ${accent}12 inset` }}
             >
+              <div className="mb-3 h-1.5 rounded-full" style={{ background: accent }} />
               <div className="flex items-start justify-between gap-2">
                 <p className="text-[14px] font-black leading-snug text-white">{item.title}</p>
                 <span className="rounded-full px-2.5 py-1 text-[10px] font-black" style={{ color: accent, background: `${accent}18` }}>
@@ -2997,10 +2999,23 @@ function PeopleWorkspaceExecutive({
         </div>
       </Surface>
 
-      <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="space-y-5">
         <Surface className="overflow-hidden">
-          <SectionHeader eyebrow="Cargos" title="Filtros" />
-          <div className="space-y-2 p-4">
+          <div className="flex flex-col gap-4 border-b border-white/10 p-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Cargos e escalação</p>
+              <h3 className="mt-2 text-2xl font-black text-white">Leia o time por cargo e foque no centro executivo.</h3>
+              <p className="mt-2 text-sm text-white/50">A navegação saiu da lateral e virou uma faixa limpa, para a ficha ficar no meio e sem ruído visual.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setWorkspaceMode(mode => (mode === 'simplificado' ? 'completo' : 'simplificado'))} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">
+                {workspaceMode === 'simplificado' ? 'Vista completa' : 'Vista compacta'}
+              </button>
+              <span className="rounded-full bg-white/[0.06] px-3 py-2 text-xs font-black text-white/70">{filteredPeople.length} perfis</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-b border-white/10 px-5 py-4">
             {roleTabs.map(tab => {
               const count = tab === 'Todos' ? people.length : people.filter(person => (person.unit || person.role).toLowerCase().includes(tab.toLowerCase())).length
               const active = roleFilter === tab
@@ -3008,22 +3023,20 @@ function PeopleWorkspaceExecutive({
                 <button
                   key={tab}
                   onClick={() => setRoleFilter(tab)}
-                  className="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition"
+                  className="rounded-full border px-4 py-2 text-xs font-black transition"
                   style={{
                     borderColor: active ? 'rgba(248,163,3,0.35)' : 'rgba(255,255,255,0.08)',
                     background: active ? 'rgba(248,163,3,0.12)' : 'rgba(255,255,255,0.03)',
+                    color: active ? '#F8A303' : 'rgba(255,255,255,0.76)',
                   }}
                 >
-                  <span className="text-sm font-black text-white">{tab}</span>
-                  <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-black text-white/55">{count}</span>
+                  {tab}
+                  <span className="ml-2 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-black text-white/60">{count}</span>
                 </button>
               )
             })}
           </div>
-        </Surface>
 
-        <Surface className="overflow-hidden">
-          <SectionHeader eyebrow="Equipe" title="Escalação executiva" />
           <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
             {lineupPeople.map(person => {
               const active = person.id === selectedPerson?.id
@@ -3077,7 +3090,7 @@ function PeopleWorkspaceExecutive({
           </div>
         </Surface>
 
-        <Surface className="overflow-hidden xl:col-span-2">
+        <Surface className="overflow-hidden">
           <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
             <div className="min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Relatorio central</p>
