@@ -2773,8 +2773,10 @@ function PeopleWorkspaceExecutive({
   const [draft, setDraft] = useState<Person | null>(people[0] ? { ...people[0], files: [...(people[0].files || [])] } : null)
   const [fileInput, setFileInput] = useState('')
   const [panelTab, setPanelTab] = useState<'resumo' | 'editar' | 'arquivos' | 'relatorios'>('resumo')
+  const [workspaceMode, setWorkspaceMode] = useState<'simplificado' | 'completo'>('simplificado')
   const [draftDirty, setDraftDirty] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState('')
 
   useEffect(() => {
     if (!people.length) return
@@ -2830,6 +2832,28 @@ function PeopleWorkspaceExecutive({
   const averageProductivity = Math.round(people.reduce((sum, item) => sum + (item.productivityIndex || productivityIndex), 0) / Math.max(1, people.length))
   const readyLeaders = people.filter(item => (item.leadershipLevel || 0) >= 4).length
   const executivePerson = selectedPerson || people[0] || null
+  const relationshipIndex = selectedPerson
+    ? selectedPerson.relationalClassification === 'Referencia positiva de relacionamento e trabalho em equipe'
+      ? 96
+      : selectedPerson.relationalClassification === 'Relacionamento acima da media'
+        ? 88
+        : selectedPerson.relationalClassification === 'Relacionamento adequado'
+          ? 76
+          : selectedPerson.relationalClassification === 'Necessita desenvolver competencias relacionais'
+            ? 64
+            : 52
+    : 0
+  const friendlinessIndex = selectedPerson
+    ? selectedPerson.convivenceLevel === 'Muito facil de lidar'
+      ? 96
+      : selectedPerson.convivenceLevel === 'Facil de lidar'
+        ? 88
+        : selectedPerson.convivenceLevel === 'Moderadamente facil de lidar'
+          ? 74
+          : selectedPerson.convivenceLevel === 'Dificil de lidar em algumas situacoes'
+            ? 60
+            : 48
+    : 0
 
   const leadershipSnapshot = selectedPerson ? [
     { label: 'Nivel', value: `N${selectedPerson.leadershipLevel || 3}`, detail: 'maturidade atual' },
@@ -2919,6 +2943,7 @@ function PeopleWorkspaceExecutive({
         files: draft.files || [],
       })
       setDraftDirty(false)
+      setLastSavedAt(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
     } finally {
       if (!silent) setSavingDraft(false)
     }
@@ -2940,6 +2965,9 @@ function PeopleWorkspaceExecutive({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setWorkspaceMode(mode => (mode === 'simplificado' ? 'completo' : 'simplificado'))} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">
+                {workspaceMode === 'simplificado' ? 'Vista completa' : 'Vista compacta'}
+              </button>
               <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio geral - ${selectedPerson.name}`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório geral</button>
               <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Abrir relatório</button>
               <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Plano com Sofi - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Gerar com Sofi</button>
@@ -2957,6 +2985,7 @@ function PeopleWorkspaceExecutive({
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Estado da ficha</p>
                 <p className="mt-1 text-sm font-semibold text-white/60">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+                <p className="mt-1 text-xs font-semibold text-white/35">{lastSavedAt ? `Último salvamento: ${lastSavedAt}` : 'Ainda não salvo nesta sessão'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{selectedPerson?.leadershipLevel || 3}</span>
@@ -2968,7 +2997,7 @@ function PeopleWorkspaceExecutive({
         </div>
       </Surface>
 
-      <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_420px]">
+      <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
         <Surface className="overflow-hidden">
           <SectionHeader eyebrow="Cargos" title="Filtros" />
           <div className="space-y-2 p-4">
@@ -3025,24 +3054,33 @@ function PeopleWorkspaceExecutive({
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{person.leadershipLevel || 3}</span>
-                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.leadershipProfile || 'Executor'}</span>
-                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.productivityIndex || 0}%</span>
-                  </div>
-                  <div className="mt-4">
-                    <ProgressRow label="Liderança" value={leadershipPercent} color="#8B5CF6" />
-                  </div>
+                  {workspaceMode === 'completo' ? (
+                    <>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{person.leadershipLevel || 3}</span>
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.leadershipProfile || 'Executor'}</span>
+                        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.productivityIndex || 0}%</span>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        <ProgressRow label="Liderança" value={leadershipPercent} color="#8B5CF6" />
+                        <ProgressRow label="Produtividade" value={person.productivityIndex || 0} color="#0ABD78" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-4 space-y-2">
+                      <ProgressRow label="Liderança" value={leadershipPercent} color="#8B5CF6" />
+                    </div>
+                  )}
                 </button>
               )
             })}
           </div>
         </Surface>
 
-        <Surface className="overflow-hidden">
+        <Surface className="overflow-hidden xl:col-span-2">
           <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Ficha profissional</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Relatorio central</p>
               <p className="mt-2 truncate text-2xl font-black text-white">{selectedPerson?.name || 'Selecione alguém'}</p>
               <p className="mt-1 text-sm font-semibold text-white/55">{selectedPerson?.role || 'Sem cargo'}</p>
             </div>
@@ -3078,7 +3116,34 @@ function PeopleWorkspaceExecutive({
             {panelTab === 'resumo' && selectedPerson && (
               <div className="space-y-4">
                 <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
-                  <p className="text-sm text-white/55">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard
+                      label="Liderança"
+                      value={`${selectedLeadershipPercent}%`}
+                      detail={`N${selectedPerson.leadershipLevel || 3} • ${selectedPerson.leadershipProfile || 'Executor'}`}
+                      color="#8B5CF6"
+                    />
+                    <MetricCard
+                      label="Temperamento"
+                      value={`${selectedPerson.behavioralProfilePercent || 75}%`}
+                      detail={`${selectedPerson.temperamentPrimaryPercent || 70}% ${selectedPerson.temperamentPrimary || 'Fleumático'} / ${selectedPerson.temperamentSecondaryPercent || 30}% ${selectedPerson.temperamentSecondary || 'Sanguíneo'}`}
+                      color="#38BDF8"
+                    />
+                    <MetricCard
+                      label="Relacionamento"
+                      value={`${relationshipIndex}%`}
+                      detail={selectedPerson.relationalClassification || 'Relacionamento adequado'}
+                      color="#0ABD78"
+                    />
+                    <MetricCard
+                      label="Produtividade"
+                      value={`${productivityIndex}%`}
+                      detail={productivityDiagnosis.label}
+                      color="#F8A303"
+                    />
+                  </div>
+
+                  <p className="mt-4 text-sm text-white/55">
                     {selectedPerson.name} atua como {selectedPerson.role}. Nível {selectedPerson.leadershipLevel || 3}, perfil {selectedPerson.leadershipProfile || 'Executor'}, potencial {selectedPerson.leadershipPotential || 'Alto'} e prontidão {selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}.
                   </p>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -3095,9 +3160,12 @@ function PeopleWorkspaceExecutive({
                 <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
                   <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Temperamento e personalidade</p>
                   <p className="mt-2 text-sm text-white/55">
-                    {selectedPerson.temperamentPrimaryPercent || 70}% {selectedPerson.temperamentPrimary || 'Fleumatico'} e {selectedPerson.temperamentSecondaryPercent || 30}% {selectedPerson.temperamentSecondary || 'Sanguineo'}.
+                    {selectedPerson.temperamentPrimaryPercent || 70}% {selectedPerson.temperamentPrimary || 'Fleumático'} e {selectedPerson.temperamentSecondaryPercent || 30}% {selectedPerson.temperamentSecondary || 'Sanguíneo'}.
                   </p>
-                  <p className="mt-3 text-sm font-semibold text-white/45">{selectedPerson.temperamentReason || 'Leitura calculada a partir do cargo, área e contexto de trabalho.'}</p>
+                  <p className="mt-3 text-sm font-semibold text-white/45">
+                    {selectedPerson.temperamentReason || 'Leitura calculada a partir do cargo, área e contexto de trabalho.'}
+                    {' '}• Facilidade de convivência: {friendlinessIndex}%.
+                  </p>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
                     {temperamentSnapshot.map(item => (
                       <div key={item.label} className="rounded-2xl border border-white/10 bg-black/10 p-3">
@@ -3229,7 +3297,10 @@ function PeopleWorkspaceExecutive({
 
           <div className="border-t border-white/10 bg-[#090B12]/98 px-5 py-4 backdrop-blur-md">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/40">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-white/40">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+                <p className="mt-1 text-[11px] font-semibold text-white/30">{lastSavedAt ? `Último salvamento: ${lastSavedAt}` : 'Ainda não salvo nesta sessão'}</p>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => void saveDraft()} className="h-11 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Salvar</button>
                 <button type="button" onClick={() => selectedPerson && onCreateAction(selectedPerson, `Plano de ação - ${selectedPerson.name}`)} className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Criar plano</button>

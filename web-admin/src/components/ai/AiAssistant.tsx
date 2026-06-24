@@ -630,14 +630,14 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/* ── PANEL ───────────────────────────────────────────── */}
       {open && (
         <div
-          className={`fixed inset-y-3 z-50 flex overflow-hidden rounded-[28px] border border-white/10 bg-[#060814]/95 shadow-[0_40px_120px_rgba(0,0,0,0.78)] backdrop-blur-2xl ${dockLeft ? 'left-3 md:left-[21rem]' : 'right-3 sm:right-6'} w-[min(1060px,calc(100vw-24px))]`}
+          className={`fixed inset-y-3 z-50 flex overflow-hidden rounded-[28px] border border-white/10 bg-[#060814]/95 shadow-[0_40px_120px_rgba(0,0,0,0.78)] backdrop-blur-2xl ${dockLeft ? 'left-3 md:left-[21rem]' : 'right-3 sm:right-6'} w-[min(980px,calc(100vw-24px))]`}
           style={{
             height: 'calc(100vh - 24px)',
             boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
             animation: 'scaleIn 0.18s ease',
           }}
         >
-          <aside className="hidden w-[290px] flex-col border-r border-white/10 bg-white/[0.02] md:flex">
+          <aside className="hidden w-[256px] flex-col border-r border-white/10 bg-white/[0.02] md:flex">
             <div className="border-b border-white/10 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
@@ -645,7 +645,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/35">Sofi IA</p>
-                  <p className="truncate text-sm font-black text-white">Projetos e hist?rico</p>
+                  <p className="truncate text-sm font-black text-white">Projetos</p>
                 </div>
               </div>
 
@@ -753,11 +753,6 @@ Entregue uma resposta clara, acionável e de alto nível.`
                 >
                   <ArrowPathIcon className="h-4 w-4" />
                 </button>
-                <div className="hidden h-8 w-px bg-white/10 sm:block" />
-                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/65 sm:flex">
-                  <Squares2X2Icon className="h-4 w-4" />
-                  Claude Code
-                </div>
                 {isSpeaking && (
                   <button onClick={stopSpeaking} className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70 transition hover:bg-white/[0.06]" title="Parar voz">
                     <SpeakerXMarkIcon className="h-4 w-4" />
@@ -779,9 +774,9 @@ Entregue uma resposta clara, acionável e de alto nível.`
             <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
               {messages.length <= 1 ? (
                 <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
-                  <p className="text-3xl font-black tracking-tight text-white sm:text-4xl">Por onde come?amos?</p>
+                  <p className="text-3xl font-black tracking-tight text-white sm:text-4xl">Escreva para a Sofi</p>
                   <p className="mt-3 max-w-xl text-sm leading-6 text-white/45">
-                    A Sofi mant?m o contexto vivo, executa a??es e transforma pedidos em tarefas, documentos e agenda.
+                    Contexto vivo, respostas diretas e acoes prontas para executar.
                   </p>
                   <div className="mt-6 flex flex-wrap justify-center gap-2">
                     {SOFI_QUICK_ACTIONS.map(item => (
