@@ -215,6 +215,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRole = userRoleName
   const roleLevel = getRoleLevel(typeof userRoleName === 'string' ? userRoleName : 'member')
   const currentGestaoView = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') || 'agenda' : 'agenda'
+  // Mantemos o menu contextual enxuto para evitar duplicidade na navegação da Gestão.
   const contextualGestaoItems = [
     { href: '/gestao?view=agenda', label: 'Agenda e Calendários', key: 'agenda' },
     { href: '/gestao?view=kanban', label: 'Tarefas e Projetos', key: 'kanban' },
