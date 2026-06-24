@@ -561,6 +561,89 @@ async function createDriveFolder(userId, payload) {
   throw new Error('Provedor de arquivos não suportado')
 }
 
+function sanitizeDriveName(value) {
+  return String(value || 'arquivo-aps-edu')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140) || 'arquivo-aps-edu'
+}
+
+function buildMultipartBody(metadata, content, mimeType = 'application/octet-stream') {
+  const boundary = `aps-edu-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const parts = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata || {}),
+    `--${boundary}`,
+    `Content-Type: ${mimeType}`,
+    '',
+    typeof content === 'string' ? content : Buffer.from(content || '').toString('utf8'),
+    `--${boundary}--`,
+    '',
+  ]
+
+  return {
+    boundary,
+    body: parts.join('\r\n'),
+  }
+}
+
+async function uploadDriveFile(userId, payload) {
+  const provider = payload.provider || 'google'
+  let integration = null
+  try {
+    integration = await ensureAccess(userId, provider)
+  } catch {
+    integration = await ensureAccess(userId, provider === 'google' ? 'microsoft' : 'google')
+  }
+
+  const fileName = sanitizeDriveName(payload.name)
+  const mimeType = payload.mimeType || 'application/json'
+  const content = payload.content || ''
+
+  if (integration.provider === 'google') {
+    const { boundary, body } = buildMultipartBody(
+      {
+        name: fileName,
+        mimeType,
+        ...(payload.parentId ? { parents: [payload.parentId] } : {}),
+      },
+      content,
+      mimeType,
+    )
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,modifiedTime', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${integration.accessToken}`,
+        'content-type': `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    })
+    if (!response.ok) throw new Error(await response.text())
+    return { provider: 'google', file: await response.json() }
+  }
+
+  if (integration.provider === 'microsoft') {
+    const targetPath = encodeURIComponent(fileName)
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${targetPath}:/content`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${integration.accessToken}`,
+        'content-type': mimeType,
+      },
+      body: typeof content === 'string' ? content : Buffer.from(content || ''),
+    })
+    if (!response.ok) throw new Error(await response.text())
+    return { provider: 'microsoft', file: await response.json() }
+  }
+
+  throw new Error('Provedor de arquivos não suportado')
+}
+
 async function buildStatus(userId) {
   const integrations = await getUserIntegrations(userId)
   const byProvider = Object.fromEntries(integrations.map(item => [item.provider, item]))
@@ -619,6 +702,7 @@ module.exports = {
   buildStatus,
   createCalendarEvent,
   createDriveFolder,
+  uploadDriveFile,
   fetchGoogleProfile,
   fetchMicrosoftProfile,
   getIntegration,

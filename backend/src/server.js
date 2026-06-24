@@ -66,6 +66,7 @@ fastify.register(require('./modules/calendar/calendar.routes'), { prefix: '/api/
 fastify.register(require('./modules/gmail/gmail.routes'), { prefix: '/api/gmail' })
 fastify.register(require('./modules/drive/drive.routes'), { prefix: '/api/drive' })
 fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
+fastify.register(require('./modules/promoterForms/promoterForms.routes'), { prefix: '/api/promoter-forms' })
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

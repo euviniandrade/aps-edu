@@ -143,6 +143,10 @@ type Person = {
   email?: string
   phone?: string
   files?: string[]
+  assessmentForm?: Record<string, unknown>
+  driveSyncAt?: string
+  driveSyncProvider?: string
+  driveSyncFile?: string
 }
 
 type FinanceLine = {
@@ -445,77 +449,7 @@ const fallbackState: ManagementState = {
     { id: 'MAT-2042', family: 'Familia Andrade', student: 'Livia Andrade - 1o ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentacao' },
     { id: 'MAT-2043', family: 'Familia Rocha', student: 'Emanuel Rocha - 4o ano', stage: 'Contato inicial', value: 1740, next: 'Agendar visita escolar' },
   ],
-  people: [
-    {
-      id: 'P-1',
-      name: 'Marina Costa',
-      role: 'Coordenacao pedagogica',
-      unit: 'Pedagogico',
-      score: 4.7,
-      leadershipPercent: 94,
-      leadershipLevel: 4,
-      leadershipProfile: 'Estrategico',
-      leadershipPotential: 'Muito Alto',
-      leadershipReadiness: 'Pronto para liderar setores/departamentos',
-      leaderDevelopment: 'Forma novos lideres de maneira consistente',
-      training: 'Avaliacao formativa',
-      nextReview: '20/06',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
-      strengths: ['lideranca', 'curriculo', 'familias'],
-      risks: ['agenda cheia'],
-      nextAction: 'Revisar plano de acompanhamento do 6o ano',
-      files: ['avaliacao-marina-2026.pdf', 'plano-acompanhamento.docx'],
-      bio: 'Lidera a rotina pedagógica, a comunicação com familias e a priorização de acompanhamento da equipe.',
-      email: 'marina.costa@aps.edu.br',
-      phone: '(11) 99999-0001',
-    },
-    {
-      id: 'P-2',
-      name: 'Rafael Almeida',
-      role: 'Secretaria escolar',
-      unit: 'Atendimento',
-      score: 4.4,
-      leadershipPercent: 88,
-      leadershipLevel: 4,
-      leadershipProfile: 'Organizador',
-      leadershipPotential: 'Alto',
-      leadershipReadiness: 'Pronto para liderar pequenas equipes',
-      leaderDevelopment: 'Desenvolve regularmente',
-      training: 'Jornada da familia',
-      nextReview: '18/06',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',
-      strengths: ['matriculas', 'crm', 'comunicacao'],
-      risks: ['fila de retornos'],
-      nextAction: 'Padronizar follow-up das propostas abertas',
-      files: ['follow-up-familias.xlsx', 'roteiro-secretaria.pdf'],
-      bio: 'Cuida do atendimento, da jornada de matriculas e do retorno rápido às familias.',
-      email: 'rafael.almeida@aps.edu.br',
-      phone: '(11) 99999-0002',
-    },
-    {
-      id: 'P-3',
-      name: 'Juliana Martins',
-      role: 'Operacao e suporte',
-      unit: 'Operacao',
-      score: 4.1,
-      leadershipPercent: 82,
-      leadershipLevel: 3,
-      leadershipProfile: 'Executor',
-      leadershipPotential: 'Moderado',
-      leadershipReadiness: 'Potencial em desenvolvimento',
-      leaderDevelopment: 'Desenvolve ocasionalmente',
-      training: 'SLA e rotina visual',
-      nextReview: '21/06',
-      avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=160&q=80',
-      strengths: ['processos', 'estoque', 'suporte'],
-      risks: ['sobrecarga'],
-      nextAction: 'Delegar compras recorrentes e revisar criticidade',
-      files: ['inventario-operacional.pdf', 'checklist-suporte.docx'],
-      bio: 'Acompanha operação, suporte e padronização de processos críticos.',
-      email: 'juliana.martins@aps.edu.br',
-      phone: '(11) 99999-0003',
-    },
-  ],
+  people: [],
   finance: [
     { id: 'F-1', label: 'Matriculas previstas', type: 'Receita', amount: 3470, status: 'Previsto', due: 'Hoje' },
     { id: 'F-2', label: 'Compra de materiais pedagogicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanha' },
@@ -796,8 +730,8 @@ function hydratedState(raw: Partial<ManagementState>, columns: WorkflowColumn[])
     ...raw,
     work,
     admissions: raw.admissions?.length ? raw.admissions : fallbackState.admissions,
-    people: raw.people?.length
-      ? raw.people.map((item, index) => normalizePerson({ ...fallbackState.people[index % fallbackState.people.length], ...item }))
+    people: Array.isArray(raw.people)
+      ? raw.people.map((item, index) => normalizePerson({ ...(fallbackState.people[index % Math.max(1, fallbackState.people.length)] || {}), ...item }))
       : fallbackState.people.map(person => normalizePerson(person)),
     finance: raw.finance?.length ? raw.finance : fallbackState.finance,
     assets: raw.assets?.length ? raw.assets.map((item, index) => ({ ...fallbackState.assets[index % fallbackState.assets.length], ...item })) : fallbackState.assets,
@@ -1106,6 +1040,65 @@ export default function WorldClassOperations({
     }))
   }
 
+  async function createPeopleProfile(person: Partial<Person>) {
+    try {
+      const res = await api.post('/management/people', person)
+      applyState(res.data, workflowColumns)
+      return res.data?.people?.[0] || null
+    } catch {
+      const localPerson: Person = {
+        id: person.id || `P-${Date.now()}`,
+        name: person.name || 'Novo colaborador',
+        role: person.role || 'Cargo em definicao',
+        unit: person.unit || '',
+        training: person.training || '',
+        nextReview: person.nextReview || '',
+        avatar: person.avatar || '',
+        score: Number(person.score || 0),
+        leadershipPercent: Number(person.leadershipPercent || 0),
+        leadershipLevel: (person.leadershipLevel || 3) as LeadershipLevel,
+        leadershipProfile: person.leadershipProfile || 'Executor',
+        leadershipPotential: person.leadershipPotential || 'Alto',
+        leadershipReadiness: person.leadershipReadiness || 'Potencial em desenvolvimento',
+        leaderDevelopment: person.leaderDevelopment || 'Desenvolve regularmente',
+        temperamentPrimary: person.temperamentPrimary || 'Fleumatico',
+        temperamentPrimaryPercent: Number(person.temperamentPrimaryPercent || 70),
+        temperamentSecondary: person.temperamentSecondary || 'Sanguineo',
+        temperamentSecondaryPercent: Number(person.temperamentSecondaryPercent || 30),
+        temperamentReason: person.temperamentReason || '',
+        behavioralProfile: person.behavioralProfile || 'Estavel',
+        behavioralProfilePercent: Number(person.behavioralProfilePercent || 75),
+        decisionStyle: person.decisionStyle || 'Busca equilibrio entre velocidade e analise',
+        interpersonalLevel: person.interpersonalLevel || 'Equilibrado',
+        convivenceLevel: person.convivenceLevel || 'Facil de lidar',
+        collaborationLevel: person.collaborationLevel || 'Colabora ativamente com os demais',
+        relationalIntelligence: person.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes',
+        relationalClassification: person.relationalClassification || 'Relacionamento adequado',
+        pressureResponse: person.pressureResponse || 'Mantem a calma',
+        productivityEfficiency: Number(person.productivityEfficiency || 0),
+        productivityQuality: Number(person.productivityQuality || 0),
+        productivityOrganization: Number(person.productivityOrganization || 0),
+        productivityCommitment: Number(person.productivityCommitment || 0),
+        productivityAutonomy: Number(person.productivityAutonomy || 0),
+        productivityIndex: Number(person.productivityIndex || 0),
+        productivityDiagnosis: person.productivityDiagnosis || '',
+        pulse: Number(person.pulse || 0),
+        attendance: Number(person.attendance || 0),
+        workload: Number(person.workload || 0),
+        strengths: person.strengths || [],
+        risks: person.risks || [],
+        nextAction: person.nextAction || '',
+        bio: person.bio || '',
+        email: person.email || '',
+        phone: person.phone || '',
+        files: person.files || [],
+        assessmentForm: person.assessmentForm || {},
+      }
+      updateLocal(prev => ({ ...prev, people: [localPerson, ...prev.people] }))
+      return localPerson
+    }
+  }
+
   async function updatePeopleProfile(personId: string, patch: Partial<Person>) {
     try {
       const res = await api.patch(`/management/people/${personId}`, patch)
@@ -1174,6 +1167,7 @@ export default function WorldClassOperations({
           people={state.people}
           work={state.work.filter(item => item.area === 'Pessoas' || item.area === 'Treinamento')}
           onCreateAction={createPeopleAction}
+          onCreatePerson={createPeopleProfile}
           onUpdatePerson={updatePeopleProfile}
         />
       )}
@@ -2763,11 +2757,13 @@ function PeopleWorkspaceExecutive({
   people,
   work,
   onCreateAction,
+  onCreatePerson,
   onUpdatePerson,
 }: {
   people: Person[]
   work: WorkItem[]
   onCreateAction: (person: Person, title: string) => void
+  onCreatePerson: (person: Partial<Person>) => Promise<Person | null>
   onUpdatePerson: (personId: string, patch: Partial<Person>) => void | Promise<void>
 }) {
   const [roleFilter, setRoleFilter] = useState('Todos')
@@ -2779,6 +2775,58 @@ function PeopleWorkspaceExecutive({
   const [draftDirty, setDraftDirty] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState('')
+  const [creatingPerson, setCreatingPerson] = useState(false)
+
+  function createEmptyDraft(): Person {
+    return {
+      id: `P-${Date.now()}`,
+      name: '',
+      role: '',
+      unit: '',
+      training: '',
+      nextReview: '',
+      avatar: '',
+      score: 0,
+      leadershipPercent: 0,
+      leadershipLevel: 3,
+      leadershipProfile: 'Executor',
+      leadershipPotential: 'Alto',
+      leadershipReadiness: 'Potencial em desenvolvimento',
+      leaderDevelopment: 'Desenvolve regularmente',
+      temperamentPrimary: 'Fleumatico',
+      temperamentPrimaryPercent: 70,
+      temperamentSecondary: 'Sanguineo',
+      temperamentSecondaryPercent: 30,
+      temperamentReason: '',
+      behavioralProfile: 'Estavel',
+      behavioralProfilePercent: 75,
+      decisionStyle: 'Busca equilibrio entre velocidade e analise',
+      interpersonalLevel: 'Equilibrado',
+      convivenceLevel: 'Facil de lidar',
+      collaborationLevel: 'Colabora ativamente com os demais',
+      relationalIntelligence: 'Geralmente aceita feedbacks e faz ajustes',
+      relationalClassification: 'Relacionamento adequado',
+      pressureResponse: 'Mantem a calma',
+      productivityEfficiency: 0,
+      productivityQuality: 0,
+      productivityOrganization: 0,
+      productivityCommitment: 0,
+      productivityAutonomy: 0,
+      productivityIndex: 0,
+      productivityDiagnosis: '',
+      pulse: 0,
+      attendance: 0,
+      workload: 0,
+      strengths: [],
+      risks: [],
+      nextAction: '',
+      bio: '',
+      email: '',
+      phone: '',
+      files: [],
+      assessmentForm: {},
+    }
+  }
 
   useEffect(() => {
     if (!people.length) return
@@ -2906,11 +2954,30 @@ function PeopleWorkspaceExecutive({
     setDraftDirty(true)
   }
 
+  function updateAssessmentForm(rawText: string) {
+    try {
+      const parsed = rawText.trim() ? JSON.parse(rawText) : {}
+      setDraft(current => (current ? { ...current, assessmentForm: parsed } : current))
+      setDraftDirty(true)
+    } catch {}
+  }
+
+  function startNewPerson() {
+    const next = createEmptyDraft()
+    setCreatingPerson(true)
+    setSelectedPersonId(next.id)
+    setPanelTab('editar')
+    setWorkspaceMode('completo')
+    setDraft(next)
+    setDraftDirty(false)
+    setLastSavedAt('')
+  }
+
   async function saveDraft(silent = false) {
     if (!draft) return
     if (!silent) setSavingDraft(true)
     try {
-      await onUpdatePerson(draft.id, {
+      const payload = {
         ...draft,
         score: Number(draft.score || 0),
         leadershipPercent: Number(draft.leadershipPercent || 0),
@@ -2943,7 +3010,19 @@ function PeopleWorkspaceExecutive({
         strengths: draft.strengths || [],
         risks: draft.risks || [],
         files: draft.files || [],
-      })
+        assessmentForm: draft.assessmentForm || {},
+      }
+
+      if (creatingPerson) {
+        const created = await onCreatePerson(payload)
+        if (created) {
+          setCreatingPerson(false)
+          setSelectedPersonId(created.id)
+          setDraft({ ...created, files: [...(created.files || [])] })
+        }
+      } else {
+        await onUpdatePerson(draft.id, payload)
+      }
       setDraftDirty(false)
       setLastSavedAt(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
     } finally {
@@ -2967,6 +3046,9 @@ function PeopleWorkspaceExecutive({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button onClick={startNewPerson} className="h-10 rounded-2xl border border-[#0ABD78]/30 bg-[#0ABD78]/10 px-4 text-xs font-black text-[#7AF0C0]">
+                Novo cadastro inteligente
+              </button>
               <button onClick={() => setWorkspaceMode(mode => (mode === 'simplificado' ? 'completo' : 'simplificado'))} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">
                 {workspaceMode === 'simplificado' ? 'Vista completa' : 'Vista compacta'}
               </button>
@@ -2986,7 +3068,9 @@ function PeopleWorkspaceExecutive({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Estado da ficha</p>
-                <p className="mt-1 text-sm font-semibold text-white/60">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+                <p className="mt-1 text-sm font-semibold text-white/60">
+                  {creatingPerson ? 'Criando novo cadastro inteligente' : savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}
+                </p>
                 <p className="mt-1 text-xs font-semibold text-white/35">{lastSavedAt ? `Último salvamento: ${lastSavedAt}` : 'Ainda não salvo nesta sessão'}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -3038,6 +3122,19 @@ function PeopleWorkspaceExecutive({
           </div>
 
           <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+            {lineupPeople.length === 0 && (
+              <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.03] p-6 sm:col-span-2 xl:col-span-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Base zerada</p>
+                <h4 className="mt-2 text-2xl font-black text-white">Nenhuma pessoa cadastrada ainda.</h4>
+                <p className="mt-2 max-w-2xl text-sm text-white/55">
+                  Use o cadastro inteligente para criar a primeira ficha. A partir dele, o sistema salva a base local, sincroniza no backend e envia o snapshot para o Drive.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button onClick={startNewPerson} className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Criar primeiro cadastro</button>
+                  <button onClick={() => void saveDraft()} className="h-10 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black text-white">Salvar base atual</button>
+                </div>
+              </div>
+            )}
             {lineupPeople.map(person => {
               const active = person.id === selectedPerson?.id
               const leadershipPercent = person.leadershipPercent ?? Math.round((person.score || 0) * 20)
@@ -3229,6 +3326,15 @@ function PeopleWorkspaceExecutive({
                       className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none md:col-span-2"
                       placeholder="Resumo executivo"
                     />
+                    <textarea
+                      value={JSON.stringify(draft.assessmentForm || {}, null, 2)}
+                      onChange={event => updateAssessmentForm(event.target.value)}
+                      className="min-h-40 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-xs text-white/80 outline-none md:col-span-2"
+                      placeholder='{"bloco1":{"1":5,"2":4},"observacoes":"..."}'
+                    />
+                    <p className="text-xs text-white/35 md:col-span-2">
+                      Formulário inteligente: deixe aqui a base estruturada em JSON. Quando você me mandar o modelo final, eu adapto para campos visuais sem perder a base.
+                    </p>
                   </div>
                 </div>
 

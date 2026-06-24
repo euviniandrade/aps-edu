@@ -2,9 +2,11 @@ const fs = require('fs')
 const path = require('path')
 const { randomUUID } = require('crypto')
 const { authenticate } = require('../../shared/middleware/auth.middleware')
+const { uploadDriveFile } = require('../integrations/integrations.service')
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const DATA_FILE = path.join(DATA_DIR, 'management-state.json')
+const PEOPLE_BACKUP_DIR = path.join(DATA_DIR, 'people-backups')
 
 const defaultState = {
   work: [
@@ -18,53 +20,7 @@ const defaultState = {
     { id: 'MAT-2042', family: 'Familia Andrade', student: 'Livia Andrade - 1 ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentacao' },
     { id: 'MAT-2043', family: 'Familia Costa', student: 'Rafael Costa - 9 ano', stage: 'Bolsa em analise', value: 2100, next: 'Aprovar condicao comercial' }
   ],
-  people: [
-    {
-      id: 'P-1',
-      name: 'Marina Costa',
-      role: 'Coordenacao pedagogica',
-      unit: 'Pedagogico',
-      score: 4.7,
-      leadershipPercent: 94,
-      leadershipLevel: 4,
-      leadershipProfile: 'Estrategico',
-      leadershipPotential: 'Muito Alto',
-      leadershipReadiness: 'Pronto para liderar setores/departamentos',
-      leaderDevelopment: 'Forma novos lideres de maneira consistente',
-      training: 'Avaliacao formativa',
-      nextReview: '20/06'
-    },
-    {
-      id: 'P-2',
-      name: 'Rafael Almeida',
-      role: 'Secretaria escolar',
-      unit: 'Atendimento',
-      score: 4.4,
-      leadershipPercent: 88,
-      leadershipLevel: 4,
-      leadershipProfile: 'Organizador',
-      leadershipPotential: 'Alto',
-      leadershipReadiness: 'Pronto para liderar pequenas equipes',
-      leaderDevelopment: 'Desenvolve regularmente',
-      training: 'Jornada da familia',
-      nextReview: '18/06'
-    },
-    {
-      id: 'P-3',
-      name: 'Juliana Martins',
-      role: 'Operacao e suporte',
-      unit: 'Operacao',
-      score: 4.1,
-      leadershipPercent: 82,
-      leadershipLevel: 3,
-      leadershipProfile: 'Executor',
-      leadershipPotential: 'Moderado',
-      leadershipReadiness: 'Potencial em desenvolvimento',
-      leaderDevelopment: 'Desenvolve ocasionalmente',
-      training: 'SLA e rotina visual',
-      nextReview: '21/06'
-    }
-  ],
+  people: [],
   finance: [
     { id: 'F-1', label: 'Matriculas previstas', type: 'Receita', amount: 3470, status: 'Previsto', due: 'Hoje' },
     { id: 'F-2', label: 'Compra de materiais pedagogicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanha' },
@@ -127,6 +83,18 @@ function parseList(value) {
       .filter(Boolean)
   }
   return undefined
+}
+
+function parseMaybeJsonObject(value) {
+  if (!value) return undefined
+  if (typeof value === 'object') return value
+  if (typeof value !== 'string') return undefined
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' ? parsed : undefined
+  } catch {
+    return undefined
+  }
 }
 
 const leadershipProfiles = ['Executor', 'Entusiasta', 'Relacional', 'Organizador', 'Desenvolvedor', 'Estrategico', 'Influenciador']
@@ -287,6 +255,12 @@ function inferProductivityDiagnosis(value) {
   return 'Necessita Desenvolvimento'
 }
 
+function parseSmartForm(value) {
+  const parsed = parseMaybeJsonObject(value)
+  if (!parsed) return undefined
+  return parsed
+}
+
 function inferLeadershipPercent(person, level) {
   if (typeof person.leadershipPercent === 'number') return clampNumber(person.leadershipPercent, 0, 100)
   if (typeof person.score === 'number' && person.score > 0) return clampNumber(person.score * 20, 0, 100)
@@ -340,6 +314,10 @@ function normalizePerson(person) {
     strengths: Array.isArray(person.strengths) ? person.strengths : [],
     risks: Array.isArray(person.risks) ? person.risks : [],
     files: Array.isArray(person.files) ? person.files : [],
+    assessmentForm: parseSmartForm(person.assessmentForm) || person.assessmentForm || undefined,
+    driveSyncAt: typeof person.driveSyncAt === 'string' ? person.driveSyncAt : undefined,
+    driveSyncProvider: typeof person.driveSyncProvider === 'string' ? person.driveSyncProvider : undefined,
+    driveSyncFile: typeof person.driveSyncFile === 'string' ? person.driveSyncFile : undefined,
   }
 }
 
@@ -354,6 +332,45 @@ function nextStage(stage) {
     Concluido: 'Concluido'
   }
   return map[stage] || 'Em andamento'
+}
+
+function backupPeopleState(state, reason = 'update') {
+  fs.mkdirSync(PEOPLE_BACKUP_DIR, { recursive: true })
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const fileName = `${stamp}-${reason}.json`
+  const filePath = path.join(PEOPLE_BACKUP_DIR, fileName)
+  fs.writeFileSync(filePath, JSON.stringify({ updatedAt: new Date().toISOString(), people: state.people || [] }, null, 2))
+  return { fileName, filePath }
+}
+
+async function syncPeopleSnapshotToDrive(userId, state, reason = 'update') {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const payload = {
+    name: `APS EDU - Pessoas - ${stamp}.json`,
+    mimeType: 'application/json',
+    content: JSON.stringify({
+      updatedAt: state.updatedAt || new Date().toISOString(),
+      reason,
+      people: state.people || [],
+    }, null, 2),
+  }
+
+  try {
+    const result = await uploadDriveFile(userId, payload)
+    return {
+      provider: result.provider,
+      fileId: result.file?.id || null,
+      fileName: result.file?.name || payload.name,
+      webViewLink: result.file?.webViewLink || null,
+      syncedAt: new Date().toISOString(),
+    }
+  } catch (error) {
+    return {
+      provider: null,
+      error: error?.message || 'Falha ao sincronizar com Drive',
+      syncedAt: null,
+    }
+  }
 }
 
 module.exports = async function (fastify) {
@@ -524,11 +541,27 @@ module.exports = async function (fastify) {
         strengths: strengths || item.strengths,
         risks: risks || item.risks,
         files: files || item.files,
+        assessmentForm: parseMaybeJsonObject(body.assessmentForm) || item.assessmentForm,
+        driveSyncAt: item.driveSyncAt,
+        driveSyncProvider: item.driveSyncProvider,
+        driveSyncFile: item.driveSyncFile,
       })
     })
 
     if (!found) return reply.code(404).send({ error: 'Pessoa nao encontrada' })
-    return reply.send(writeState(state))
+    const saved = writeState(state)
+    backupPeopleState(saved, 'people-update')
+    const sync = await syncPeopleSnapshotToDrive(request.currentUser.id, saved, 'people-update')
+    if (sync?.syncedAt) {
+      const next = writeState({
+        ...saved,
+        peopleDriveSync: sync,
+        peopleDriveSyncAt: sync.syncedAt,
+        peopleDriveSyncFile: sync.fileName,
+      })
+      return reply.send(next)
+    }
+    return reply.send(saved)
   })
 
   fastify.post('/people', { preHandler: [authenticate] }, async (request, reply) => {
@@ -583,9 +616,46 @@ module.exports = async function (fastify) {
       bio: typeof body.bio === 'string' ? body.bio.trim() : '',
       email: typeof body.email === 'string' ? body.email.trim() : '',
       phone: typeof body.phone === 'string' ? body.phone.trim() : '',
+      assessmentForm: parseMaybeJsonObject(body.assessmentForm) || undefined,
     }), ...state.people]
 
-    return reply.code(201).send(writeState(state))
+    const saved = writeState(state)
+    backupPeopleState(saved, 'people-create')
+    const sync = await syncPeopleSnapshotToDrive(request.currentUser.id, saved, 'people-create')
+    if (sync?.syncedAt) {
+      const next = writeState({
+        ...saved,
+        peopleDriveSync: sync,
+        peopleDriveSyncAt: sync.syncedAt,
+        peopleDriveSyncFile: sync.fileName,
+      })
+      return reply.code(201).send(next)
+    }
+
+    return reply.code(201).send(saved)
+  })
+
+  fastify.delete('/people', { preHandler: [authenticate] }, async (request, reply) => {
+    const state = readState()
+    backupPeopleState(state, 'people-reset-before-clear')
+    const cleared = writeState({
+      ...state,
+      people: [],
+      peopleDriveSync: null,
+      peopleDriveSyncAt: null,
+      peopleDriveSyncFile: null,
+    })
+    const sync = await syncPeopleSnapshotToDrive(request.currentUser.id, cleared, 'people-reset')
+    if (sync?.syncedAt) {
+      const next = writeState({
+        ...cleared,
+        peopleDriveSync: sync,
+        peopleDriveSyncAt: sync.syncedAt,
+        peopleDriveSyncFile: sync.fileName,
+      })
+      return reply.send(next)
+    }
+    return reply.send(cleared)
   })
 
   fastify.patch('/automations/:id/toggle', { preHandler: [authenticate] }, async (request, reply) => {

@@ -5,7 +5,7 @@ import api from '@/lib/api'
 import {
   ChartBarIcon, UserGroupIcon, ExclamationTriangleIcon,
   CheckCircleIcon, PlusIcon, XMarkIcon, MagnifyingGlassIcon,
-  ArrowTrendingUpIcon, FireIcon,
+  ArrowTrendingUpIcon, FireIcon, LinkIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── HISTORICAL DATA (from Relatório Executivo 2027) ──────────
@@ -98,14 +98,39 @@ interface Avaliacao {
   criadoEm: string
 }
 
+interface PromoterLink {
+  id: string
+  token: string
+  publicPath: string
+  promoterName?: string
+  unit?: string
+  role?: string
+  notes?: string
+  status?: string
+  createdAt?: string
+}
+
 export default function PromotoresPage() {
   const [mounted, setMounted] = useState(false)
-  const [tab, setTab] = useState<'painel'|'promotores'|'avaliacoes'|'ia'>('painel')
+  const [tab, setTab] = useState<'painel'|'promotores'|'avaliacoes'|'formulario'|'ia'>('painel')
+  const [origin, setOrigin] = useState('')
   const [search, setSearch] = useState('')
   const [filterRisco, setFilterRisco] = useState('all')
   const [filterPlano, setFilterPlano] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([])
+  const [formLinks, setFormLinks] = useState<PromoterLink[]>([])
+  const [formSubmissions, setFormSubmissions] = useState<any[]>([])
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkCreating, setLinkCreating] = useState(false)
+  const [linkCopied, setLinkCopied] = useState('')
+  const [linkDraft, setLinkDraft] = useState({
+    promoterName: '',
+    unit: '',
+    role: '',
+    notes: '',
+    expiresAt: '',
+  })
   const [loadingAval, setLoadingAval] = useState(false)
   const [aiMessages, setAiMessages] = useState<{role:'user'|'assistant';content:string}[]>([])
   const [aiInput, setAiInput] = useState('')
@@ -115,6 +140,11 @@ export default function PromotoresPage() {
   useEffect(() => {
     setMounted(true)
     loadAvaliacoes()
+    loadFormData()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin)
   }, [])
 
   useEffect(() => {
@@ -128,6 +158,45 @@ export default function PromotoresPage() {
       setAvaliacoes(r.data || [])
     } catch { setAvaliacoes([]) }
     finally { setLoadingAval(false) }
+  }
+
+  const loadFormData = async () => {
+    setLinkLoading(true)
+    try {
+      const [linksRes, subsRes] = await Promise.all([
+        api.get('/promoter-forms/links'),
+        api.get('/promoter-forms/submissions'),
+      ])
+      setFormLinks(Array.isArray(linksRes.data?.links) ? linksRes.data.links : [])
+      setFormSubmissions(Array.isArray(subsRes.data?.submissions) ? subsRes.data.submissions : [])
+    } catch {
+      setFormLinks([])
+      setFormSubmissions([])
+    } finally {
+      setLinkLoading(false)
+    }
+  }
+
+  const createFormLink = async () => {
+    if (linkCreating) return
+    setLinkCreating(true)
+    try {
+      await api.post('/promoter-forms/links', linkDraft)
+      setLinkDraft({ promoterName: '', unit: '', role: '', notes: '', expiresAt: '' })
+      await loadFormData()
+      setTab('formulario')
+    } catch {
+      // keep silent for now
+    } finally {
+      setLinkCreating(false)
+    }
+  }
+
+  const copyPublicLink = async (token: string) => {
+    const url = `${window.location.origin}/promotores/form/${token}`
+    await navigator.clipboard.writeText(url)
+    setLinkCopied(token)
+    window.setTimeout(() => setLinkCopied(''), 1800)
   }
 
   const sendAiMessage = async () => {
@@ -168,6 +237,7 @@ export default function PromotoresPage() {
     { id: 'painel',      label: '📊 Painel' },
     { id: 'promotores',  label: '👥 Promotores' },
     { id: 'avaliacoes',  label: '📋 Avaliações' },
+    { id: 'formulario',  label: '🔗 Formulário' },
     { id: 'ia',          label: '🤖 IA Consultiva' },
   ]
 
@@ -430,6 +500,125 @@ export default function PromotoresPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: FORMULÁRIO */}
+      {tab === 'formulario' && (
+        <div className="animate-fade-in-up space-y-5">
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Formulário inteligente</p>
+                  <h3 className="text-xl font-extrabold text-white mt-1">Criar link para promotor</h3>
+                </div>
+                <button
+                  onClick={createFormLink}
+                  disabled={linkCreating}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)' }}>
+                  <LinkIcon className="w-4 h-4" />
+                  {linkCreating ? 'Gerando...' : 'Gerar link'}
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 mt-4">
+                <input value={linkDraft.promoterName} onChange={e => setLinkDraft(prev => ({ ...prev, promoterName: e.target.value }))}
+                  placeholder="Nome do promotor"
+                  className="px-4 py-3 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <input value={linkDraft.unit} onChange={e => setLinkDraft(prev => ({ ...prev, unit: e.target.value }))}
+                  placeholder="Unidade"
+                  className="px-4 py-3 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <input value={linkDraft.role} onChange={e => setLinkDraft(prev => ({ ...prev, role: e.target.value }))}
+                  placeholder="Cargo / função"
+                  className="px-4 py-3 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <input value={linkDraft.expiresAt} onChange={e => setLinkDraft(prev => ({ ...prev, expiresAt: e.target.value }))}
+                  placeholder="Validade opcional (YYYY-MM-DD)"
+                  className="px-4 py-3 rounded-xl text-sm text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+                <textarea value={linkDraft.notes} onChange={e => setLinkDraft(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Instruções para o promotor"
+                  className="sm:col-span-2 px-4 py-3 rounded-xl text-sm text-white outline-none min-h-[100px]"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }} />
+              </div>
+              <div className="mt-4 rounded-xl p-4" style={{ background: 'rgba(248,163,3,0.06)', border: '1px solid rgba(248,163,3,0.16)' }}>
+                <p className="text-sm font-semibold text-white">Link público do formulário</p>
+                <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  O link pode ser enviado por WhatsApp, Gmail, Teams ou qualquer outro canal.
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {formLinks.slice(0, 6).map(link => (
+                    <div key={link.id} className="flex items-center justify-between gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{origin ? `${origin}/promotores/form/${link.token}` : `/promotores/form/${link.token}`}</p>
+                        <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          {link.promoterName || 'Sem nome'}{link.unit ? ` · ${link.unit}` : ''}
+                        </p>
+                      </div>
+                      <button onClick={() => copyPublicLink(link.token)}
+                        className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold text-black"
+                        style={{ background: 'linear-gradient(135deg,#0ABD78,#47D99C)' }}>
+                        {linkCopied === link.token ? 'Copiado' : 'Copiar'}
+                      </button>
+                    </div>
+                  ))}
+                  {!formLinks.length && (
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Nenhum link gerado ainda. Use o botão acima para criar o primeiro.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <p className="text-xs uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Status do fluxo</p>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(74,158,255,0.08)' }}>
+                    <p className="text-xs text-white/45">Links ativos</p>
+                    <p className="mt-1 text-3xl font-extrabold text-white">{formLinks.length}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(10,189,120,0.08)' }}>
+                    <p className="text-xs text-white/45">Envios recebidos</p>
+                    <p className="mt-1 text-3xl font-extrabold text-white">{formSubmissions.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Últimos envios</p>
+                    <p className="text-sm text-white/60 mt-1">Dados gravados na plataforma e sincronizados com Drive</p>
+                  </div>
+                  <button onClick={loadFormData} className="text-xs font-semibold text-white/60 hover:text-white">
+                    Atualizar
+                  </button>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {formSubmissions.slice(0, 5).map(submission => (
+                    <div key={submission.id} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{submission.promoterName || 'Promotor'}</p>
+                          <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                            {submission.unit || 'APS'}{submission.role ? ` · ${submission.role}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303' }}>
+                          {submission.computed?.finalProfile?.title || 'Recebido'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {!formSubmissions.length && (
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Ainda não há envios nesta base.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
