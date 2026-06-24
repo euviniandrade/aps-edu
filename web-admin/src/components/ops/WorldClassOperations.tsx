@@ -1170,7 +1170,7 @@ export default function WorldClassOperations({
       )}
 
       {activeView === 'pessoas' && (
-        <PeopleWorkspacePremium
+        <PeopleWorkspaceExecutive
           people={state.people}
           work={state.work.filter(item => item.area === 'Pessoas' || item.area === 'Treinamento')}
           onCreateAction={createPeopleAction}
@@ -2748,6 +2748,532 @@ function PeopleWorkspacePremium({
                 >
                   Pedir plano a Sofi
                 </button>
+              </div>
+            ))}
+          </div>
+        </Surface>
+      </div>
+    </section>
+  )
+}
+
+function PeopleWorkspaceExecutive({
+  people,
+  work,
+  onCreateAction,
+  onUpdatePerson,
+}: {
+  people: Person[]
+  work: WorkItem[]
+  onCreateAction: (person: Person, title: string) => void
+  onUpdatePerson: (personId: string, patch: Partial<Person>) => void | Promise<void>
+}) {
+  const [roleFilter, setRoleFilter] = useState('Todos')
+  const [selectedPersonId, setSelectedPersonId] = useState(people[0]?.id || '')
+  const [draft, setDraft] = useState<Person | null>(people[0] ? { ...people[0], files: [...(people[0].files || [])] } : null)
+  const [fileInput, setFileInput] = useState('')
+  const [panelTab, setPanelTab] = useState<'resumo' | 'editar' | 'arquivos' | 'relatorios'>('resumo')
+  const [draftDirty, setDraftDirty] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+
+  useEffect(() => {
+    if (!people.length) return
+    if (!selectedPersonId || !people.some(person => person.id === selectedPersonId)) {
+      setSelectedPersonId(people[0].id)
+    }
+  }, [people, selectedPersonId])
+
+  useEffect(() => {
+    const next = people.find(person => person.id === selectedPersonId) || people[0] || null
+    setDraft(next ? { ...next, files: [...(next.files || [])] } : null)
+    setDraftDirty(false)
+  }, [people, selectedPersonId])
+
+  useEffect(() => {
+    if (!draft || !draftDirty) return
+    const timer = window.setTimeout(() => {
+      void saveDraft(true)
+    }, 900)
+    return () => window.clearTimeout(timer)
+  }, [draft, draftDirty])
+
+  const roleTabs = useMemo(() => {
+    const items = people.map(person => person.unit || person.role).filter(Boolean)
+    return ['Todos', ...Array.from(new Set(items))]
+  }, [people])
+
+  const filteredPeople = useMemo(() => {
+    if (roleFilter === 'Todos') return people
+    return people.filter(person => {
+      const bucket = person.unit || person.role
+      return bucket?.toLowerCase().includes(roleFilter.toLowerCase()) || person.role.toLowerCase().includes(roleFilter.toLowerCase())
+    })
+  }, [people, roleFilter])
+
+  const lineupPeople = useMemo(
+    () => [...filteredPeople].sort((a, b) => (b.leadershipPercent ?? 0) - (a.leadershipPercent ?? 0) || (b.score || 0) - (a.score || 0)),
+    [filteredPeople],
+  )
+
+  const selectedPerson = draft || lineupPeople[0] || people[0] || null
+  const selectedLeadershipPercent = selectedPerson?.leadershipPercent ?? Math.round((selectedPerson?.score || 0) * 20)
+  const productivityIndex = selectedPerson?.productivityIndex ?? inferProductivityIndex([
+    selectedPerson?.productivityEfficiency,
+    selectedPerson?.productivityQuality,
+    selectedPerson?.productivityOrganization,
+    selectedPerson?.productivityCommitment,
+    selectedPerson?.productivityAutonomy,
+  ])
+  const productivityDiagnosis = inferProductivityDiagnosis(productivityIndex)
+  const averageLeadership = Math.round(people.reduce((sum, item) => sum + (item.leadershipPercent ?? Math.round((item.score || 0) * 20)), 0) / Math.max(1, people.length))
+  const averageTemperament = Math.round(people.reduce((sum, item) => sum + (item.temperamentPrimaryPercent || 70), 0) / Math.max(1, people.length))
+  const averageProductivity = Math.round(people.reduce((sum, item) => sum + (item.productivityIndex || productivityIndex), 0) / Math.max(1, people.length))
+  const readyLeaders = people.filter(item => (item.leadershipLevel || 0) >= 4).length
+  const executivePerson = selectedPerson || people[0] || null
+
+  const leadershipSnapshot = selectedPerson ? [
+    { label: 'Nivel', value: `N${selectedPerson.leadershipLevel || 3}`, detail: 'maturidade atual' },
+    { label: 'Perfil', value: selectedPerson.leadershipProfile || 'Executor', detail: 'estilo predominante' },
+    { label: 'Potencial', value: selectedPerson.leadershipPotential || 'Alto', detail: 'escala de responsabilidade' },
+    { label: 'Desenvolve', value: selectedPerson.leaderDevelopment || 'Desenvolve regularmente', detail: 'efeito multiplicador' },
+  ] : []
+
+  const temperamentSnapshot = selectedPerson ? [
+    { label: 'Dominante', value: `${selectedPerson.temperamentPrimaryPercent || 70}% ${selectedPerson.temperamentPrimary || 'Fleumatico'}`, detail: selectedPerson.temperamentReason || 'perfil dominante' },
+    { label: 'Secundario', value: `${selectedPerson.temperamentSecondaryPercent || 30}% ${selectedPerson.temperamentSecondary || 'Sanguineo'}`, detail: 'traços complementares' },
+    { label: 'Perfil', value: selectedPerson.behavioralProfile || 'Estavel', detail: `${selectedPerson.behavioralProfilePercent || 75}% de aderencia comportamental` },
+    { label: 'Leitura', value: selectedPerson.relationalClassification || 'Relacionamento adequado', detail: 'síntese relacional' },
+  ] : []
+
+  const productivitySnapshot = selectedPerson ? [
+    { label: 'Eficiência', value: `${selectedPerson.productivityEfficiency ?? 0}%`, detail: 'capacidade de concluir tarefas' },
+    { label: 'Qualidade', value: `${selectedPerson.productivityQuality ?? 0}%`, detail: 'confiabilidade das entregas' },
+    { label: 'Organização', value: `${selectedPerson.productivityOrganization ?? 0}%`, detail: 'gestão de prioridades' },
+    { label: 'Índice geral', value: `${productivityIndex}%`, detail: productivityDiagnosis.label },
+  ] : []
+
+  function syncDraftField<K extends keyof Person>(key: K, value: Person[K]) {
+    setDraft(current => (current ? { ...current, [key]: value } : current))
+    setDraftDirty(true)
+  }
+
+  function addDraftFile() {
+    if (!fileInput.trim()) return
+    setDraft(current => (current ? { ...current, files: Array.from(new Set([...(current.files || []), fileInput.trim()])) } : current))
+    setDraftDirty(true)
+    setFileInput('')
+  }
+
+  function handleAvatarFile(file: File | null) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      setDraft(current => (current ? { ...current, avatar: result } : current))
+      setDraftDirty(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function removeDraftFile(name: string) {
+    setDraft(current => (current ? { ...current, files: (current.files || []).filter(file => file !== name) } : current))
+    setDraftDirty(true)
+  }
+
+  async function saveDraft(silent = false) {
+    if (!draft) return
+    if (!silent) setSavingDraft(true)
+    try {
+      await onUpdatePerson(draft.id, {
+        ...draft,
+        score: Number(draft.score || 0),
+        leadershipPercent: Number(draft.leadershipPercent || 0),
+        leadershipLevel: (draft.leadershipLevel || 3) as LeadershipLevel,
+        leadershipProfile: draft.leadershipProfile || 'Executor',
+        leadershipPotential: draft.leadershipPotential || 'Alto',
+        leadershipReadiness: draft.leadershipReadiness || 'Potencial em desenvolvimento',
+        leaderDevelopment: draft.leaderDevelopment || 'Desenvolve regularmente',
+        temperamentPrimary: draft.temperamentPrimary || 'Fleumatico',
+        temperamentPrimaryPercent: Number(draft.temperamentPrimaryPercent || 0),
+        temperamentSecondary: draft.temperamentSecondary || 'Sanguineo',
+        temperamentSecondaryPercent: Number(draft.temperamentSecondaryPercent || 0),
+        temperamentReason: draft.temperamentReason || '',
+        behavioralProfile: draft.behavioralProfile || 'Estavel',
+        behavioralProfilePercent: Number(draft.behavioralProfilePercent || 0),
+        decisionStyle: draft.decisionStyle || 'Busca equilibrio entre velocidade e analise',
+        interpersonalLevel: draft.interpersonalLevel || 'Equilibrado',
+        convivenceLevel: draft.convivenceLevel || 'Facil de lidar',
+        collaborationLevel: draft.collaborationLevel || 'Colabora ativamente com os demais',
+        relationalIntelligence: draft.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes',
+        relationalClassification: draft.relationalClassification || 'Relacionamento adequado',
+        pressureResponse: draft.pressureResponse || 'Mantem a calma',
+        productivityEfficiency: Number(draft.productivityEfficiency || 0),
+        productivityQuality: Number(draft.productivityQuality || 0),
+        productivityOrganization: Number(draft.productivityOrganization || 0),
+        productivityCommitment: Number(draft.productivityCommitment || 0),
+        productivityAutonomy: Number(draft.productivityAutonomy || 0),
+        productivityIndex: Number(draft.productivityIndex || 0),
+        productivityDiagnosis: draft.productivityDiagnosis || '',
+        strengths: draft.strengths || [],
+        risks: draft.risks || [],
+        files: draft.files || [],
+      })
+      setDraftDirty(false)
+    } finally {
+      if (!silent) setSavingDraft(false)
+    }
+  }
+
+  return (
+    <section className="space-y-5">
+      <Surface className="overflow-hidden">
+        <div className="p-5 xl:p-6">
+          <div className="flex flex-col gap-4 border-b border-white/10 pb-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Central executiva de pessoas</p>
+              <h2 className="mt-2 text-3xl font-black leading-tight text-white xl:text-4xl">Liderança, temperamento e produtividade numa tela editorial, limpa e viva.</h2>
+              <p className="mt-3 text-sm text-white/55">
+                {selectedPerson
+                  ? `${selectedPerson.name} atua como ${selectedPerson.role}. A leitura executiva fica no centro para editar, salvar e confiar no resultado em tempo real.`
+                  : 'Selecione uma pessoa para abrir a leitura executiva consolidada.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio geral - ${selectedPerson.name}`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório geral</button>
+              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Abrir relatório</button>
+              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Plano com Sofi - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Gerar com Sofi</button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <MetricCard label="Liderança média" value={`${averageLeadership}%`} detail={`${readyLeaders} prontos para liderar` } color="#C4B5FD" />
+            <MetricCard label="Temperamento médio" value={`${averageTemperament}%`} detail="leitura relacional consolidada" color="#38BDF8" />
+            <MetricCard label="Produtividade média" value={`${averageProductivity}%`} detail="índice geral do time" color="#F8A303" />
+          </div>
+
+          <div className="mt-4 rounded-[1.55rem] border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Estado da ficha</p>
+                <p className="mt-1 text-sm font-semibold text-white/60">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{selectedPerson?.leadershipLevel || 3}</span>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{selectedLeadershipPercent}% liderança</span>
+                <button onClick={() => void saveDraft()} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Surface>
+
+      <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_420px]">
+        <Surface className="overflow-hidden">
+          <SectionHeader eyebrow="Cargos" title="Filtros" />
+          <div className="space-y-2 p-4">
+            {roleTabs.map(tab => {
+              const count = tab === 'Todos' ? people.length : people.filter(person => (person.unit || person.role).toLowerCase().includes(tab.toLowerCase())).length
+              const active = roleFilter === tab
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setRoleFilter(tab)}
+                  className="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition"
+                  style={{
+                    borderColor: active ? 'rgba(248,163,3,0.35)' : 'rgba(255,255,255,0.08)',
+                    background: active ? 'rgba(248,163,3,0.12)' : 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <span className="text-sm font-black text-white">{tab}</span>
+                  <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11px] font-black text-white/55">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </Surface>
+
+        <Surface className="overflow-hidden">
+          <SectionHeader eyebrow="Equipe" title="Escalação executiva" />
+          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+            {lineupPeople.map(person => {
+              const active = person.id === selectedPerson?.id
+              const leadershipPercent = person.leadershipPercent ?? Math.round((person.score || 0) * 20)
+              return (
+                <button
+                  key={person.id}
+                  onClick={() => {
+                    setSelectedPersonId(person.id)
+                    setPanelTab('resumo')
+                  }}
+                  className="rounded-[1.5rem] border p-4 text-left transition hover:-translate-y-0.5"
+                  style={{
+                    borderColor: active ? 'rgba(248,163,3,0.4)' : 'rgba(255,255,255,0.08)',
+                    background: active ? 'rgba(248,163,3,0.08)' : 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <img src={person.avatar} alt={person.name} className="h-14 w-14 rounded-2xl object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-lg font-black text-white">{person.name}</p>
+                          <p className="mt-1 text-sm font-semibold text-white/60">{person.role}</p>
+                          <p className="mt-1 text-sm font-black text-[#A78BFA]">{person.unit}</p>
+                        </div>
+                        <span className="rounded-full bg-[#8B5CF6]/16 px-3 py-1 text-xs font-black text-[#C4B5FD]">{leadershipPercent}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{person.leadershipLevel || 3}</span>
+                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.leadershipProfile || 'Executor'}</span>
+                    <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{person.productivityIndex || 0}%</span>
+                  </div>
+                  <div className="mt-4">
+                    <ProgressRow label="Liderança" value={leadershipPercent} color="#8B5CF6" />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </Surface>
+
+        <Surface className="overflow-hidden">
+          <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Ficha profissional</p>
+              <p className="mt-2 truncate text-2xl font-black text-white">{selectedPerson?.name || 'Selecione alguém'}</p>
+              <p className="mt-1 text-sm font-semibold text-white/55">{selectedPerson?.role || 'Sem cargo'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Status</p>
+              <p className="mt-1 text-sm font-black text-[#C4B5FD]">N{selectedPerson?.leadershipLevel || 3}</p>
+              <p className="mt-1 text-xs text-white/45">{selectedLeadershipPercent}% liderança</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-b border-white/10 px-5 py-4">
+            {([
+              { id: 'resumo', label: 'Resumo' },
+              { id: 'editar', label: 'Editar' },
+              { id: 'arquivos', label: 'Arquivos' },
+              { id: 'relatorios', label: 'Relatórios' },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setPanelTab(tab.id)}
+                className="h-10 rounded-2xl px-4 text-xs font-black transition"
+                style={{
+                  background: panelTab === tab.id ? '#F8A303' : 'rgba(255,255,255,0.04)',
+                  color: panelTab === tab.id ? '#05070D' : 'rgba(255,255,255,0.68)',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="max-h-[calc(100vh-320px)] overflow-y-auto p-5">
+            {panelTab === 'resumo' && selectedPerson && (
+              <div className="space-y-4">
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-sm text-white/55">
+                    {selectedPerson.name} atua como {selectedPerson.role}. Nível {selectedPerson.leadershipLevel || 3}, perfil {selectedPerson.leadershipProfile || 'Executor'}, potencial {selectedPerson.leadershipPotential || 'Alto'} e prontidão {selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}.
+                  </p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {leadershipSnapshot.map(item => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-black/10 p-3">
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/32">{item.label}</p>
+                        <p className="mt-1 text-sm font-black text-white">{item.value}</p>
+                        <p className="mt-1 text-xs text-white/38">{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Temperamento e personalidade</p>
+                  <p className="mt-2 text-sm text-white/55">
+                    {selectedPerson.temperamentPrimaryPercent || 70}% {selectedPerson.temperamentPrimary || 'Fleumatico'} e {selectedPerson.temperamentSecondaryPercent || 30}% {selectedPerson.temperamentSecondary || 'Sanguineo'}.
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-white/45">{selectedPerson.temperamentReason || 'Leitura calculada a partir do cargo, área e contexto de trabalho.'}</p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {temperamentSnapshot.map(item => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-black/10 p-3">
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/32">{item.label}</p>
+                        <p className="mt-1 text-sm font-black text-white">{item.value}</p>
+                        <p className="mt-1 text-xs text-white/38">{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Produtividade</p>
+                  <p className="mt-2 text-sm text-white/55">Índice geral de produtividade: {productivityIndex}% - {productivityDiagnosis.label}</p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {productivitySnapshot.map(item => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-black/10 p-3">
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/32">{item.label}</p>
+                        <p className="mt-1 text-sm font-black text-white">{item.value}</p>
+                        <p className="mt-1 text-xs text-white/38">{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {panelTab === 'editar' && draft && (
+              <div className="space-y-4">
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Editar profissional</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <Input value={draft.name || ''} onChange={event => syncDraftField('name', event.target.value)} placeholder="Nome" />
+                    <Input value={draft.role || ''} onChange={event => syncDraftField('role', event.target.value)} placeholder="Cargo" />
+                    <Input value={draft.unit || ''} onChange={event => syncDraftField('unit', event.target.value)} placeholder="Área / setor" />
+                    <Input value={draft.avatar || ''} onChange={event => syncDraftField('avatar', event.target.value)} placeholder="URL da foto" />
+                    <label className="flex h-11 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-4 text-xs font-black text-white/60 md:col-span-2">
+                      Trocar foto
+                      <input type="file" accept="image/*" className="hidden" onChange={event => handleAvatarFile(event.target.files?.[0] || null)} />
+                    </label>
+                    <Input value={draft.training || ''} onChange={event => syncDraftField('training', event.target.value)} placeholder="Treinamento" />
+                    <Input value={draft.nextReview || ''} onChange={event => syncDraftField('nextReview', event.target.value)} placeholder="Próxima revisão" />
+                    <Input value={draft.email || ''} onChange={event => syncDraftField('email', event.target.value)} placeholder="E-mail" />
+                    <Input value={draft.phone || ''} onChange={event => syncDraftField('phone', event.target.value)} placeholder="Telefone" />
+                    <textarea
+                      value={draft.bio || ''}
+                      onChange={event => syncDraftField('bio', event.target.value)}
+                      className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none md:col-span-2"
+                      placeholder="Resumo executivo"
+                    />
+                  </div>
+                </div>
+
+                <ChoiceGroup label="Eixo 1 - Nível de maturidade" value={draft.leadershipLevel || 3} options={leadershipMaturityOptions} onChange={value => syncDraftField('leadershipLevel', value as LeadershipLevel)} />
+                <ChoiceGroup label="Eixo 2 - Perfil de liderança" value={draft.leadershipProfile || 'Executor'} options={leadershipProfileOptions} onChange={value => syncDraftField('leadershipProfile', value as LeadershipProfile)} />
+                <ChoiceGroup label="Potencial para cargos maiores" value={draft.leadershipPotential || 'Alto'} options={leadershipPotentialOptions} onChange={value => syncDraftField('leadershipPotential', value as LeadershipPotential)} />
+                <ChoiceGroup label="Prontidão para liderança" value={draft.leadershipReadiness || 'Potencial em desenvolvimento'} options={leadershipReadinessOptions} onChange={value => syncDraftField('leadershipReadiness', value as LeadershipReadiness)} />
+                <ChoiceGroup label="Capacidade de desenvolver outros líderes" value={draft.leaderDevelopment || 'Desenvolve regularmente'} options={leaderDevelopmentOptions} onChange={value => syncDraftField('leaderDevelopment', value as LeaderDevelopment)} />
+                <ChoiceGroup label="Temperamento predominante" value={draft.temperamentPrimary || 'Fleumatico'} options={temperamentOptions} onChange={value => syncDraftField('temperamentPrimary', value as TemperamentType)} />
+                <ChoiceGroup label="Temperamento secundário" value={draft.temperamentSecondary || 'Sanguineo'} options={temperamentOptions} onChange={value => syncDraftField('temperamentSecondary', value as TemperamentType)} />
+                <ChoiceGroup label="Perfil comportamental" value={draft.behavioralProfile || 'Estavel'} options={behavioralProfileOptions} onChange={value => syncDraftField('behavioralProfile', value as BehavioralProfile)} />
+                <ChoiceGroup label="Tomada de decisão" value={draft.decisionStyle || 'Busca equilibrio entre velocidade e analise'} options={decisionStyleOptions} onChange={value => syncDraftField('decisionStyle', value as DecisionStyle)} />
+                <ChoiceGroup label="Relacionamento interpessoal" value={draft.interpersonalLevel || 'Equilibrado'} options={interpersonalLevelOptions} onChange={value => syncDraftField('interpersonalLevel', value as InterpersonalLevel)} />
+                <ChoiceGroup label="Resposta à pressão" value={draft.pressureResponse || 'Mantem a calma'} options={pressureResponseOptions} onChange={value => syncDraftField('pressureResponse', value as PressureResponse)} />
+                <ChoiceGroup label="Facilidade de convivência" value={draft.convivenceLevel || 'Facil de lidar'} options={convivenceOptions} onChange={value => syncDraftField('convivenceLevel', value as ConvivenceLevel)} />
+                <ChoiceGroup label="Trabalho em equipe" value={draft.collaborationLevel || 'Colabora ativamente com os demais'} options={collaborationOptions} onChange={value => syncDraftField('collaborationLevel', value as CollaborationLevel)} />
+                <ChoiceGroup label="Inteligência relacional" value={draft.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes'} options={relationalIntelligenceOptions} onChange={value => syncDraftField('relationalIntelligence', value as RelationalIntelligence)} />
+                <ChoiceGroup label="Classificação geral de relacionamento" value={draft.relationalClassification || 'Relacionamento adequado'} options={relationalClassificationOptions} onChange={value => syncDraftField('relationalClassification', value as RelationalClassification)} />
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Produtividade</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <Input value={String(draft.productivityEfficiency ?? '')} onChange={event => syncDraftField('productivityEfficiency', Number(event.target.value || 0))} placeholder="Eficiência %" />
+                    <Input value={String(draft.productivityQuality ?? '')} onChange={event => syncDraftField('productivityQuality', Number(event.target.value || 0))} placeholder="Qualidade %" />
+                    <Input value={String(draft.productivityOrganization ?? '')} onChange={event => syncDraftField('productivityOrganization', Number(event.target.value || 0))} placeholder="Organização %" />
+                    <Input value={String(draft.productivityCommitment ?? '')} onChange={event => syncDraftField('productivityCommitment', Number(event.target.value || 0))} placeholder="Comprometimento %" />
+                    <Input value={String(draft.productivityAutonomy ?? '')} onChange={event => syncDraftField('productivityAutonomy', Number(event.target.value || 0))} placeholder="Autonomia %" />
+                    <Input value={String(draft.productivityIndex ?? '')} onChange={event => syncDraftField('productivityIndex', Number(event.target.value || 0))} placeholder="Índice geral %" />
+                  </div>
+                  <Input value={draft.productivityDiagnosis || ''} onChange={event => syncDraftField('productivityDiagnosis', event.target.value)} placeholder="Diagnóstico automático" className="mt-3" />
+                </div>
+              </div>
+            )}
+
+            {panelTab === 'arquivos' && draft && (
+              <div className="space-y-4">
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Arquivos da pessoa</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Input value={fileInput} onChange={event => setFileInput(event.target.value)} placeholder="Adicionar arquivo ou link" />
+                    <button onClick={addDraftFile} className="h-11 rounded-2xl bg-white/[0.06] px-4 text-xs font-black text-white">+</button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(draft.files || []).map(file => (
+                      <button key={file} onClick={() => removeDraftFile(file)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-black text-white/65">
+                        <PaperClipIcon className="h-3.5 w-3.5" />
+                        {file}
+                        <TrashIcon className="h-3.5 w-3.5 text-white/35" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {panelTab === 'relatorios' && selectedPerson && (
+              <div className="space-y-4">
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Relatório executivo</p>
+                  <div className="mt-2 text-sm text-white/55">Aqui reunimos liderança, temperamento e produtividade em uma leitura central.</div>
+                  <div className="mt-4 grid gap-2 md:grid-cols-3">
+                    <button onClick={() => onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-11 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Relatório completo</button>
+                    <button onClick={() => onCreateAction(selectedPerson, `Relatorio segmentado - ${selectedPerson.name}`)} className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório segmentado</button>
+                    <button onClick={() => openSofi(`Sofi, gere um relatório executivo completo de ${selectedPerson.name}. Liderança: Nível ${selectedPerson.leadershipLevel || 3}, perfil ${selectedPerson.leadershipProfile || 'Executor'}, potencial ${selectedPerson.leadershipPotential || 'Alto'}, prontidão ${selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}, desenvolve líderes ${selectedPerson.leaderDevelopment || 'Desenvolve regularmente'}. Temperamento: ${selectedPerson.temperamentPrimaryPercent || 70}% ${selectedPerson.temperamentPrimary || 'Fleumatico'} e ${selectedPerson.temperamentSecondaryPercent || 30}% ${selectedPerson.temperamentSecondary || 'Sanguineo'}. Produtividade: índice ${productivityIndex}%, diagnóstico ${productivityDiagnosis.label}. Inclua arquivos ${(selectedPerson.files || []).join(', ')} e um plano de desenvolvimento.`)} className="h-11 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Gerar com Sofi</button>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Indicadores</p>
+                  <div className="mt-4 space-y-3">
+                    <ProgressRow label="Liderança" value={selectedLeadershipPercent} color="#8B5CF6" />
+                    <ProgressRow label="Produtividade" value={productivityIndex} color="#0ABD78" />
+                    <ProgressRow label="Autonomia" value={selectedPerson.productivityAutonomy || 0} color="#F8A303" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-white/10 bg-[#090B12]/98 px-5 py-4 backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/40">{savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => void saveDraft()} className="h-11 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Salvar</button>
+                <button type="button" onClick={() => selectedPerson && onCreateAction(selectedPerson, `Plano de ação - ${selectedPerson.name}`)} className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Criar plano</button>
+              </div>
+            </div>
+          </div>
+        </Surface>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Surface className="overflow-hidden">
+          <SectionHeader eyebrow="Ações" title="Fluxo aberto do time" />
+          <div className="divide-y divide-white/10">
+            {work.slice(0, 5).length === 0 && <p className="p-5 text-sm text-white/38">Nenhuma ação de pessoas em aberto.</p>}
+            {work.slice(0, 5).map(item => (
+              <div key={item.id} className="grid gap-3 p-4 md:grid-cols-[1fr_110px_140px] md:items-center">
+                <div>
+                  <p className="font-black text-white">{item.title}</p>
+                  <p className="mt-1 text-xs text-white/38">{item.owner} • {item.due}</p>
+                </div>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.priority}</span>
+                <button onClick={() => openSofi(`Sofi, assuma a ação de pessoas "${item.title}" com contexto de ${item.owner}.`)} className="h-10 rounded-2xl bg-white/[0.07] px-4 text-xs font-black text-white">Abrir</button>
+              </div>
+            ))}
+          </div>
+        </Surface>
+
+        <Surface className="p-5">
+          <h3 className="font-black text-white">Leitura executiva</h3>
+          <div className="mt-4 space-y-3">
+            {people.slice(0, 3).map(person => (
+              <div key={person.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-white">{person.name}</p>
+                    <p className="mt-1 text-xs text-white/38">{person.unit}</p>
+                  </div>
+                  <span className="rounded-full bg-[#8B5CF6]/14 px-2.5 py-1 text-[11px] font-black text-[#C4B5FD]">{person.leadershipPercent ?? Math.round((person.score || 0) * 20)}%</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">N{person.leadershipLevel || 3}</span>
+                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">{person.leadershipProfile || 'Executor'}</span>
+                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">{person.leadershipPotential || 'Alto'}</span>
+                </div>
               </div>
             ))}
           </div>
