@@ -8,8 +8,18 @@ const uploadsDir = path.join(process.cwd(), 'uploads')
 fs.mkdirSync(uploadsDir, { recursive: true })
 
 // Plugins
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(item => item.trim())
+  .filter(Boolean)
+
 fastify.register(require('@fastify/cors'), {
-  origin: (origin, cb) => cb(null, true),
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true)
+    if (!allowedOrigins.length) return cb(null, true)
+    if (allowedOrigins.includes(origin)) return cb(null, true)
+    return cb(new Error('Origin not allowed by CORS'), false)
+  },
   credentials: true
 })
 
@@ -51,6 +61,11 @@ fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles'
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 fastify.register(require('./modules/management/management.routes'), { prefix: '/api/management' })
+fastify.register(require('./modules/integrations/integrations.routes'), { prefix: '/api/integrations' })
+fastify.register(require('./modules/calendar/calendar.routes'), { prefix: '/api/calendar' })
+fastify.register(require('./modules/gmail/gmail.routes'), { prefix: '/api/gmail' })
+fastify.register(require('./modules/drive/drive.routes'), { prefix: '/api/drive' })
+fastify.register(require('./modules/whatsapp/whatsapp.routes'), { prefix: '/api/whatsapp' })
 
 // Health check
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
@@ -60,6 +75,12 @@ const start = async () => {
     await fastify.listen({ port: process.env.PORT || 3000, host: '0.0.0.0' })
     console.log(`\nAPS EDU API rodando em http://localhost:${process.env.PORT || 3000}`)
     console.log(`Documentação em http://localhost:${process.env.PORT || 3000}/docs\n`)
+
+    // Auto-conectar WhatsApp se habilitado
+    if (process.env.WHATSAPP_ENABLED === 'true') {
+      const wa = require('./modules/whatsapp/whatsapp.service')
+      wa.connect().catch(err => console.error('[WhatsApp] Erro ao conectar:', err.message))
+    }
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)

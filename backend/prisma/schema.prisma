@@ -1,6 +1,3 @@
-﻿// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,4 +5,480 @@ generator client {
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ───────────────────────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  permissions String   @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+
+  @@index([slug])
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  city      String
+  type      String   @default("school")
+  region    String   @default("SP")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  tasks     Task[]
+  events    Event[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  fcmToken     String?
+  roleId       String
+  unitId       String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  role           Role            @relation(fields: [roleId], references: [id])
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  refreshTokens  RefreshToken[]
+  userPoints     UserPoints?
+  userBadges     UserBadge[]
+  tasksCreated   Task[]          @relation("TaskCreatedBy")
+  tasksAssigned  Task[]          @relation("TaskAssignedTo")
+  taskComments   TaskComment[]
+  taskEvidences  TaskEvidence[]
+  eventsCreated  Event[]
+  eventRoles     EventResponsible[]
+  announcements  Announcement[]
+  announcementReads AnnouncementRead[]
+  feedbacks      Feedback[]
+  notifications  Notification[]
+  externalIntegrations ExternalIntegration[]
+
+  @@index([email])
+  @@index([roleId])
+  @@index([unitId])
+}
+
+model ExternalIntegration {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  externalAccountId String?
+  email             String?
+  accessToken       String
+  refreshToken      String?
+  tokenType         String?
+  scope             String?
+  expiresAt         DateTime?
+  meta              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── GAMIFICATION ───────────────────────────────────────────────────────────
+
+model UserPoints {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  points             Int       @default(0)
+  tasksCompleted     Int       @default(0)
+  tasksOnTime        Int       @default(0)
+  tasksCreated       Int       @default(0)
+  commentsPosted     Int       @default(0)
+  evidencesUploaded  Int       @default(0)
+  announcementsRead  Int       @default(0)
+  eventsCreated      Int       @default(0)
+  loginStreak        Int       @default(0)
+  lastLoginDate      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([points])
+}
+
+model Badge {
+  id           String      @id @default(uuid())
+  name         String
+  description  String
+  icon         String
+  pointsReward Int         @default(0)
+  unlockRule   String      @default("{}")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userBadges   UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// ─── TASKS ──────────────────────────────────────────────────────────────────
+
+model Task {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  status       String    @default("pending")
+  priority     String    @default("medium")
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdById  String
+  assignedToId String?
+  unitId       String
+  eventId      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  createdBy  User           @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignedTo User?          @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  unit       Unit           @relation(fields: [unitId], references: [id])
+  event      Event?         @relation(fields: [eventId], references: [id])
+  checklists TaskChecklist[]
+  comments   TaskComment[]
+  evidences  TaskEvidence[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([unitId])
+  @@index([dueDate])
+}
+
+model TaskChecklist {
+  id        String   @id @default(uuid())
+  taskId    String
+  title     String
+  completed Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+}
+
+model TaskEvidence {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  fileUrl   String
+  fileName  String?
+  fileType  String?
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+}
+
+// ─── EVENTS ─────────────────────────────────────────────────────────────────
+
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  type        String    @default("meeting")
+  status      String    @default("scheduled")
+  unitId      String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  unit         Unit?              @relation(fields: [unitId], references: [id])
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  responsibles EventResponsible[]
+  tasks        Task[]
+
+  @@index([startDate])
+  @@index([status])
+  @@index([unitId])
+}
+
+model EventResponsible {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  role      String?
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+}
+
+// ─── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+
+model Announcement {
+  id          String    @id @default(uuid())
+  title       String
+  content     String
+  urgent      Boolean   @default(false)
+  category    String    @default("general")
+  authorId    String
+  unitId      String?
+  publishedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author User               @relation(fields: [authorId], references: [id])
+  reads  AnnouncementRead[]
+
+  @@index([publishedAt])
+  @@index([urgent])
+}
+
+model AnnouncementRead {
+  id             String   @id @default(uuid())
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([announcementId, userId])
+  @@index([userId])
+}
+
+// ─── FEEDBACK ───────────────────────────────────────────────────────────────
+
+model Feedback {
+  id        String   @id @default(uuid())
+  content   String
+  category  String   @default("general")
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([category])
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  data      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ─── WHATSAPP CRM ────────────────────────────────────────────────────────────
+
+model Lead {
+  id              String    @id @default(uuid())
+  phoneNumber     String    @unique
+  contactName     String?
+  stage           String    @default("inbox")
+  score           Int       @default(50)
+  lastMessageAt   DateTime?
+  lastMessageText String?
+  isGroup         Boolean   @default(false)
+  customData      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  conversations Conversation[]
+  labels        LeadLabel[]
+  events        LeadEvent[]
+
+  @@index([phoneNumber])
+  @@index([stage])
+  @@index([createdAt])
+}
+
+model Conversation {
+  id           String    @id @default(uuid())
+  leadId       String
+  title        String?
+  lastMessageAt DateTime?
+  messageCount  Int      @default(0)
+  archived     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([leadId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  content        String
+  contentType    String   @default("text")
+  messageId      String   @unique
+  timestamp      DateTime
+  fromPhone      String
+  ackStatus      Int      @default(1)
+  bulkMessageId  String?
+  generatedByAI  Boolean  @default(false)
+  aiModel        String?
+  createdAt      DateTime @default(now())
+
+  conversation  Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  bulkMessage   BulkMessage?  @relation(fields: [bulkMessageId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([timestamp])
+  @@index([fromPhone])
+  @@index([bulkMessageId])
+}
+
+model LeadLabel {
+  id        String   @id @default(uuid())
+  leadId    String
+  labelType String
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, labelType])
+  @@index([labelType])
+}
+
+model LeadEvent {
+  id          String   @id @default(uuid())
+  leadId      String
+  eventType   String
+  description String?
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model KnowledgeBase {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  category  String
+  embedding String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model BulkMessage {
+  id             String   @id @default(uuid())
+  userId         String
+  title          String?
+  content        String
+  recipientCount Int
+  sentCount      Int      @default(0)
+  failedCount    Int      @default(0)
+  status         String   @default("pending")
+  jobId          String?
+  metadata       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─── WHATSAPP BOT RULES ──────────────────────────────────────────────────────
+
+model BotRule {
+  id        String   @id @default(uuid())
+  trigger   String
+  response  String
+  isActive  Boolean  @default(true)
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ─── WHATSAPP SCHEDULED MESSAGES ────────────────────────────────────────────
+
+model ScheduledMessage {
+  id          String    @id @default(uuid())
+  phoneNumber String
+  content     String
+  scheduledAt DateTime
+  status      String    @default("pending")
+  sentAt      DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([scheduledAt])
+  @@index([status])
 }

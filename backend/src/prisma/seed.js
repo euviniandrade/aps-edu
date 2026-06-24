@@ -42,15 +42,15 @@ async function main() {
 
   // ─── ROLES ────────────────────────────────────────────────────────────────
   const roles = await Promise.all([
-    prisma.role.upsert({ where: { slug: 'admin' }, create: { name: 'Administrador', slug: 'admin', permissions: { canCreateTasks: true, canCreateEvents: true, canPublishAnnouncements: true, canViewAllData: true, canManageUsers: true, canViewReports: true, canGrantBadges: true } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'director' }, create: { name: 'Diretor', slug: 'director', permissions: { canCreateTasks: true, canCreateEvents: true, canPublishAnnouncements: true, canViewAllData: true, canManageUsers: false, canViewReports: true, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'vice_director' }, create: { name: 'Vice-Diretor', slug: 'vice_director', permissions: { canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: true, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'coordinator' }, create: { name: 'Coordenador', slug: 'coordinator', permissions: { canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'chaplain' }, create: { name: 'Capelão', slug: 'chaplain', permissions: { canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'treasurer' }, create: { name: 'Tesoureiro', slug: 'treasurer', permissions: { canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'disciplinary' }, create: { name: 'Disciplinar', slug: 'disciplinary', permissions: { canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'counselor' }, create: { name: 'Orientador', slug: 'counselor', permissions: { canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} }),
-    prisma.role.upsert({ where: { slug: 'secretary' }, create: { name: 'Secretária', slug: 'secretary', permissions: { canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false } }, update: {} })
+    prisma.role.upsert({ where: { slug: 'admin' }, create: { name: 'Administrador', slug: 'admin', permissions: JSON.stringify({ canCreateTasks: true, canCreateEvents: true, canPublishAnnouncements: true, canViewAllData: true, canManageUsers: true, canViewReports: true, canGrantBadges: true }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'director' }, create: { name: 'Diretor', slug: 'director', permissions: JSON.stringify({ canCreateTasks: true, canCreateEvents: true, canPublishAnnouncements: true, canViewAllData: true, canManageUsers: false, canViewReports: true, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'vice_director' }, create: { name: 'Vice-Diretor', slug: 'vice_director', permissions: JSON.stringify({ canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: true, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'coordinator' }, create: { name: 'Coordenador', slug: 'coordinator', permissions: JSON.stringify({ canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'chaplain' }, create: { name: 'Capelão', slug: 'chaplain', permissions: JSON.stringify({ canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'treasurer' }, create: { name: 'Tesoureiro', slug: 'treasurer', permissions: JSON.stringify({ canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'disciplinary' }, create: { name: 'Disciplinar', slug: 'disciplinary', permissions: JSON.stringify({ canCreateTasks: true, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'counselor' }, create: { name: 'Orientador', slug: 'counselor', permissions: JSON.stringify({ canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} }),
+    prisma.role.upsert({ where: { slug: 'secretary' }, create: { name: 'Secretária', slug: 'secretary', permissions: JSON.stringify({ canCreateTasks: false, canCreateEvents: false, canPublishAnnouncements: false, canViewAllData: false, canManageUsers: false, canViewReports: false, canGrantBadges: false }) }, update: {} })
   ])
   console.log(`✅ ${roles.length} funções criadas`)
 
@@ -288,7 +288,7 @@ async function main() {
       create: {
         userId: u.id, points, tasksCompleted, tasksOnTime, loginStreak,
         tasksCreated: Math.floor(tasksCompleted * 0.6),
-        eventsParticipated: Math.floor(points / 400),
+        eventsCreated: Math.floor(points / 400),
         commentsPosted: Math.floor(tasksCompleted * 1.4),
         evidencesUploaded: Math.floor(tasksCompleted * 0.8),
         announcementsRead: Math.floor(points / 140),

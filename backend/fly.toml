@@ -1,6 +1,6 @@
 # fly.toml - APS EDU Backend
 
-app = "aps-edu-api"
+app = "aps-edu"
 primary_region = "gru"
 
 [build]
@@ -23,13 +23,14 @@ primary_region = "gru"
     hard_limit = 100
     soft_limit = 80
 
+[[mounts]]
+  source = "aps_edu_data"
+  destination = "/data"
+
 [[vm]]
   memory = "1024mb"
   cpu_kind = "shared"
   cpus = 1
-
-[deploy]
-  release_command = "npx prisma migrate deploy"
 
 [[statics]]
   guest_path = "/app/public"

@@ -2300,7 +2300,7 @@ function PeopleWorkspacePremium({
         <div className="flex flex-col gap-4 border-b border-white/10 p-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Equipe</p>
-            <h2 className="text-xl font-black text-white">Escalacao da lideranca</h2>
+            <h2 className="text-xl font-black text-white">Central executiva de pessoas</h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -2342,7 +2342,7 @@ function PeopleWorkspacePremium({
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">{roleFilter}</p>
-                <p className="mt-1 text-sm font-semibold text-white/50">Selecione uma pessoa para editar lideranca, foto, arquivos e relat?rios.</p>
+                <p className="mt-1 text-sm font-semibold text-white/50">Selecione uma pessoa para editar, salvar e organizar em tempo real.</p>
               </div>
             </div>
 

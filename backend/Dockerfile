@@ -28,13 +28,13 @@ RUN npx prisma generate
 COPY src ./src/
 
 # Cria pasta de uploads e configura permissões
-RUN mkdir -p /app/uploads /app/.wwebjs_auth
+RUN mkdir -p /app/uploads /app/.wwebjs_auth /data
 
 # Usuário não-root por segurança
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-RUN chown -R nodejs:nodejs /app
+RUN chown -R nodejs:nodejs /app /data
 USER nodejs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node src/prisma/seed.js && node src/server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && if [ \"$SEED_ON_STARTUP\" = \"true\" ]; then node src/prisma/seed.js; fi && node src/server.js"]
