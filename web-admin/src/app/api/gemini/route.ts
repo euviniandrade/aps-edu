@@ -22,6 +22,14 @@ interface ProviderResult {
   error?: string
 }
 
+interface GenerationSuccess {
+  content: string
+  provider: string
+  providerLabel: string
+  model: string
+  attemptedProviders: string[]
+}
+
 const keys = {
   groq: process.env.GROQ_API_KEY || '',
   gemini: process.env.GEMINI_API_KEY || '',
@@ -66,7 +74,13 @@ function openAiContent(prompt: string, imageBase64?: string, imageMimeType?: str
   ]
 }
 
-async function callOpenAiCompatible(provider: ProviderConfig, prompt: string, model: string, imageBase64?: string, imageMimeType?: string): Promise<ProviderResult> {
+async function callOpenAiCompatible(
+  provider: ProviderConfig,
+  prompt: string,
+  model: string,
+  imageBase64?: string,
+  imageMimeType?: string
+): Promise<ProviderResult> {
   const res = await fetch(`${provider.baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -79,7 +93,8 @@ async function callOpenAiCompatible(provider: ProviderConfig, prompt: string, mo
       messages: [
         {
           role: 'system',
-          content: 'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.',
+          content:
+            'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.',
         },
         { role: 'user', content: openAiContent(prompt, imageBase64, imageMimeType) },
       ],
@@ -92,17 +107,29 @@ async function callOpenAiCompatible(provider: ProviderConfig, prompt: string, mo
   return { text: data?.choices?.[0]?.message?.content || '' }
 }
 
-async function callGemini(provider: ProviderConfig, prompt: string, model: string, imageBase64?: string, imageMimeType?: string): Promise<ProviderResult> {
+async function callGemini(
+  provider: ProviderConfig,
+  prompt: string,
+  model: string,
+  imageBase64?: string,
+  imageMimeType?: string
+): Promise<ProviderResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${provider.apiKey}`
   const parts = imageBase64 && imageMimeType
     ? [{ text: prompt }, { inlineData: { mimeType: imageMimeType, data: imageBase64 } }]
     : [{ text: prompt }]
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: {
-        parts: [{ text: 'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.' }],
+        parts: [
+          {
+            text:
+              'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.',
+          },
+        ],
       },
       contents: [{ parts }],
       generationConfig: {
@@ -111,18 +138,26 @@ async function callGemini(provider: ProviderConfig, prompt: string, model: strin
       },
     }),
   })
+
   const data = await res.json().catch(() => null)
   if (!res.ok || data?.error) return { error: extractError(data, `${provider.label} retornou HTTP ${res.status}`) }
   return { text: data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('\n') || '' }
 }
 
-async function callAnthropic(provider: ProviderConfig, prompt: string, model: string, imageBase64?: string, imageMimeType?: string): Promise<ProviderResult> {
+async function callAnthropic(
+  provider: ProviderConfig,
+  prompt: string,
+  model: string,
+  imageBase64?: string,
+  imageMimeType?: string
+): Promise<ProviderResult> {
   const content = imageBase64 && imageMimeType
     ? [
         { type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 } },
         { type: 'text', text: prompt },
       ]
     : prompt
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -134,16 +169,26 @@ async function callAnthropic(provider: ProviderConfig, prompt: string, model: st
       model,
       max_tokens: 2200,
       temperature: 0.45,
-      system: 'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.',
+      system:
+        'Você é a Sofi, assistente executiva da Associação Paulista Sul. Responda em português do Brasil, com clareza, estrutura e próximos passos acionáveis.',
       messages: [{ role: 'user', content }],
     }),
   })
+
   const data = await res.json().catch(() => null)
-  if (!res.ok || data?.error || data?.type === 'error') return { error: extractError(data, `${provider.label} retornou HTTP ${res.status}`) }
+  if (!res.ok || data?.error || data?.type === 'error') {
+    return { error: extractError(data, `${provider.label} retornou HTTP ${res.status}`) }
+  }
   return { text: data?.content?.map((part: any) => part.text || '').join('\n') || '' }
 }
 
-async function callProvider(provider: ProviderConfig, prompt: string, model: string, imageBase64?: string, imageMimeType?: string) {
+async function callProvider(
+  provider: ProviderConfig,
+  prompt: string,
+  model: string,
+  imageBase64?: string,
+  imageMimeType?: string
+) {
   if (provider.kind === 'gemini') return callGemini(provider, prompt, model, imageBase64, imageMimeType)
   if (provider.kind === 'anthropic') return callAnthropic(provider, prompt, model, imageBase64, imageMimeType)
   return callOpenAiCompatible(provider, prompt, model, imageBase64, imageMimeType)
@@ -234,47 +279,86 @@ function getProviders(): ProviderConfig[] {
   return providers.filter(provider => provider.apiKey)
 }
 
+async function generateResponse(
+  prompt: string,
+  imageBase64?: string,
+  imageMimeType?: string,
+  preferredProvider?: string
+): Promise<GenerationSuccess> {
+  const safePrompt = truncatePrompt(prompt)
+  const providers = getProviders()
+  const allErrors: string[] = []
+
+  if (!providers.length) {
+    throw new Error(
+      'Nenhum provedor de IA está configurado. Adicione pelo menos uma chave no Vercel: GROQ_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, MISTRAL_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY ou PERPLEXITY_API_KEY.'
+    )
+  }
+
+  for (const provider of providerOrder(safePrompt, providers, preferredProvider)) {
+    const models = imageBase64 && imageMimeType && provider.visionModels ? provider.visionModels : provider.models
+    for (const model of models) {
+      const result = await callProvider(provider, safePrompt, model, imageBase64, imageMimeType)
+      if (result.text) {
+        return {
+          content: result.text,
+          provider: provider.id,
+          providerLabel: provider.label,
+          model,
+          attemptedProviders: providers.map(item => item.label),
+        }
+      }
+      allErrors.push(`${provider.label}/${model}: ${result.error || 'resposta vazia'}`)
+    }
+  }
+
+  throw new Error(`Todos os provedores configurados falharam: ${allErrors.join(' | ')}`)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { prompt, imageBase64, imageMimeType, preferredProvider } = body
+    const { prompt, imageBase64, imageMimeType, preferredProvider, stream } = body
 
     if (!prompt) return NextResponse.json({ error: 'prompt obrigatório' }, { status: 400 })
 
-    const safePrompt = truncatePrompt(prompt)
-    const providers = getProviders()
-    const allErrors: string[] = []
+    const result = await generateResponse(prompt, imageBase64, imageMimeType, preferredProvider)
+    if (!stream) return NextResponse.json(result)
 
-    if (!providers.length) {
-      return NextResponse.json(
-        {
-          error: 'Nenhum provedor de IA está configurado. Adicione pelo menos uma chave no Vercel: GROQ_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, MISTRAL_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY ou PERPLEXITY_API_KEY.',
-        },
-        { status: 500 }
-      )
-    }
+    const encoder = new TextEncoder()
+    const chunks = result.content.match(/.{1,110}(\s|$)|.+$/g) || [result.content]
+    const readable = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: 'meta',
+              provider: result.provider,
+              providerLabel: result.providerLabel,
+              model: result.model,
+            })}\n\n`
+          )
+        )
 
-    for (const provider of providerOrder(safePrompt, providers, preferredProvider)) {
-      const models = imageBase64 && imageMimeType && provider.visionModels ? provider.visionModels : provider.models
-      for (const model of models) {
-        const result = await callProvider(provider, safePrompt, model, imageBase64, imageMimeType)
-        if (result.text) {
-          return NextResponse.json({
-            content: result.text,
-            provider: provider.id,
-            providerLabel: provider.label,
-            model,
-            attemptedProviders: providers.map(item => item.label),
-          })
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`))
+          await new Promise(resolve => setTimeout(resolve, 18))
         }
-        allErrors.push(`${provider.label}/${model}: ${result.error || 'resposta vazia'}`)
-      }
-    }
 
-    return NextResponse.json(
-      { error: `Todos os provedores configurados falharam: ${allErrors.join(' | ')}` },
-      { status: 500 }
-    )
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'done', attemptedProviders: result.attemptedProviders })}\n\n`)
+        )
+        controller.close()
+      },
+    })
+
+    return new NextResponse(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+      },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

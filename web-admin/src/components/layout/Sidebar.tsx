@@ -15,15 +15,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/gestao',        icon: 'G', label: 'Centro' },
+  { href: '/gestao',        icon: 'G', label: 'Central Operacional' },
   { href: '/meu-dia',       icon: 'D', label: 'Meu Dia' },
   { href: '/tasks',         icon: 'T', label: 'Tarefas' },
-  { href: '/estoque',       icon: 'E', label: 'Estoque' },
+  { href: '/estoque',       icon: 'E', label: 'Estoque e Patrimônio' },
   { href: '/reports',       icon: 'R', label: 'Relatórios', leaderOnly: true },
   { href: '/users',         icon: 'P', label: 'Pessoas',   adminOnly: true },
   { href: '/units',         icon: 'U', label: 'Unidades',   adminOnly: true },
-  { href: '/analytics',     icon: 'A', label: 'Analytics IA' },
+  { href: '/analytics',     icon: 'A', label: 'Central IA' },
   { href: '/automacoes',    icon: 'Z', label: 'Automações' },
+  { href: '/whatsapp',      icon: '💬', label: 'WhatsApp CRM' },
 ]
 
 function getRoleFromUser(user: any): string {

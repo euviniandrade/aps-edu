@@ -46,6 +46,13 @@ export function getOrigin(request: NextRequest) {
     || request.nextUrl.origin
 }
 
+export function getBackendApiBase() {
+  return (cleanEnv(process.env.BACKEND_URL)
+    || cleanEnv(process.env.API_URL)
+    || cleanEnv(process.env.NEXT_PUBLIC_API_URL)
+    || 'https://aps-edu-api.fly.dev/api').replace(/\/$/, '')
+}
+
 export function getOAuthConfig(provider: string): OAuthConfig | null {
   if (provider === 'google') {
     return {

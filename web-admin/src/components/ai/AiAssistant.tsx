@@ -1,8 +1,25 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import api from '@/lib/api'
-import { XMarkIcon, PaperAirplaneIcon, MicrophoneIcon, SpeakerWaveIcon, SpeakerXMarkIcon, PaperClipIcon, StopCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import {
+  XMarkIcon,
+  PaperAirplaneIcon,
+  MicrophoneIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon,
+  PaperClipIcon,
+  StopCircleIcon,
+  DocumentTextIcon,
+  MagnifyingGlassIcon,
+  ChatBubbleLeftRightIcon,
+  FolderIcon,
+  Squares2X2Icon,
+  PencilSquareIcon,
+  ArrowPathIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -15,13 +32,17 @@ const SOFI_MEMORY_SUMMARY_KEY = 'aps_edu_sofi_memory_summary_v1'
 const SOFI_MEMORY_RECORDS_KEY = 'aps_edu_sofi_memory_records_v1'
 const SOFI_MAX_MESSAGES = 260
 
-const QUICK_PROMPTS = [
-  { label: 'Analise do dia', text: 'Faca uma analise rapida do meu dia e me de um resumo do que preciso fazer agora.' },
-  { label: 'Tarefas urgentes', text: 'Quais sao as tarefas mais urgentes da rede? O que precisa de atencao imediata?' },
-  { label: 'Engajamento', text: 'Como esta o engajamento dos colaboradores? De dicas praticas para melhorar.' },
-  { label: 'Plano da semana', text: 'Sugira um plano de acao para esta semana com base nos dados da plataforma.' },
-  { label: 'Riscos e prioridades', text: 'Liste riscos operacionais, prioridades e proximos passos para a Associacao Paulista Sul.' },
-  { label: 'Ata + tarefas', text: 'Ajude a transformar uma reuniao em ata, decisoes, responsaveis e tarefas de acompanhamento.' },
+const SOFI_PROJECTS = [
+  { title: 'Educação Adventista', subtitle: 'Contexto institucional', count: '12 chats' },
+  { title: 'Operação', subtitle: 'Agenda, tarefas e relatórios', count: '8 chats' },
+  { title: 'Escola', subtitle: 'Matrículas, documentos e calendário', count: '5 chats' },
+  { title: 'Pessoas', subtitle: 'Liderança, temperamento e produtividade', count: '4 chats' },
+]
+
+const SOFI_QUICK_ACTIONS = [
+  { label: 'Criar tarefa', text: 'Crie uma tarefa executável com responsável, prazo e prioridade.' },
+  { label: 'Agendar', text: 'Agende um compromisso com contexto, participantes e lembrete.' },
+  { label: 'Gerar documento', text: 'Gere um documento executivo pronto para revisão.' },
 ]
 
 const TRANSCRIBE_INTENT = /transcrev|transcri[cç][aã]o|degrav|texto do [aá]udio|s[oó] transcri/i
@@ -120,12 +141,15 @@ export default function AiAssistant() {
   const [isSpeaking, setIsSpeaking]    = useState(false)
   const [pulse, setPulse]         = useState(false)
   const [unread, setUnread]       = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [transcriptionPreview, setTranscriptionPreview] = useState('')
   const [errorText, setErrorText] = useState('')
   const [mounted, setMounted] = useState(false)
   const [memoryLoaded, setMemoryLoaded] = useState(false)
+  const pathname = usePathname()
+  const dockLeft = pathname?.startsWith('/gestao') || pathname?.startsWith('/pessoas') || pathname?.startsWith('/escolar-financeiro')
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
@@ -581,8 +605,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-4 z-50 flex items-center gap-2.5 rounded-2xl px-4 py-3 sm:bottom-6 sm:right-6
-                     shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group"
+          className={`fixed bottom-5 z-50 flex items-center gap-2.5 rounded-2xl px-4 py-3 sm:bottom-6 shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group ${dockLeft ? 'left-4 md:left-[21rem]' : 'right-4 sm:right-6'}`}
           style={{
             background: 'linear-gradient(135deg, #F8A303, #FDC347)',
             boxShadow: '0 8px 32px rgba(248,163,3,0.5), 0 0 0 1px rgba(248,163,3,0.2)',
@@ -607,199 +630,324 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/* ── PANEL ───────────────────────────────────────────── */}
       {open && (
         <div
-          className="fixed bottom-4 right-3 z-50 flex flex-col sm:bottom-6 sm:right-6"
+          className={`fixed inset-y-3 z-50 flex overflow-hidden rounded-[28px] border border-white/10 bg-[#060814]/95 shadow-[0_40px_120px_rgba(0,0,0,0.78)] backdrop-blur-2xl ${dockLeft ? 'left-3 md:left-[21rem]' : 'right-3 sm:right-6'} w-[min(1060px,calc(100vw-24px))]`}
           style={{
-            width: 'min(400px, calc(100vw - 24px))',
-            height: 'min(600px, calc(100vh - 32px))',
-            background: 'rgba(7,9,22,0.98)',
-            backdropFilter: 'blur(28px)',
-            WebkitBackdropFilter: 'blur(28px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 24,
-            boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(248,163,3,0.1)',
-            overflow: 'hidden',
-            animation: 'scaleIn 0.2s ease',
+            height: 'calc(100vh - 24px)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
+            animation: 'scaleIn 0.18s ease',
           }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0"
-            style={{ background: 'linear-gradient(180deg, rgba(248,163,3,0.07) 0%, transparent 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-black flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', boxShadow: '0 0 16px rgba(248,163,3,0.4)' }}>
-                <SparklesIcon size={18} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-extrabold text-white leading-none">Sofi</p>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(248,163,3,0.15)', color: '#FDC347', border: '1px solid rgba(248,163,3,0.2)' }}>IA</span>
+          <aside className="hidden w-[290px] flex-col border-r border-white/10 bg-white/[0.02] md:flex">
+            <div className="border-b border-white/10 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
+                  <SparklesIcon size={18} />
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Online · Powered by Gemini + Groq</p>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/35">Sofi IA</p>
+                  <p className="truncate text-sm font-black text-white">Projetos e hist?rico</p>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              {isSpeaking && (
-                <button onClick={stopSpeaking} className="p-1.5 rounded-lg transition-colors hover:bg-white/5" title="Parar voz">
-                  <span className="text-xs">⏹</span>
-                </button>
-              )}
-              <button onClick={() => setVoiceEnabled(v => !v)} className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
-                title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
-                {voiceEnabled
-                  ? <SpeakerWaveIcon className="w-4 h-4" style={{ color: 'rgba(248,163,3,0.7)' }} />
-                  : <SpeakerXMarkIcon className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.3)' }} />}
-              </button>
-              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg transition-colors hover:bg-white/5"
-                style={{ color: 'rgba(255,255,255,0.35)' }}>
-                <XMarkIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3" style={{ scrollbarWidth: 'thin' }}>
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mr-2 mt-0.5 text-black"
-                    style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', minWidth: 24 }}>
-                    <SparklesIcon size={12} />
-                  </div>
+              <button
+                onClick={() => {
+                  setMessages([{
+                    role: 'assistant',
+                    content: 'Nova conversa pronta. O que voc? quer construir agora?'
+                  }])
+                  setInput('')
+                }}
+                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] text-sm font-black text-white transition hover:bg-white/[0.08]"
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+                Novo chat
+              </button>
+            </div>
+
+            <div className="border-b border-white/10 p-4">
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                <MagnifyingGlassIcon className="h-4 w-4 text-white/35" />
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar conversas"
+                  className="w-full bg-transparent text-sm text-white/85 outline-none placeholder:text-white/30"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/35">Pastas</p>
+              <div className="mt-3 space-y-2">
+                {SOFI_PROJECTS.map(project => (
+                  <button
+                    key={project.title}
+                    className="flex w-full items-start justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                  >
+                    <div className="flex min-w-0 items-start gap-2">
+                      <FolderIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-white/35" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-white">{project.title}</p>
+                        <p className="mt-1 text-xs text-white/45">{project.subtitle}</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/55">{project.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/35">Recentes</p>
+                <button className="text-[11px] font-black text-[#FDC347]">Ver tudo</button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {[
+                  { title: 'Resumo da semana', meta: 'Opera??o ? hoje' },
+                  { title: 'Plano executivo', meta: 'Pessoas ? ontem' },
+                  { title: 'Agenda central', meta: 'Calend?rio ? 2h' },
+                ].map(item => (
+                  <button
+                    key={item.title}
+                    className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">{item.title}</p>
+                      <p className="mt-1 text-xs text-white/40">{item.meta}</p>
+                    </div>
+                    <ChatBubbleLeftRightIcon className="h-4 w-4 flex-shrink-0 text-white/25" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 p-4">
+              <div className="flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/8 px-3 py-3">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-white">Online</p>
+                  <p className="text-xs text-white/40">Mem?ria ativa e contexto persistente</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4 sm:px-5">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/35">Conversa</p>
+                <h3 className="truncate text-lg font-black text-white">Novo chat</h3>
+                <p className="mt-1 text-xs text-white/40">Pronta para agir com contexto entre p?ginas.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/75">Auto</span>
+                <button
+                  onClick={() => {
+                    setMessages([{
+                      role: 'assistant',
+                      content: 'Nova conversa pronta. Como posso ajudar agora?'
+                    }])
+                    setInput('')
+                  }}
+                  className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70 transition hover:bg-white/[0.06]"
+                  title="Reiniciar chat"
+                >
+                  <ArrowPathIcon className="h-4 w-4" />
+                </button>
+                <div className="hidden h-8 w-px bg-white/10 sm:block" />
+                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/65 sm:flex">
+                  <Squares2X2Icon className="h-4 w-4" />
+                  Claude Code
+                </div>
+                {isSpeaking && (
+                  <button onClick={stopSpeaking} className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70 transition hover:bg-white/[0.06]" title="Parar voz">
+                    <SpeakerXMarkIcon className="h-4 w-4" />
+                  </button>
                 )}
-                <div className="max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words"
-                  style={msg.role === 'user'
-                    ? { background: 'linear-gradient(135deg,rgba(248,163,3,0.18),rgba(253,195,71,0.08))', border: '1px solid rgba(248,163,3,0.22)', color: 'rgba(255,255,255,0.92)', borderBottomRightRadius: 6 }
-                    : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.83)', borderBottomLeftRadius: 6 }}>
-                  {msg.content.startsWith('[IMAGE:') ? (
-                    <img src={msg.content.replace('[IMAGE:', '').replace(']', '')} alt="gerado" className="rounded-lg max-w-full" />
+                <button
+                  onClick={() => setVoiceEnabled(v => !v)}
+                  className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70 transition hover:bg-white/[0.06]"
+                  title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}
+                >
+                  {voiceEnabled ? <SpeakerWaveIcon className="h-4 w-4" /> : <SpeakerXMarkIcon className="h-4 w-4" />}
+                </button>
+                <button onClick={() => setOpen(false)} className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/70 transition hover:bg-white/[0.06]">
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              {messages.length <= 1 ? (
+                <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
+                  <p className="text-3xl font-black tracking-tight text-white sm:text-4xl">Por onde come?amos?</p>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-white/45">
+                    A Sofi mant?m o contexto vivo, executa a??es e transforma pedidos em tarefas, documentos e agenda.
+                  </p>
+                  <div className="mt-6 flex flex-wrap justify-center gap-2">
+                    {SOFI_QUICK_ACTIONS.map(item => (
+                      <button
+                        key={item.label}
+                        onClick={() => sendMessage(item.text)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/72 transition hover:border-white/20 hover:bg-white/[0.06]"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      {msg.role === 'assistant' && (
+                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
+                          <SparklesIcon size={13} />
+                        </div>
+                      )}
+                      <div
+                        className="max-w-[min(80%,760px)] whitespace-pre-wrap break-words rounded-3xl px-4 py-3 text-sm leading-6"
+                        style={
+                          msg.role === 'user'
+                            ? {
+                                background: 'linear-gradient(135deg,rgba(248,163,3,0.18),rgba(253,195,71,0.08))',
+                                border: '1px solid rgba(248,163,3,0.22)',
+                                color: 'rgba(255,255,255,0.92)',
+                                borderBottomRightRadius: 8,
+                              }
+                            : {
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.07)',
+                                color: 'rgba(255,255,255,0.88)',
+                                borderBottomLeftRadius: 8,
+                              }
+                        }
+                      >
+                        {msg.content.startsWith('[IMAGE:') ? (
+                          <img src={msg.content.replace('[IMAGE:', '').replace(']', '')} alt="gerado" className="rounded-2xl max-w-full" />
+                        ) : (
+                          renderRichText(msg.display || msg.content)
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {loading && (
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
+                    <SparklesIcon size={13} />
+                  </div>
+                  <div className="rounded-2xl border border-white/7 bg-white/[0.05] px-4 py-3 text-sm text-white/75">
+                    <TypingDots />
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="border-t border-white/10 px-4 pb-4 pt-4 sm:px-5">
+              {attachedFile && (
+                <div className="mb-3 flex items-center gap-2 rounded-2xl border border-[#F8A303]/20 bg-[#F8A303]/10 px-3 py-2 text-xs text-[#FDC347]">
+                  <span>{isAudioOrVideo(attachedFile) ? '?udio pronto para transcri??o' : 'Arquivo anexado'} ? {attachedFile.name}</span>
+                  <button onClick={() => setAttachedFile(null)} className="ml-auto text-white/50 transition hover:text-white">?</button>
+                </div>
+              )}
+
+              {(isRecording || errorText) && (
+                <div className="mb-3 flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs"
+                  style={{
+                    background: isRecording ? 'rgba(255,71,87,0.1)' : 'rgba(255,71,87,0.08)',
+                    borderColor: 'rgba(255,71,87,0.18)',
+                    color: isRecording ? '#FF8A95' : '#FF6B78',
+                  }}>
+                  {isRecording ? (
+                    <>
+                      <span className="h-2 w-2 rounded-full bg-[#FF4757]" />
+                      <span>Gravando ?udio ? {formatSeconds(recordingSeconds)}</span>
+                    </>
                   ) : (
-                    renderRichText(msg.display || msg.content)
+                    <span>{errorText}</span>
                   )}
                 </div>
-              </div>
-            ))}
+              )}
 
-            {loading && (
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-black"
-                  style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', minWidth: 24 }}>
-                  <SparklesIcon size={12} />
+              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white/45 transition hover:bg-white/[0.06]"
+                    title="Anexar arquivo"
+                  >
+                    <PaperClipIcon className="h-4 w-4" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,audio/*,.pdf,.txt,.doc,.docx,.csv"
+                    onChange={e => e.target.files?.[0] && setAttachedFile(e.target.files[0])}
+                  />
+                  <button
+                    onClick={toggleRecording}
+                    disabled={loading}
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white/45 transition hover:bg-white/[0.06]"
+                    title={isRecording ? 'Parar e transcrever ?udio' : 'Gravar ?udio para transcrever'}
+                    style={{
+                      color: isRecording ? '#FF4757' : 'rgba(255,255,255,0.45)',
+                      boxShadow: isRecording ? '0 0 0 1px rgba(255,71,87,0.25)' : 'none',
+                    }}
+                  >
+                    {isRecording ? <StopCircleIcon className="h-4 w-4" /> : <DocumentTextIcon className="h-4 w-4" />}
+                  </button>
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKey}
+                    placeholder={isRecording ? 'Gravando ?udio para transcri??o...' : isListening ? '?? Ouvindo...' : 'Pergunte ? Sofi...'}
+                    disabled={loading || isRecording}
+                    className="min-h-[44px] flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-white/30"
+                    style={{ color: 'rgba(255,255,255,0.9)' }}
+                  />
+                  <button
+                    onClick={toggleListening}
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white/45 transition hover:bg-white/[0.06]"
+                    title="Falar"
+                    style={{
+                      color: isListening ? '#FF4757' : 'rgba(255,255,255,0.45)',
+                      background: isListening ? 'rgba(255,71,87,0.15)' : 'rgba(255,255,255,0.03)',
+                    }}
+                  >
+                    <MicrophoneIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={(!input.trim() && !attachedFile) || loading || isRecording}
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition"
+                    style={{
+                      background: (input.trim() || attachedFile) && !loading
+                        ? 'linear-gradient(135deg, #F8A303, #FDC347)'
+                        : 'rgba(255,255,255,0.07)',
+                      color: (input.trim() || attachedFile) && !loading ? 'black' : 'rgba(255,255,255,0.3)',
+                    }}
+                  >
+                    <PaperAirplaneIcon className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="px-3.5 py-2.5 rounded-2xl text-sm" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderBottomLeftRadius: 6 }}>
-                  <TypingDots />
-                </div>
               </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
 
-          {/* Quick prompts */}
-          {messages.length === 1 && (
-            <div className="px-3 pb-2 flex flex-wrap gap-1.5 flex-shrink-0">
-              {QUICK_PROMPTS.map(p => (
-                <button key={p.label} onClick={() => sendMessage(p.text)}
-                  className="text-[11px] px-2.5 py-1.5 rounded-xl transition-all hover:scale-105"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)' }}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Attachment preview */}
-          {attachedFile && (
-            <div className="px-3 pb-1 flex-shrink-0">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs"
-                style={{ background: 'rgba(248,163,3,0.1)', border: '1px solid rgba(248,163,3,0.2)', color: '#FDC347' }}>
-                <span>{isAudioOrVideo(attachedFile) ? '🎙️ Áudio pronto para transcrição' : '📎 Arquivo anexado'} · {attachedFile.name}</span>
-                <button onClick={() => setAttachedFile(null)} className="ml-auto opacity-60 hover:opacity-100">✕</button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {SOFI_QUICK_ACTIONS.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => sendMessage(item.text)}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/[0.06]"
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
-
-          {(isRecording || errorText) && (
-            <div className="px-3 pb-1 flex-shrink-0">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs"
-                style={{
-                  background: isRecording ? 'rgba(255,71,87,0.1)' : 'rgba(255,71,87,0.08)',
-                  border: '1px solid rgba(255,71,87,0.18)',
-                  color: isRecording ? '#FF8A95' : '#FF6B78',
-                }}>
-                {isRecording ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FF4757' }} />
-                    <span>Gravando áudio · {formatSeconds(recordingSeconds)}</span>
-                  </>
-                ) : (
-                  <span>{errorText}</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Input */}
-          <div className="px-3 pb-3 flex-shrink-0">
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-2xl"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <button onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 p-1 rounded-lg transition-colors hover:bg-white/10"
-                style={{ color: 'rgba(255,255,255,0.35)' }} title="Anexar arquivo">
-                <PaperClipIcon className="w-4 h-4" />
-              </button>
-              <input ref={fileInputRef} type="file" className="hidden"
-                accept="image/*,audio/*,.pdf,.txt,.doc,.docx,.csv"
-                onChange={e => e.target.files?.[0] && setAttachedFile(e.target.files[0])} />
-              <button
-                onClick={toggleRecording}
-                disabled={loading}
-                className="flex-shrink-0 p-1.5 rounded-xl transition-all"
-                style={{
-                  color: isRecording ? '#FF4757' : 'rgba(255,255,255,0.35)',
-                  background: isRecording ? 'rgba(255,71,87,0.15)' : 'transparent',
-                  boxShadow: isRecording ? '0 0 0 1px rgba(255,71,87,0.25)' : 'none',
-                }}
-                title={isRecording ? 'Parar e transcrever áudio' : 'Gravar áudio para transcrever'}
-              >
-                {isRecording ? <StopCircleIcon className="w-4 h-4" /> : <DocumentTextIcon className="w-4 h-4" />}
-              </button>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder={isRecording ? 'Gravando áudio para transcrição...' : isListening ? '🎤 Ouvindo...' : 'Pergunte à Sofi...'}
-                disabled={loading || isRecording}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-40 min-w-0"
-                style={{ color: 'rgba(255,255,255,0.9)' }}
-              />
-              <button
-                onClick={toggleListening}
-                className="flex-shrink-0 p-1.5 rounded-xl transition-all"
-                style={{
-                  color: isListening ? '#FF4757' : 'rgba(255,255,255,0.35)',
-                  background: isListening ? 'rgba(255,71,87,0.15)' : 'transparent',
-                  animation: isListening ? 'pulse 1s infinite' : undefined,
-                }}
-                title="Falar"
-              >
-                <MicrophoneIcon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => sendMessage()}
-                disabled={(!input.trim() && !attachedFile) || loading || isRecording}
-                className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-                style={{
-                  background: (input.trim() || attachedFile) && !loading
-                    ? 'linear-gradient(135deg, #F8A303, #FDC347)'
-                    : 'rgba(255,255,255,0.07)',
-                  color: (input.trim() || attachedFile) && !loading ? 'black' : 'rgba(255,255,255,0.3)',
-                }}
-              >
-                <PaperAirplaneIcon className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOAuthConfig, hasOAuthCredentials } from '../_lib'
+import { getBackendApiBase, getOAuthConfig, hasOAuthCredentials } from '../_lib'
 
 export const runtime = 'nodejs'
 
@@ -8,6 +8,19 @@ function cookieConnected(request: NextRequest, provider: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const accessToken = request.cookies.get('accessToken')?.value
+  if (accessToken) {
+    try {
+      const response = await fetch(`${getBackendApiBase()}/integrations/status`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      })
+      if (response.ok) {
+        return NextResponse.json(await response.json())
+      }
+    } catch {}
+  }
+
   const google = getOAuthConfig('google')!
   const microsoft = getOAuthConfig('microsoft')!
 
@@ -51,4 +64,3 @@ export async function GET(request: NextRequest) {
     },
   })
 }
-

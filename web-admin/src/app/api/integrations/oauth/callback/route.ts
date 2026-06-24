@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOAuthConfig, getOrigin, getRedirectUri, hasOAuthCredentials, setupRedirect } from '../../_lib'
+import { getBackendApiBase, getOAuthConfig, getOrigin, getRedirectUri, hasOAuthCredentials, setupRedirect } from '../../_lib'
 
 export const runtime = 'nodejs'
 
@@ -43,6 +43,23 @@ export async function GET(request: NextRequest) {
   url.searchParams.set('tab', 'sobre')
   url.searchParams.set('integration', config.provider)
   url.searchParams.set('connected', '1')
+
+  const accessToken = request.cookies.get('accessToken')?.value
+  if (accessToken) {
+    try {
+      await fetch(`${getBackendApiBase()}/integrations/oauth/store`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: config.provider,
+          tokenData,
+        }),
+      })
+    } catch {}
+  }
 
   const response = NextResponse.redirect(url)
   response.cookies.delete(`aps_${config.provider}_oauth_state`)

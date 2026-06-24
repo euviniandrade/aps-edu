@@ -27,32 +27,25 @@ import {
 // Nav principal enxuto; fluxos detalhados vivem dentro do Centro e da busca.
 const navSections = [
   {
-    label: 'Centro',
-    items: [
-      { href: '/gestao',        label: 'Centro',       icon: HomeIcon,                   iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
-      { href: '/meu-dia',       label: 'Meu Dia',      icon: CalendarDaysIcon,           iconSolid: CalendarIconSolid,  color: '#4A9EFF', roles: [] },
-    ],
-  },
-  {
     label: 'Operação',
     items: [
-      { href: '/estoque',       label: 'Estoque',      icon: ArchiveBoxIcon,             iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
-      { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
-    ],
-  },
-  {
-    label: 'Rede',
-    items: [
-      { href: '/users',         label: 'Pessoas',      icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#4A9EFF', roles: ['admin'] },
-      { href: '/units',         label: 'Unidades',     icon: BuildingLibraryIcon,        iconSolid: BuildingIconSolid,  color: '#34D399', roles: ['admin'] },
+      { href: '/gestao',        label: 'Central Operacional', icon: HomeIcon,             iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
+      { href: '/escolar-financeiro', label: 'Gestão Escolar e Financeiro', icon: BuildingLibraryIcon, iconSolid: BuildingIconSolid, color: '#29ABE2', roles: [] },
+      { href: '/pessoas',       label: 'Pessoas',      icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#8B5CF6', roles: [] },
+      { href: '/estoque',       label: 'Estoque e Patrimônio', icon: ArchiveBoxIcon,     iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
     ],
   },
   {
     label: 'Inteligência',
     items: [
       { href: '/inovacao',      label: 'Central IA',   icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
-      { href: '/analytics',     label: 'Analytics IA', icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: [] },
-      { href: '/automacoes',    label: 'Automações',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#4A9EFF', roles: [] },
+      { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { href: '/configuracoes', label: 'Configurações', icon: Cog6ToothIcon,             iconSolid: Cog6ToothIcon,      color: '#A78BFA', roles: [] },
     ],
   },
 ]
@@ -116,7 +109,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
     { key: '?',            desc: 'Ver atalhos de teclado' },
     { key: 'Esc',          desc: 'Fechar modal / painel' },
     { key: 'G + D',        desc: 'Ir para Dashboard' },
-    { key: 'G + G',        desc: 'Ir para Centro de Gestão' },
+    { key: 'G + G',        desc: 'Ir para Central Operacional' },
     { key: 'G + T',        desc: 'Ir para Central de Tarefas' },
     { key: 'G + E',        desc: 'Ir para Eventos' },
     { key: 'G + N',        desc: 'Ir para Notificações' },
@@ -151,6 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen]       = useState(false)
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen]         = useState(false)
   const [paletteOpen, setPaletteOpen]       = useState(false)
   const [shortcutsOpen, setShortcutsOpen]   = useState(false)
@@ -193,6 +187,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   )
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const payload = {
+      path: pathname,
+      label: currentPage?.label || 'Tela atual',
+      recordedAt: new Date().toISOString(),
+    }
+    try {
+      localStorage.setItem('aps_edu_last_context_v1', JSON.stringify(payload))
+    } catch {}
+  }, [pathname, currentPage?.label])
+
   let user: any = null
   try {
     const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
@@ -208,10 +214,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRoleName = user?.role?.name ?? user?.role ?? 'Admin'
   const userRole = userRoleName
   const roleLevel = getRoleLevel(typeof userRoleName === 'string' ? userRoleName : 'member')
+  const currentGestaoView = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') || 'agenda' : 'agenda'
+  const contextualGestaoItems = [
+    { href: '/gestao?view=agenda', label: 'Agenda e Calendários', key: 'agenda' },
+    { href: '/gestao?view=kanban', label: 'Tarefas e Projetos', key: 'kanban' },
+    { href: '/gestao?view=escolar', label: 'Escolar e Financeiro', key: 'escolar' },
+  ]
+  const desktopSidebarWidth = desktopSidebarOpen ? 256 : 18
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
+      className="relative h-screen overflow-hidden"
       style={{ backgroundColor: 'var(--bg-base)' }}
     >
       {/* â”€â”€ BACKGROUND ORBS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -244,6 +257,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
+      <div
+        className="fixed inset-y-0 left-0 z-20 hidden lg:block"
+        style={{ width: 14 }}
+        onMouseEnter={() => setDesktopSidebarOpen(true)}
+      />
+
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           SIDEBAR
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
@@ -256,9 +275,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           borderRight: '1px solid rgba(255,255,255,0.06)',
           boxShadow: '4px 0 40px rgba(0,0,0,0.4)',
         }}
+        onMouseEnter={() => setDesktopSidebarOpen(true)}
+        onMouseLeave={() => setDesktopSidebarOpen(false)}
         className={`fixed inset-y-0 left-0 z-30 flex flex-col
-          transform transition-transform duration-300 ease-in-out
-          lg:relative lg:translate-x-0
+          transition-transform duration-300 ease-in-out
+          ${desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-[238px]'}
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {/* â”€â”€ LOGO AREA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -354,6 +375,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )
                   })}
                 </ul>
+
+                {pathname.startsWith('/gestao') && section.label === 'Operação' && (
+                  <div className="mt-2 space-y-1 rounded-2xl border border-white/8 bg-white/[0.025] p-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                      Central Operacional
+                    </p>
+                    {contextualGestaoItems.map(item => {
+                      const activeView = currentGestaoView === item.key
+                      return (
+                        <Link
+                          key={item.key}
+                          href={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition-all"
+                          style={{
+                            background: activeView ? 'rgba(248,163,3,0.14)' : 'transparent',
+                            color: activeView ? '#F8A303' : 'rgba(255,255,255,0.55)',
+                            border: activeView ? '1px solid rgba(248,163,3,0.2)' : '1px solid transparent',
+                          }}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: activeView ? '#F8A303' : 'rgba(255,255,255,0.22)' }} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {pathname.startsWith('/escolar-financeiro') && section.label === 'Operação' && (
+                  <div className="mt-2 space-y-1 rounded-2xl border border-white/8 bg-white/[0.025] p-2">
+                    <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                      Suite escolar
+                    </p>
+                    <Link
+                      href="/gestao?view=escolar"
+                      onClick={() => setSidebarOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition-all"
+                      style={{ background: 'rgba(41,171,226,0.14)', color: '#29ABE2', border: '1px solid rgba(41,171,226,0.2)' }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-[#29ABE2]" />
+                      <span className="truncate">Matrículas, financeiro e documentos</span>
+                    </Link>
+                  </div>
+                )}
+
               </div>
             )
           })}
@@ -425,7 +491,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           MAIN AREA
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+      <div
+        className="relative z-10 flex h-full min-w-0 flex-col overflow-hidden"
+        style={{ marginLeft: desktopSidebarWidth }}
+      >
 
         {/* â”€â”€ TOP BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <header
@@ -560,7 +629,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* â”€â”€ AI ASSISTANT FLOAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <AiAssistant />
+      {!pathname?.startsWith('/inovacao') && <AiAssistant />}
 
       {/* â”€â”€ COMMAND PALETTE âŒ˜K â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
@@ -571,11 +640,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* â”€â”€ MOBILE BOTTOM NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2"
         style={{ background: 'rgba(7,9,22,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {[
-          { href: '/gestao',       icon: 'G', label: 'Centro' },
-          { href: '/meu-dia',      icon: 'D', label: 'Dia' },
-          { href: '/estoque',      icon: 'E', label: 'Estoque' },
-          { href: '/reports',      icon: 'R', label: 'Relat.' },
+        {[ 
+          { href: '/gestao',       icon: 'C', label: 'Centro' },
+          { href: '/escolar-financeiro', icon: 'E', label: 'Escola' },
+          { href: '/pessoas',      icon: 'P', label: 'Pessoas' },
+          { href: '/inovacao',     icon: 'I', label: 'IA' },
         ].map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
