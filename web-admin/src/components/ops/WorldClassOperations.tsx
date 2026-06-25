@@ -3031,43 +3031,46 @@ function PeopleWorkspaceExecutive({
   }
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 pb-24">
       <Surface className="overflow-hidden">
         <div className="p-5 xl:p-6">
-          <div className="flex flex-col gap-4 border-b border-white/10 pb-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Central executiva de pessoas</p>
-              <h2 className="mt-2 text-3xl font-black leading-tight text-white xl:text-4xl">Liderança, temperamento e produtividade numa tela editorial, limpa e viva.</h2>
-              <p className="mt-3 text-sm text-white/55">
+          <div className="flex flex-col gap-4 border-b border-white/10 pb-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/35">Central executiva de pessoas</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h2 className="text-3xl font-black leading-tight text-white">Liderança, temperamento e produtividade</h2>
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/70">{people.length} perfis</span>
+              </div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
                 {selectedPerson
-                  ? `${selectedPerson.name} atua como ${selectedPerson.role}. A leitura executiva fica no centro para editar, salvar e confiar no resultado em tempo real.`
+                  ? `${selectedPerson.name} atua como ${selectedPerson.role}. A leitura executiva fica centralizada para editar, salvar e confiar no resultado em tempo real.`
                   : 'Selecione uma pessoa para abrir a leitura executiva consolidada.'}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={startNewPerson} className="h-10 rounded-2xl border border-[#0ABD78]/30 bg-[#0ABD78]/10 px-4 text-xs font-black text-[#7AF0C0]">
+              <button onClick={startNewPerson} className="h-10 rounded-2xl border border-[#0ABD78]/30 bg-[#0ABD78]/10 px-4 text-xs font-black text-[#7AF0C0] transition hover:-translate-y-0.5">
                 Novo cadastro inteligente
               </button>
-              <button onClick={() => setWorkspaceMode(mode => (mode === 'simplificado' ? 'completo' : 'simplificado'))} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">
+              <button onClick={() => setWorkspaceMode(mode => (mode === 'simplificado' ? 'completo' : 'simplificado'))} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white transition hover:border-white/20 hover:bg-white/[0.08]">
                 {workspaceMode === 'simplificado' ? 'Vista completa' : 'Vista compacta'}
               </button>
-              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio geral - ${selectedPerson.name}`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório geral</button>
-              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Abrir relatório</button>
-              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Plano com Sofi - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Gerar com Sofi</button>
+              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio geral - ${selectedPerson.name}`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white transition hover:border-white/20 hover:bg-white/[0.08]">Relatório geral</button>
+              <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black transition hover:-translate-y-0.5">Abrir relatório</button>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <MetricCard label="Liderança média" value={`${averageLeadership}%`} detail={`${readyLeaders} prontos para liderar` } color="#C4B5FD" />
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Liderança média" value={`${averageLeadership}%`} detail={`${readyLeaders} prontos para liderar`} color="#C4B5FD" />
             <MetricCard label="Temperamento médio" value={`${averageTemperament}%`} detail="leitura relacional consolidada" color="#38BDF8" />
+            <MetricCard label="Relacionamento médio" value={`${Math.round((relationshipIndex + friendlinessIndex) / 2 || 0)}%`} detail="convivência e inteligência relacional" color="#0ABD78" />
             <MetricCard label="Produtividade média" value={`${averageProductivity}%`} detail="índice geral do time" color="#F8A303" />
           </div>
 
           <div className="mt-4 rounded-[1.55rem] border border-white/10 bg-white/[0.035] p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/35">Estado da ficha</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/35">Estado da ficha</p>
                 <p className="mt-1 text-sm font-semibold text-white/60">
                   {creatingPerson ? 'Criando novo cadastro inteligente' : savingDraft ? 'Salvando...' : draftDirty ? 'Alterações pendentes' : 'Atualização em tempo real'}
                 </p>
@@ -3076,14 +3079,14 @@ function PeopleWorkspaceExecutive({
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">N{selectedPerson?.leadershipLevel || 3}</span>
                 <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/70">{selectedLeadershipPercent}% liderança</span>
-                <button onClick={() => void saveDraft()} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Salvar</button>
+                <button onClick={() => void saveDraft()} className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black transition hover:-translate-y-0.5">Salvar</button>
               </div>
             </div>
           </div>
         </div>
       </Surface>
 
-      <div className="space-y-5">
+      <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
         <Surface className="overflow-hidden">
           <div className="flex flex-col gap-4 border-b border-white/10 p-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
@@ -3429,46 +3432,22 @@ function PeopleWorkspaceExecutive({
         </Surface>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Surface className="overflow-hidden">
-          <SectionHeader eyebrow="Ações" title="Fluxo aberto do time" />
-          <div className="divide-y divide-white/10">
-            {work.slice(0, 5).length === 0 && <p className="p-5 text-sm text-white/38">Nenhuma ação de pessoas em aberto.</p>}
-            {work.slice(0, 5).map(item => (
-              <div key={item.id} className="grid gap-3 p-4 md:grid-cols-[1fr_110px_140px] md:items-center">
-                <div>
-                  <p className="font-black text-white">{item.title}</p>
-                  <p className="mt-1 text-xs text-white/38">{item.owner} • {item.due}</p>
-                </div>
-                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.priority}</span>
-                <button onClick={() => openSofi(`Sofi, assuma a ação de pessoas "${item.title}" com contexto de ${item.owner}.`)} className="h-10 rounded-2xl bg-white/[0.07] px-4 text-xs font-black text-white">Abrir</button>
+      <Surface className="overflow-hidden">
+        <SectionHeader eyebrow="Ações" title="Fluxo aberto do time" />
+        <div className="divide-y divide-white/10">
+          {work.slice(0, 5).length === 0 && <p className="p-5 text-sm text-white/38">Nenhuma ação de pessoas em aberto.</p>}
+          {work.slice(0, 5).map(item => (
+            <div key={item.id} className="grid gap-3 p-4 md:grid-cols-[1fr_110px_140px] md:items-center">
+              <div>
+                <p className="font-black text-white">{item.title}</p>
+                <p className="mt-1 text-xs text-white/38">{item.owner} • {item.due}</p>
               </div>
-            ))}
-          </div>
-        </Surface>
-
-        <Surface className="p-5">
-          <h3 className="font-black text-white">Leitura executiva</h3>
-          <div className="mt-4 space-y-3">
-            {people.slice(0, 3).map(person => (
-              <div key={person.id} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black text-white">{person.name}</p>
-                    <p className="mt-1 text-xs text-white/38">{person.unit}</p>
-                  </div>
-                  <span className="rounded-full bg-[#8B5CF6]/14 px-2.5 py-1 text-[11px] font-black text-[#C4B5FD]">{person.leadershipPercent ?? Math.round((person.score || 0) * 20)}%</span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">N{person.leadershipLevel || 3}</span>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">{person.leadershipProfile || 'Executor'}</span>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-white/65">{person.leadershipPotential || 'Alto'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Surface>
-      </div>
+              <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-black text-white/55">{item.priority}</span>
+              <button onClick={() => openSofi(`Sofi, assuma a ação de pessoas "${item.title}" com contexto de ${item.owner}.`)} className="h-10 rounded-2xl bg-white/[0.07] px-4 text-xs font-black text-white">Abrir</button>
+            </div>
+          ))}
+        </div>
+      </Surface>
     </section>
   )
 }

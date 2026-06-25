@@ -24,7 +24,6 @@ const navItems: NavItem[] = [
   { href: '/units',         icon: 'U', label: 'Unidades',   adminOnly: true },
   { href: '/analytics',     icon: 'A', label: 'Central IA' },
   { href: '/automacoes',    icon: 'Z', label: 'Automações' },
-  { href: '/whatsapp',      icon: '💬', label: 'WhatsApp CRM' },
 ]
 
 function getRoleFromUser(user: any): string {

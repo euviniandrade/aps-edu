@@ -154,6 +154,9 @@ export default function AiAssistant({ embedded = false }: AiAssistantProps = {})
   const [memoryLoaded, setMemoryLoaded] = useState(false)
   const pathname = usePathname()
   const dockLeft = !embedded && (pathname?.startsWith('/gestao') || pathname?.startsWith('/pessoas') || pathname?.startsWith('/escolar-financeiro'))
+  const dockButtonClass = dockLeft
+    ? 'left-4 bottom-32 sm:bottom-32 md:left-[20rem]'
+    : 'right-4 bottom-6 sm:right-6 sm:bottom-6'
 
   const bottomRef     = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
@@ -609,7 +612,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className={`fixed bottom-5 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group sm:bottom-6 ${dockLeft ? 'left-4 md:left-[21rem]' : 'right-4 sm:right-6'}`}
+          className={`fixed z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 group ${dockButtonClass}`}
           style={{
             background: 'linear-gradient(135deg, #F8A303, #FDC347)',
             boxShadow: '0 8px 32px rgba(248,163,3,0.5), 0 0 0 1px rgba(248,163,3,0.2)',
