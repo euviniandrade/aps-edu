@@ -1,0 +1,9 @@
+# Exclui tudo fora da pasta web-admin
+../evolution-api
+../backend
+../.git
+
+# Dev artifacts
+node_modules
+.next
+*.log

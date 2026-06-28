@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 132" role="img" aria-labelledby="title desc">
+  <title id="title">APS30 — Propósito em Ação</title>
+  <desc id="desc">Logotipo institucional APS30 para a plataforma SOFI.</desc>
+  <rect width="520" height="132" rx="28" fill="#FFFFFF"/>
+  <g transform="translate(22 16)">
+    <circle cx="50" cy="50" r="48" fill="#003F75"/>
+    <text x="50" y="42" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="900" text-anchor="middle">APS</text>
+    <text x="50" y="66" fill="#F6B221" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900" text-anchor="middle">30</text>
+    <path d="M18 78h64" stroke="#F6B221" stroke-width="6" stroke-linecap="round"/>
+    <path d="M24 88h52" stroke="#00A9E0" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(136 34)">
+    <text x="0" y="29" fill="#003F75" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="900">APS30</text>
+    <text x="0" y="52" fill="#5E748C" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" letter-spacing="2">SISTEMA DE GESTÃO · APS EDU</text>
+    <rect x="0" y="72" width="148" height="7" rx="3.5" fill="#F6B221"/>
+    <rect x="158" y="72" width="94" height="7" rx="3.5" fill="#00A9E0"/>
+    <rect x="262" y="72" width="64" height="7" rx="3.5" fill="#003F75"/>
+  </g>
+</svg>

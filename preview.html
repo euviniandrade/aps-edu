@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APS EDU — Preview Visual</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: '#132C45', dark: '#003B55', light: '#F8A303' },
+          accent: '#F8A303',
+          gold: '#FDCF38',
+          navy: '#132C45',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  * { font-family: 'Inter', 'Segoe UI', sans-serif; }
+  .screen { display: none; }
+  .screen.active { display: flex; }
+  .phone { width: 375px; height: 812px; overflow: hidden; border-radius: 40px; box-shadow: 0 30px 80px rgba(0,0,0,0.3); border: 8px solid #1a1a1a; position: relative; flex-shrink: 0; }
+  .phone-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 140px; height: 28px; background: #1a1a1a; border-radius: 0 0 18px 18px; z-index: 100; }
+  .phone-inner { width: 100%; height: 100%; overflow-y: auto; background: #F5F7FA; }
+  .phone-inner::-webkit-scrollbar { display: none; }
+  .web { width: 1100px; height: 720px; overflow: hidden; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; }
+  .tab-btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .2s; border: 2px solid transparent; }
+  .tab-btn.active { background: #132C45; color: white; }
+  .tab-btn:not(.active) { background: white; color: #6b7280; border-color: #e5e7eb; }
+  .tab-btn:not(.active):hover { border-color: #132C45; color: #132C45; }
+  .status-bar { height: 44px; background: inherit; display: flex; align-items: flex-end; padding: 0 20px 6px; justify-content: space-between; }
+  .bottom-nav { position: sticky; bottom: 0; background: white; border-top: 1px solid #E5E7EB; display: flex; z-index: 50; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 12px; gap: 3px; cursor: pointer; }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; color: #6b7280; }
+  .nav-item.active .nav-label { color: #132C45; font-weight: 600; }
+  .badge-card { border-radius: 12px; padding: 12px; text-align: center; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 16px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .progress-bar { height: 8px; border-radius: 4px; background: #E5E7EB; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; color: rgba(255,255,255,0.8); cursor: pointer; font-size: 14px; transition: all .2s; }
+  .sidebar-item:hover { background: rgba(255,255,255,0.1); color: white; }
+  .sidebar-item.active { background: rgba(248,163,3,0.18); color: #F8A303 !important; font-weight: 600; border-left: 3px solid #F8A303; }
+  .kpi { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .table-row:hover { background: #f9fafb; }
+  .animate-pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<!-- NAV TABS -->
+<div class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
+    <div class="flex items-center gap-3 mr-6">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:#132C45;border:2px solid #F8A303">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="width:3px;height:10px;background:#F8A303;border-radius:2px"></div>
+          <div style="width:12px;height:3px;background:#F8A303;border-radius:2px;margin-top:-6px"></div>
+          <div style="width:3px;height:6px;background:#F8A303;border-radius:2px"></div>
+        </div>
+      </div>
+      <div>
+        <span class="font-extrabold text-gray-900" style="color:#132C45">APS Sul</span>
+        <span class="text-xs font-semibold ml-2" style="color:#F8A303">EDUCAÇÃO ADVENTISTA</span>
+        <span class="text-gray-400 text-xs ml-2">— Preview Visual</span>
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button class="tab-btn active" onclick="show('login-mobile')">📱 Login</button>
+      <button class="tab-btn" onclick="show('dashboard-mobile')">📱 Dashboard</button>
+      <button class="tab-btn" onclick="show('tasks-mobile')">📱 Tarefas</button>
+      <button class="tab-btn" onclick="show('events-mobile')">📱 Eventos</button>
+      <button class="tab-btn" onclick="show('badges-mobile')">📱 Selos</button>
+      <button class="tab-btn" onclick="show('profile-mobile')">📱 Perfil</button>
+      <button class="tab-btn" onclick="show('web-dashboard')">🖥️ Web Admin</button>
+      <button class="tab-btn" onclick="show('web-users')">🖥️ Usuários</button>
+      <button class="tab-btn" onclick="show('web-gamification')">🖥️ Gamificação</button>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- ===== LOGIN MOBILE ===== -->
+<div id="login-mobile" class="screen active flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Tela de Login — APS Sul</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <div class="flex flex-col min-h-full" style="background:linear-gradient(170deg,#003B55,#132C45)">
+        <!-- Header Brand -->
+        <div class="flex flex-col items-center pt-14 pb-10 px-8">
+          <!-- Cross emblem -->
+          <div style="width:80px;height:80px;border-radius:50%;border:2.5px solid #F8A303;background:rgba(248,163,3,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <div style="position:relative;display:flex;align-items:center;justify-content:center">
+              <div style="width:4px;height:40px;background:#F8A303;border-radius:2px;position:absolute"></div>
+              <div style="width:28px;height:4px;background:#F8A303;border-radius:2px;position:absolute;top:-4px"></div>
+            </div>
+          </div>
+          <h1 class="text-white font-extrabold text-3xl tracking-wide">APS Sul</h1>
+          <p class="text-xs font-semibold tracking-widest mt-1" style="color:#F8A303;letter-spacing:3px">EDUCAÇÃO ADVENTISTA</p>
+          <!-- Gold divider -->
+          <div style="width:40px;height:2px;background:#F8A303;border-radius:1px;margin:14px 0 10px"></div>
+          <p style="color:rgba(255,255,255,0.65);font-size:12px;font-style:italic;text-align:center;line-height:1.6">Formando Caráter,<br>Transformando Vidas</p>
+        </div>
+        <!-- Card Login -->
+        <div class="flex-1 rounded-t-3xl px-7 pt-8 pb-6" style="background:#F5F7FA">
+          <h2 class="text-xl font-bold mb-1" style="color:#132C45">Bem-vindo de volta</h2>
+          <p class="text-xs text-gray-500 mb-6">Acesse com seu e-mail institucional</p>
+          <div class="mb-3">
+            <div class="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center gap-3">
+              <span style="color:#132C45">📧</span>
+              <input class="flex-1 text-sm text-gray-700 bg-transparent outline-none" placeholder="E-mail institucional" value="admin@aps.edu.br" readonly/>
+            </div>
+          </div>
+          <div class="mb-6">
+            <div class="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center gap-3">
+              <span style="color:#132C45">🔒</span>
+              <input class="flex-1 text-sm text-gray-700 bg-transparent outline-none" type="password" value="Admin@123" placeholder="Senha" readonly/>
+              <span class="text-gray-400">👁️</span>
+            </div>
+          </div>
+          <button class="w-full py-4 rounded-xl text-white font-bold text-sm shadow-md" style="background:#132C45">Entrar no Sistema</button>
+          <p class="text-center mt-4 text-xs font-semibold" style="color:#132C45">Esqueci minha senha</p>
+          <p class="text-center text-gray-400" style="font-size:10px;margin-top:24px">APS Sul — Associação Paulista Sul<br>Departamento de Educação</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD MOBILE ===== -->
+<div id="dashboard-mobile" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Dashboard</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <!-- App Bar -->
+      <div class="text-white px-5 pt-12 pb-5" style="background:linear-gradient(135deg,#003B55,#132C45)">
+        <div style="height:2px;background:linear-gradient(90deg,#F8A303,rgba(248,163,3,0));margin-bottom:12px;border-radius:1px"></div>
+        <div class="flex justify-between items-start">
+          <div>
+            <p style="font-size:10px;color:#F8A303;font-weight:600;letter-spacing:1.5px;margin-bottom:2px">APS SUL — EDUCAÇÃO ADVENTISTA</p>
+            <p class="text-lg font-bold">Bom dia, Maria! 👋</p>
+            <p style="color:rgba(255,255,255,0.65)" class="text-xs mt-0.5">Coordenadora | Colégio Central</p>
+          </div>
+          <div class="flex gap-2">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.12)"><span class="text-lg">🔔</span></div>
+            <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.12)"><span class="text-lg">🔍</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Body -->
+      <div class="px-4 py-4 space-y-4 pb-20">
+        <!-- Stats grid -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="card"><div class="text-blue-700 text-xl mb-1">✅</div><p class="text-2xl font-bold text-gray-800">8</p><p class="text-xs text-gray-500">Tarefas Ativas</p></div>
+          <div class="card"><div class="text-amber-500 text-xl mb-1">📅</div><p class="text-2xl font-bold text-gray-800">3</p><p class="text-xs text-gray-500">Próx. Eventos</p></div>
+          <div class="card"><div class="text-yellow-500 text-xl mb-1">⭐</div><p class="text-2xl font-bold text-gray-800">1.240</p><p class="text-xs text-gray-500">Meus Pontos</p></div>
+          <div class="card"><div class="text-green-600 text-xl mb-1">📈</div><p class="text-2xl font-bold text-gray-800">Líder</p><p class="text-xs text-gray-500">Nível Atual</p></div>
+        </div>
+        <!-- Tarefas -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <p class="font-bold text-gray-800">Minhas Tarefas</p>
+            <p class="text-xs font-semibold" style="color:#132C45">Ver todas →</p>
+          </div>
+          <div class="card mb-2">
+            <div class="flex justify-between items-start mb-2">
+              <p class="font-semibold text-sm text-gray-800 flex-1 pr-2">Relatório mensal de atividades</p>
+              <span class="chip" style="background:#fef3c7;color:#d97706">🟡 Pendente</span>
+            </div>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:40%;background:#f59e0b"></div></div>
+            <p class="text-xs text-gray-500">📅 Vence 20/04/2025 · 🏢 Colégio Central</p>
+          </div>
+          <div class="card">
+            <div class="flex justify-between items-start mb-2">
+              <p class="font-semibold text-sm text-gray-800 flex-1 pr-2">Organizar gincana cultural</p>
+              <span class="chip" style="background:#d1fae5;color:#059669">🟢 Em andamento</span>
+            </div>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:70%;background:#10b981"></div></div>
+            <p class="text-xs text-gray-500">📅 Vence 25/04/2025 · 🏢 Colégio Central</p>
+          </div>
+        </div>
+        <!-- Ranking -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <p class="font-bold text-gray-800">Ranking da Semana 🏆</p>
+            <p class="text-xs font-semibold" style="color:#132C45">Ver tudo →</p>
+          </div>
+          <div class="card">
+            <div class="flex items-center gap-3 py-2 border-b border-gray-100"><span class="text-2xl">🥇</span><div class="flex-1"><p class="font-semibold text-sm">Ana Silva</p><p class="text-xs text-gray-500">Sede APS</p></div><span class="font-bold text-sm" style="color:#132C45">1.580 pts</span></div>
+            <div class="flex items-center gap-3 py-2 border-b border-gray-100"><span class="text-2xl">🥈</span><div class="flex-1"><p class="font-semibold text-sm">Maria Santos</p><p class="text-xs text-gray-500">Colégio Central</p></div><span class="font-bold text-sm" style="color:#132C45">1.240 pts</span></div>
+            <div class="flex items-center gap-3 py-2"><span class="text-2xl">🥉</span><div class="flex-1"><p class="font-semibold text-sm">João Costa</p><p class="text-xs text-gray-500">Sede APS</p></div><span class="font-bold text-sm" style="color:#132C45">980 pts</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Bottom Nav -->
+      <div class="bottom-nav">
+        <div class="nav-item active"><span class="nav-icon">🏠</span><span class="nav-label" style="color:#132C45;font-weight:700">Início</span></div>
+        <div class="nav-item"><span class="nav-icon">✅</span><span class="nav-label">Tarefas</span></div>
+        <div class="nav-item"><span class="nav-icon">📅</span><span class="nav-label">Eventos</span></div>
+        <div class="nav-item"><span class="nav-icon">📣</span><span class="nav-label">Mural</span></div>
+        <div class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Perfil</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TASKS MOBILE ===== -->
+<div id="tasks-mobile" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Tela de Tarefas</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <div class="px-4 pt-12 pb-20">
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-xl font-bold text-gray-800">Tarefas</h1>
+        </div>
+        <!-- Filtros -->
+        <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+          <span class="chip flex-shrink-0 text-white" style="background:#132C45">Todas</span>
+          <span class="chip flex-shrink-0 bg-white border border-gray-200 text-gray-600">Pendentes</span>
+          <span class="chip flex-shrink-0 bg-white border border-gray-200 text-gray-600">Em andamento</span>
+          <span class="chip flex-shrink-0 bg-white border border-gray-200 text-gray-600">Concluídas</span>
+        </div>
+        <!-- Task cards -->
+        <div class="space-y-3">
+          <div class="card border-l-4" style="border-left-color:#f59e0b">
+            <div class="flex justify-between mb-1"><p class="font-semibold text-sm">Relatório mensal</p><span class="chip" style="background:#fff7ed;color:#ea580c;font-size:10px">🔴 Alta</span></div>
+            <p class="text-xs text-gray-500 mb-2">Elaborar relatório de atividades do mês de abril...</p>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:40%;background:#f59e0b"></div></div>
+            <div class="flex justify-between"><p class="text-xs text-gray-400">40% concluído</p><p class="text-xs text-gray-400">📅 20/04</p></div>
+          </div>
+          <div class="card border-l-4" style="border-left-color:#10b981">
+            <div class="flex justify-between mb-1"><p class="font-semibold text-sm">Gincana cultural</p><span class="chip" style="background:#ecfdf5;color:#059669;font-size:10px">🟢 Em andamento</span></div>
+            <p class="text-xs text-gray-500 mb-2">Organizar atividades da gincana para os alunos...</p>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:70%;background:#10b981"></div></div>
+            <div class="flex justify-between"><p class="text-xs text-gray-400">70% concluído</p><p class="text-xs text-gray-400">📅 25/04</p></div>
+          </div>
+          <div class="card border-l-4" style="border-left-color:#6366f1">
+            <div class="flex justify-between mb-1"><p class="font-semibold text-sm">Reunião pais e mestres</p><span class="chip" style="background:#eff6ff;color:#2563eb;font-size:10px">📋 Pendente</span></div>
+            <p class="text-xs text-gray-500 mb-2">Agendar e preparar pauta da reunião bimestral...</p>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:10%;background:#6366f1"></div></div>
+            <div class="flex justify-between"><p class="text-xs text-gray-400">10% concluído</p><p class="text-xs text-gray-400">📅 30/04</p></div>
+          </div>
+          <div class="card border-l-4" style="border-left-color:#ef4444">
+            <div class="flex justify-between mb-1"><p class="font-semibold text-sm">Envio de notas bimestrais</p><span class="chip" style="background:#fef2f2;color:#dc2626;font-size:10px">⏰ Atrasada</span></div>
+            <p class="text-xs text-gray-500 mb-2">Registrar e enviar notas para o sistema...</p>
+            <div class="progress-bar mb-1"><div class="progress-fill" style="width:0%;background:#ef4444"></div></div>
+            <div class="flex justify-between"><p class="text-xs text-gray-400">0% concluído</p><p class="text-xs text-red-500">📅 10/04 ⚠️</p></div>
+          </div>
+        </div>
+      </div>
+      <!-- FAB -->
+      <div class="absolute bottom-20 right-5">
+        <div class="flex items-center gap-2 text-white px-4 py-3 rounded-full shadow-xl" style="background:#132C45">
+          <span>➕</span><span class="font-semibold text-sm">Nova Tarefa</span>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Início</span></div>
+        <div class="nav-item active"><span class="nav-icon">✅</span><span class="nav-label" style="color:#132C45;font-weight:700">Tarefas</span></div>
+        <div class="nav-item"><span class="nav-icon">📅</span><span class="nav-label">Eventos</span></div>
+        <div class="nav-item"><span class="nav-icon">📣</span><span class="nav-label">Mural</span></div>
+        <div class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Perfil</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EVENTS MOBILE ===== -->
+<div id="events-mobile" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Tela de Eventos</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <div class="px-4 pt-12 pb-24">
+        <h1 class="text-xl font-bold text-gray-800 mb-4">Eventos</h1>
+        <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+          <span class="chip text-white flex-shrink-0" style="background:#132C45">Todos</span>
+          <span class="chip bg-white border border-gray-200 text-gray-600 flex-shrink-0">Planejados</span>
+          <span class="chip bg-white border border-gray-200 text-gray-600 flex-shrink-0">Em andamento</span>
+          <span class="chip bg-white border border-gray-200 text-gray-600 flex-shrink-0">Concluídos</span>
+        </div>
+        <div class="space-y-3">
+          <div class="card overflow-hidden p-0">
+            <div class="h-24 flex items-center justify-center" style="background:#dbeafe"><span style="font-size:40px">📅</span></div>
+            <div class="p-3">
+              <div class="flex justify-between items-start mb-1"><p class="font-bold text-sm">Semana da Educação Adventista</p><span class="chip" style="background:#dbeafe;color:#1d4ed8;font-size:10px">Planejado</span></div>
+              <p class="text-xs text-gray-500 mb-2">📍 Colégio Central — São Paulo</p>
+              <div class="flex items-center gap-2"><div class="progress-bar flex-1"><div class="progress-fill" style="width:25%;background:#132C45"></div></div><span class="text-xs font-bold" style="color:#132C45">25%</span></div>
+            </div>
+          </div>
+          <div class="card overflow-hidden p-0">
+            <div class="h-24 flex items-center justify-center" style="background:#d1fae5"><span style="font-size:40px">🎉</span></div>
+            <div class="p-3">
+              <div class="flex justify-between items-start mb-1"><p class="font-bold text-sm">Gincana Cultural 2025</p><span class="chip" style="background:#d1fae5;color:#059669;font-size:10px">Em andamento</span></div>
+              <p class="text-xs text-gray-500 mb-2">📍 Ginásio — Sede APS</p>
+              <div class="flex items-center gap-2"><div class="progress-bar flex-1"><div class="progress-fill" style="width:60%;background:#10b981"></div></div><span class="text-xs font-bold text-green-600">60%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="absolute bottom-20 right-5">
+        <div class="flex items-center gap-2 text-white px-4 py-3 rounded-full shadow-xl" style="background:#132C45">
+          <span>➕</span><span class="font-semibold text-sm">Novo Evento</span>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Início</span></div>
+        <div class="nav-item"><span class="nav-icon">✅</span><span class="nav-label">Tarefas</span></div>
+        <div class="nav-item active"><span class="nav-icon">📅</span><span class="nav-label" style="color:#132C45;font-weight:700">Eventos</span></div>
+        <div class="nav-item"><span class="nav-icon">📣</span><span class="nav-label">Mural</span></div>
+        <div class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Perfil</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BADGES MOBILE ===== -->
+<div id="badges-mobile" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Selos de Gamificação</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <div class="px-4 pt-12 pb-24">
+        <h1 class="text-xl font-bold text-gray-800 mb-1">Meus Selos</h1>
+        <p class="text-sm text-gray-500 mb-3">12 de 50 conquistados</p>
+        <div class="progress-bar mb-4"><div class="progress-fill" style="width:24%;background:#FFD700"></div></div>
+        <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+          <span class="chip text-white flex-shrink-0" style="background:#132C45">Todos</span>
+          <span class="chip bg-white border flex-shrink-0 text-gray-600">Comprometimento</span>
+          <span class="chip bg-white border flex-shrink-0 text-gray-600">Pontualidade</span>
+          <span class="chip bg-white border flex-shrink-0 text-gray-600">Liderança</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <!-- Earned badges -->
+          <div class="badge-card" style="background:#fff7ed;border:2px solid #CD7F32"><div class="text-3xl mb-1">🎯</div><p class="text-xs font-bold text-amber-800">Primeiro Passo</p><div class="chip mt-1" style="background:#CD7F32;color:white;font-size:9px">Bronze</div></div>
+          <div class="badge-card" style="background:#fff7ed;border:2px solid #CD7F32"><div class="text-3xl mb-1">⚡</div><p class="text-xs font-bold text-amber-800">Ativo</p><div class="chip mt-1" style="background:#CD7F32;color:white;font-size:9px">Bronze</div></div>
+          <div class="badge-card" style="background:#f8fafc;border:2px solid #C0C0C0"><div class="text-3xl mb-1">🏆</div><p class="text-xs font-bold text-gray-600">Dedicado</p><div class="chip mt-1" style="background:#C0C0C0;color:white;font-size:9px">Prata</div></div>
+          <div class="badge-card" style="background:#fffbeb;border:2px solid #FFD700"><div class="text-3xl mb-1">👑</div><p class="text-xs font-bold text-yellow-700">Líder Nato</p><div class="chip mt-1" style="background:#FFD700;color:#7c5c00;font-size:9px">Ouro</div></div>
+          <div class="badge-card" style="background:#f8fafc;border:2px solid #C0C0C0"><div class="text-3xl mb-1">📝</div><p class="text-xs font-bold text-gray-600">Organizado</p><div class="chip mt-1" style="background:#C0C0C0;color:white;font-size:9px">Prata</div></div>
+          <!-- Locked badges -->
+          <div class="badge-card" style="background:#f1f5f9;border:2px solid #e2e8f0;opacity:0.5"><div class="text-3xl mb-1 grayscale">🔥</div><p class="text-xs font-bold text-gray-400">Em chamas</p><div class="chip mt-1 bg-gray-300 text-gray-500" style="font-size:9px">🔒 Bloqueado</div></div>
+          <div class="badge-card" style="background:#f1f5f9;border:2px solid #e2e8f0;opacity:0.5"><div class="text-3xl mb-1">⭐</div><p class="text-xs font-bold text-gray-400">Estrela</p><div class="chip mt-1 bg-gray-300 text-gray-500" style="font-size:9px">🔒 Bloqueado</div></div>
+          <div class="badge-card" style="background:#f1f5f9;border:2px solid #e2e8f0;opacity:0.5"><div class="text-3xl mb-1">🚀</div><p class="text-xs font-bold text-gray-400">Acelerado</p><div class="chip mt-1 bg-gray-300 text-gray-500" style="font-size:9px">🔒 Bloqueado</div></div>
+          <div class="badge-card" style="background:#f1f5f9;border:2px solid #e2e8f0;opacity:0.5"><div class="text-3xl mb-1">💎</div><p class="text-xs font-bold text-gray-400">Diamante</p><div class="chip mt-1 bg-gray-300 text-gray-500" style="font-size:9px">🔒 Bloqueado</div></div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Início</span></div>
+        <div class="nav-item"><span class="nav-icon">✅</span><span class="nav-label">Tarefas</span></div>
+        <div class="nav-item"><span class="nav-icon">📅</span><span class="nav-label">Eventos</span></div>
+        <div class="nav-item"><span class="nav-icon">📣</span><span class="nav-label">Mural</span></div>
+        <div class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label" style="color:#132C45;font-weight:700">Perfil</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROFILE MOBILE ===== -->
+<div id="profile-mobile" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Perfil do Usuário</h2>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-inner">
+      <!-- Header -->
+      <div class="text-white pb-6 pt-10 px-5" style="background:linear-gradient(135deg,#003B55,#132C45)">
+        <div class="flex flex-col items-center">
+          <div class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white mb-3" style="background:rgba(255,255,255,0.25)">M</div>
+          <p class="text-lg font-bold">Maria Santos</p>
+          <p style="color:rgba(255,255,255,0.75)" class="text-sm">Coordenadora | Colégio Central</p>
+        </div>
+      </div>
+      <div class="px-4 py-4 pb-24 space-y-4">
+        <!-- Points card -->
+        <div class="card">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2"><span class="text-yellow-400 text-lg">⭐</span><p class="font-bold text-lg">1.240 pontos</p></div>
+            <span class="font-semibold text-sm" style="color:#132C45">Líder</span>
+          </div>
+          <div class="progress-bar mb-1"><div class="progress-fill" style="width:62%;background:#FFD700"></div></div>
+          <p class="text-xs text-gray-500">760 pts para o próximo nível</p>
+        </div>
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="text-center p-3 bg-white rounded-xl border border-gray-100"><p class="text-green-600 text-xl">✅</p><p class="font-bold text-lg text-green-600">24</p><p class="text-gray-400 text-xs leading-tight">Tarefas Concluídas</p></div>
+          <div class="text-center p-3 bg-white rounded-xl border border-gray-100"><p style="color:#132C45" class="text-xl">⏱️</p><p class="font-bold text-lg" style="color:#132C45">20</p><p class="text-gray-400 text-xs leading-tight">No Prazo</p></div>
+          <div class="text-center p-3 bg-white rounded-xl border border-gray-100"><p class="text-yellow-500 text-xl">🏅</p><p class="font-bold text-lg text-yellow-500">12</p><p class="text-gray-400 text-xs leading-tight">Selos Conquistados</p></div>
+        </div>
+        <!-- Menu -->
+        <div class="card space-y-1 p-2">
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer"><div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#fff7ed"><span>🏅</span></div><p class="font-medium text-sm flex-1">Meus Selos</p><span class="text-gray-400">›</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer"><div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#eff6ff"><span>🏆</span></div><p class="font-medium text-sm flex-1">Ranking</p><span class="text-gray-400">›</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer"><div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#fefce8"><span>🔔</span></div><p class="font-medium text-sm flex-1">Notificações</p><span class="text-gray-400">›</span></div>
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer"><div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#f0fdf4"><span>💬</span></div><p class="font-medium text-sm flex-1">Enviar Feedback</p><span class="text-gray-400">›</span></div>
+          <div class="h-px bg-gray-100 mx-3"></div>
+          <div class="flex items-center gap-3 p-3 rounded-xl cursor-pointer"><div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:#fef2f2"><span>🚪</span></div><p class="font-medium text-sm text-red-500">Sair</p><span class="text-red-300">›</span></div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Início</span></div>
+        <div class="nav-item"><span class="nav-icon">✅</span><span class="nav-label">Tarefas</span></div>
+        <div class="nav-item"><span class="nav-icon">📅</span><span class="nav-label">Eventos</span></div>
+        <div class="nav-item"><span class="nav-icon">📣</span><span class="nav-label">Mural</span></div>
+        <div class="nav-item active"><span class="nav-icon">👤</span><span class="nav-label" style="color:#132C45;font-weight:700">Perfil</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WEB ADMIN DASHBOARD ===== -->
+<div id="web-dashboard" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Painel Web Admin — Dashboard</h2>
+  <div class="web bg-gray-100 flex overflow-hidden">
+    <!-- Sidebar -->
+    <div class="w-56 flex-shrink-0 text-white flex flex-col py-5 px-3" style="background:linear-gradient(180deg,#003B55,#132C45)">
+      <div class="flex flex-col items-center px-3 mb-8 pb-5" style="border-bottom:1px solid rgba(255,255,255,0.1)">
+        <div style="width:48px;height:48px;border-radius:50%;border:2px solid #F8A303;background:rgba(248,163,3,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:8px">
+          <div style="position:relative;width:20px;height:28px;display:flex;align-items:center;justify-content:center">
+            <div style="width:3px;height:22px;background:#F8A303;border-radius:2px;position:absolute"></div>
+            <div style="width:16px;height:3px;background:#F8A303;border-radius:2px;position:absolute;top:2px"></div>
+          </div>
+        </div>
+        <p class="font-extrabold text-white text-base">APS Sul</p>
+        <p style="color:#F8A303;font-size:9px;letter-spacing:2px;font-weight:600">EDUCAÇÃO ADVENTISTA</p>
+      </div>
+      <div class="space-y-1 flex-1">
+        <div class="sidebar-item active"><span>📊</span> Dashboard</div>
+        <div class="sidebar-item"><span>👥</span> Usuários</div>
+        <div class="sidebar-item"><span>✅</span> Tarefas</div>
+        <div class="sidebar-item"><span>📅</span> Eventos</div>
+        <div class="sidebar-item"><span>📣</span> Mural</div>
+        <div class="sidebar-item"><span>🏆</span> Gamificação</div>
+        <div class="sidebar-item"><span>📈</span> Relatórios</div>
+        <div class="sidebar-item"><span>💬</span> Feedback</div>
+      </div>
+      <div class="sidebar-item mt-4 border-t border-white/10 pt-4"><span>🚪</span> Sair</div>
+    </div>
+    <!-- Main -->
+    <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex justify-between items-center mb-5">
+        <div><h1 class="text-xl font-bold text-gray-800">Dashboard</h1><p class="text-sm text-gray-500">Visão geral do sistema — Abril 2025</p></div>
+        <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700"><span>👤</span><span class="font-medium">Admin APS</span></div>
+      </div>
+      <!-- KPIs -->
+      <div class="grid grid-cols-4 gap-3 mb-5">
+        <div class="kpi"><div class="flex justify-between items-start mb-2"><div><p class="text-xs text-gray-500 mb-1">Usuários Ativos</p><p class="text-2xl font-bold text-gray-800">47</p></div><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#dbeafe"><span>👥</span></div></div><p class="text-xs text-green-600 font-medium">↑ +3 este mês</p></div>
+        <div class="kpi"><div class="flex justify-between items-start mb-2"><div><p class="text-xs text-gray-500 mb-1">Tarefas Ativas</p><p class="text-2xl font-bold text-gray-800">134</p></div><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#dcfce7"><span>✅</span></div></div><p class="text-xs text-amber-600 font-medium">18 atrasadas</p></div>
+        <div class="kpi"><div class="flex justify-between items-start mb-2"><div><p class="text-xs text-gray-500 mb-1">Eventos</p><p class="text-2xl font-bold text-gray-800">12</p></div><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fef3c7"><span>📅</span></div></div><p class="text-xs text-blue-600 font-medium">4 em andamento</p></div>
+        <div class="kpi"><div class="flex justify-between items-start mb-2"><div><p class="text-xs text-gray-500 mb-1">Total de Pontos</p><p class="text-2xl font-bold text-gray-800">28.4K</p></div><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fef9c3"><span>⭐</span></div></div><p class="text-xs text-green-600 font-medium">↑ +12% semana</p></div>
+      </div>
+      <!-- Charts + Ranking row -->
+      <div class="grid grid-cols-5 gap-3 mb-5">
+        <!-- Pie chart placeholder -->
+        <div class="col-span-2 kpi">
+          <p class="font-semibold text-sm text-gray-700 mb-3">Tarefas por Status</p>
+          <div class="flex items-center justify-center gap-6">
+            <div class="relative w-28 h-28">
+              <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="0"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="30 70" stroke-dashoffset="-45"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="13 87" stroke-dashoffset="-75"/>
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#6b7280" stroke-width="3" stroke-dasharray="12 88" stroke-dashoffset="-88"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center"><p class="text-xs font-bold text-gray-700">134</p></div>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-green-500"></div><span class="text-gray-600">Concluídas 45%</span></div>
+              <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div><span class="text-gray-600">Andamento 30%</span></div>
+              <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div><span class="text-gray-600">Atrasadas 13%</span></div>
+              <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-gray-400"></div><span class="text-gray-600">Pendentes 12%</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Top 5 ranking -->
+        <div class="col-span-3 kpi">
+          <p class="font-semibold text-sm text-gray-700 mb-3">🏆 Top 5 Ranking Geral</p>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 p-2 rounded-lg" style="background:#fffbeb"><span class="text-xl">🥇</span><div class="flex-1"><p class="font-semibold text-sm">Ana Silva</p><div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded" style="width:100%;background:#132C45"></div></div></div><span class="font-bold text-sm" style="color:#132C45">1.580 pts</span></div>
+            <div class="flex items-center gap-3 p-2 rounded-lg bg-gray-50"><span class="text-xl">🥈</span><div class="flex-1"><p class="font-semibold text-sm">Maria Santos</p><div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded" style="width:78%;background:#132C45"></div></div></div><span class="font-bold text-sm" style="color:#132C45">1.240 pts</span></div>
+            <div class="flex items-center gap-3 p-2 rounded-lg bg-gray-50"><span class="text-xl">🥉</span><div class="flex-1"><p class="font-semibold text-sm">João Costa</p><div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded" style="width:62%;background:#132C45"></div></div></div><span class="font-bold text-sm" style="color:#132C45">980 pts</span></div>
+            <div class="flex items-center gap-3 p-2 rounded-lg bg-gray-50"><span>4️⃣</span><div class="flex-1"><p class="font-semibold text-sm">Carla Mendes</p><div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded" style="width:54%;background:#F8A303"></div></div></div><span class="font-bold text-sm text-gray-500">850 pts</span></div>
+            <div class="flex items-center gap-3 p-2 rounded-lg bg-gray-50"><span>5️⃣</span><div class="flex-1"><p class="font-semibold text-sm">Pedro Lima</p><div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded" style="width:48%;background:#F8A303"></div></div></div><span class="font-bold text-sm text-gray-500">760 pts</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Alerts -->
+      <div class="kpi">
+        <p class="font-semibold text-sm text-gray-700 mb-3">⚠️ Alertas do Sistema</p>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:#fef2f2"><span>🚨</span><p class="text-sm text-red-700 flex-1">18 tarefas com prazo vencido precisam de atenção</p><button class="text-xs px-3 py-1 rounded-full text-white" style="background:#ef4444">Ver</button></div>
+          <div class="flex items-center gap-3 p-3 rounded-lg" style="background:#fefce8"><span>⚡</span><p class="text-sm text-yellow-700 flex-1">5 usuários sem atividade há mais de 7 dias</p><button class="text-xs px-3 py-1 rounded-full text-white" style="background:#f59e0b">Ver</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WEB USERS ===== -->
+<div id="web-users" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Painel Web Admin — Usuários</h2>
+  <div class="web bg-gray-100 flex overflow-hidden">
+    <div class="w-56 flex-shrink-0 text-white flex flex-col py-5 px-3" style="background:linear-gradient(180deg,#003B55,#132C45)">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 12px 20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:20px">
+        <div style="width:44px;height:44px;border-radius:50%;border:2px solid #F8A303;background:rgba(248,163,3,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:7px">
+          <div style="position:relative;width:18px;height:26px;display:flex;align-items:center;justify-content:center">
+            <div style="width:3px;height:20px;background:#F8A303;border-radius:2px;position:absolute"></div>
+            <div style="width:14px;height:3px;background:#F8A303;border-radius:2px;position:absolute;top:2px"></div>
+          </div>
+        </div>
+        <p style="font-weight:800;font-size:14px;color:white">APS Sul</p>
+        <p style="color:#F8A303;font-size:8px;letter-spacing:2px;font-weight:600">EDUCAÇÃO ADVENTISTA</p>
+      </div>
+      <div class="space-y-1 flex-1">
+        <div class="sidebar-item"><span>📊</span> Dashboard</div>
+        <div class="sidebar-item active"><span>👥</span> Usuários</div>
+        <div class="sidebar-item"><span>✅</span> Tarefas</div>
+        <div class="sidebar-item"><span>📅</span> Eventos</div>
+        <div class="sidebar-item"><span>📣</span> Mural</div>
+        <div class="sidebar-item"><span>🏆</span> Gamificação</div>
+        <div class="sidebar-item"><span>📈</span> Relatórios</div>
+        <div class="sidebar-item"><span>💬</span> Feedback</div>
+      </div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex justify-between items-center mb-5">
+        <div><h1 class="text-xl font-bold text-gray-800">Usuários</h1><p class="text-sm text-gray-500">47 colaboradores cadastrados</p></div>
+        <button class="flex items-center gap-2 text-white px-4 py-2 rounded-lg text-sm font-semibold" style="background:#132C45">➕ Novo Usuário</button>
+      </div>
+      <div class="kpi mb-4">
+        <input class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="🔍  Buscar por nome, email ou função..." />
+      </div>
+      <div class="kpi p-0 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead style="background:#f8fafc">
+            <tr class="text-left text-xs text-gray-500 font-semibold">
+              <th class="px-4 py-3">Usuário</th>
+              <th class="px-4 py-3">Função</th>
+              <th class="px-4 py-3">Unidade</th>
+              <th class="px-4 py-3">Pontos</th>
+              <th class="px-4 py-3">Tarefas</th>
+              <th class="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="table-row border-t border-gray-100">
+              <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs" style="background:#132C45">A</div><div><p class="font-medium">Ana Silva</p><p class="text-xs text-gray-500">ana@aps.edu.br</p></div></div></td>
+              <td class="px-4 py-3"><span class="chip" style="background:#eff6ff;color:#1d4ed8">Diretora</span></td>
+              <td class="px-4 py-3 text-gray-600">Sede APS</td>
+              <td class="px-4 py-3 font-bold" style="color:#132C45">1.580</td>
+              <td class="px-4 py-3 text-gray-600">32 / 35</td>
+              <td class="px-4 py-3"><span class="chip" style="background:#dcfce7;color:#16a34a">● Ativo</span></td>
+            </tr>
+            <tr class="table-row border-t border-gray-100">
+              <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs" style="background:#7c3aed">M</div><div><p class="font-medium">Maria Santos</p><p class="text-xs text-gray-500">maria@aps.edu.br</p></div></div></td>
+              <td class="px-4 py-3"><span class="chip" style="background:#f3e8ff;color:#7c3aed">Coordenadora</span></td>
+              <td class="px-4 py-3 text-gray-600">Colégio Central</td>
+              <td class="px-4 py-3 font-bold" style="color:#132C45">1.240</td>
+              <td class="px-4 py-3 text-gray-600">24 / 28</td>
+              <td class="px-4 py-3"><span class="chip" style="background:#dcfce7;color:#16a34a">● Ativo</span></td>
+            </tr>
+            <tr class="table-row border-t border-gray-100">
+              <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs bg-amber-500">J</div><div><p class="font-medium">João Costa</p><p class="text-xs text-gray-500">joao@aps.edu.br</p></div></div></td>
+              <td class="px-4 py-3"><span class="chip" style="background:#fef3c7;color:#d97706">Orientador</span></td>
+              <td class="px-4 py-3 text-gray-600">Sede APS</td>
+              <td class="px-4 py-3 font-bold" style="color:#132C45">980</td>
+              <td class="px-4 py-3 text-gray-600">18 / 22</td>
+              <td class="px-4 py-3"><span class="chip" style="background:#dcfce7;color:#16a34a">● Ativo</span></td>
+            </tr>
+            <tr class="table-row border-t border-gray-100">
+              <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs bg-rose-500">C</div><div><p class="font-medium">Carla Mendes</p><p class="text-xs text-gray-500">carla@aps.edu.br</p></div></div></td>
+              <td class="px-4 py-3"><span class="chip" style="background:#fce7f3;color:#be185d">Secretária</span></td>
+              <td class="px-4 py-3 text-gray-600">Colégio Central</td>
+              <td class="px-4 py-3 font-bold text-gray-500">850</td>
+              <td class="px-4 py-3 text-gray-600">15 / 20</td>
+              <td class="px-4 py-3"><span class="chip" style="background:#fef9c3;color:#ca8a04">● Inativo</span></td>
+            </tr>
+            <tr class="table-row border-t border-gray-100">
+              <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs bg-teal-500">P</div><div><p class="font-medium">Pedro Lima</p><p class="text-xs text-gray-500">pedro@aps.edu.br</p></div></div></td>
+              <td class="px-4 py-3"><span class="chip" style="background:#ccfbf1;color:#0f766e">Capelão</span></td>
+              <td class="px-4 py-3 text-gray-600">Sede APS</td>
+              <td class="px-4 py-3 font-bold text-gray-500">760</td>
+              <td class="px-4 py-3 text-gray-600">12 / 18</td>
+              <td class="px-4 py-3"><span class="chip" style="background:#dcfce7;color:#16a34a">● Ativo</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WEB GAMIFICATION ===== -->
+<div id="web-gamification" class="screen flex-col items-center gap-6">
+  <h2 class="text-xl font-bold text-gray-700">Painel Web Admin — Gamificação</h2>
+  <div class="web bg-gray-100 flex overflow-hidden">
+    <div class="w-56 flex-shrink-0 text-white flex flex-col py-5 px-3" style="background:linear-gradient(180deg,#003B55,#132C45)">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 12px 20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:20px">
+        <div style="width:44px;height:44px;border-radius:50%;border:2px solid #F8A303;background:rgba(248,163,3,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:7px">
+          <div style="position:relative;width:18px;height:26px;display:flex;align-items:center;justify-content:center">
+            <div style="width:3px;height:20px;background:#F8A303;border-radius:2px;position:absolute"></div>
+            <div style="width:14px;height:3px;background:#F8A303;border-radius:2px;position:absolute;top:2px"></div>
+          </div>
+        </div>
+        <p style="font-weight:800;font-size:14px;color:white">APS Sul</p>
+        <p style="color:#F8A303;font-size:8px;letter-spacing:2px;font-weight:600">EDUCAÇÃO ADVENTISTA</p>
+      </div>
+      <div class="space-y-1 flex-1">
+        <div class="sidebar-item"><span>📊</span> Dashboard</div>
+        <div class="sidebar-item"><span>👥</span> Usuários</div>
+        <div class="sidebar-item"><span>✅</span> Tarefas</div>
+        <div class="sidebar-item"><span>📅</span> Eventos</div>
+        <div class="sidebar-item"><span>📣</span> Mural</div>
+        <div class="sidebar-item active"><span>🏆</span> Gamificação</div>
+        <div class="sidebar-item"><span>📈</span> Relatórios</div>
+        <div class="sidebar-item"><span>💬</span> Feedback</div>
+      </div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+      <h1 class="text-xl font-bold text-gray-800 mb-5">Gamificação</h1>
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-5">
+        <span class="tab-btn active text-sm">🏆 Ranking</span>
+        <span class="tab-btn text-sm">🏅 Selos (50)</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <!-- Ranking list -->
+        <div class="col-span-2 kpi">
+          <div class="flex justify-between items-center mb-4">
+            <p class="font-semibold text-gray-700">Ranking Geral</p>
+            <select class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none text-gray-600">
+              <option>Geral</option><option>Semanal</option><option>Mensal</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-4 p-3 rounded-xl" style="background:linear-gradient(90deg,#fffbeb,#fef9c3)">
+              <span class="text-2xl">🥇</span>
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold" style="background:#132C45">A</div>
+              <div class="flex-1"><p class="font-semibold text-sm">Ana Silva</p><p class="text-xs text-gray-500">Diretora · Sede APS</p><div class="progress-bar mt-1.5"><div class="progress-fill" style="width:100%;background:#FFD700"></div></div></div>
+              <div class="text-right"><p class="font-bold" style="color:#132C45">1.580</p><p class="text-xs text-gray-500">pontos</p></div>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+              <span class="text-2xl">🥈</span>
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold bg-purple-600">M</div>
+              <div class="flex-1"><p class="font-semibold text-sm">Maria Santos</p><p class="text-xs text-gray-500">Coordenadora · Colégio Central</p><div class="progress-bar mt-1.5"><div class="progress-fill" style="width:78%;background:#132C45"></div></div></div>
+              <div class="text-right"><p class="font-bold text-gray-700">1.240</p><p class="text-xs text-gray-500">pontos</p></div>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+              <span class="text-2xl">🥉</span>
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold bg-amber-500">J</div>
+              <div class="flex-1"><p class="font-semibold text-sm">João Costa</p><p class="text-xs text-gray-500">Orientador · Sede APS</p><div class="progress-bar mt-1.5"><div class="progress-fill" style="width:62%;background:#132C45"></div></div></div>
+              <div class="text-right"><p class="font-bold text-gray-700">980</p><p class="text-xs text-gray-500">pontos</p></div>
+            </div>
+            <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+              <span class="text-xl ml-1">4</span>
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold bg-rose-500">C</div>
+              <div class="flex-1"><p class="font-semibold text-sm">Carla Mendes</p><p class="text-xs text-gray-500">Secretária · Colégio Central</p><div class="progress-bar mt-1.5"><div class="progress-fill" style="width:54%;background:#F8A303"></div></div></div>
+              <div class="text-right"><p class="font-bold text-gray-700">850</p><p class="text-xs text-gray-500">pontos</p></div>
+            </div>
+          </div>
+        </div>
+        <!-- Badges summary -->
+        <div class="kpi">
+          <p class="font-semibold text-gray-700 mb-3">Selos por Categoria</p>
+          <div class="space-y-2 mb-4">
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">🎯 Comprometimento</span><span class="font-bold text-gray-800">9</span></div>
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">⏰ Pontualidade</span><span class="font-bold text-gray-800">9</span></div>
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">⚡ Produtividade</span><span class="font-bold text-gray-800">9</span></div>
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">🌟 Excelência</span><span class="font-bold text-gray-800">9</span></div>
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">🤝 Trabalho em Equipe</span><span class="font-bold text-gray-800">8</span></div>
+            <div class="flex justify-between items-center text-sm"><span class="text-gray-600">👑 Liderança</span><span class="font-bold text-gray-800">6</span></div>
+          </div>
+          <div class="h-px bg-gray-100 mb-3"></div>
+          <p class="text-xs text-gray-500 text-center mb-3">Total: <span class="font-bold text-gray-800">50 selos</span></p>
+          <div class="grid grid-cols-3 gap-1.5">
+            <div class="text-center p-2 rounded-lg" style="background:#fff7ed"><p class="text-lg">🎯</p><p class="text-xs text-amber-800 font-bold mt-0.5">Bronze</p></div>
+            <div class="text-center p-2 rounded-lg" style="background:#f8fafc"><p class="text-lg">🏆</p><p class="text-xs text-gray-600 font-bold mt-0.5">Prata</p></div>
+            <div class="text-center p-2 rounded-lg" style="background:#fffbeb"><p class="text-lg">👑</p><p class="text-xs text-yellow-700 font-bold mt-0.5">Ouro</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end max-w -->
+
+<script>
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

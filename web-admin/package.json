@@ -1,0 +1,35 @@
+{
+  "name": "aps-edu-web-admin",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ./node_modules/next/dist/bin/next dev -p 3001",
+    "build": "node ./node_modules/next/dist/bin/next build",
+    "start": "node ./node_modules/next/dist/bin/next start -p 3001",
+    "typecheck": "node ./node_modules/next/dist/bin/next typegen && node ./node_modules/typescript/bin/tsc --noEmit --pretty false",
+    "ci": "npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.1.4",
+    "axios": "^1.7.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "js-cookie": "^3.0.5",
+    "mammoth": "^1.8.0",
+    "next": "^15.5.18",
+    "pusher-js": "^8.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5"
+  }
+}

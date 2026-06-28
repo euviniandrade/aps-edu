@@ -1,0 +1,163 @@
+{
+  "work": [
+    {
+      "id": "T-1024",
+      "title": "Fechar roteiro de matriculas 2026",
+      "owner": "Secretaria",
+      "area": "Escola",
+      "stage": "Em andamento",
+      "priority": "Alta",
+      "due": "Hoje"
+    },
+    {
+      "id": "T-1025",
+      "title": "Revisar compras de tecnologia",
+      "owner": "Operacao",
+      "area": "Ativos",
+      "stage": "Aguardando aprovacao",
+      "priority": "Alta",
+      "due": "Amanha"
+    },
+    {
+      "id": "T-1026",
+      "title": "Preparar treinamento de coordenadores",
+      "owner": "Pessoas",
+      "area": "Treinamento",
+      "stage": "Planejado",
+      "priority": "Media",
+      "due": "17/06"
+    },
+    {
+      "id": "T-1027",
+      "title": "Consolidar indicadores por unidade",
+      "owner": "Direcao",
+      "area": "Comando",
+      "stage": "Hoje",
+      "priority": "Alta",
+      "due": "Hoje"
+    }
+  ],
+  "admissions": [
+    {
+      "id": "MAT-2041",
+      "family": "Familia Silva",
+      "student": "Pedro Silva - 6 ano",
+      "stage": "Visita pedagogica",
+      "value": 1850,
+      "next": "Confirmar presenca da familia"
+    },
+    {
+      "id": "MAT-2042",
+      "family": "Familia Andrade",
+      "student": "Livia Andrade - 1 ano",
+      "stage": "Proposta enviada",
+      "value": 1620,
+      "next": "Enviar documentacao"
+    },
+    {
+      "id": "MAT-2043",
+      "family": "Familia Costa",
+      "student": "Rafael Costa - 9 ano",
+      "stage": "Bolsa em analise",
+      "value": 2100,
+      "next": "Aprovar condicao comercial"
+    }
+  ],
+  "people": [],
+  "finance": [
+    {
+      "id": "F-1",
+      "label": "Matriculas previstas",
+      "type": "Receita",
+      "amount": 3470,
+      "status": "Previsto",
+      "due": "Hoje"
+    },
+    {
+      "id": "F-2",
+      "label": "Compra de materiais pedagogicos",
+      "type": "Despesa",
+      "amount": 980,
+      "status": "A aprovar",
+      "due": "Amanha"
+    },
+    {
+      "id": "F-3",
+      "label": "Campanha escolar",
+      "type": "Despesa",
+      "amount": 2600,
+      "status": "Contrato em revisao",
+      "due": "19/06"
+    }
+  ],
+  "assets": [
+    {
+      "id": "A-1",
+      "name": "Kits de matricula",
+      "location": "Secretaria APS",
+      "qty": 42,
+      "min": 60,
+      "status": "Repor"
+    },
+    {
+      "id": "A-2",
+      "name": "Projetores multimidia",
+      "location": "Sala de recursos",
+      "qty": 4,
+      "min": 5,
+      "status": "Critico"
+    },
+    {
+      "id": "A-3",
+      "name": "Materiais de limpeza",
+      "location": "Almoxarifado",
+      "qty": 22,
+      "min": 25,
+      "status": "Monitorar"
+    }
+  ],
+  "knowledge": [
+    {
+      "id": "D-1",
+      "title": "Politica de matricula 2026",
+      "type": "Documento",
+      "owner": "Secretaria",
+      "status": "Revisao"
+    },
+    {
+      "id": "D-2",
+      "title": "Ata do comite executivo",
+      "type": "Nota",
+      "owner": "Direcao",
+      "status": "Publicada"
+    },
+    {
+      "id": "D-3",
+      "title": "E-mail de follow-up para familias",
+      "type": "E-mail",
+      "owner": "Sofi IA",
+      "status": "Rascunho"
+    }
+  ],
+  "automations": [
+    {
+      "id": "AU-1",
+      "trigger": "Tarefa vence hoje",
+      "action": "Notificar responsavel e resumir risco para a direcao",
+      "status": "Ativa"
+    },
+    {
+      "id": "AU-2",
+      "trigger": "Estoque abaixo do minimo",
+      "action": "Criar solicitacao de compra e pedir aprovacao",
+      "status": "Ativa"
+    },
+    {
+      "id": "AU-3",
+      "trigger": "Nova familia no funil",
+      "action": "Gerar checklist de matricula e proximo contato",
+      "status": "Rascunho"
+    }
+  ],
+  "updatedAt": "2026-06-24T00:00:00.000Z"
+}

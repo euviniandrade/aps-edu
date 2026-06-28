@@ -1,0 +1,40 @@
+name: Deploy Web Admin → Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web-admin/**'
+      - '.github/workflows/deploy-web-admin.yml'
+
+jobs:
+  deploy:
+    name: Deploy Web Admin
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        working-directory: web-admin
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        working-directory: web-admin
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        working-directory: web-admin
+        timeout-minutes: 8
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

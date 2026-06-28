@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 430">
+  <defs>
+    <mask id="ea-mask">
+      <rect width="500" height="430" fill="white"/>
+      <!-- Upper diagonal band -->
+      <polygon points="0,224 500,181 500,215 0,258" fill="black"/>
+      <!-- Lower diagonal band -->
+      <polygon points="0,281 500,235 500,280 0,326" fill="black"/>
+    </mask>
+  </defs>
+  <!-- Left leg + foot -->
+  <path
+    d="M250,14 L8,378 L0,378 L0,420 L130,420 L130,378 L188,378 Z"
+    fill="#1B3A6B"
+    mask="url(#ea-mask)"
+  />
+  <!-- Right leg + foot -->
+  <path
+    d="M250,14 L492,378 L500,378 L500,420 L370,420 L370,378 L312,378 Z"
+    fill="#1B3A6B"
+    mask="url(#ea-mask)"
+  />
+</svg>
