@@ -4275,6 +4275,3 @@ function ChoiceGroup({
     </div>
   )
 }
->
-  )
-}
