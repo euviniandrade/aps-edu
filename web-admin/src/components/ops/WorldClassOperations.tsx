@@ -59,48 +59,54 @@ type Admission = {
 }
 
 type LeadershipLevel = 1 | 2 | 3 | 4 | 5
-type LeadershipProfile = 'Executor' | 'Entusiasta' | 'Relacional' | 'Organizador' | 'Desenvolvedor' | 'Estrategico' | 'Influenciador'
+type LeadershipProfile = 'Executor' | 'Entusiasta' | 'Relacional' | 'Organizador' | 'Desenvolvedor' | 'Estratégico' | 'Estrategico' | 'Influenciador'
 type LeadershipPotential = 'Baixo' | 'Moderado' | 'Alto' | 'Muito Alto' | 'Excepcional'
 type LeadershipReadiness =
-  | 'Ainda nao demonstra perfil de lideranca'
+  | 'Ainda não demonstra perfil de liderança'
   | 'Potencial em desenvolvimento'
   | 'Pronto para liderar pequenas equipes'
   | 'Pronto para liderar setores/departamentos'
   | 'Pronto para liderar unidades ou grandes projetos'
 type LeaderDevelopment =
-  | 'Nao desenvolve'
+  | 'Não desenvolve'
   | 'Desenvolve ocasionalmente'
   | 'Desenvolve regularmente'
-  | 'Forma novos lideres de maneira consistente'
-  | 'Multiplica lideres e fortalece a cultura institucional'
+  | 'Forma novos líderes de maneira consistente'
+  | 'Multiplica líderes e fortalece a cultura institucional'
 type TemperamentType = 'Sanguíneo' | 'Colérico' | 'Fleumático' | 'Melancólico' | 'Sanguineo' | 'Colerico' | 'Fleumatico' | 'Melancolico'
-type BehavioralProfile = 'Executor' | 'Influenciador' | 'Analitico' | 'Estavel'
+type BehavioralProfile = 'Executor' | 'Influenciador' | 'Analítico' | 'Estável' | 'Analitico' | 'Estavel'
 type DecisionStyle =
   | 'Decide rapidamente mesmo com poucas informações'
-  | 'Busca equilibrio entre velocidade e análise'
+  | 'Busca equilíbrio entre velocidade e análise'
   | 'Analisa profundamente antes de decidir'
   | 'Prefere consultar outras pessoas antes de decidir'
+  | 'Busca equilibrio entre velocidade e análise'
 type InterpersonalLevel = 'Muito reservado' | 'Reservado' | 'Equilibrado' | 'Comunicativo' | 'Extremamente comunicativo'
-type PressureResponse = 'Mantem a calma' | 'Assume o controle' | 'Busca apoio da equipe' | 'Torna-se mais analitico' | 'Demonstra dificuldade sob pressao'
-type CollaborationLevel = 'Atua como agregador da equipe' | 'Colabora ativamente com os demais' | 'Colabora quando solicitado' | 'Prefere trabalhar de forma individual' | 'Demonstra resistencia ao trabalho em equipe'
+type PressureResponse = 'Mantém a calma' | 'Assume o controle' | 'Busca apoio da equipe' | 'Torna-se mais analítico' | 'Demonstra dificuldade sob pressão' | 'Mantem a calma' | 'Torna-se mais analitico' | 'Demonstra dificuldade sob pressao'
+type CollaborationLevel = 'Atua como agregador da equipe' | 'Colabora ativamente com os demais' | 'Colabora quando solicitado' | 'Prefere trabalhar de forma individual' | 'Demonstra resistência ao trabalho em equipe'
 type ConvivenceLevel =
+  | 'Muito fácil de lidar'
+  | 'Fácil de lidar'
+  | 'Moderadamente fácil de lidar'
+  | 'Difícil de lidar em algumas situações'
+  | 'Dificil de lidar em algumas situações'
+  | 'Frequentemente difícil de lidar'
   | 'Muito facil de lidar'
   | 'Facil de lidar'
   | 'Moderadamente facil de lidar'
-  | 'Dificil de lidar em algumas situações'
   | 'Frequentemente dificil de lidar'
 type RelationalIntelligence =
   | 'Recebe feedbacks com maturidade e busca crescimento'
   | 'Geralmente aceita feedbacks e faz ajustes'
-  | 'Aceita feedbacks com alguma resistencia inicial'
-  | 'Tem dificuldade em aceitar feedbacks ou opinioes diferentes'
+  | 'Aceita feedbacks com alguma resistência inicial'
+  | 'Tem dificuldade em aceitar feedbacks ou opiniões diferentes'
   | 'Frequentemente reage de forma defensiva ou conflituosa'
 type RelationalClassification =
-  | 'Referencia positiva de relacionamento e trabalho em equipe'
-  | 'Relacionamento acima da media'
+  | 'Referência positiva de relacionamento e trabalho em equipe'
+  | 'Relacionamento acima da média'
   | 'Relacionamento adequado'
-  | 'Necessita desenvolver competencias relacionais'
-  | 'Necessita acompanhamento prioritario em relacionamento interpessoal'
+  | 'Necessita desenvolver competências relacionais'
+  | 'Necessita acompanhamento prioritário em relacionamento interpessoal'
 
 type Person = {
   id: string
@@ -249,13 +255,14 @@ type SofiThread = {
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const MANAGEMENT_CACHE_KEY = 'aps_edu_management_state_v2'
 const WORKFLOW_COLUMNS_KEY = 'aps_edu_workflow_columns_v1'
+const PEOPLE_SUBMISSIONS_CACHE_KEY = 'aps30_people_submissions_cache_v1'
 
 const leadershipMaturityOptions: Array<{ value: LeadershipLevel; label: string; detail: string }> = [
   { value: 1, label: 'Executor', detail: 'Cumpre tarefas e depende de direcionamento.' },
   { value: 2, label: 'Colaborador', detail: 'Sugere melhorias e assume pequenas frentes.' },
-  { value: 3, label: 'Lider Operacional', detail: 'Coordena pessoas e garante a execucao.' },
-  { value: 4, label: 'Lider Estrategico', detail: 'Planeja, desenvolve pessoas e influencia a equipe.' },
-  { value: 5, label: 'Lider Multiplicador', detail: 'Forma novos lideres e fortalece a cultura.' },
+  { value: 3, label: 'Líder Operacional', detail: 'Coordena pessoas e garante a execução.' },
+  { value: 4, label: 'Líder Estratégico', detail: 'Planeja, desenvolve pessoas e influencia a equipe.' },
+  { value: 5, label: 'Líder Multiplicador', detail: 'Forma novos líderes e fortalece a cultura.' },
 ]
 
 const leadershipProfileOptions: Array<{ value: LeadershipProfile; label: string; detail: string }> = [
@@ -264,32 +271,32 @@ const leadershipProfileOptions: Array<{ value: LeadershipProfile; label: string;
   { value: 'Relacional', label: 'Relacional', detail: 'Cria conexão e confiança.' },
   { value: 'Organizador', label: 'Organizador', detail: 'Processos, planejamento e controle.' },
   { value: 'Desenvolvedor', label: 'Desenvolvedor', detail: 'Forma pessoas e acompanha de perto.' },
-  { value: 'Estrategico', label: 'Estrategico', detail: 'Visao de futuro e crescimento.' },
+  { value: 'Estratégico', label: 'Estratégico', detail: 'Visão de futuro e crescimento.' },
   { value: 'Influenciador', label: 'Influenciador', detail: 'Mobiliza equipes e inspira.' },
 ]
 
 const leadershipPotentialOptions: Array<{ value: LeadershipPotential; label: string; detail: string }> = [
   { value: 'Baixo', label: 'Baixo', detail: 'Ainda precisa consolidar base.' },
-  { value: 'Moderado', label: 'Moderado', detail: 'Sinaliza evolucao com suporte.' },
+  { value: 'Moderado', label: 'Moderado', detail: 'Sinaliza evolução com suporte.' },
   { value: 'Alto', label: 'Alto', detail: 'Pronto para ganhar mais responsabilidades.' },
   { value: 'Muito Alto', label: 'Muito Alto', detail: 'Forte candidato a cargos maiores.' },
-  { value: 'Excepcional', label: 'Excepcional', detail: 'Perfil raro de lideranca.' },
+  { value: 'Excepcional', label: 'Excepcional', detail: 'Perfil raro de liderança.' },
 ]
 
 const leadershipReadinessOptions: Array<{ value: LeadershipReadiness; label: string; detail: string }> = [
-  { value: 'Ainda nao demonstra perfil de lideranca', label: 'Ainda nao demonstra', detail: 'Precisa de base e direcionamento.' },
+  { value: 'Ainda não demonstra perfil de liderança', label: 'Ainda não demonstra', detail: 'Precisa de base e direcionamento.' },
   { value: 'Potencial em desenvolvimento', label: 'Potencial em desenvolvimento', detail: 'Evolui com acompanhamento.' },
   { value: 'Pronto para liderar pequenas equipes', label: 'Pequenas equipes', detail: 'Ja pode coordenar rotinas simples.' },
-  { value: 'Pronto para liderar setores/departamentos', label: 'Setores / departamentos', detail: 'Pronto para uma lideranca maior.' },
+  { value: 'Pronto para liderar setores/departamentos', label: 'Setores / departamentos', detail: 'Pronto para uma liderança maior.' },
   { value: 'Pronto para liderar unidades ou grandes projetos', label: 'Unidades / grandes projetos', detail: 'Tem maturidade para amplitude institucional.' },
 ]
 
 const leaderDevelopmentOptions: Array<{ value: LeaderDevelopment; label: string; detail: string }> = [
-  { value: 'Nao desenvolve', label: 'Nao desenvolve', detail: 'Ainda nao forma outros lideres.' },
+  { value: 'Não desenvolve', label: 'Não desenvolve', detail: 'Ainda não forma outros líderes.' },
   { value: 'Desenvolve ocasionalmente', label: 'Ocasionalmente', detail: 'Ajuda pontualmente outros profissionais.' },
-  { value: 'Desenvolve regularmente', label: 'Regularmente', detail: 'Acompanha e orienta com frequencia.' },
-  { value: 'Forma novos lideres de maneira consistente', label: 'Forma lideres', detail: 'Prepara novos lideres de forma constante.' },
-  { value: 'Multiplica lideres e fortalece a cultura institucional', label: 'Multiplica lideres', detail: 'Cria legado e cultura de sucessao.' },
+  { value: 'Desenvolve regularmente', label: 'Regularmente', detail: 'Acompanha e orienta com frequência.' },
+  { value: 'Forma novos líderes de maneira consistente', label: 'Forma líderes', detail: 'Prepara novos líderes de forma constante.' },
+  { value: 'Multiplica líderes e fortalece a cultura institucional', label: 'Multiplica líderes', detail: 'Cria legado e cultura de sucessão.' },
 ]
 
 const temperamentOptions: Array<{ value: TemperamentType; label: string; detail: string }> = [
@@ -300,15 +307,15 @@ const temperamentOptions: Array<{ value: TemperamentType; label: string; detail:
 ]
 
 const behavioralProfileOptions: Array<{ value: BehavioralProfile; label: string; detail: string }> = [
-  { value: 'Executor', label: 'Executor', detail: 'Faz acontecer e resolve rapido.' },
+  { value: 'Executor', label: 'Executor', detail: 'Faz acontecer e resolve rápido.' },
   { value: 'Influenciador', label: 'Influenciador', detail: 'Convence pessoas e comunica bem.' },
-  { value: 'Analitico', label: 'Analitico', detail: 'Gosta de dados, processos e precisao.' },
-  { value: 'Estavel', label: 'Estavel', detail: 'Mantem equilibrio e confiança.' },
+  { value: 'Analítico', label: 'Analítico', detail: 'Gosta de dados, processos e precisão.' },
+  { value: 'Estável', label: 'Estável', detail: 'Mantém equilíbrio e confiança.' },
 ]
 
 const decisionStyleOptions: Array<{ value: DecisionStyle; label: string; detail: string }> = [
-  { value: 'Decide rapidamente mesmo com poucas informações', label: 'Rapida', detail: 'Age com velocidade e firmeza.' },
-  { value: 'Busca equilibrio entre velocidade e análise', label: 'Equilibrada', detail: 'Concilia rapidez e criterio.' },
+  { value: 'Decide rapidamente mesmo com poucas informações', label: 'Rápida', detail: 'Age com velocidade e firmeza.' },
+  { value: 'Busca equilíbrio entre velocidade e análise', label: 'Equilibrada', detail: 'Concilia rapidez e critério.' },
   { value: 'Analisa profundamente antes de decidir', label: 'Profunda', detail: 'Pensa bastante antes de agir.' },
   { value: 'Prefere consultar outras pessoas antes de decidir', label: 'Consultiva', detail: 'Ouve outras vozes antes de fechar.' },
 ]
@@ -322,11 +329,11 @@ const interpersonalLevelOptions: Array<{ value: InterpersonalLevel; label: strin
 ]
 
 const pressureResponseOptions: Array<{ value: PressureResponse; label: string; detail: string }> = [
-  { value: 'Mantem a calma', label: 'Mantem a calma', detail: 'Sustenta estabilidade sob pressao.' },
+  { value: 'Mantém a calma', label: 'Mantém a calma', detail: 'Sustenta estabilidade sob pressão.' },
   { value: 'Assume o controle', label: 'Assume o controle', detail: 'Centraliza e organiza a resposta.' },
   { value: 'Busca apoio da equipe', label: 'Busca apoio', detail: 'Ativa o coletivo rapidamente.' },
-  { value: 'Torna-se mais analitico', label: 'Mais analitico', detail: 'Redobra a leitura tecnica.' },
-  { value: 'Demonstra dificuldade sob pressao', label: 'Dificuldade', detail: 'Perde fluidez em cenarios tensos.' },
+  { value: 'Torna-se mais analítico', label: 'Mais analítico', detail: 'Redobra a leitura técnica.' },
+  { value: 'Demonstra dificuldade sob pressão', label: 'Dificuldade', detail: 'Perde fluidez em cenários tensos.' },
 ]
 
 const collaborationOptions: Array<{ value: CollaborationLevel; label: string; detail: string }> = [
@@ -334,31 +341,31 @@ const collaborationOptions: Array<{ value: CollaborationLevel; label: string; de
   { value: 'Colabora ativamente com os demais', label: 'Colabora ativamente', detail: 'Participa e contribui sempre.' },
   { value: 'Colabora quando solicitado', label: 'Quando solicitado', detail: 'Ajuda sob demanda.' },
   { value: 'Prefere trabalhar de forma individual', label: 'Individual', detail: 'Entrega sozinho com autonomia.' },
-  { value: 'Demonstra resistencia ao trabalho em equipe', label: 'Resistencia', detail: 'Precisa de mediação e apoio.' },
+  { value: 'Demonstra resistência ao trabalho em equipe', label: 'Resistência', detail: 'Precisa de mediação e apoio.' },
 ]
 
 const convivenceOptions: Array<{ value: ConvivenceLevel; label: string; detail: string }> = [
-  { value: 'Muito facil de lidar', label: 'Muito facil', detail: 'Flexivel, receptivo e colaborativo.' },
-  { value: 'Facil de lidar', label: 'Facil', detail: 'Boa convivencia e comunicação adequada.' },
-  { value: 'Moderadamente facil de lidar', label: 'Moderada', detail: 'Algumas particularidades sem comprometer.' },
-  { value: 'Dificil de lidar em algumas situações', label: 'Dificil em alguns casos', detail: 'Pode reagir ou resistir em certos cenarios.' },
-  { value: 'Frequentemente dificil de lidar', label: 'Frequentemente dificil', detail: 'Exige acompanhamento constante.' },
+  { value: 'Muito fácil de lidar', label: 'Muito fácil', detail: 'Flexível, receptivo e colaborativo.' },
+  { value: 'Fácil de lidar', label: 'Fácil', detail: 'Boa convivência e comunicação adequada.' },
+  { value: 'Moderadamente fácil de lidar', label: 'Moderada', detail: 'Algumas particularidades sem comprometer.' },
+  { value: 'Difícil de lidar em algumas situações', label: 'Difícil em alguns casos', detail: 'Pode reagir ou resistir em certos cenários.' },
+  { value: 'Frequentemente difícil de lidar', label: 'Frequentemente difícil', detail: 'Exige acompanhamento constante.' },
 ]
 
 const relationalIntelligenceOptions: Array<{ value: RelationalIntelligence; label: string; detail: string }> = [
   { value: 'Recebe feedbacks com maturidade e busca crescimento', label: 'Maturidade alta', detail: 'Escuta e evolui com feedbacks.' },
   { value: 'Geralmente aceita feedbacks e faz ajustes', label: 'Aceita bem', detail: 'Faz ajustes quando orientado.' },
-  { value: 'Aceita feedbacks com alguma resistencia inicial', label: 'Resistencia inicial', detail: 'Precisa de tempo para processar.' },
-  { value: 'Tem dificuldade em aceitar feedbacks ou opinioes diferentes', label: 'Dificuldade', detail: 'Tem atrito com visoes distintas.' },
+  { value: 'Aceita feedbacks com alguma resistência inicial', label: 'Resistência inicial', detail: 'Precisa de tempo para processar.' },
+  { value: 'Tem dificuldade em aceitar feedbacks ou opiniões diferentes', label: 'Dificuldade', detail: 'Tem atrito com visões distintas.' },
   { value: 'Frequentemente reage de forma defensiva ou conflituosa', label: 'Defensiva', detail: 'Reage sob tensão relacional.' },
 ]
 
 const relationalClassificationOptions: Array<{ value: RelationalClassification; label: string; detail: string }> = [
-  { value: 'Referencia positiva de relacionamento e trabalho em equipe', label: 'Referencia positiva', detail: 'Modelo de convivio e equipe.' },
-  { value: 'Relacionamento acima da media', label: 'Acima da media', detail: 'Boa convivencia consistente.' },
+  { value: 'Referência positiva de relacionamento e trabalho em equipe', label: 'Referência positiva', detail: 'Modelo de convívio e equipe.' },
+  { value: 'Relacionamento acima da média', label: 'Acima da média', detail: 'Boa convivência consistente.' },
   { value: 'Relacionamento adequado', label: 'Adequado', detail: 'Atende ao esperado.' },
-  { value: 'Necessita desenvolver competencias relacionais', label: 'Desenvolver', detail: 'Precisa fortalecer relações.' },
-  { value: 'Necessita acompanhamento prioritario em relacionamento interpessoal', label: 'Acompanhamento', detail: 'Prioridade em relações.' },
+  { value: 'Necessita desenvolver competências relacionais', label: 'Desenvolver', detail: 'Precisa fortalecer relações.' },
+  { value: 'Necessita acompanhamento prioritário em relacionamento interpessoal', label: 'Acompanhamento', detail: 'Prioridade em relações.' },
 ]
 
 const productivityDiagnosisOptions = [
@@ -416,10 +423,10 @@ const fallbackState: ManagementState = {
       stage: 'Planejado',
       priority: 'Media',
       due: '17/06',
-      project: 'Trilha de lideranca',
-      description: 'Montar pauta, materiais e criterios de avaliação.',
+      project: 'Trilha de liderança',
+      description: 'Montar pauta, materiais e critérios de avaliação.',
       attachments: ['trilha-coordenadores.pdf'],
-      tags: ['lideranca'],
+      tags: ['liderança'],
       participants: ['Marina Costa', 'Pessoas'],
     },
     {
@@ -463,8 +470,8 @@ const fallbackState: ManagementState = {
     { id: 'F-3', label: 'Repasse de eventos escolares', type: 'Receita', amount: 2200, status: 'Confirmado', due: '20/06' },
   ],
   assets: [
-    { id: 'A-1', name: 'Kits de matricula', category: 'Material de secretaria', location: 'Secretaria APS', qty: 42, min: 60, status: 'Repor', supplier: 'Grafica parceira', unitCost: 18.9, lastMove: '11/06', owner: 'Secretaria', nextAction: 'Comprar 30 unidades para campanha 2026' },
-    { id: 'A-2', name: 'Projetores multimidia', category: 'Tecnologia educacional', location: 'Sala de recursos', qty: 4, min: 5, status: 'Critico', supplier: 'TI regional', unitCost: 2490, lastMove: '08/06', owner: 'Operação', nextAction: 'Abrir aprovação de compra de 2 unidades' },
+    { id: 'A-1', name: 'Kits de matrícula', category: 'Material de secretaria', location: 'Secretaria APS', qty: 42, min: 60, status: 'Repor', supplier: 'Gráfica parceira', unitCost: 18.9, lastMove: '11/06', owner: 'Secretaria', nextAction: 'Comprar 30 unidades para campanha 2026' },
+    { id: 'A-2', name: 'Projetores multimídia', category: 'Tecnologia educacional', location: 'Sala de recursos', qty: 4, min: 5, status: 'Crítico', supplier: 'TI regional', unitCost: 2490, lastMove: '08/06', owner: 'Operação', nextAction: 'Abrir aprovação de compra de 2 unidades' },
     { id: 'A-3', name: 'Chromebooks pedagogicos', category: 'Tecnologia educacional', location: 'Laboratorio movel', qty: 18, min: 16, status: 'Ok', supplier: 'Fornecedor homologado', unitCost: 1480, lastMove: '10/06', owner: 'Pedagogico', nextAction: 'Agendar conferencia patrimonial' },
   ],
   knowledge: [
@@ -535,7 +542,7 @@ function levelFromScore(score?: number): LeadershipLevel {
 
 function inferLeadershipProfile(person: Partial<Person>): LeadershipProfile {
   const text = `${person.role || ''} ${person.unit || ''} ${person.name || ''}`.toLowerCase()
-  if (text.includes('coorden') || text.includes('direcao') || text.includes('gestão')) return 'Estrategico'
+  if (text.includes('coorden') || text.includes('direcao') || text.includes('gestão')) return 'Estratégico'
   if (text.includes('secretaria') || text.includes('atendimento') || text.includes('matricula')) return 'Organizador'
   if (text.includes('operação') || text.includes('suporte') || text.includes('processo')) return 'Executor'
   if (text.includes('pedagog') || text.includes('formação') || text.includes('trein')) return 'Desenvolvedor'
@@ -556,15 +563,15 @@ function inferLeadershipReadiness(level: LeadershipLevel): LeadershipReadiness {
   if (level === 4) return 'Pronto para liderar setores/departamentos'
   if (level === 3) return 'Pronto para liderar pequenas equipes'
   if (level === 2) return 'Potencial em desenvolvimento'
-  return 'Ainda nao demonstra perfil de lideranca'
+  return 'Ainda não demonstra perfil de liderança'
 }
 
 function inferLeaderDevelopment(level: LeadershipLevel): LeaderDevelopment {
-  if (level >= 5) return 'Multiplica lideres e fortalece a cultura institucional'
-  if (level === 4) return 'Forma novos lideres de maneira consistente'
+  if (level >= 5) return 'Multiplica líderes e fortalece a cultura institucional'
+  if (level === 4) return 'Forma novos líderes de maneira consistente'
   if (level === 3) return 'Desenvolve regularmente'
   if (level === 2) return 'Desenvolve ocasionalmente'
-  return 'Nao desenvolve'
+  return 'Não desenvolve'
 }
 
 function inferLeadershipPercent(person: Partial<Person>, level?: LeadershipLevel) {
@@ -580,7 +587,7 @@ function inferTemperament(person: Partial<Person>) {
     return { primary: 'Sanguíneo' as TemperamentType, secondary: 'Fleumático' as TemperamentType, rationale: 'perfil comunicativo e relacional' }
   }
   if (text.includes('coord') || text.includes('gestão') || text.includes('direcao') || text.includes('lider')) {
-    return { primary: 'Colérico' as TemperamentType, secondary: 'Melancólico' as TemperamentType, rationale: 'decisao, foco em resultado e estrutura' }
+    return { primary: 'Colérico' as TemperamentType, secondary: 'Melancólico' as TemperamentType, rationale: 'decisão, foco em resultado e estrutura' }
   }
   if (text.includes('anal') || text.includes('finance') || text.includes('planej') || text.includes('processo')) {
     return { primary: 'Melancólico' as TemperamentType, secondary: 'Colérico' as TemperamentType, rationale: 'análise, detalhe e controle' }
@@ -590,10 +597,10 @@ function inferTemperament(person: Partial<Person>) {
 
 function inferBehavioralProfile(person: Partial<Person>): BehavioralProfile {
   const text = `${person.role || ''} ${person.unit || ''} ${person.name || ''}`.toLowerCase()
-  if (text.includes('anal') || text.includes('finance') || text.includes('contabil') || text.includes('auditoria')) return 'Analitico'
+  if (text.includes('anal') || text.includes('finance') || text.includes('contabil') || text.includes('auditoria')) return 'Analítico'
   if (text.includes('atendimento') || text.includes('famil') || text.includes('relacion') || text.includes('comunic')) return 'Influenciador'
   if (text.includes('rotina') || text.includes('operação') || text.includes('secretaria') || text.includes('suporte')) return 'Executor'
-  return 'Estavel'
+  return 'Estável'
 }
 
 function inferProductivityMetric(base: number, offset = 0) {
@@ -610,19 +617,53 @@ function inferProductivityDiagnosis(value: number) {
   return productivityDiagnosisOptions.find(item => value >= item.min) || productivityDiagnosisOptions[productivityDiagnosisOptions.length - 1]
 }
 
+const legacyPeopleText: Record<string, string> = {
+  Estrategico: 'Estratégico',
+  Analitico: 'Analítico',
+  Estavel: 'Estável',
+  'Busca equilibrio entre velocidade e análise': 'Busca equilíbrio entre velocidade e análise',
+  'Ainda nao demonstra perfil de lideranca': 'Ainda não demonstra perfil de liderança',
+  'Nao desenvolve': 'Não desenvolve',
+  'Forma novos lideres de maneira consistente': 'Forma novos líderes de maneira consistente',
+  'Multiplica lideres e fortalece a cultura institucional': 'Multiplica líderes e fortalece a cultura institucional',
+  'Mantem a calma': 'Mantém a calma',
+  'Torna-se mais analitico': 'Torna-se mais analítico',
+  'Demonstra dificuldade sob pressao': 'Demonstra dificuldade sob pressão',
+  'Demonstra resistencia ao trabalho em equipe': 'Demonstra resistência ao trabalho em equipe',
+  'Muito facil de lidar': 'Muito fácil de lidar',
+  'Facil de lidar': 'Fácil de lidar',
+  'Moderadamente facil de lidar': 'Moderadamente fácil de lidar',
+  'Dificil de lidar em algumas situações': 'Difícil de lidar em algumas situações',
+  'Frequentemente dificil de lidar': 'Frequentemente difícil de lidar',
+  'Aceita feedbacks com alguma resistencia inicial': 'Aceita feedbacks com alguma resistência inicial',
+  'Tem dificuldade em aceitar feedbacks ou opinioes diferentes': 'Tem dificuldade em aceitar feedbacks ou opiniões diferentes',
+  'Referencia positiva de relacionamento e trabalho em equipe': 'Referência positiva de relacionamento e trabalho em equipe',
+  'Relacionamento acima da media': 'Relacionamento acima da média',
+  'Necessita desenvolver competencias relacionais': 'Necessita desenvolver competências relacionais',
+  'Necessita acompanhamento prioritario em relacionamento interpessoal': 'Necessita acompanhamento prioritário em relacionamento interpessoal',
+}
+
+function normalizePeopleText<T extends string | undefined>(value: T): T {
+  if (!value) return value
+  return (legacyPeopleText[value] || value) as T
+}
+
 function normalizePerson(person: Partial<Person>): Person {
   const baseLevel = person.leadershipLevel ? clampNumber(person.leadershipLevel, 1, 5) as LeadershipLevel : levelFromScore(person.score)
-  const profile = (person.leadershipProfile && leadershipProfileOptions.some(option => option.value === person.leadershipProfile))
-    ? person.leadershipProfile
+  const normalizedProfile = normalizePeopleText(person.leadershipProfile) as LeadershipProfile | undefined
+  const profile = (normalizedProfile && leadershipProfileOptions.some(option => option.value === normalizedProfile))
+    ? normalizedProfile
     : inferLeadershipProfile(person)
   const potential = (person.leadershipPotential && leadershipPotentialOptions.some(option => option.value === person.leadershipPotential))
     ? person.leadershipPotential
     : inferLeadershipPotential(baseLevel)
-  const readiness = (person.leadershipReadiness && leadershipReadinessOptions.some(option => option.value === person.leadershipReadiness))
-    ? person.leadershipReadiness
+  const normalizedReadiness = normalizePeopleText(person.leadershipReadiness) as LeadershipReadiness | undefined
+  const readiness = (normalizedReadiness && leadershipReadinessOptions.some(option => option.value === normalizedReadiness))
+    ? normalizedReadiness
     : inferLeadershipReadiness(baseLevel)
-  const development = (person.leaderDevelopment && leaderDevelopmentOptions.some(option => option.value === person.leaderDevelopment))
-    ? person.leaderDevelopment
+  const normalizedDevelopment = normalizePeopleText(person.leaderDevelopment) as LeaderDevelopment | undefined
+  const development = (normalizedDevelopment && leaderDevelopmentOptions.some(option => option.value === normalizedDevelopment))
+    ? normalizedDevelopment
     : inferLeaderDevelopment(baseLevel)
   const temperament = inferTemperament(person)
   const temperamentPrimary = (person.temperamentPrimary && temperamentOptions.some(option => option.value === person.temperamentPrimary))
@@ -631,8 +672,9 @@ function normalizePerson(person: Partial<Person>): Person {
   const temperamentSecondary = (person.temperamentSecondary && temperamentOptions.some(option => option.value === person.temperamentSecondary))
     ? person.temperamentSecondary
     : temperament.secondary
-  const behavioralProfile = (person.behavioralProfile && behavioralProfileOptions.some(option => option.value === person.behavioralProfile))
-    ? person.behavioralProfile
+  const normalizedBehavioralProfile = normalizePeopleText(person.behavioralProfile) as BehavioralProfile | undefined
+  const behavioralProfile = (normalizedBehavioralProfile && behavioralProfileOptions.some(option => option.value === normalizedBehavioralProfile))
+    ? normalizedBehavioralProfile
     : inferBehavioralProfile(person)
   const productivityEfficiency = clampNumber(typeof person.productivityEfficiency === 'number' ? person.productivityEfficiency : inferProductivityMetric((person.score || 4) * 20, 3), 0, 100)
   const productivityQuality = clampNumber(typeof person.productivityQuality === 'number' ? person.productivityQuality : inferProductivityMetric((person.score || 4) * 20, -1), 0, 100)
@@ -666,13 +708,13 @@ function normalizePerson(person: Partial<Person>): Person {
     temperamentReason: person.temperamentReason || temperament.rationale,
     behavioralProfile,
     behavioralProfilePercent: typeof person.behavioralProfilePercent === 'number' ? clampNumber(person.behavioralProfilePercent, 0, 100) : 75,
-    decisionStyle: person.decisionStyle || 'Busca equilibrio entre velocidade e análise',
+    decisionStyle: person.decisionStyle || 'Busca equilíbrio entre velocidade e análise',
     interpersonalLevel: person.interpersonalLevel || 'Equilibrado',
-    convivenceLevel: person.convivenceLevel || 'Facil de lidar',
-    collaborationLevel: person.collaborationLevel || 'Colabora ativamente com os demais',
-    relationalIntelligence: person.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes',
-    relationalClassification: person.relationalClassification || 'Relacionamento adequado',
-    pressureResponse: person.pressureResponse || 'Mantem a calma',
+    convivenceLevel: (normalizePeopleText(person.convivenceLevel) as ConvivenceLevel | undefined) || 'Fácil de lidar',
+    collaborationLevel: (normalizePeopleText(person.collaborationLevel) as CollaborationLevel | undefined) || 'Colabora ativamente com os demais',
+    relationalIntelligence: (normalizePeopleText(person.relationalIntelligence) as RelationalIntelligence | undefined) || 'Geralmente aceita feedbacks e faz ajustes',
+    relationalClassification: (normalizePeopleText(person.relationalClassification) as RelationalClassification | undefined) || 'Relacionamento adequado',
+    pressureResponse: (normalizePeopleText(person.pressureResponse) as PressureResponse | undefined) || 'Mantém a calma',
     productivityEfficiency,
     productivityQuality,
     productivityOrganization,
@@ -685,7 +727,7 @@ function normalizePerson(person: Partial<Person>): Person {
     workload: typeof person.workload === 'number' ? person.workload : undefined,
     strengths: person.strengths || [],
     risks: person.risks || [],
-    nextAction: person.nextAction || 'Acompanhar evolucao da lideranca',
+    nextAction: person.nextAction || 'Acompanhar evolução da liderança',
     bio: person.bio || '',
     email: person.email || '',
     phone: person.phone || '',
@@ -1018,7 +1060,7 @@ export default function WorldClassOperations({
       knowledge: [
         {
           id: `D-${Date.now()}`,
-          title: type === 'E-mail' ? 'Rascunho criado pela IA da Educação' : 'Documento operacional em revisao',
+          title: type === 'E-mail' ? 'Rascunho criado pela IA da Educação' : 'Documento operacional em revisão',
           type,
           owner: 'IA da Educação',
           status: 'Rascunho',
@@ -1076,15 +1118,15 @@ export default function WorldClassOperations({
         temperamentSecondary: person.temperamentSecondary || 'Sanguíneo',
         temperamentSecondaryPercent: Number(person.temperamentSecondaryPercent || 30),
         temperamentReason: person.temperamentReason || '',
-        behavioralProfile: person.behavioralProfile || 'Estavel',
+        behavioralProfile: (normalizePeopleText(person.behavioralProfile) as BehavioralProfile | undefined) || 'Estável',
         behavioralProfilePercent: Number(person.behavioralProfilePercent || 75),
-        decisionStyle: person.decisionStyle || 'Busca equilibrio entre velocidade e análise',
+        decisionStyle: person.decisionStyle || 'Busca equilíbrio entre velocidade e análise',
         interpersonalLevel: person.interpersonalLevel || 'Equilibrado',
-        convivenceLevel: person.convivenceLevel || 'Facil de lidar',
+        convivenceLevel: (normalizePeopleText(person.convivenceLevel) as ConvivenceLevel | undefined) || 'Fácil de lidar',
         collaborationLevel: person.collaborationLevel || 'Colabora ativamente com os demais',
         relationalIntelligence: person.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes',
         relationalClassification: person.relationalClassification || 'Relacionamento adequado',
-        pressureResponse: person.pressureResponse || 'Mantem a calma',
+        pressureResponse: (normalizePeopleText(person.pressureResponse) as PressureResponse | undefined) || 'Mantém a calma',
         productivityEfficiency: Number(person.productivityEfficiency || 0),
         productivityQuality: Number(person.productivityQuality || 0),
         productivityOrganization: Number(person.productivityOrganization || 0),
@@ -2071,7 +2113,7 @@ function SchoolFinanceWorkspace({
                 </div>
                 <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs font-black text-white/60">{item.stage}</span>
                 <span className="text-sm font-black text-[#0ABD78]">{money.format(item.value)}</span>
-                <button onClick={() => openSofi(`IA da Educação, conduza o follow-up da familia ${item.family}. Etapa: ${item.stage}. Proxima ação: ${item.next}.`)} className="h-10 rounded-2xl bg-[#29ABE2]/15 px-4 text-xs font-black text-[#29ABE2]">Assumir com IA da Educação</button>
+                <button onClick={() => openSofi(`IA da Educação, conduza o follow-up da família ${item.family}. Etapa: ${item.stage}. Próxima ação: ${item.next}.`)} className="h-10 rounded-2xl bg-[#29ABE2]/15 px-4 text-xs font-black text-[#29ABE2]">Assumir com IA da Educação</button>
               </div>
             ))}
           </div>
@@ -2316,15 +2358,15 @@ function PeopleWorkspacePremium({
         temperamentSecondary: draft.temperamentSecondary || 'Sanguíneo',
         temperamentSecondaryPercent: Number(draft.temperamentSecondaryPercent || 0),
         temperamentReason: draft.temperamentReason || '',
-        behavioralProfile: draft.behavioralProfile || 'Estavel',
+        behavioralProfile: (normalizePeopleText(draft.behavioralProfile) as BehavioralProfile | undefined) || 'Estável',
         behavioralProfilePercent: Number(draft.behavioralProfilePercent || 0),
-        decisionStyle: draft.decisionStyle || 'Busca equilibrio entre velocidade e análise',
+        decisionStyle: draft.decisionStyle || 'Busca equilíbrio entre velocidade e análise',
         interpersonalLevel: draft.interpersonalLevel || 'Equilibrado',
-        convivenceLevel: draft.convivenceLevel || 'Facil de lidar',
+        convivenceLevel: (normalizePeopleText(draft.convivenceLevel) as ConvivenceLevel | undefined) || 'Fácil de lidar',
         collaborationLevel: draft.collaborationLevel || 'Colabora ativamente com os demais',
         relationalIntelligence: draft.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes',
         relationalClassification: draft.relationalClassification || 'Relacionamento adequado',
-        pressureResponse: draft.pressureResponse || 'Mantem a calma',
+        pressureResponse: (normalizePeopleText(draft.pressureResponse) as PressureResponse | undefined) || 'Mantém a calma',
         productivityEfficiency: Number(draft.productivityEfficiency || 0),
         productivityQuality: Number(draft.productivityQuality || 0),
         productivityOrganization: Number(draft.productivityOrganization || 0),
@@ -2344,11 +2386,11 @@ function PeopleWorkspacePremium({
 
   const selectedLeadershipPercent = selectedPerson?.leadershipPercent ?? Math.round((selectedPerson?.score || 0) * 20)
   const leadershipSummary = selectedPerson
-    ? `${selectedPerson.name} atua como ${selectedPerson.role}. Nivel ${selectedPerson.leadershipLevel || 3}, perfil ${selectedPerson.leadershipProfile || 'Executor'}, potencial ${selectedPerson.leadershipPotential || 'Alto'} e prontidao ${selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}.`
-    : 'Selecione um profissional para ler a lideranca, editar campos e abrir os relat?rios.'
+    ? `${selectedPerson.name} atua como ${selectedPerson.role}. Nível ${selectedPerson.leadershipLevel || 3}, perfil ${selectedPerson.leadershipProfile || 'Executor'}, potencial ${selectedPerson.leadershipPotential || 'Alto'} e prontidão ${selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}.`
+    : 'Selecione um profissional para ler a liderança, editar campos e abrir os relatórios.'
 
   const leadershipSnapshot = [
-    { label: 'Nivel', value: `N${selectedPerson?.leadershipLevel || 3}`, detail: 'maturidade atual' },
+    { label: 'Nível', value: `N${selectedPerson?.leadershipLevel || 3}`, detail: 'maturidade atual' },
     { label: 'Perfil', value: selectedPerson?.leadershipProfile || 'Executor', detail: 'estilo predominante' },
     { label: 'Potencial', value: selectedPerson?.leadershipPotential || 'Alto', detail: 'escala de responsabilidade' },
     { label: 'Desenvolve', value: selectedPerson?.leaderDevelopment || 'Desenvolve regularmente', detail: 'efeito multiplicador' },
@@ -2367,8 +2409,8 @@ function PeopleWorkspacePremium({
   const temperamentSnapshot = selectedPerson ? [
     { label: 'Dominante', value: `${temperamentPrimaryPercent}% ${selectedPerson.temperamentPrimary || 'Fleumático'}`, detail: selectedPerson.temperamentReason || 'perfil dominante' },
     { label: 'Secundário', value: `${temperamentSecondaryPercent}% ${selectedPerson.temperamentSecondary || 'Sanguíneo'}`, detail: 'traços complementares' },
-    { label: 'Perfil', value: selectedPerson.behavioralProfile || 'Estavel', detail: `${selectedPerson.behavioralProfilePercent || 75}% de aderencia comportamental` },
-    { label: 'Leitura', value: selectedPerson.relationalClassification || 'Relacionamento adequado', detail: 'sintese relacional' },
+    { label: 'Perfil', value: selectedPerson.behavioralProfile || 'Estável', detail: `${selectedPerson.behavioralProfilePercent || 75}% de aderência comportamental` },
+    { label: 'Leitura', value: selectedPerson.relationalClassification || 'Relacionamento adequado', detail: 'síntese relacional' },
   ] : []
   const productivitySnapshot = selectedPerson ? [
     { label: 'Eficiência', value: `${selectedPerson.productivityEfficiency ?? 0}%`, detail: 'capacidade de concluir tarefas' },
@@ -2473,7 +2515,7 @@ function PeopleWorkspacePremium({
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio geral de lideranca - ${selectedPerson.name}`)}
+              onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatório geral de liderança - ${selectedPerson.name}`)}
               className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white"
             >
               Relatorio geral
@@ -2558,7 +2600,7 @@ function PeopleWorkspacePremium({
                     </div>
 
                     <div className="mt-4">
-                      <ProgressRow label="Lideranca" value={leadershipPercent} color="#8B5CF6" />
+                      <ProgressRow label="Liderança" value={leadershipPercent} color="#8B5CF6" />
                     </div>
                   </button>
                 )
@@ -2670,12 +2712,12 @@ function PeopleWorkspacePremium({
                       <div className="mt-4 grid gap-3 xl:grid-cols-2">
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
                           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/32">Perfil comportamental</p>
-                          <p className="mt-1 text-sm font-black text-white">{selectedPerson?.behavioralProfile || 'Estavel'}</p>
+                          <p className="mt-1 text-sm font-black text-white">{selectedPerson?.behavioralProfile || 'Estável'}</p>
                           <p className="mt-1 text-xs text-white/38">{selectedPerson?.behavioralProfilePercent || 75}% de aderência</p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-3">
                           <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/32">Tomada de decisão</p>
-                          <p className="mt-1 text-sm font-black text-white">{selectedPerson?.decisionStyle || 'Busca equilibrio entre velocidade e análise'}</p>
+                          <p className="mt-1 text-sm font-black text-white">{selectedPerson?.decisionStyle || 'Busca equilíbrio entre velocidade e análise'}</p>
                         </div>
                       </div>
                     </div>
@@ -2720,7 +2762,7 @@ function PeopleWorkspacePremium({
                           <input type="file" accept="image/*" className="hidden" onChange={event => handleAvatarFile(event.target.files?.[0] || null)} />
                         </label>
                         <Input value={draft?.training || ''} onChange={event => syncDraftField('training', event.target.value)} placeholder="Treinamento" />
-                        <Input value={draft?.nextReview || ''} onChange={event => syncDraftField('nextReview', event.target.value)} placeholder="Proxima revisao" />
+                        <Input value={draft?.nextReview || ''} onChange={event => syncDraftField('nextReview', event.target.value)} placeholder="Próxima revisão" />
                         <Input value={draft?.email || ''} onChange={event => syncDraftField('email', event.target.value)} placeholder="E-mail" />
                         <Input value={draft?.phone || ''} onChange={event => syncDraftField('phone', event.target.value)} placeholder="Telefone" />
                         <textarea
@@ -2732,21 +2774,21 @@ function PeopleWorkspacePremium({
                       </div>
                     </div>
 
-                    <ChoiceGroup label="Eixo 1 - Nivel de maturidade" value={draft?.leadershipLevel || 3} options={leadershipMaturityOptions} onChange={value => syncDraftField('leadershipLevel', value as LeadershipLevel)} />
-                    <ChoiceGroup label="Eixo 2 - Perfil de lideranca" value={draft?.leadershipProfile || 'Executor'} options={leadershipProfileOptions} onChange={value => syncDraftField('leadershipProfile', value as LeadershipProfile)} />
+                    <ChoiceGroup label="Eixo 1 - Nível de maturidade" value={draft?.leadershipLevel || 3} options={leadershipMaturityOptions} onChange={value => syncDraftField('leadershipLevel', value as LeadershipLevel)} />
+                    <ChoiceGroup label="Eixo 2 - Perfil de liderança" value={draft?.leadershipProfile || 'Executor'} options={leadershipProfileOptions} onChange={value => syncDraftField('leadershipProfile', value as LeadershipProfile)} />
                     <ChoiceGroup label="Potencial para cargos maiores" value={draft?.leadershipPotential || 'Alto'} options={leadershipPotentialOptions} onChange={value => syncDraftField('leadershipPotential', value as LeadershipPotential)} />
-                    <ChoiceGroup label="Prontidao para lideranca" value={draft?.leadershipReadiness || 'Potencial em desenvolvimento'} options={leadershipReadinessOptions} onChange={value => syncDraftField('leadershipReadiness', value as LeadershipReadiness)} />
-                    <ChoiceGroup label="Capacidade de desenvolver outros lideres" value={draft?.leaderDevelopment || 'Desenvolve regularmente'} options={leaderDevelopmentOptions} onChange={value => syncDraftField('leaderDevelopment', value as LeaderDevelopment)} />
+                    <ChoiceGroup label="Prontidão para liderança" value={draft?.leadershipReadiness || 'Potencial em desenvolvimento'} options={leadershipReadinessOptions} onChange={value => syncDraftField('leadershipReadiness', value as LeadershipReadiness)} />
+                    <ChoiceGroup label="Capacidade de desenvolver outros líderes" value={draft?.leaderDevelopment || 'Desenvolve regularmente'} options={leaderDevelopmentOptions} onChange={value => syncDraftField('leaderDevelopment', value as LeaderDevelopment)} />
 
                     <ChoiceGroup label="Temperamento predominante" value={draft?.temperamentPrimary || 'Fleumático'} options={temperamentOptions} onChange={value => syncDraftField('temperamentPrimary', value as TemperamentType)} />
-                    <ChoiceGroup label="Temperamento secundario" value={draft?.temperamentSecondary || 'Sanguíneo'} options={temperamentOptions} onChange={value => syncDraftField('temperamentSecondary', value as TemperamentType)} />
-                    <ChoiceGroup label="Perfil comportamental" value={draft?.behavioralProfile || 'Estavel'} options={behavioralProfileOptions} onChange={value => syncDraftField('behavioralProfile', value as BehavioralProfile)} />
-                    <ChoiceGroup label="Tomada de decisao" value={draft?.decisionStyle || 'Busca equilibrio entre velocidade e análise'} options={decisionStyleOptions} onChange={value => syncDraftField('decisionStyle', value as DecisionStyle)} />
+                    <ChoiceGroup label="Temperamento secundário" value={draft?.temperamentSecondary || 'Sanguíneo'} options={temperamentOptions} onChange={value => syncDraftField('temperamentSecondary', value as TemperamentType)} />
+                    <ChoiceGroup label="Perfil comportamental" value={draft?.behavioralProfile || 'Estável'} options={behavioralProfileOptions} onChange={value => syncDraftField('behavioralProfile', value as BehavioralProfile)} />
+                    <ChoiceGroup label="Tomada de decisão" value={draft?.decisionStyle || 'Busca equilíbrio entre velocidade e análise'} options={decisionStyleOptions} onChange={value => syncDraftField('decisionStyle', value as DecisionStyle)} />
                     <ChoiceGroup label="Relacionamento interpessoal" value={draft?.interpersonalLevel || 'Equilibrado'} options={interpersonalLevelOptions} onChange={value => syncDraftField('interpersonalLevel', value as InterpersonalLevel)} />
-                    <ChoiceGroup label="Resposta a pressao" value={draft?.pressureResponse || 'Mantem a calma'} options={pressureResponseOptions} onChange={value => syncDraftField('pressureResponse', value as PressureResponse)} />
-                    <ChoiceGroup label="Facilidade de convivencia" value={draft?.convivenceLevel || 'Facil de lidar'} options={convivenceOptions} onChange={value => syncDraftField('convivenceLevel', value as ConvivenceLevel)} />
+                    <ChoiceGroup label="Resposta à pressão" value={draft?.pressureResponse || 'Mantém a calma'} options={pressureResponseOptions} onChange={value => syncDraftField('pressureResponse', value as PressureResponse)} />
+                    <ChoiceGroup label="Facilidade de convivência" value={draft?.convivenceLevel || 'Fácil de lidar'} options={convivenceOptions} onChange={value => syncDraftField('convivenceLevel', value as ConvivenceLevel)} />
                     <ChoiceGroup label="Trabalho em equipe" value={draft?.collaborationLevel || 'Colabora ativamente com os demais'} options={collaborationOptions} onChange={value => syncDraftField('collaborationLevel', value as CollaborationLevel)} />
-                    <ChoiceGroup label="Inteligencia relacional" value={draft?.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes'} options={relationalIntelligenceOptions} onChange={value => syncDraftField('relationalIntelligence', value as RelationalIntelligence)} />
+                    <ChoiceGroup label="Inteligência relacional" value={draft?.relationalIntelligence || 'Geralmente aceita feedbacks e faz ajustes'} options={relationalIntelligenceOptions} onChange={value => syncDraftField('relationalIntelligence', value as RelationalIntelligence)} />
                     <ChoiceGroup label="Classificação geral de relacionamento" value={draft?.relationalClassification || 'Relacionamento adequado'} options={relationalClassificationOptions} onChange={value => syncDraftField('relationalClassification', value as RelationalClassification)} />
 
                     <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
@@ -2991,11 +3033,11 @@ function mapSubmissionToPerson(submission: any): Person {
 
   return {
     id: `FORM-${merged?.id || merged?.email || merged?.promoterName || Date.now()}`,
-    name: String(merged?.promoterName || 'Pessoa do formulario'),
+    name: String(merged?.promoterName || 'Pessoa do formulário'),
     role,
     unit: String(merged?.unit || ''),
-    training: role.toLowerCase().includes('diretor') ? 'Diretores' : 'Promotores de matricula',
-    nextReview: 'Revisar formulario',
+    training: role.toLowerCase().includes('diretor') ? 'Diretores' : 'Promotores de matrícula',
+    nextReview: 'Revisar formulário',
     avatar: photo,
     score: Math.round(((leadership + productivityIndex + relationship) / 3) / 20),
     leadershipPercent: leadership || 70,
@@ -3011,15 +3053,15 @@ function mapSubmissionToPerson(submission: any): Person {
     temperamentTertiary: (temperament?.tertiary || 'Colérico') as TemperamentType,
     temperamentTertiaryPercent: Number(temperament?.tertiaryPercent ?? 10),
     temperamentReason: String(temperament?.reason || ''),
-    behavioralProfile: (computed?.behavioralProfile?.profile || 'Estavel') as BehavioralProfile,
+    behavioralProfile: normalizePeopleText(computed?.behavioralProfile?.profile || 'Estável') as BehavioralProfile,
     behavioralProfilePercent: Number(computed?.behavioralProfile?.percent || relationship || 75),
-    decisionStyle: 'Busca equilibrio entre velocidade e análise',
+    decisionStyle: 'Busca equilíbrio entre velocidade e análise',
     interpersonalLevel: relationship >= 85 ? 'Comunicativo' : 'Equilibrado',
-    convivenceLevel: relationship >= 80 ? 'Facil de lidar' : 'Moderadamente facil de lidar',
+    convivenceLevel: relationship >= 80 ? 'Fácil de lidar' : 'Moderadamente fácil de lidar',
     collaborationLevel: 'Colabora ativamente com os demais',
     relationalIntelligence: 'Geralmente aceita feedbacks e faz ajustes',
-    relationalClassification: relationship >= 85 ? 'Relacionamento acima da media' : 'Relacionamento adequado',
-    pressureResponse: 'Mantem a calma',
+    relationalClassification: relationship >= 85 ? 'Relacionamento acima da média' : 'Relacionamento adequado',
+    pressureResponse: 'Mantém a calma',
     productivityEfficiency: Number(productivity?.efficiency || productivityIndex),
     productivityQuality: Number(productivity?.quality || productivityIndex),
     productivityOrganization: Number(productivity?.organization || productivityIndex),
@@ -3036,7 +3078,7 @@ function mapSubmissionToPerson(submission: any): Person {
       alerts?.conflictRisk?.level === 'Alto' ? 'conflitos' : '',
       alerts?.procrastination?.level === 'Alto' ? 'procrastinação' : '',
     ].filter(Boolean),
-    nextAction: 'Analisar formulario recebido e validar plano individual.',
+    nextAction: 'Analisar formulário recebido e validar plano individual.',
     bio: cleanProfileText(finalProfile?.description || merged?.notes, ''),
     email: String(merged?.email || ''),
     phone: String(merged?.phone || ''),
@@ -3072,6 +3114,30 @@ function isRealSubmittedPerson(person: Person) {
   return Boolean(person.assessmentForm || person.email || person.phone)
 }
 
+function isVisiblePerson(person: Person) {
+  const name = String(person.name || '').trim().toLowerCase()
+  const email = String(person.email || '').trim().toLowerCase()
+  if (!name) return false
+  if (name.includes('teste') || email.includes('example.com')) return false
+  return !['rafael almeida', 'juliana martins', 'marina costa'].includes(name)
+}
+
+function readCachedSubmittedPeople() {
+  try {
+    const raw = window.localStorage.getItem(PEOPLE_SUBMISSIONS_CACHE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(item => normalizePerson(item)).filter(isRealSubmittedPerson) : []
+  } catch {
+    return []
+  }
+}
+
+function writeCachedSubmittedPeople(people: Person[]) {
+  try {
+    window.localStorage.setItem(PEOPLE_SUBMISSIONS_CACHE_KEY, JSON.stringify(people))
+  } catch {}
+}
+
 function PeopleWorkspaceExecutive({
   people,
   work,
@@ -3105,7 +3171,7 @@ function PeopleWorkspaceExecutive({
     const submitted = [...submittedPeople]
       .filter(isRealSubmittedPerson)
       .sort((a, b) => String(a.driveSyncAt || '').localeCompare(String(b.driveSyncAt || '')))
-    const manual = people.filter(person => isRealSubmittedPerson(person) && !['rafael almeida', 'juliana martins', 'marina costa'].includes(String(person.name || '').trim().toLowerCase()))
+    const manual = people.map(person => normalizePerson(person)).filter(isVisiblePerson)
     const byKey = new Map<string, Person>()
     for (const person of [...submitted, ...manual]) {
       byKey.set(`${person.email || ''}|${person.name}`.toLowerCase(), person)
@@ -3121,9 +3187,16 @@ function PeopleWorkspaceExecutive({
       try {
         const { data } = await api.get('/promoter-forms/submissions')
         const submissions = Array.isArray(data?.submissions) ? data.submissions : []
-        if (active) setSubmittedPeople(submissions.map(mapSubmissionToPerson).filter(Boolean))
+        const mapped = submissions.map(mapSubmissionToPerson).filter(isRealSubmittedPerson)
+        if (!active) return
+        if (mapped.length) {
+          setSubmittedPeople(mapped)
+          writeCachedSubmittedPeople(mapped)
+          return
+        }
+        setSubmittedPeople(current => current.length ? current : readCachedSubmittedPeople())
       } catch {
-        if (active) setSubmittedPeople([])
+        if (active) setSubmittedPeople(current => current.length ? current : readCachedSubmittedPeople())
       }
     }
     void loadSubmittedPeople()
@@ -3154,7 +3227,7 @@ function PeopleWorkspaceExecutive({
     return {
       units: unique(allPeople.map(person => person.unit)),
       roles: unique(allPeople.map(person => person.role)),
-      traits: ['Todos', 'Lideranca alta', 'Produtividade alta', 'Relacionamento forte', 'Atenção', 'Sem foto'],
+      traits: ['Todos', 'Liderança alta', 'Produtividade alta', 'Relacionamento forte', 'Atenção', 'Sem foto'],
     }
   }, [allPeople, people])
 
@@ -3169,7 +3242,7 @@ function PeopleWorkspaceExecutive({
         person.productivityCommitment,
         person.productivityAutonomy,
       ])
-      const relationalStrong = ['Referencia positiva de relacionamento e trabalho em equipe', 'Relacionamento acima da media'].includes(person.relationalClassification || '')
+      const relationalStrong = ['Referência positiva de relacionamento e trabalho em equipe', 'Relacionamento acima da média'].includes(person.relationalClassification || '')
       const isPromoter = `${person.role} ${person.training} ${person.bio}`.toLowerCase().includes('promotor')
       const isDirector = `${person.role} ${person.training} ${person.bio}`.toLowerCase().includes('diretor') || `${person.role}`.toLowerCase().includes('director')
       const searchable = `${person.name} ${person.role} ${person.unit} ${person.email} ${person.phone} ${(person.strengths || []).join(' ')}`.toLowerCase()
@@ -3179,7 +3252,7 @@ function PeopleWorkspaceExecutive({
       if (unitFilter !== 'Todos' && (person.unit || '') !== unitFilter) return false
       if (roleFilter !== 'Todos' && (person.role || '') !== roleFilter) return false
       if (term && !searchable.includes(term)) return false
-      if (traitFilter === 'Lideranca alta' && leadership < 80) return false
+      if (traitFilter === 'Liderança alta' && leadership < 80) return false
       if (traitFilter === 'Produtividade alta' && productivity < 80) return false
       if (traitFilter === 'Relacionamento forte' && !relationalStrong) return false
       if (traitFilter === 'Atenção' && leadership >= 60 && productivity >= 60 && (person.workload || 0) < 85) return false
@@ -3211,9 +3284,9 @@ function PeopleWorkspaceExecutive({
     return {
       id: `P-${Date.now()}`,
       name: '',
-      role: 'Promotor de matriculas',
+      role: 'Promotor de matrículas',
       unit: '',
-      training: 'Promotores de matricula',
+      training: 'Promotores de matrícula',
       nextReview: '',
       avatar: '',
       score: 0,
@@ -3227,15 +3300,15 @@ function PeopleWorkspaceExecutive({
       temperamentPrimaryPercent: 70,
       temperamentSecondary: 'Sanguíneo',
       temperamentSecondaryPercent: 30,
-      behavioralProfile: 'Estavel',
+      behavioralProfile: 'Estável',
       behavioralProfilePercent: 75,
-      decisionStyle: 'Busca equilibrio entre velocidade e análise',
+      decisionStyle: 'Busca equilíbrio entre velocidade e análise',
       interpersonalLevel: 'Equilibrado',
-      convivenceLevel: 'Facil de lidar',
+      convivenceLevel: 'Fácil de lidar',
       collaborationLevel: 'Colabora ativamente com os demais',
       relationalIntelligence: 'Geralmente aceita feedbacks e faz ajustes',
       relationalClassification: 'Relacionamento adequado',
-      pressureResponse: 'Mantem a calma',
+      pressureResponse: 'Mantém a calma',
       productivityEfficiency: 0,
       productivityQuality: 0,
       productivityOrganization: 0,
@@ -3772,7 +3845,7 @@ function PeopleWorkspaceExecutive({
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={copyPublicFormLink} className="h-11 rounded-2xl border border-[#0ABD78]/25 bg-[#0ABD78]/12 px-4 text-xs font-black text-[#8EF7C2]">
-              {formLinkCopied ? 'Link copiado' : 'Enviar formulario'}
+              {formLinkCopied ? 'Link copiado' : 'Enviar formulário'}
             </button>
             <button onClick={startNewPerson} className="h-11 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Nova pessoa</button>
           </div>
@@ -3959,12 +4032,12 @@ function PeopleWorkspaceExecutive({
                   {panelTab === 'relatorio' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-2 lg:hidden">
-                        <MiniStat label="Lideranca" value={`${selectedLeadership}%`} />
+                        <MiniStat label="Liderança" value={`${selectedLeadership}%`} />
                         <MiniStat label="Produtividade" value={`${selectedProductivity}%`} />
                         <MiniStat label="Temperamento" value={selectedPerson.temperamentPrimary || 'N/D'} />
                         <MiniStat label="Perfil" value={selectedPerson.behavioralProfile || 'N/D'} />
                       </div>
-                      <ProgressRow label="Lideranca" value={selectedLeadership} color="#8B5CF6" />
+                      <ProgressRow label="Liderança" value={selectedLeadership} color="#8B5CF6" />
                       <ProgressRow label="Produtividade" value={selectedProductivity} color="#0ABD78" />
                       <ProgressRow label="Carga" value={selectedPerson.workload || 0} color="#F8A303" />
                       <div className="grid gap-3 lg:grid-cols-2">
@@ -4046,16 +4119,16 @@ function PeopleWorkspaceExecutive({
 
                   {panelTab === 'categorias' && draft && (
                     <div className="space-y-3">
-                      <Input value={draft.training || ''} onChange={event => syncDraftField('training', event.target.value)} placeholder="Categoria principal. Ex: Promotores de matricula" />
+                      <Input value={draft.training || ''} onChange={event => syncDraftField('training', event.target.value)} placeholder="Categoria principal. Ex: Promotores de matrícula" />
                       <select value={draft.leadershipProfile || 'Executor'} onChange={event => syncDraftField('leadershipProfile', event.target.value as LeadershipProfile)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none">
                         {leadershipProfileOptions.map(option => <option key={String(option.value)} className="bg-[#10121A]" value={option.value}>{option.label}</option>)}
                       </select>
                       <select value={draft.temperamentPrimary || 'Fleumático'} onChange={event => syncDraftField('temperamentPrimary', event.target.value as TemperamentType)} className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-white outline-none">
                         {temperamentOptions.map(option => <option key={String(option.value)} className="bg-[#10121A]" value={option.value}>{option.label}</option>)}
                       </select>
-                      <Input value={String(draft.leadershipPercent ?? '')} onChange={event => syncDraftField('leadershipPercent', Number(event.target.value || 0))} placeholder="Lideranca %" />
+                      <Input value={String(draft.leadershipPercent ?? '')} onChange={event => syncDraftField('leadershipPercent', Number(event.target.value || 0))} placeholder="Liderança %" />
                       <Input value={String(draft.productivityIndex ?? '')} onChange={event => syncDraftField('productivityIndex', Number(event.target.value || 0))} placeholder="Produtividade %" />
-                      <Input value={draft.nextReview || ''} onChange={event => syncDraftField('nextReview', event.target.value)} placeholder="Proxima revisao" />
+                      <Input value={draft.nextReview || ''} onChange={event => syncDraftField('nextReview', event.target.value)} placeholder="Próxima revisão" />
                     </div>
                   )}
 
@@ -4207,13 +4280,13 @@ function PersonCard({ person, onCreateAction }: { person: Person; onCreateAction
       </div>
 
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/35">Proxima acao</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-white/35">Próxima ação</p>
         <p className="mt-2 text-lg font-black text-white">{person.nextAction}</p>
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <button onClick={() => onCreateAction(person, `Plano de desenvolvimento - ${person.name}`)} className="h-10 rounded-2xl bg-[#8B5CF6] px-4 text-xs font-black text-white">Criar plano</button>
-        <button onClick={() => openSofi(`IA da Educacao, assuma o acompanhamento de ${person.name}. Cargo: ${person.role}. Proxima acao: ${person.nextAction}.`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Abrir com IA da Educacao</button>
+        <button onClick={() => openSofi(`IA da Educação, assuma o acompanhamento de ${person.name}. Cargo: ${person.role}. Próxima ação: ${person.nextAction}.`)} className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Abrir com IA da Educação</button>
       </div>
     </div>
   )
