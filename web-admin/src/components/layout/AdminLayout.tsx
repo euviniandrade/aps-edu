@@ -10,7 +10,7 @@ import {
   ChatBubbleLeftEllipsisIcon, KeyIcon, BuildingLibraryIcon,
   ArrowRightOnRectangleIcon, Bars3Icon, BellIcon,
   ChevronRightIcon, MagnifyingGlassIcon, XMarkIcon,
-  UserGroupIcon, RocketLaunchIcon, ArchiveBoxIcon, Cog6ToothIcon,
+  UserGroupIcon, RocketLaunchIcon, ArchiveBoxIcon, Cog6ToothIcon, AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import AiAssistant from '@/components/ai/AiAssistant'
 import {
@@ -21,7 +21,7 @@ import {
   ChatBubbleLeftEllipsisIcon as ChatIconSolid,
   KeyIcon as KeyIconSolid, BuildingLibraryIcon as BuildingIconSolid,
   UserGroupIcon as UserGroupIconSolid, RocketLaunchIcon as RocketLaunchIconSolid,
-  ArchiveBoxIcon as ArchiveBoxIconSolid,
+  ArchiveBoxIcon as ArchiveBoxIconSolid, AcademicCapIcon as AcademicCapIconSolid,
 } from '@heroicons/react/24/solid'
 
 // Nav principal enxuto; fluxos detalhados vivem dentro do Centro e da busca.
@@ -32,6 +32,7 @@ const navSections = [
       { href: '/gestao',        label: 'Central Operacional', icon: HomeIcon,             iconSolid: HomeIconSolid,      color: '#F8A303', roles: [] },
       { href: '/escolar-financeiro', label: 'Gestão Escolar e Financeiro', icon: BuildingLibraryIcon, iconSolid: BuildingIconSolid, color: '#29ABE2', roles: [] },
       { href: '/pessoas',       label: 'Pessoas',      icon: UsersIcon,                  iconSolid: UsersIconSolid,     color: '#8B5CF6', roles: [] },
+      { href: '/academico',     label: 'Acadêmico',    icon: AcademicCapIcon,            iconSolid: AcademicCapIconSolid, color: '#0ABD78', roles: [] },
       { href: '/estoque',       label: 'Estoque e Patrimônio', icon: ArchiveBoxIcon,     iconSolid: ArchiveBoxIconSolid, color: '#E07B39', roles: [] },
     ],
   },
@@ -634,8 +635,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {[ 
           { href: '/gestao',       icon: 'C', label: 'Centro' },
           { href: '/escolar-financeiro', icon: 'E', label: 'Escola' },
+          { href: '/academico',    icon: 'A', label: 'Acad.' },
           { href: '/pessoas',      icon: 'P', label: 'Pessoas' },
-          { href: '/inovação',     icon: 'I', label: 'IA' },
+          { href: '/inovacao',     icon: 'I', label: 'IA' },
         ].map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           return (

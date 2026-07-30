@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { href: '/gestao',        icon: 'G', label: 'Central Operacional' },
   { href: '/meu-dia',       icon: 'D', label: 'Meu Dia' },
   { href: '/tasks',         icon: 'T', label: 'Tarefas' },
+  { href: '/academico',     icon: 'A', label: 'Acadêmico' },
   { href: '/estoque',       icon: 'E', label: 'Estoque e Patrimônio' },
   { href: '/reports',       icon: 'R', label: 'Relatórios', leaderOnly: true },
   { href: '/users',         icon: 'P', label: 'Pessoas',   adminOnly: true },

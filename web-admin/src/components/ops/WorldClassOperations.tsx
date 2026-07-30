@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import api from '@/lib/api'
 import { PROMOTER_QUESTIONS, getPromoterFormQuestionSections } from '@/lib/promoter-form'
+import { academicEventsFromState, readAcademicState } from '@/lib/academic'
 import {
   AcademicCapIcon,
   ArrowPathIcon,
@@ -817,6 +818,16 @@ export default function WorldClassOperations({
   }, [state])
 
   const agendaEvents = useMemo(() => {
+    const academic = academicEventsFromState(readAcademicState())
+      .slice(0, 8)
+      .map(event => ({
+        id: event.id,
+        time: event.time,
+        title: event.title,
+        area: event.location || 'Faculdade',
+        source: 'Acadêmico',
+        color: '#0ABD78',
+      }))
     const derived = state.work
       .filter(item => item.due === 'Hoje')
       .slice(0, 4)
@@ -828,7 +839,7 @@ export default function WorldClassOperations({
         source: 'APS',
         color: priorityColor(item.priority),
       }))
-    return [...baseAgenda, ...derived]
+    return [...academic, ...baseAgenda, ...derived]
   }, [state.work])
 
   const weeklyPanorama = useMemo(() => {
