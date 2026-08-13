@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import api from '@/lib/api'
 import { PROMOTER_QUESTIONS, getPromoterFormQuestionSections } from '@/lib/promoter-form'
 import { academicEventsFromState, readAcademicState } from '@/lib/academic'
+import restoredPromoterSubmissions from '@/data/restored-promoter-submissions.json'
 import {
   AcademicCapIcon,
   ArrowPathIcon,
@@ -3035,9 +3036,9 @@ function mapSubmissionToPerson(submission: any): Person {
   const productivity = computed?.productivity || {}
   const alerts = computed?.alerts || {}
   const finalProfile = computed?.finalProfile || {}
-  const leadership = Number(indices?.leadership?.score || indices?.promotion?.score || 0)
-  const emotional = Number(indices?.emotional?.score || 0)
-  const relationship = Number(indices?.relationship?.score || temperament?.primaryPercent || 75)
+  const leadership = Number(indices?.leadershipPotential?.score || indices?.leadership?.score || indices?.promotionPotential?.score || indices?.promotion?.score || 0)
+  const emotional = Number(indices?.emotionalIntelligence?.score || indices?.emotional?.score || 0)
+  const relationship = Number(indices?.interpersonalRelationship?.score || indices?.relationship?.score || temperament?.primaryPercent || 75)
   const productivityIndex = Number(productivity?.index || indices?.productivity?.score || 0)
   const photo = resolveSubmissionPhoto(merged)
   const role = String(merged?.role || 'Promotor')
@@ -3093,7 +3094,7 @@ function mapSubmissionToPerson(submission: any): Person {
     bio: cleanProfileText(finalProfile?.description || merged?.notes, ''),
     email: String(merged?.email || ''),
     phone: String(merged?.phone || ''),
-    files: [merged?.driveSnapshot?.webViewLink, merged?.driveReport?.webViewLink].filter(Boolean).map(String),
+    files: [merged?.driveFolder, merged?.driveSnapshot?.webViewLink, merged?.driveReport?.webViewLink, merged?.photoUrl].filter(Boolean).map(String),
     assessmentForm: merged,
     driveSyncAt: String(merged?.submittedAt || ''),
     driveSyncProvider: 'Google Drive',
@@ -3149,6 +3150,20 @@ function writeCachedSubmittedPeople(people: Person[]) {
   } catch {}
 }
 
+const restoredSubmittedPeople = (restoredPromoterSubmissions as any[])
+  .map(mapSubmissionToPerson)
+  .filter(isRealSubmittedPerson)
+
+function mergeSubmittedPeople(...groups: Person[][]) {
+  const byKey = new Map<string, Person>()
+  for (const person of groups.flat()) {
+    if (!isRealSubmittedPerson(person)) continue
+    const key = `${person.email || person.id || ''}|${person.name}`.toLowerCase()
+    byKey.set(key, person)
+  }
+  return Array.from(byKey.values())
+}
+
 function PeopleWorkspaceExecutive({
   people,
   work,
@@ -3176,7 +3191,7 @@ function PeopleWorkspaceExecutive({
   const [lastSavedAt, setLastSavedAt] = useState('')
   const [creatingPerson, setCreatingPerson] = useState(false)
   const [formLinkCopied, setFormLinkCopied] = useState(false)
-  const [submittedPeople, setSubmittedPeople] = useState<Person[]>([])
+  const [submittedPeople, setSubmittedPeople] = useState<Person[]>(() => mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople()))
 
   const allPeople = useMemo(() => {
     const submitted = [...submittedPeople]
@@ -3201,13 +3216,13 @@ function PeopleWorkspaceExecutive({
         const mapped = submissions.map(mapSubmissionToPerson).filter(isRealSubmittedPerson)
         if (!active) return
         if (mapped.length) {
-          setSubmittedPeople(mapped)
+          setSubmittedPeople(current => mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople(), current, mapped))
           writeCachedSubmittedPeople(mapped)
           return
         }
-        setSubmittedPeople(current => current.length ? current : readCachedSubmittedPeople())
+        setSubmittedPeople(current => mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople(), current))
       } catch {
-        if (active) setSubmittedPeople(current => current.length ? current : readCachedSubmittedPeople())
+        if (active) setSubmittedPeople(current => mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople(), current))
       }
     }
     void loadSubmittedPeople()

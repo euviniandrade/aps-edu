@@ -1,0 +1,4176 @@
+[
+  {
+    "id": "S-d89e8247",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Kauan Ferreira de Araújo",
+    "unit": "CACLI",
+    "role": "Promotor",
+    "email": "kauan022f@gmail.com",
+    "phone": "11994333547",
+    "birthDate": "02112006",
+    "address": "Rua Francisco Peixoto, 132 - Campo Limpo",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 0,
+      "3": 1,
+      "4": 3,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 0,
+      "10": 3,
+      "11": 1,
+      "12": 0,
+      "13": 2,
+      "14": 1,
+      "15": 2,
+      "16": 2,
+      "17": 3,
+      "18": 2,
+      "19": 2,
+      "20": 2,
+      "21": 0,
+      "22": 3,
+      "23": 2,
+      "24": 1,
+      "25": 1,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 1,
+      "30": 0,
+      "31": 1,
+      "32": 3,
+      "33": 0,
+      "34": 1,
+      "35": 0,
+      "36": 3,
+      "37": 0,
+      "38": 3,
+      "39": 1,
+      "40": 0,
+      "41": 3,
+      "42": 0,
+      "43": 1,
+      "44": 1,
+      "45": 0,
+      "46": 1,
+      "47": 2,
+      "48": 3,
+      "49": 1,
+      "50": 1,
+      "51": 0,
+      "52": 2,
+      "53": 0,
+      "54": 2,
+      "55": 0,
+      "56": 1,
+      "57": 0,
+      "58": 0,
+      "59": 0,
+      "60": 3,
+      "61": 0,
+      "62": 0,
+      "63": 0,
+      "64": 0,
+      "65": 2,
+      "66": 2,
+      "67": 0,
+      "68": 3,
+      "69": 3,
+      "70": 1,
+      "71": 3,
+      "72": 0,
+      "73": 3,
+      "74": 3,
+      "75": 3,
+      "76": 0,
+      "77": 0,
+      "78": 2
+    },
+    "computed": {
+      "answeredCount": 78,
+      "totalQuestions": 78,
+      "indices": {
+        "leadershipPotential": {
+          "score": 82,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 74,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 68,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 76,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 78,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 67,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Colérico",
+        "secondary": "Melancólico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 37,
+        "secondaryPercent": 32,
+        "tertiaryPercent": 31,
+        "reason": "Decisão, iniciativa, foco em resultados e ação executiva. Leitura comparativa: 37% do eixo dominante, 32% do eixo secundário e 31% do terceiro eixo, dentro de 100% da composição comportamental exibida."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 26,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata. Percentual calculado como participação do perfil dominante dentro da soma dos quatro perfis comportamentais."
+      },
+      "productivity": {
+        "efficiency": 79,
+        "quality": 61,
+        "organization": 89,
+        "commitment": 68,
+        "autonomy": 82,
+        "index": 76,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Coordenador",
+        "description": "Boa liderança operacional, relacionamento equilibrado e entrega consistente."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "WhatsApp Image 2026-07-09 at 12.44.49.jpg",
+    "submittedAt": "2026-07-09T16:09:10.403Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1OqDWMjNpk7DV9IQclzpy8YoA1C-TmYdM",
+    "photoDriveFileId": "1OqDWMjNpk7DV9IQclzpy8YoA1C-TmYdM",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1A6R7bvDZIMFSnwonRJ-E9UybJQmxTJfB/view?usp=drivesdk",
+      "fileId": "1A6R7bvDZIMFSnwonRJ-E9UybJQmxTJfB"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1q-NsymWHBf3E4Pp4v6I2MxfxtjH2TPi8/view?usp=drivesdk",
+      "fileId": "1q-NsymWHBf3E4Pp4v6I2MxfxtjH2TPi8"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1kekDRkhnm6d6bcTYVWdrfTrHoPio52J5",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-09 - Kauan Ferreira de Araújo - CACLI - Promotor - S-d89e8247"
+  },
+  {
+    "id": "S-19e5ac66",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Grazielle da Silva Martins",
+    "unit": "CACLI 2",
+    "role": "Promotor",
+    "email": "grazielle.martins@adventistas.org",
+    "phone": "11912834815",
+    "birthDate": "01-09-1992",
+    "address": "Rua Cortegaça, 5555 - Jardim Guarujá, 05877200",
+    "notes": "",
+    "answers": {
+      "1": 1,
+      "2": 3,
+      "3": 0,
+      "4": 3,
+      "5": 0,
+      "6": 0,
+      "7": 3,
+      "8": 1,
+      "9": 0,
+      "10": 1,
+      "11": 1,
+      "12": 3,
+      "13": 0,
+      "14": 0,
+      "15": 1,
+      "16": 0,
+      "17": 2,
+      "18": 0,
+      "19": 3,
+      "20": 2,
+      "21": 1,
+      "22": 3,
+      "23": 0,
+      "24": 3,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 2,
+      "30": 0,
+      "31": 2,
+      "32": 0,
+      "33": 1,
+      "34": 1,
+      "35": 0,
+      "36": 0,
+      "37": 2,
+      "38": 0,
+      "39": 0,
+      "40": 2,
+      "41": 0,
+      "42": 0,
+      "43": 1,
+      "44": 1,
+      "45": 2,
+      "46": 3,
+      "47": 3,
+      "48": 2,
+      "49": 1,
+      "50": 1,
+      "51": 2,
+      "52": 2,
+      "53": 2,
+      "54": 2,
+      "55": 3,
+      "56": 3,
+      "57": 0,
+      "58": 1,
+      "59": 0,
+      "60": 0,
+      "61": 1,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 63,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 75,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 54,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 71,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 88,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 71,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Melancólico",
+        "tertiary": "Colérico",
+        "primaryPercent": 28,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 46,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Análise, organização, detalhamento e busca por excelência."
+      },
+      "behavioralProfile": {
+        "profile": "Estavel",
+        "percent": 81,
+        "reason": "Busca equilíbrio, previsibilidade e convivência harmoniosa."
+      },
+      "productivity": {
+        "efficiency": 82,
+        "quality": 75,
+        "organization": 96,
+        "commitment": 79,
+        "autonomy": 79,
+        "index": 82,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 90,
+          "message": "Boa consistência entre resposta direta e cenarios práticos."
+        }
+      },
+      "finalProfile": {
+        "title": "Coordenador",
+        "description": "Boa liderança operacional, relacionamento equilibrado e entrega consistente."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000449685.jpg",
+    "submittedAt": "2026-07-02T15:11:36.425Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1U8raewFFfw2Ws-YkLVeD3ssCBVuG_vWF",
+    "photoDriveFileId": "1U8raewFFfw2Ws-YkLVeD3ssCBVuG_vWF",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1Fe3dfWw8_2Plhcv7_YO4PH3G09iKx-Ed/view?usp=drivesdk",
+      "fileId": "1Fe3dfWw8_2Plhcv7_YO4PH3G09iKx-Ed"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/151X6lUXrYfpiXwP5iFt3i7XwVCHlOIxn/view?usp=drivesdk",
+      "fileId": "151X6lUXrYfpiXwP5iFt3i7XwVCHlOIxn"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1JaoomFXZOuajkSVl7wdMFnTAvM3VXZxW",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Grazielle da Silva Martins - CACLI 2 - Promotor - S-19e5ac66"
+  },
+  {
+    "id": "S-a8489d54",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "David Loiola Alves Braga",
+    "unit": "CAIS",
+    "role": "Promotor",
+    "email": "david.braga@adventistas.org",
+    "phone": "11918533016",
+    "birthDate": "20/11/2001",
+    "address": "Rua Rosário Scamardi, 878",
+    "notes": "Não",
+    "answers": {
+      "1": 1,
+      "2": 2,
+      "3": 0,
+      "4": 3,
+      "5": 1,
+      "6": 0,
+      "7": 1,
+      "8": 2,
+      "9": 1,
+      "10": 3,
+      "11": 3,
+      "12": 0,
+      "13": 1,
+      "14": 2,
+      "15": 2,
+      "16": 0,
+      "17": 3,
+      "18": 1,
+      "19": 1,
+      "20": 3,
+      "21": 1,
+      "22": 0,
+      "23": 0,
+      "24": 1,
+      "25": 1,
+      "26": 2,
+      "27": 2,
+      "28": 0,
+      "29": 2,
+      "30": 2,
+      "31": 1,
+      "32": 0,
+      "33": 1,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 3,
+      "39": 3,
+      "40": 0,
+      "41": 3,
+      "42": 1,
+      "43": 0,
+      "44": 0,
+      "45": 1,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 0,
+      "51": 1,
+      "52": 0,
+      "53": 2,
+      "54": 3,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 3,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 1
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 69,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 75,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 77,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 81,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 71,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 83,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Sanguíneo",
+        "secondary": "Fleumático",
+        "tertiary": "Melancólico",
+        "primaryPercent": 30,
+        "secondaryPercent": 24,
+        "tertiaryPercent": 46,
+        "reason": "Força social, comunicação, energia para pessoas e influência. Segunda tendência: Equilíbrio, estabilidade, mediação e constância."
+      },
+      "behavioralProfile": {
+        "profile": "Influenciador",
+        "percent": 90,
+        "reason": "Apresenta energia relacional, engajamento e capacidade de mobilização."
+      },
+      "productivity": {
+        "efficiency": 68,
+        "quality": 75,
+        "organization": 68,
+        "commitment": 82,
+        "autonomy": 79,
+        "index": 74,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Coordenador",
+        "description": "Boa liderança operacional, relacionamento equilibrado e entrega consistente."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-02T14:56:03.327Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1fGFIgrfWVkOQJd0TYtqmUUYFe7dC4uug/view?usp=drivesdk",
+      "fileId": "1fGFIgrfWVkOQJd0TYtqmUUYFe7dC4uug"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1T8JllQkFq6uPVxTbqkr1l88OpU45oJLH/view?usp=drivesdk",
+      "fileId": "1T8JllQkFq6uPVxTbqkr1l88OpU45oJLH"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1R_tmiKWt43hva8zX9qEZiJu03ed_foF9",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - David Loiola Alves Braga - CAIS - Promotor - S-a8489d54"
+  },
+  {
+    "id": "S-f36def4f",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Pamela Santana Rodrigues",
+    "unit": "APS",
+    "role": "Promotor",
+    "email": "pamela.santana@adventistas.org",
+    "phone": "11961765773",
+    "birthDate": "15122005",
+    "address": "Estrada de Itapecerica, 5859 -Jardim IAE, São Paulo - SP",
+    "notes": "",
+    "answers": {
+      "1": 3,
+      "2": 2,
+      "3": 3,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 3,
+      "8": 2,
+      "9": 3,
+      "10": 3,
+      "11": 3,
+      "12": 0,
+      "13": 0,
+      "14": 2,
+      "15": 2,
+      "16": 3,
+      "17": 0,
+      "18": 2,
+      "19": 1,
+      "20": 1,
+      "21": 1,
+      "22": 0,
+      "23": 0,
+      "24": 1,
+      "25": 2,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 3,
+      "37": 0,
+      "38": 3,
+      "39": 0,
+      "40": 3,
+      "41": 3,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 3,
+      "48": 0,
+      "49": 0,
+      "50": 0,
+      "51": 2,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 81,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 85,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 90,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 85,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 92,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 85,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Melancólico",
+        "secondary": "Sanguíneo",
+        "tertiary": "Colérico",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Análise, organização, detalhamento e busca por excelência. Segunda tendência: Força social, comunicação, energia para pessoas e influência."
+      },
+      "behavioralProfile": {
+        "profile": "Analítico",
+        "percent": 93,
+        "reason": "Privilegia dados, precisão, planejamento e consistência de processo."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 100,
+        "organization": 86,
+        "commitment": 82,
+        "autonomy": 96,
+        "index": 90,
+        "diagnosis": "Alta Performance"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000039428.jpg",
+    "submittedAt": "2026-07-02T13:43:30.679Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=10G4UCGXwLD6Q3rDfPtZlus4qgRaJLUxA",
+    "photoDriveFileId": "10G4UCGXwLD6Q3rDfPtZlus4qgRaJLUxA",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1f8i2dxinW30hPoAbEcKAHYhiifQK0O7-/view?usp=drivesdk",
+      "fileId": "1f8i2dxinW30hPoAbEcKAHYhiifQK0O7-"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1pgxoaHZ0ErKO8U-op3ogTSie_dFF62Lz/view?usp=drivesdk",
+      "fileId": "1pgxoaHZ0ErKO8U-op3ogTSie_dFF62Lz"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1kEM-bLeC5PDV3FYwMjdmaG0lVLwQoZLZ",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Pamela Santana Rodrigues - APS - Promotor - S-f36def4f"
+  },
+  {
+    "id": "S-fb600984",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Léo Otto Feliciano",
+    "unit": "CAR",
+    "role": "Promotor",
+    "email": "leo.feliciano@adventistas.org",
+    "phone": "13997304237",
+    "birthDate": "17031967",
+    "address": "Rua Marrocos 363 Xangrilá",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 3,
+      "5": 1,
+      "6": 0,
+      "7": 3,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 1,
+      "12": 0,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 2,
+      "17": 2,
+      "18": 3,
+      "19": 2,
+      "20": 1,
+      "21": 0,
+      "22": 2,
+      "23": 2,
+      "24": 1,
+      "25": 3,
+      "26": 1,
+      "27": 1,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 2,
+      "34": 0,
+      "35": 0,
+      "36": 0,
+      "37": 1,
+      "38": 0,
+      "39": 1,
+      "40": 0,
+      "41": 2,
+      "42": 1,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 3,
+      "47": 3,
+      "48": 0,
+      "49": 1,
+      "50": 2,
+      "51": 3,
+      "52": 0,
+      "53": 2,
+      "54": 1,
+      "55": 2,
+      "56": 1,
+      "57": 2,
+      "58": 0,
+      "59": 3,
+      "60": 3,
+      "61": 2,
+      "62": 1
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 85,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 73,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 73,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 75,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 83,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 67,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Colérico",
+        "secondary": "Melancólico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 30,
+        "secondaryPercent": 27,
+        "tertiaryPercent": 43,
+        "reason": "Decisão, iniciativa, foco em resultados e ação executiva. Segunda tendência: Análise, organização, detalhamento e busca por excelência."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 80,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 79,
+        "quality": 82,
+        "organization": 86,
+        "commitment": 71,
+        "autonomy": 86,
+        "index": 81,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Moderadamente Adaptável",
+          "message": "Se adapta, mas pode precisar de mais tempo e contexto."
+        },
+        "consistency": {
+          "score": 90,
+          "message": "Boa consistência entre resposta direta e cenarios práticos."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "IMG_8119.jpg",
+    "submittedAt": "2026-07-02T13:42:57.221Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1JHj0eikyAELLGLPwfOpsQGOPSZqibTTq",
+    "photoDriveFileId": "1JHj0eikyAELLGLPwfOpsQGOPSZqibTTq",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1LS6r5rQFYMta0RpQdOIXpqIFmZ13nXRx/view?usp=drivesdk",
+      "fileId": "1LS6r5rQFYMta0RpQdOIXpqIFmZ13nXRx"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1FCWJ8te70PLfkoqr5tCs-z55MthWiCJd/view?usp=drivesdk",
+      "fileId": "1FCWJ8te70PLfkoqr5tCs-z55MthWiCJd"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1m8VrGu9qDYpWGLq1ZfFyP9wNZXmy0ews",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Léo Otto Feliciano - CAR - Promotor - S-fb600984"
+  },
+  {
+    "id": "S-82c7f0af",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Emily Jesus dos Santos",
+    "unit": "Jardim Lilah",
+    "role": "Promotora",
+    "email": "emily.jsantos@adventistas.org",
+    "phone": "+55 11 92604-3263",
+    "birthDate": "20/02/1998",
+    "address": "Rua Carneiro Vilela 153",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 1,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 2,
+      "8": 2,
+      "9": 0,
+      "10": 3,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 1,
+      "21": 0,
+      "22": 2,
+      "23": 2,
+      "24": 1,
+      "25": 1,
+      "26": 0,
+      "27": 2,
+      "28": 3,
+      "29": 0,
+      "30": 0,
+      "31": 1,
+      "32": 0,
+      "33": 0,
+      "34": 2,
+      "35": 0,
+      "36": 2,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 3,
+      "41": 3,
+      "42": 0,
+      "43": 1,
+      "44": 0,
+      "45": 0,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 1,
+      "51": 0,
+      "52": 0,
+      "53": 2,
+      "54": 1,
+      "55": 2,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 0,
+      "60": 0,
+      "61": 0,
+      "62": 3
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 88,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 81,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 79,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 83,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 83,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 88,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Colérico",
+        "tertiary": "Melancólico",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 93,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 82,
+        "quality": 86,
+        "organization": 79,
+        "commitment": 86,
+        "autonomy": 75,
+        "index": 82,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "9c528435-2aa5-496c-8854-bfd37a3c21de.jpg",
+    "submittedAt": "2026-07-02T13:16:52.928Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1KxgktbgkKGklQravOgWZyrUq-ldDdYxQ",
+    "photoDriveFileId": "1KxgktbgkKGklQravOgWZyrUq-ldDdYxQ",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1iLKqlQYO5lK2YZ1ZpjbeaxaXE45KvdRr/view?usp=drivesdk",
+      "fileId": "1iLKqlQYO5lK2YZ1ZpjbeaxaXE45KvdRr"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1Gtfw27v3S4MxlLRFk-QMK8GVOFIUxzrM/view?usp=drivesdk",
+      "fileId": "1Gtfw27v3S4MxlLRFk-QMK8GVOFIUxzrM"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1lAk2h_e-qW_STI6YD-HedpEW0kLZk3uX",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Emily Jesus dos Santos - Jardim Lilah - Promotora - S-82c7f0af"
+  },
+  {
+    "id": "S-f0914f4a",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Roseli Alves de Souza",
+    "unit": "74645-010",
+    "role": "Promotor",
+    "email": "roseli.asouza@adventistas.org",
+    "phone": "62999968004",
+    "birthDate": "15.07.1978",
+    "address": "Avenida Independência número 1730 quadra f lote 5 Leste vila Nova Goiânia Goiás",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 3,
+      "5": 1,
+      "6": 3,
+      "7": 0,
+      "8": 0,
+      "9": 1,
+      "10": 3,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 3,
+      "17": 0,
+      "18": 0,
+      "19": 1,
+      "20": 1,
+      "21": 1,
+      "22": 1,
+      "23": 2,
+      "24": 1,
+      "25": 0,
+      "26": 2,
+      "27": 2,
+      "28": 0,
+      "29": 2,
+      "30": 0,
+      "31": 2,
+      "32": 0,
+      "33": 2,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 0,
+      "41": 3,
+      "42": 0,
+      "43": 0,
+      "44": 2,
+      "45": 3,
+      "46": 3,
+      "47": 3,
+      "48": 0,
+      "49": 2,
+      "50": 2,
+      "51": 2,
+      "52": 2,
+      "53": 0,
+      "54": 2,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 3,
+      "59": 0,
+      "60": 3,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 79,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 73,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 81,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 81,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 73,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 83,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Sanguíneo",
+        "tertiary": "Colérico",
+        "primaryPercent": 27,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 47,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Força social, comunicação, energia para pessoas e influência."
+      },
+      "behavioralProfile": {
+        "profile": "Estavel",
+        "percent": 89,
+        "reason": "Busca equilíbrio, previsibilidade e convivência harmoniosa."
+      },
+      "productivity": {
+        "efficiency": 64,
+        "quality": 79,
+        "organization": 79,
+        "commitment": 79,
+        "autonomy": 71,
+        "index": 74,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000059252.jpg",
+    "submittedAt": "2026-07-02T13:06:37.477Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1ioDgd_4rnTF4HhoRuAWvZdAsxVtX7V-8",
+    "photoDriveFileId": "1ioDgd_4rnTF4HhoRuAWvZdAsxVtX7V-8",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1_8lme6oVXT-ZyD1JpkraaRJu5mrqeum9/view?usp=drivesdk",
+      "fileId": "1_8lme6oVXT-ZyD1JpkraaRJu5mrqeum9"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1kl163nGNbEkq3RL35bx45xLLGaqHjO8K/view?usp=drivesdk",
+      "fileId": "1kl163nGNbEkq3RL35bx45xLLGaqHjO8K"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1_xrhYXY4WIXZ6ya6yNDiauUSz6zy3BK2",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Roseli Alves de Souza - 74645-010 - Promotor - S-f0914f4a"
+  },
+  {
+    "id": "S-0b415500",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Maria Clara Andrade Oliveira",
+    "unit": "CAIS",
+    "role": "Promotora de vendas",
+    "email": "mariaclaraandradeoliveira02@gmail.com",
+    "phone": "11964245778",
+    "birthDate": "02/02/2008",
+    "address": "Estrada de Itapecerica, 6520. Parque Fernanda, São Paulo- SP",
+    "notes": "",
+    "answers": {
+      "1": 3,
+      "2": 0,
+      "3": 2,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 0,
+      "10": 0,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 2,
+      "15": 2,
+      "16": 0,
+      "17": 1,
+      "18": 0,
+      "19": 0,
+      "20": 0,
+      "21": 0,
+      "22": 2,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 3,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 1,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 0,
+      "37": 3,
+      "38": 0,
+      "39": 0,
+      "40": 0,
+      "41": 2,
+      "42": 0,
+      "43": 1,
+      "44": 0,
+      "45": 3,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 2,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 2,
+      "58": 0,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 88,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 90,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 75,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 88,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 96,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 92,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Sanguíneo",
+        "secondary": "Melancólico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 26,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 49,
+        "reason": "Força social, comunicação, energia para pessoas e influência. Segunda tendência: Análise, organização, detalhamento e busca por excelência."
+      },
+      "behavioralProfile": {
+        "profile": "Influenciador",
+        "percent": 93,
+        "reason": "Apresenta energia relacional, engajamento e capacidade de mobilização."
+      },
+      "productivity": {
+        "efficiency": 96,
+        "quality": 86,
+        "organization": 96,
+        "commitment": 96,
+        "autonomy": 93,
+        "index": 93,
+        "diagnosis": "Alta Performance"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 82,
+          "message": "Algumas inconsistências merecem revisão."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-02T12:57:06.496Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/102di81JNkXXXuTCpIDZegg2vSjGeeDFE/view?usp=drivesdk",
+      "fileId": "102di81JNkXXXuTCpIDZegg2vSjGeeDFE"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1wKu-jQrWwdgoRKWs6kHh_V5eptqG8sef/view?usp=drivesdk",
+      "fileId": "1wKu-jQrWwdgoRKWs6kHh_V5eptqG8sef"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1TswAvsm32gJw4l-HfVQiQkcpt7dvDNI-",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Maria Clara Andrade Oliveira - CAIS - Promotora de vendas - S-0b415500"
+  },
+  {
+    "id": "S-ba791eb0",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Denise Martins Alves",
+    "unit": "Cacli1",
+    "role": "Promotor",
+    "email": "gp-dealves@uol.com.br",
+    "phone": "11981865765",
+    "birthDate": "19/12/1979",
+    "address": "Rua Maiorca, 45 Jd São Bento Novo, Cep 05881-240",
+    "notes": "Não",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 2,
+      "8": 0,
+      "9": 1,
+      "10": 3,
+      "11": 1,
+      "12": 3,
+      "13": 2,
+      "14": 0,
+      "15": 2,
+      "16": 3,
+      "17": 1,
+      "18": 1,
+      "19": 2,
+      "20": 1,
+      "21": 0,
+      "22": 0,
+      "23": 2,
+      "24": 3,
+      "25": 1,
+      "26": 0,
+      "27": 1,
+      "28": 0,
+      "29": 2,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 1,
+      "39": 1,
+      "40": 0,
+      "41": 2,
+      "42": 3,
+      "43": 0,
+      "44": 0,
+      "45": 2,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 1,
+      "51": 2,
+      "52": 2,
+      "53": 0,
+      "54": 0,
+      "55": 0,
+      "56": 0,
+      "57": 1,
+      "58": 3,
+      "59": 0,
+      "60": 0,
+      "61": 3,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 83,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 73,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 75,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 81,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 83,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 77,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Colérico",
+        "tertiary": "Melancólico",
+        "primaryPercent": 29,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 46,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Analítico",
+        "percent": 86,
+        "reason": "Privilegia dados, precisão, planejamento e consistência de processo."
+      },
+      "productivity": {
+        "efficiency": 71,
+        "quality": 82,
+        "organization": 86,
+        "commitment": 68,
+        "autonomy": 75,
+        "index": 76,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-02T12:38:29.819Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1ArhCNfGvAnrPKp3RG9KRLmOadaVtNK7c/view?usp=drivesdk",
+      "fileId": "1ArhCNfGvAnrPKp3RG9KRLmOadaVtNK7c"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1a0lisI74_XFcDx0vUbSa3TCgs_Riheof/view?usp=drivesdk",
+      "fileId": "1a0lisI74_XFcDx0vUbSa3TCgs_Riheof"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1BDEBlx4CohmMRQiXvGiUeSSE0i-dmbT_",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Denise Martins Alves - Cacli1 - Promotor - S-ba791eb0"
+  },
+  {
+    "id": "S-2c1f1b14",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Natália Maria da Rocha",
+    "unit": "Eavb",
+    "role": "Aux. Adm - Promotor",
+    "email": "natalia.rocha@adventistas.org",
+    "phone": "11965235834",
+    "birthDate": "20061990",
+    "address": "Rua Luís Antônio Verney 71, cs 08 Jd. Casa Blanca, São Paulo - Sp",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 0,
+      "10": 1,
+      "11": 1,
+      "12": 0,
+      "13": 2,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 3,
+      "19": 3,
+      "20": 2,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 1,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 2,
+      "37": 1,
+      "38": 3,
+      "39": 0,
+      "40": 0,
+      "41": 2,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 2,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 2,
+      "50": 2,
+      "51": 2,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 2,
+      "58": 0,
+      "59": 0,
+      "60": 3,
+      "61": 3,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 85,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 83,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 81,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 92,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 92,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 88,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Colérico",
+        "tertiary": "Melancólico",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 93,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 93,
+        "organization": 93,
+        "commitment": 82,
+        "autonomy": 89,
+        "index": 89,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 92,
+          "message": "Boa consistência entre resposta direta e cenarios práticos."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "WhatsApp Image 2026-07-02 at 08.31.27.jpg",
+    "submittedAt": "2026-07-02T12:26:22.609Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1RAkKiunRfpQNpDTTxeSzSUl12HkblWrE",
+    "photoDriveFileId": "1RAkKiunRfpQNpDTTxeSzSUl12HkblWrE",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1yz6YeBf73PZKVobiz9nUtysPCkGVmPn9/view?usp=drivesdk",
+      "fileId": "1yz6YeBf73PZKVobiz9nUtysPCkGVmPn9"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1F2eiemPuOOzxAqDfQWqXK3FauYSB85RM/view?usp=drivesdk",
+      "fileId": "1F2eiemPuOOzxAqDfQWqXK3FauYSB85RM"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1UQ-6w6WGuMszNauK2CsWj7Or-7Ybrs5q",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Natália Maria da Rocha - Eavb - Aux. Adm - Promotor - S-2c1f1b14"
+  },
+  {
+    "id": "S-777860ef",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Natália Maria da Rocha",
+    "unit": "Eavb",
+    "role": "Aux. Adm - Promotor",
+    "email": "natalia.rocha@adventistas.org",
+    "phone": "11965235834",
+    "birthDate": "20061990",
+    "address": "Rua Luís Antônio Verney 71, cs 08 Jd. Casa Blanca, São Paulo - Sp",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 0,
+      "10": 1,
+      "11": 1,
+      "12": 0,
+      "13": 2,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 3,
+      "19": 3,
+      "20": 2,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 1,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 2,
+      "37": 1,
+      "38": 3,
+      "39": 0,
+      "40": 0,
+      "41": 2,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 2,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 2,
+      "50": 2,
+      "51": 2,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 2,
+      "58": 0,
+      "59": 0,
+      "60": 3,
+      "61": 3,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 85,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 83,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 81,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 92,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 92,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 88,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Colérico",
+        "tertiary": "Melancólico",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 93,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 93,
+        "organization": 93,
+        "commitment": 82,
+        "autonomy": 89,
+        "index": 89,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 92,
+          "message": "Boa consistência entre resposta direta e cenarios práticos."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "WhatsApp Image 2026-07-02 at 08.31.27.jpg",
+    "submittedAt": "2026-07-02T12:25:55.165Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1NQaNiOBV43JODYqaqOzjr_19hNyF5UQW",
+    "photoDriveFileId": "1NQaNiOBV43JODYqaqOzjr_19hNyF5UQW",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1VeoyVFx_vbc3X6qzbP2pzZQV2i8OXwJ7/view?usp=drivesdk",
+      "fileId": "1VeoyVFx_vbc3X6qzbP2pzZQV2i8OXwJ7"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1bNPs6s-gLV2P699XS-VKVYU8M91QUaql/view?usp=drivesdk",
+      "fileId": "1bNPs6s-gLV2P699XS-VKVYU8M91QUaql"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1NAtShuJEWxNBnET-93Xmu9YWnhLn3BLB",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Natália Maria da Rocha - Eavb - Aux. Adm - Promotor - S-777860ef"
+  },
+  {
+    "id": "S-85560e3b",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Sonia Michele Silva da Anunciação Rosa",
+    "unit": "CAEGW",
+    "role": "Promotor",
+    "email": "sonia.rosa@adventistas.org",
+    "phone": "11954057649",
+    "birthDate": "11/10/1981",
+    "address": "Rua Gonçalves dos Santos, 46",
+    "notes": "Sem mais.",
+    "answers": {
+      "1": 3,
+      "2": 0,
+      "3": 2,
+      "4": 3,
+      "5": 0,
+      "6": 3,
+      "7": 0,
+      "8": 2,
+      "9": 1,
+      "10": 1,
+      "11": 1,
+      "12": 3,
+      "13": 2,
+      "14": 3,
+      "15": 2,
+      "16": 2,
+      "17": 0,
+      "18": 1,
+      "19": 2,
+      "20": 1,
+      "21": 1,
+      "22": 3,
+      "23": 2,
+      "24": 1,
+      "25": 1,
+      "26": 0,
+      "27": 1,
+      "28": 0,
+      "29": 2,
+      "30": 0,
+      "31": 2,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 1,
+      "39": 1,
+      "40": 0,
+      "41": 3,
+      "42": 3,
+      "43": 1,
+      "44": 1,
+      "45": 1,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 0,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 0,
+      "55": 0,
+      "56": 1,
+      "57": 2,
+      "58": 0,
+      "59": 1,
+      "60": 3,
+      "61": 2,
+      "62": 3
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 75,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 81,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 73,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 88,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 79,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 65,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Melancólico",
+        "secondary": "Colérico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 30,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 44,
+        "reason": "Análise, organização, detalhamento e busca por excelência. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Analítico",
+        "percent": 84,
+        "reason": "Privilegia dados, precisão, planejamento e consistência de processo."
+      },
+      "productivity": {
+        "efficiency": 64,
+        "quality": 93,
+        "organization": 86,
+        "commitment": 82,
+        "autonomy": 75,
+        "index": 80,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "Screenshot_20260503_113801_Gallery.jpg",
+    "submittedAt": "2026-07-02T12:22:45.045Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=18AsJgwZIu_zvThliSykDYeU1cACVMERN",
+    "photoDriveFileId": "18AsJgwZIu_zvThliSykDYeU1cACVMERN",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1COKjsJt7NqpgOrHtZvU87GLwp3SwMixz/view?usp=drivesdk",
+      "fileId": "1COKjsJt7NqpgOrHtZvU87GLwp3SwMixz"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1fpfenoVbFMTR2i9Xaaocpfj1DWL3rjU6/view?usp=drivesdk",
+      "fileId": "1fpfenoVbFMTR2i9Xaaocpfj1DWL3rjU6"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/14cP3SwGVcCLpYaOOyDtVwbMoZwu97ThO",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Sonia Michele Silva da Anunciação Rosa - CAEGW - Promotor - S-85560e3b"
+  },
+  {
+    "id": "S-c2d0188b",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Luis Henrique neves de Carvalho",
+    "unit": "CAEA",
+    "role": "Promotor",
+    "email": "luissevencarvalho@gmail.com",
+    "phone": "11 934895632",
+    "birthDate": "27/12/1982",
+    "address": "Avenida Elias Yasbek 1851 -Tingidor - Embu das Artes",
+    "notes": "",
+    "answers": {
+      "1": 1,
+      "2": 2,
+      "3": 0,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 3,
+      "10": 1,
+      "11": 1,
+      "12": 0,
+      "13": 2,
+      "14": 0,
+      "15": 0,
+      "16": 1,
+      "17": 0,
+      "18": 1,
+      "19": 2,
+      "20": 2,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 2,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 2,
+      "41": 3,
+      "42": 0,
+      "43": 1,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 2,
+      "50": 3,
+      "51": 2,
+      "52": 3,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 1,
+      "60": 0,
+      "61": 3,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 75,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 75,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 79,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 79,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 96,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 90,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Sanguíneo",
+        "secondary": "Fleumático",
+        "tertiary": "Melancólico",
+        "primaryPercent": 27,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 48,
+        "reason": "Força social, comunicação, energia para pessoas e influência. Segunda tendência: Equilíbrio, estabilidade, mediação e constância."
+      },
+      "behavioralProfile": {
+        "profile": "Influenciador",
+        "percent": 88,
+        "reason": "Apresenta energia relacional, engajamento e capacidade de mobilização."
+      },
+      "productivity": {
+        "efficiency": 93,
+        "quality": 75,
+        "organization": 93,
+        "commitment": 82,
+        "autonomy": 82,
+        "index": 85,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-02T12:12:39.063Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1QgG-qcGT6MHA5Fbkl9Qj-gFxvMAjB239/view?usp=drivesdk",
+      "fileId": "1QgG-qcGT6MHA5Fbkl9Qj-gFxvMAjB239"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1Hpnx_5HInp8GNfOdy_4JH5G6ty8lHRTi/view?usp=drivesdk",
+      "fileId": "1Hpnx_5HInp8GNfOdy_4JH5G6ty8lHRTi"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1oo2rTRakVmjN5R-5a7XLePbWNjN4SZR-",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Luis Henrique neves de Carvalho - CAEA - Promotor - S-c2d0188b"
+  },
+  {
+    "id": "S-bf60f43a",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Pierry Pereira de Souza Silva",
+    "unit": "CAP",
+    "role": "Promotor/Monitor",
+    "email": "pereirapierry@gmail.com",
+    "phone": "11966553253",
+    "birthDate": "15/11/1990",
+    "address": "Rua jose pedro de oliveira correa 82 jardim mazza",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 2,
+      "11": 3,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 3,
+      "17": 0,
+      "18": 0,
+      "19": 2,
+      "20": 0,
+      "21": 1,
+      "22": 1,
+      "23": 2,
+      "24": 2,
+      "25": 1,
+      "26": 1,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 2,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 1,
+      "36": 3,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 2,
+      "41": 2,
+      "42": 1,
+      "43": 1,
+      "44": 0,
+      "45": 1,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 2,
+      "50": 2,
+      "51": 0,
+      "52": 0,
+      "53": 2,
+      "54": 2,
+      "55": 0,
+      "56": 0,
+      "57": 1,
+      "58": 3,
+      "59": 0,
+      "60": 3,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 79,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 83,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 75,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 83,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 83,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 79,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Sanguíneo",
+        "tertiary": "Melancólico",
+        "primaryPercent": 27,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 48,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Força social, comunicação, energia para pessoas e influência."
+      },
+      "behavioralProfile": {
+        "profile": "Estavel",
+        "percent": 83,
+        "reason": "Busca equilíbrio, previsibilidade e convivência harmoniosa."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 79,
+        "organization": 71,
+        "commitment": 86,
+        "autonomy": 82,
+        "index": 81,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000252113.jpg",
+    "submittedAt": "2026-07-02T11:20:48.491Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=10woSh5syYKW8RfMx7TohDpIEW85js2nv",
+    "photoDriveFileId": "10woSh5syYKW8RfMx7TohDpIEW85js2nv",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1Hlkqd0zu9QXhM14Znh4_NljyC8l32Daw/view?usp=drivesdk",
+      "fileId": "1Hlkqd0zu9QXhM14Znh4_NljyC8l32Daw"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1_iGQeA6jBOEv7FfPZT35y9M5TSQPxEgA/view?usp=drivesdk",
+      "fileId": "1_iGQeA6jBOEv7FfPZT35y9M5TSQPxEgA"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1mFEUk44oPWkayLKUVwf9APTc3cJSu0le",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Pierry Pereira de Souza Silva - CAP - Promotor-Monitor - S-bf60f43a"
+  },
+  {
+    "id": "S-bc5cefa1",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Giovani Barbosa Vieira",
+    "unit": "CATW",
+    "role": "Promotor",
+    "email": "giovani2006vieira@gmail.com",
+    "phone": "11911152204",
+    "birthDate": "22/04/2006",
+    "address": "Travessa Passareira, 100, Casa 2 - Conjunto Habitacional Instituto Adventista - São Paulo/SP",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 0,
+      "3": 2,
+      "4": 3,
+      "5": 0,
+      "6": 0,
+      "7": 3,
+      "8": 0,
+      "9": 0,
+      "10": 2,
+      "11": 1,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 2,
+      "16": 0,
+      "17": 3,
+      "18": 0,
+      "19": 0,
+      "20": 1,
+      "21": 2,
+      "22": 3,
+      "23": 2,
+      "24": 1,
+      "25": 0,
+      "26": 0,
+      "27": 1,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 1,
+      "34": 0,
+      "35": 0,
+      "36": 0,
+      "37": 1,
+      "38": 3,
+      "39": 2,
+      "40": 0,
+      "41": 0,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 1,
+      "51": 0,
+      "52": 1,
+      "53": 0,
+      "54": 1,
+      "55": 3,
+      "56": 0,
+      "57": 2,
+      "58": 3,
+      "59": 0,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 83,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 77,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 75,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 83,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 94,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 75,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Melancólico",
+        "secondary": "Fleumático",
+        "tertiary": "Colérico",
+        "primaryPercent": 27,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 48,
+        "reason": "Análise, organização, detalhamento e busca por excelência. Segunda tendência: Equilíbrio, estabilidade, mediação e constância."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 90,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 89,
+        "quality": 79,
+        "organization": 100,
+        "commitment": 86,
+        "autonomy": 89,
+        "index": 89,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Moderadamente Adaptável",
+          "message": "Se adapta, mas pode precisar de mais tempo e contexto."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "2bf5e9ec-0723-41e1-8380-9e7f33f9fed8.jpg",
+    "submittedAt": "2026-07-01T22:37:14.383Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1ccbSyjaHjRECWDCGyqEubmvgSHmsqWLl",
+    "photoDriveFileId": "1ccbSyjaHjRECWDCGyqEubmvgSHmsqWLl",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1PffsWa8SPcHfpolfeMhX4le1dcCID3-f/view?usp=drivesdk",
+      "fileId": "1PffsWa8SPcHfpolfeMhX4le1dcCID3-f"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1zN7vkdJU171qyatuA5BjEV-wdmT-hfOh/view?usp=drivesdk",
+      "fileId": "1zN7vkdJU171qyatuA5BjEV-wdmT-hfOh"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1u9-QenhAnnWzDMy0TnKabQ0eVwCHkrnC",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-02 - Giovani Barbosa Vieira - CATW - Promotor - S-bc5cefa1"
+  },
+  {
+    "id": "S-ecfd786d",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Luana Kerolayne Caetano Messias",
+    "unit": "CAP",
+    "role": "Monitora (atualmente promova de matrícula)",
+    "email": "luana225566@gmail.com",
+    "phone": "11978603146",
+    "birthDate": "27/10/1996",
+    "address": "Rua José Roberto de Souza N: 95",
+    "notes": "Gostaria de descrever o quanto gosto de trabalhar na instituição, é um sonho se realizando em proporcionar para os meus filhos educação de extrema qualidade e trabalhando com crianças, aprendi a ser uma mãe e uma pessoa melhor. Aprendi a sonhar e ter metas em minhas funções, espero um dia ser uma boa disciplinar.",
+    "answers": {
+      "1": 1,
+      "2": 0,
+      "3": 1,
+      "4": 3,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 3,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 1,
+      "21": 0,
+      "22": 3,
+      "23": 2,
+      "24": 0,
+      "25": 0,
+      "26": 3,
+      "27": 2,
+      "28": 0,
+      "29": 2,
+      "30": 0,
+      "31": 1,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 2,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 0,
+      "41": 0,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 0,
+      "51": 1,
+      "52": 0,
+      "53": 0,
+      "54": 2,
+      "55": 3,
+      "56": 1,
+      "57": 2,
+      "58": 0,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 90,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 85,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 83,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 88,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 85,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 88,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Colérico",
+        "tertiary": "Melancólico",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Estavel",
+        "percent": 89,
+        "reason": "Busca equilíbrio, previsibilidade e convivência harmoniosa."
+      },
+      "productivity": {
+        "efficiency": 79,
+        "quality": 89,
+        "organization": 89,
+        "commitment": 86,
+        "autonomy": 89,
+        "index": 86,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Multiplicador Institucional",
+        "description": "Top 5% dos avaliados, com capacidade comprovada de formar líderes e influenciar positivamente equipes e cultura organizacional."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000103216.jpg",
+    "submittedAt": "2026-07-01T22:20:22.665Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1T7UxBMTRdR_C0SsSP8rq2gLMPwZrwH-V",
+    "photoDriveFileId": "1T7UxBMTRdR_C0SsSP8rq2gLMPwZrwH-V",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1NzP92I_palEZUDHSVUBBsUqa8-DNuVYV/view?usp=drivesdk",
+      "fileId": "1NzP92I_palEZUDHSVUBBsUqa8-DNuVYV"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1Ea_sALJ0xADT0ohc1sLZso5gyKIbQcZ1/view?usp=drivesdk",
+      "fileId": "1Ea_sALJ0xADT0ohc1sLZso5gyKIbQcZ1"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/19KBjo_d98KnM3WH0Y5OlV7jRO1NTuYIW",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Luana Kerolayne Caetano Messias - CAP - Monitora (atualmente promotora de matrícula) - S-ecfd786d"
+  },
+  {
+    "id": "S-fd09ca96",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Philipe da Silva",
+    "unit": "EACF",
+    "role": "Promotor",
+    "email": "philipe.silva@adventistas.org",
+    "phone": "11945446854",
+    "birthDate": "12032001",
+    "address": "Rua João de Góis n•468, jardim Lídia",
+    "notes": "Acredito que um líder sabe ouvir e conduzir situações de stress, líder cuida e motiva, também ajuda na entrega de qualidade. Pressão não pode ser uma desculpa para entregar de qualquer jeito.",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 0,
+      "6": 1,
+      "7": 1,
+      "8": 0,
+      "9": 3,
+      "10": 0,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 1,
+      "16": 3,
+      "17": 0,
+      "18": 3,
+      "19": 0,
+      "20": 2,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 3,
+      "26": 0,
+      "27": 1,
+      "28": 2,
+      "29": 0,
+      "30": 0,
+      "31": 2,
+      "32": 2,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 0,
+      "39": 0,
+      "40": 2,
+      "41": 3,
+      "42": 1,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 3,
+      "47": 2,
+      "48": 0,
+      "49": 3,
+      "50": 2,
+      "51": 1,
+      "52": 2,
+      "53": 0,
+      "54": 1,
+      "55": 3,
+      "56": 1,
+      "57": 1,
+      "58": 0,
+      "59": 1,
+      "60": 3,
+      "61": 3,
+      "62": 1
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 83,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 75,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 77,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 73,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 73,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 90,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Colérico",
+        "secondary": "Sanguíneo",
+        "tertiary": "Fleumático",
+        "primaryPercent": 26,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 49,
+        "reason": "Decisão, iniciativa, foco em resultados e ação executiva. Segunda tendência: Força social, comunicação, energia para pessoas e influência."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 85,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 68,
+        "quality": 75,
+        "organization": 75,
+        "commitment": 71,
+        "autonomy": 75,
+        "index": 73,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "8ACC334B-242D-40A1-9C61-96DE247DAC06.jpg",
+    "submittedAt": "2026-07-01T20:49:23.063Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1cQte7r3_ebJSBX--OSOfTHXdZhyac75m",
+    "photoDriveFileId": "1cQte7r3_ebJSBX--OSOfTHXdZhyac75m",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1UnVcVyy-YJwGy-V8_RAwDHHUK1SdsT48/view?usp=drivesdk",
+      "fileId": "1UnVcVyy-YJwGy-V8_RAwDHHUK1SdsT48"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1kYF4r55rteKP_RcudMWuPeEZTAJ8xWcz/view?usp=drivesdk",
+      "fileId": "1kYF4r55rteKP_RcudMWuPeEZTAJ8xWcz"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1g9lxjlcvlF13jYRKxnB_Hx_0W8vhFQUV",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Philipe da Silva - EACF - Promotor - S-fd09ca96"
+  },
+  {
+    "id": "S-367eb5e1",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Rose Mary Pini Alves",
+    "unit": "EAA",
+    "role": "Promotor",
+    "email": "rosemary.alves@adventistas.org",
+    "phone": "11981473147",
+    "birthDate": "05/02/1967",
+    "address": "Rua Aureliano Guimarães, 65 / apto 43 - Vila Andrade CEP 05727-160",
+    "notes": "não",
+    "answers": {
+      "1": 3,
+      "2": 0,
+      "3": 1,
+      "4": 0,
+      "5": 1,
+      "6": 3,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 3,
+      "11": 1,
+      "12": 0,
+      "13": 0,
+      "14": 1,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 3,
+      "19": 0,
+      "20": 1,
+      "21": 0,
+      "22": 2,
+      "23": 0,
+      "24": 0,
+      "25": 1,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 1,
+      "37": 1,
+      "38": 3,
+      "39": 0,
+      "40": 0,
+      "41": 3,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 2,
+      "46": 3,
+      "47": 3,
+      "48": 0,
+      "49": 2,
+      "50": 0,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 3,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 92,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 92,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 90,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 92,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 92,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 83,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Melancólico",
+        "secondary": "Colérico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 27,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 47,
+        "reason": "Análise, organização, detalhamento e busca por excelência. Segunda tendência: Decisão, iniciativa, foco em resultados e ação executiva."
+      },
+      "behavioralProfile": {
+        "profile": "Analítico",
+        "percent": 95,
+        "reason": "Privilegia dados, precisão, planejamento e consistência de processo."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 96,
+        "organization": 86,
+        "commitment": 96,
+        "autonomy": 89,
+        "index": 91,
+        "diagnosis": "Alta Performance"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 78,
+          "message": "Algumas inconsistências merecem revisão."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "Foto Rose.jpg",
+    "submittedAt": "2026-07-01T19:59:57.791Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1T50Vbg2wo54o-ejGGQcSo9CmbsJ4cJJV",
+    "photoDriveFileId": "1T50Vbg2wo54o-ejGGQcSo9CmbsJ4cJJV",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1ATsFKZySW9HVc-oQ5nXNVcJqx60hvsFY/view?usp=drivesdk",
+      "fileId": "1ATsFKZySW9HVc-oQ5nXNVcJqx60hvsFY"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1l-0vVADo7tPDjaPMZO28V6IJUldY9-8g/view?usp=drivesdk",
+      "fileId": "1l-0vVADo7tPDjaPMZO28V6IJUldY9-8g"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1-mmcSYq2IB5qi1l9T2tdfmYnxdWLN_W0",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Rose Mary Pini Alves - EAA - Promotor - S-367eb5e1"
+  },
+  {
+    "id": "S-f4ee829c",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Maria Eduarda Silva Valentim",
+    "unit": "CAP",
+    "role": "Promotor/Auxiliar do SOE",
+    "email": "maria.valentim@adventistas.org",
+    "phone": "11958545336",
+    "birthDate": "19/05/2005",
+    "address": "rua dos mosaicos,225",
+    "notes": "",
+    "answers": {
+      "1": 1,
+      "2": 2,
+      "3": 2,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 3,
+      "8": 2,
+      "9": 0,
+      "10": 2,
+      "11": 1,
+      "12": 0,
+      "13": 2,
+      "14": 0,
+      "15": 2,
+      "16": 0,
+      "17": 0,
+      "18": 2,
+      "19": 3,
+      "20": 3,
+      "21": 0,
+      "22": 3,
+      "23": 0,
+      "24": 0,
+      "25": 1,
+      "26": 3,
+      "27": 2,
+      "28": 0,
+      "29": 1,
+      "30": 0,
+      "31": 0,
+      "32": 3,
+      "33": 0,
+      "34": 1,
+      "35": 1,
+      "36": 1,
+      "37": 2,
+      "38": 3,
+      "39": 1,
+      "40": 3,
+      "41": 0,
+      "42": 3,
+      "43": 0,
+      "44": 1,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 1,
+      "50": 0,
+      "51": 1,
+      "52": 3,
+      "53": 0,
+      "54": 3,
+      "55": 3,
+      "56": 0,
+      "57": 2,
+      "58": 3,
+      "59": 0,
+      "60": 3,
+      "61": 0,
+      "62": 3
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 75,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 58,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 69,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 75,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 69,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 81,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Sanguíneo",
+        "tertiary": "Melancólico",
+        "primaryPercent": 28,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 46,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Força social, comunicação, energia para pessoas e influência."
+      },
+      "behavioralProfile": {
+        "profile": "Estavel",
+        "percent": 81,
+        "reason": "Busca equilíbrio, previsibilidade e convivência harmoniosa."
+      },
+      "productivity": {
+        "efficiency": 64,
+        "quality": 68,
+        "organization": 71,
+        "commitment": 61,
+        "autonomy": 71,
+        "index": 67,
+        "diagnosis": "Atenção"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Moderado",
+          "message": "Pode postergar algumas atividades quando ha sobrecarga ou pouca clareza."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Coordenador",
+        "description": "Boa liderança operacional, relacionamento equilibrado e entrega consistente."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "F4A3AA48-F4C3-4A8D-9891-1456FF3D69A5.jpg",
+    "submittedAt": "2026-07-01T19:57:29.016Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1CBMo3XXO8M0e2eTY_8Jsqn7KtA2XpJ35",
+    "photoDriveFileId": "1CBMo3XXO8M0e2eTY_8Jsqn7KtA2XpJ35",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1H8x_EEuxZEaQv46sD6n9jSjTNhV3GufO/view?usp=drivesdk",
+      "fileId": "1H8x_EEuxZEaQv46sD6n9jSjTNhV3GufO"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/13LNIZdiEr-B45IYfFBxfkGTPKOgjiy9M/view?usp=drivesdk",
+      "fileId": "13LNIZdiEr-B45IYfFBxfkGTPKOgjiy9M"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/16hLNEoiPa27CsbzRCJVDvoSnWJauKfno",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Maria Eduarda Silva Valentim - CAP - Promotor-Auxiliar do SOE - S-f4ee829c"
+  },
+  {
+    "id": "S-b2168787",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Ismael Matheus Kauffman",
+    "unit": "CATS",
+    "role": "Promotor",
+    "email": "ismael.matheus@adventistas.org",
+    "phone": "11997171710",
+    "birthDate": "10042004",
+    "address": "Avenida João Paulo I 1973 - Apto 273 Bloco B Grupo 17 - Residencial Parque Firenze",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 2,
+      "3": 0,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 1,
+      "12": 3,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 1,
+      "17": 0,
+      "18": 3,
+      "19": 0,
+      "20": 1,
+      "21": 3,
+      "22": 0,
+      "23": 2,
+      "24": 0,
+      "25": 0,
+      "26": 3,
+      "27": 2,
+      "28": 3,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 2,
+      "35": 2,
+      "36": 1,
+      "37": 1,
+      "38": 1,
+      "39": 3,
+      "40": 0,
+      "41": 0,
+      "42": 2,
+      "43": 1,
+      "44": 2,
+      "45": 0,
+      "46": 3,
+      "47": 0,
+      "48": 1,
+      "49": 3,
+      "50": 3,
+      "51": 0,
+      "52": 0,
+      "53": 3,
+      "54": 1,
+      "55": 3,
+      "56": 3,
+      "57": 0,
+      "58": 0,
+      "59": 2,
+      "60": 3,
+      "61": 3,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 88,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 77,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 79,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 77,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 81,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 71,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Colérico",
+        "secondary": "Melancólico",
+        "tertiary": "Fleumático",
+        "primaryPercent": 26,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 48,
+        "reason": "Decisão, iniciativa, foco em resultados e ação executiva. Segunda tendência: Análise, organização, detalhamento e busca por excelência."
+      },
+      "behavioralProfile": {
+        "profile": "Executor",
+        "percent": 85,
+        "reason": "Tende a agir com prontidão, foco e busca de resolução imediata."
+      },
+      "productivity": {
+        "efficiency": 82,
+        "quality": 71,
+        "organization": 71,
+        "commitment": 82,
+        "autonomy": 57,
+        "index": 73,
+        "diagnosis": "Adequado"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Moderadamente Adaptável",
+          "message": "Se adapta, mas pode precisar de mais tempo e contexto."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Gestor",
+        "description": "Alta capacidade de conduzir pessoas, apoiar decisões e sustentar resultados com maturidade."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-01T19:49:13.344Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1OWdmPAN5-TxgJVsUpMZYyFlH0Y-F2mmQ/view?usp=drivesdk",
+      "fileId": "1OWdmPAN5-TxgJVsUpMZYyFlH0Y-F2mmQ"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1YiOqHlZ9w3skgbafezSTCImR1WCYPQ9y/view?usp=drivesdk",
+      "fileId": "1YiOqHlZ9w3skgbafezSTCImR1WCYPQ9y"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1HsJWy2cpZ2W8bkQ4E42GCuuOEeF-C98G",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Ismael Matheus Kauffman - CATS - Promotor - S-b2168787"
+  },
+  {
+    "id": "S-8135bcd1",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Victor Gaspary de Aquino",
+    "unit": "CATS",
+    "role": "Promotor",
+    "email": "gasparydeaquinovictor@gmail.com",
+    "phone": "11990267313",
+    "birthDate": "04042008",
+    "address": "Estrada de São Francisco 2701",
+    "notes": "",
+    "answers": {
+      "1": 3,
+      "2": 2,
+      "3": 0,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 0,
+      "8": 2,
+      "9": 0,
+      "10": 0,
+      "11": 1,
+      "12": 0,
+      "13": 1,
+      "14": 0,
+      "15": 2,
+      "16": 0,
+      "17": 0,
+      "18": 3,
+      "19": 0,
+      "20": 0,
+      "21": 2,
+      "22": 0,
+      "23": 2,
+      "24": 1,
+      "25": 0,
+      "26": 0,
+      "27": 3,
+      "28": 0,
+      "29": 0,
+      "30": 2,
+      "31": 0,
+      "32": 0,
+      "33": 1,
+      "34": 2,
+      "35": 0,
+      "36": 0,
+      "37": 1,
+      "38": 3,
+      "39": 0,
+      "40": 0,
+      "41": 0,
+      "42": 0,
+      "43": 1,
+      "44": 0,
+      "45": 1,
+      "46": 3,
+      "47": 0,
+      "48": 0,
+      "49": 0,
+      "50": 0,
+      "51": 2,
+      "52": 0,
+      "53": 0,
+      "54": 2,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 0,
+      "60": 3,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 85,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 83,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 92,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 88,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 83,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 81,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Fleumático",
+        "secondary": "Melancólico",
+        "tertiary": "Colérico",
+        "primaryPercent": 27,
+        "secondaryPercent": 26,
+        "tertiaryPercent": 47,
+        "reason": "Equilíbrio, estabilidade, mediação e constância. Segunda tendência: Análise, organização, detalhamento e busca por excelência."
+      },
+      "behavioralProfile": {
+        "profile": "Analítico",
+        "percent": 93,
+        "reason": "Privilegia dados, precisão, planejamento e consistência de processo."
+      },
+      "productivity": {
+        "efficiency": 86,
+        "quality": 93,
+        "organization": 86,
+        "commitment": 82,
+        "autonomy": 89,
+        "index": 87,
+        "diagnosis": "Muito Bom"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 92,
+          "message": "Boa consistência entre resposta direta e cenarios práticos."
+        }
+      },
+      "finalProfile": {
+        "title": "Diretor",
+        "description": "Liderança estratégica, visão de longo prazo e forte capacidade de desenvolver pessoas."
+      }
+    },
+    "photoMimeType": "",
+    "photoName": "",
+    "submittedAt": "2026-07-01T18:23:05.441Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "",
+    "photoDriveFileId": "",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1CneZGS9Gpovkdp73LQuAP47fwTbpGftO/view?usp=drivesdk",
+      "fileId": "1CneZGS9Gpovkdp73LQuAP47fwTbpGftO"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1D5_pPEGKsccglXTpIBaO6ekl3xdJrHGJ/view?usp=drivesdk",
+      "fileId": "1D5_pPEGKsccglXTpIBaO6ekl3xdJrHGJ"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1YmwxQ4W1kM4ESsGl7MQb9UCLBFkoAk4Z",
+    "driveCategory": "promotores",
+    "driveFolderTitle": "2026-07-01 - Victor Gaspary de Aquino - CATS - Promotor - S-8135bcd1"
+  },
+  {
+    "id": "S-0acf7efa",
+    "linkId": "L-publico",
+    "linkToken": "publico",
+    "promoterName": "Lindalva Barroso Dutra",
+    "unit": "APS",
+    "role": "Atendente de Call Center",
+    "email": "lindalvafisica5@gmail.com",
+    "phone": "11992874572",
+    "birthDate": "02101990",
+    "address": "Rua Pedro Riveira n 07 jardim IAE",
+    "notes": "",
+    "answers": {
+      "1": 0,
+      "2": 0,
+      "3": 1,
+      "4": 0,
+      "5": 1,
+      "6": 0,
+      "7": 2,
+      "8": 0,
+      "9": 3,
+      "10": 0,
+      "11": 1,
+      "12": 0,
+      "13": 1,
+      "14": 2,
+      "15": 2,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 2,
+      "20": 0,
+      "21": 1,
+      "22": 0,
+      "23": 2,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 1,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 3,
+      "37": 0,
+      "38": 3,
+      "39": 0,
+      "40": 0,
+      "41": 2,
+      "42": 3,
+      "43": 1,
+      "44": 1,
+      "45": 2,
+      "46": 0,
+      "47": 3,
+      "48": 0,
+      "49": 2,
+      "50": 2,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 1,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 3,
+      "59": 1,
+      "60": 0,
+      "61": 0,
+      "62": 0
+    },
+    "computed": {
+      "answeredCount": 62,
+      "totalQuestions": 62,
+      "indices": {
+        "leadershipPotential": {
+          "score": 92,
+          "label": "Potencial de Liderança",
+          "weight": 20,
+          "summary": "Leitura da capacidade de assumir, direcionar e influenciar a equipe."
+        },
+        "promotionPotential": {
+          "score": 94,
+          "label": "Potencial para Promoção",
+          "weight": 15,
+          "summary": "Indica prontidão para desafios maiores e responsabilidades ampliadas."
+        },
+        "emotionalIntelligence": {
+          "score": 85,
+          "label": "Inteligência Emocional",
+          "weight": 15,
+          "summary": "Mostra maturidade relacional, escuta, autocontrole e resposta ao feedback."
+        },
+        "professionalMaturity": {
+          "score": 90,
+          "label": "Maturidade Profissional",
+          "weight": 15,
+          "summary": "Avalia consistência, responsabilidade, postura e abertura ao crescimento."
+        },
+        "productivity": {
+          "score": 96,
+          "label": "Produtividade",
+          "weight": 15,
+          "summary": "Reflete eficiência, organização, disciplina e constância de entrega."
+        },
+        "interpersonalRelationship": {
+          "score": 90,
+          "label": "Relacionamento Interpessoal",
+          "weight": 10,
+          "summary": "Mede convivência, colaboração, confiança e gestão de divergências."
+        }
+      },
+      "temperament": {
+        "primary": "Sanguíneo",
+        "secondary": "Fleumático",
+        "tertiary": "Melancólico",
+        "primaryPercent": 26,
+        "secondaryPercent": 25,
+        "tertiaryPercent": 49,
+        "reason": "Força social, comunicação, energia para pessoas e influência. Segunda tendência: Equilíbrio, estabilidade, mediação e constância."
+      },
+      "behavioralProfile": {
+        "profile": "Influenciador",
+        "percent": 95,
+        "reason": "Apresenta energia relacional, engajamento e capacidade de mobilização."
+      },
+      "productivity": {
+        "efficiency": 93,
+        "quality": 93,
+        "organization": 96,
+        "commitment": 96,
+        "autonomy": 82,
+        "index": 92,
+        "diagnosis": "Alta Performance"
+      },
+      "alerts": {
+        "centralization": {
+          "level": "Baixo",
+          "message": "Bom equilíbrio entre direção, delegação e desenvolvimento da equipe."
+        },
+        "procrastination": {
+          "level": "Baixo",
+          "message": "Boa disciplina e baixa tendência a postergação."
+        },
+        "conflictRisk": {
+          "level": "Baixo",
+          "message": "Boa maturidade para lidar com divergências e feedbacks."
+        },
+        "changeResistance": {
+          "level": "Adaptável",
+          "message": "Boa adaptabilidade a mudanças e ajustes de processo."
+        },
+        "consistency": {
+          "score": 100,
+          "message": "Respostas altamente consistentes."
+        }
+      },
+      "finalProfile": {
+        "title": "Multiplicador Institucional",
+        "description": "Top 5% dos avaliados, com capacidade comprovada de formar líderes e influenciar positivamente equipes e cultura organizacional."
+      }
+    },
+    "photoMimeType": "image/jpeg",
+    "photoName": "1000437008.jpg",
+    "submittedAt": "2026-07-02T17:15:55.772Z",
+    "status": "received",
+    "storageStatus": "backup_only",
+    "driveErrors": [
+      "{\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n    \"errors\": [\n      {\n        \"message\": \"Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.\",\n        \"domain\": \"usageLimits\",\n        \"reason\": \"storageQuotaExceeded\"\n      }\n    ]\n  }\n}\n"
+    ],
+    "photoUrl": "https://drive.google.com/uc?export=view&id=1XOlxoCzMAjRTQ-PMRTV-ccXwsXyfL0rT",
+    "photoDriveFileId": "1XOlxoCzMAjRTQ-PMRTV-ccXwsXyfL0rT",
+    "driveSnapshot": {
+      "webViewLink": "https://drive.google.com/file/d/1u_lm6lg_WkjWZ5BLw6-35faAbyAc74FE/view?usp=drivesdk",
+      "fileId": "1u_lm6lg_WkjWZ5BLw6-35faAbyAc74FE"
+    },
+    "driveReport": {
+      "webViewLink": "https://drive.google.com/file/d/1qr4OwZG5skD9Hx06RwduEDK9jWEM3Syn/view?usp=drivesdk",
+      "fileId": "1qr4OwZG5skD9Hx06RwduEDK9jWEM3Syn"
+    },
+    "driveFolder": "https://drive.google.com/drive/folders/1M4i0gC6cBJHcnjlrh0yAhieZ3hAdszwh",
+    "driveCategory": "triagem",
+    "driveFolderTitle": "2026-07-02 - Lindalva Barroso Dutra - APS - Atendente de Call Center - S-0acf7efa"
+  }
+]
