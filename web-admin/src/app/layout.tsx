@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/contexts/ToastContext'
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-  weight: ['400', '500', '600', '700', '800', '900'],
-})
 
 export const viewport: Viewport = {
   themeColor: '#003F75',
@@ -17,13 +9,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'SOFI — Sistema de Gestão APS30',
+  title: 'SOFI - Sistema de Gestão APS30',
   description: 'Plataforma institucional de gestão educacional, pessoas, matrículas e inteligência da IA da Educação.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SOFI — APS30',
+    title: 'SOFI - APS30',
     startupImage: ['/aps30-logo.png'],
   },
   icons: {
@@ -44,10 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <head>
-        <meta name="application-name" content="SOFI — APS30" />
+        <meta name="application-name" content="SOFI - APS30" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="SOFI — APS30" />
+        <meta name="apple-mobile-web-app-title" content="SOFI - APS30" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#003F75" />
         <meta name="msapplication-tap-highlight" content="no" />
@@ -56,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
       </head>
-      <body className={`${inter.variable} font-sans`}>
+      <body className="font-sans">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
