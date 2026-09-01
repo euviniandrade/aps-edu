@@ -11,8 +11,15 @@ module.exports = async function (fastify) {
     if (!['admin'].includes(request.currentUser.role.slug)) {
       return reply.code(403).send({ error: 'Sem permissão' })
     }
-    const { name, city, type, region } = request.body
-    const unit = await prisma.unit.create({ data: { name, city, type: type || 'school', region } })
+    const { name, code, city, type, region } = request.body
+    const safeCode = String(code || name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 24)
+      .toUpperCase()
+    const unit = await prisma.unit.create({ data: { code: safeCode || `UN-${Date.now()}`, name, city, type: type || 'school', region } })
     return reply.code(201).send(unit)
   })
 

@@ -76,7 +76,12 @@ module.exports = async function (fastify) {
         assignedToId, unitId: unitId || user.unitId,
         eventId, createdById: user.id,
         checklists: checklists?.length ? {
-          create: checklists.map((c, i) => ({ title: c.title, order: i }))
+          create: checklists.map((c, i) => ({
+            title: c.title,
+            order: i,
+            completed: Boolean(c.completed ?? c.isCompleted),
+            isCompleted: Boolean(c.isCompleted ?? c.completed),
+          }))
         } : undefined
       },
       include: {
@@ -165,22 +170,26 @@ module.exports = async function (fastify) {
 
   // PUT /api/tasks/:id/checklists/:checkId
   fastify.put('/:id/checklists/:checkId', { preHandler: [authenticate] }, async (request, reply) => {
-    const { isCompleted, title } = request.body
+    const { isCompleted, completed, title } = request.body
+    const nextCompleted = isCompleted !== undefined ? Boolean(isCompleted) : completed !== undefined ? Boolean(completed) : undefined
     const updated = await prisma.taskChecklist.update({
       where: { id: request.params.checkId },
-      data: { ...(isCompleted !== undefined && { isCompleted }), ...(title && { title }) }
+      data: {
+        ...(nextCompleted !== undefined && { isCompleted: nextCompleted, completed: nextCompleted }),
+        ...(title && { title }),
+      }
     })
 
     // Atualizar progresso da tarefa automaticamente
     const all = await prisma.taskChecklist.findMany({ where: { taskId: request.params.id } })
     if (all.length > 0) {
-      const done = all.filter(c => c.id === updated.id ? isCompleted : c.isCompleted).length
+      const done = all.filter(c => c.id === updated.id ? nextCompleted : (c.isCompleted ?? c.completed)).length
       const progress = Math.round((done / all.length) * 100)
       await prisma.task.update({ where: { id: request.params.id }, data: { progressPercent: progress } })
     }
 
     // Gamificação: pontos por evidência de progresso
-    if (isCompleted) {
+    if (nextCompleted) {
       await gamificationService.addPoints(request.currentUser.id, 'checklist_item')
     }
 
@@ -212,7 +221,8 @@ module.exports = async function (fastify) {
     // Salvar em disco: uploads/tasks/:taskId/
     const safeFilename = data.filename.replace(/[^a-zA-Z0-9._-]/g, '_')
     const fileName = `${Date.now()}_${safeFilename}`
-    const uploadDir = path.join(process.cwd(), 'uploads', 'tasks', request.params.id)
+    const dataDir = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/data' : process.cwd())
+    const uploadDir = path.join(dataDir, 'uploads', 'tasks', request.params.id)
     fs.mkdirSync(uploadDir, { recursive: true })
     fs.writeFileSync(path.join(uploadDir, fileName), fileBuffer)
 

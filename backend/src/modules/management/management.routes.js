@@ -4,9 +4,10 @@ const { randomUUID } = require('crypto')
 const { authenticate } = require('../../shared/middleware/auth.middleware')
 const { uploadDriveFile } = require('../integrations/integrations.service')
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data'))
 const DATA_FILE = path.join(DATA_DIR, 'management-state.json')
 const PEOPLE_BACKUP_DIR = path.join(DATA_DIR, 'people-backups')
+const RESTORED_PEOPLE_FILE = path.join(DATA_DIR, 'restored-promoter-submissions.json')
 
 const defaultState = {
   work: [
@@ -55,10 +56,17 @@ function readState() {
   ensureDataFile()
   try {
     const state = { ...defaultState, ...JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) }
-    state.people = Array.isArray(state.people) ? state.people.map(normalizePerson) : defaultState.people.map(normalizePerson)
+    const restoredPeople = readRestoredPeople()
+    const sourcePeople = Array.isArray(state.people) && state.people.length
+      ? state.people
+      : restoredPeople.length
+        ? restoredPeople
+        : defaultState.people
+    state.people = sourcePeople.map(normalizePerson)
     return state
   } catch {
-    return { ...defaultState, people: defaultState.people.map(normalizePerson) }
+    const restoredPeople = readRestoredPeople()
+    return { ...defaultState, people: (restoredPeople.length ? restoredPeople : defaultState.people).map(normalizePerson) }
   }
 }
 
@@ -117,6 +125,57 @@ function parseMaybeJsonObject(value) {
     return parsed && typeof parsed === 'object' ? parsed : undefined
   } catch {
     return undefined
+  }
+}
+
+function readRestoredPeople() {
+  try {
+    if (!fs.existsSync(RESTORED_PEOPLE_FILE)) return []
+    const submissions = JSON.parse(fs.readFileSync(RESTORED_PEOPLE_FILE, 'utf8'))
+    if (!Array.isArray(submissions)) return []
+    return submissions
+      .map(item => {
+        const computed = item?.computed || {}
+        const indices = computed.indices || {}
+        const productivity = computed.productivity || {}
+        const temperament = computed.temperament || {}
+        const leadership = Number(indices.leadershipPotential?.score || indices.promotionPotential?.score || 70)
+        const productivityIndex = Number(productivity.index || indices.productivity?.score || 70)
+        const relationship = Number(indices.interpersonalRelationship?.score || temperament.primaryPercent || 75)
+        return {
+          id: `FORM-${item.id || item.email || item.promoterName}`,
+          promoterSubmissionId: item.id,
+          promoterLinkToken: item.linkToken,
+          name: item.promoterName,
+          role: item.role || 'Promotor',
+          unit: item.unit || '',
+          email: item.email || '',
+          phone: item.phone || '',
+          birthDate: item.birthDate || '',
+          document: item.document || '',
+          cpf: item.cpf || '',
+          rg: item.rg || '',
+          documentStatus: item.documentStatus || '',
+          training: String(item.role || '').toLowerCase().includes('diretor') ? 'Diretores' : 'Promotores de matrícula',
+          nextReview: 'Revisar formulário',
+          nextAction: 'Analisar formulário recebido e validar plano individual.',
+          score: Math.round(((leadership + productivityIndex + relationship) / 3) / 20),
+          leadershipPercent: leadership,
+          productivityIndex,
+          behavioralProfilePercent: relationship,
+          bio: item.notes || computed.finalProfile?.description || '',
+          strengths: [computed.finalProfile?.title, temperament.primary, computed.behavioralProfile?.profile].filter(Boolean),
+          risks: [],
+          files: [item.driveFolder, item.driveSnapshot?.webViewLink, item.driveReport?.webViewLink, item.photoUrl].filter(Boolean).map(String),
+          assessmentForm: item,
+          driveSyncAt: item.submittedAt || '',
+          driveSyncProvider: 'Google Drive',
+          driveSyncFile: item.driveSnapshot?.webViewLink || '',
+        }
+      })
+      .filter(person => String(person.name || '').trim())
+  } catch {
+    return []
   }
 }
 

@@ -66,11 +66,14 @@ module.exports = async function (fastify) {
       return reply.code(403).send({ error: 'Apenas gestores podem criar eventos' })
     }
 
-    const { name, description, startDate, endDate, location, unitId, responsibleIds, timeline } = request.body
+    const { name, title, description, startDate, endDate, location, unitId, responsibleIds, timeline } = request.body
+    const eventName = name || title
 
     const event = await prisma.event.create({
       data: {
-        name, description,
+        name: eventName,
+        title: eventName,
+        description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         location,
@@ -105,7 +108,7 @@ module.exports = async function (fastify) {
         userId: resp.user.id,
         type: 'event',
         title: 'Você foi adicionado como responsável',
-        body: `Evento: ${event.name} — ${new Date(event.startDate).toLocaleDateString('pt-BR')}`,
+        body: `Evento: ${event.name || event.title} — ${new Date(event.startDate).toLocaleDateString('pt-BR')}`,
         data: { eventId: event.id },
         fcmToken: resp.user.fcmToken
       })
@@ -123,12 +126,13 @@ module.exports = async function (fastify) {
     const canEdit = managerSlugs.includes(user.role.slug) || event.createdById === user.id
     if (!canEdit) return reply.code(403).send({ error: 'Sem permissão' })
 
-    const { name, description, status, startDate, endDate, location, progressPercent } = request.body
+    const { name, title, description, status, startDate, endDate, location, progressPercent } = request.body
+    const eventName = name || title
 
     const updated = await prisma.event.update({
       where: { id: event.id },
       data: {
-        ...(name && { name }),
+        ...(eventName && { name: eventName, title: eventName }),
         ...(description !== undefined && { description }),
         ...(status && { status }),
         ...(startDate && { startDate: new Date(startDate) }),
@@ -194,7 +198,8 @@ module.exports = async function (fastify) {
     // Salvar em disco: uploads/events/:eventId/
     const safeFilename = data.filename.replace(/[^a-zA-Z0-9._-]/g, '_')
     const fileName = `${Date.now()}_${safeFilename}`
-    const uploadDir = path.join(process.cwd(), 'uploads', 'events', request.params.id)
+    const dataDir = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/data' : process.cwd())
+    const uploadDir = path.join(dataDir, 'uploads', 'events', request.params.id)
     fs.mkdirSync(uploadDir, { recursive: true })
     fs.writeFileSync(path.join(uploadDir, fileName), fileBuffer)
 
@@ -232,7 +237,7 @@ module.exports = async function (fastify) {
     return reply.send({
       event: {
         id: event.id,
-        name: event.name,
+        name: event.name || event.title,
         description: event.description,
         startDate: event.startDate,
         endDate: event.endDate,

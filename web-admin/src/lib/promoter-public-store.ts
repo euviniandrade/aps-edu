@@ -1,4 +1,5 @@
 import { createSign, randomUUID } from 'crypto'
+import restoredPromoterSubmissions from '@/data/restored-promoter-submissions.json'
 
 type PublicSubmissionPayload = {
   promoterName?: string
@@ -34,6 +35,10 @@ type BackupResult = {
   error?: string
   record?: Record<string, unknown>
 }
+
+const restoredBackupSubmissions = Array.isArray(restoredPromoterSubmissions)
+  ? (restoredPromoterSubmissions as any[]).filter(item => item && typeof item === 'object')
+  : []
 
 function clean(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
@@ -312,6 +317,15 @@ export function publicPromoterLink(token: string) {
 export async function listPublicPromoterSubmissions() {
   const backupSubmissions = await listAppsScriptBackups().catch(() => [])
   if (clean(process.env.GOOGLE_DRIVE_READ_PROMOTER_SUBMISSIONS).toLowerCase() !== 'true') {
+    if (!backupSubmissions.length && restoredBackupSubmissions.length) {
+      return {
+        status: 200,
+        data: {
+          submissions: restoredBackupSubmissions,
+          driveErrors: ['Usando backup restaurado localmente porque a leitura do Google Drive não está habilitada.'],
+        },
+      }
+    }
     return { status: 200, data: { submissions: backupSubmissions, driveErrors: [] } }
   }
 
@@ -320,8 +334,8 @@ export async function listPublicPromoterSubmissions() {
     return {
       status: 200,
       data: {
-        submissions: backupSubmissions,
-        driveErrors: [
+      submissions: backupSubmissions.length ? backupSubmissions : restoredBackupSubmissions,
+      driveErrors: [
           configError === 'invalid'
             ? 'GOOGLE_SERVICE_ACCOUNT_JSON esta cadastrado, mas o valor nao e um JSON valido.'
             : 'Google Drive ainda nao configurado na Vercel.',
@@ -332,7 +346,13 @@ export async function listPublicPromoterSubmissions() {
 
   const rootFolderId = clean(process.env.GOOGLE_DRIVE_PROMOTER_ROOT_FOLDER_ID)
   if (!rootFolderId) {
-    return { status: 200, data: { submissions: backupSubmissions, driveErrors: ['Pasta raiz do Google Drive nao configurada.'] } }
+    return {
+      status: 200,
+      data: {
+        submissions: backupSubmissions.length ? backupSubmissions : restoredBackupSubmissions,
+        driveErrors: ['Pasta raiz do Google Drive não configurada.'],
+      },
+    }
   }
 
   const folders = await listDriveFiles(
@@ -363,6 +383,7 @@ export async function listPublicPromoterSubmissions() {
   }
 
   const byId = new Map<string, Record<string, unknown>>()
+  for (const item of restoredBackupSubmissions) byId.set(String(item.id || randomUUID()), item)
   for (const item of backupSubmissions) byId.set(String(item.id || randomUUID()), item)
   for (const item of submissions) byId.set(String(item.id || randomUUID()), item)
 

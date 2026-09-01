@@ -481,7 +481,7 @@ Juntos, seguimos com Propósito em Ação! 💛🩵🧡💙
   for (const badge of badges) {
     await prisma.badge.upsert({
       where: { id: `badge-${badge.order.toString().padStart(2, '0')}` },
-      create: { id: `badge-${badge.order.toString().padStart(2, '0')}`, ...badge },
+      create: { id: `badge-${badge.order.toString().padStart(2, '0')}`, ...badge, unlockRule: JSON.stringify(badge.unlockRule || {}) },
       update: {}
     })
     badgesCreated++

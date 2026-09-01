@@ -17,7 +17,9 @@ import {
   type AcademicState,
   type AcademicSubject,
   academicEventsFromState,
+  fetchAcademicState,
   readAcademicState,
+  saveAcademicState,
   writeAcademicState,
 } from '@/lib/academic'
 
@@ -54,14 +56,37 @@ export default function AcademicoPage() {
   const [activitySubjectId, setActivitySubjectId] = useState('')
   const [activityDate, setActivityDate] = useState(todayIso())
   const [syncMessage, setSyncMessage] = useState('')
+  const [remoteLoaded, setRemoteLoaded] = useState(false)
 
   useEffect(() => {
     setSemesterId(current => current || state.semesters.find(semester => semester.active)?.id || state.semesters[0]?.id || '')
   }, [state.semesters])
 
   useEffect(() => {
+    let active = true
+    fetchAcademicState()
+      .then(remoteState => {
+        if (!active) return
+        writeAcademicState(remoteState)
+        setState(remoteState)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setRemoteLoaded(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
     writeAcademicState(state)
-  }, [state])
+    if (!remoteLoaded) return
+    const timer = window.setTimeout(() => {
+      saveAcademicState(state).catch(() => {})
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [state, remoteLoaded])
 
   const activeModules = useMemo(
     () => state.modules.filter(module => module.semesterId === semesterId),

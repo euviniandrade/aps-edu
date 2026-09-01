@@ -37,6 +37,17 @@ function calculateLevel(points) {
   }
 }
 
+function parseUnlockRule(value) {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  if (typeof value !== 'string') return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
 async function addPoints(userId, action) {
   const pts = POINTS[action] || 0
   if (!pts) return
@@ -132,7 +143,7 @@ async function checkBadges(userId, userPoints) {
     for (const badge of allBadges) {
       if (earnedIds.has(badge.id)) continue
 
-      const rule = badge.unlockRule
+      const rule = parseUnlockRule(badge.unlockRule)
       const earned = await evaluateRule(rule, userId, userPoints)
 
       if (earned) {

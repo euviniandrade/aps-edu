@@ -99,6 +99,36 @@ export function writeAcademicState(state: AcademicState) {
   window.dispatchEvent(new CustomEvent(ACADEMIC_UPDATED_EVENT, { detail: next }))
 }
 
+export async function fetchAcademicState(): Promise<AcademicState> {
+  const response = await fetch('/api/academic', {
+    method: 'GET',
+    headers: { 'accept': 'application/json' },
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error('Não foi possível carregar o ambiente acadêmico.')
+  const data = await response.json()
+  return {
+    semesters: Array.isArray(data.semesters) ? data.semesters : academicSeed.semesters,
+    modules: Array.isArray(data.modules) ? data.modules : academicSeed.modules,
+    subjects: Array.isArray(data.subjects) ? data.subjects : academicSeed.subjects,
+    activities: Array.isArray(data.activities) ? data.activities : academicSeed.activities,
+    updatedAt: data.updatedAt || new Date().toISOString(),
+  }
+}
+
+export async function saveAcademicState(state: AcademicState): Promise<AcademicState> {
+  const next = { ...state, updatedAt: new Date().toISOString() }
+  writeAcademicState(next)
+  const response = await fetch('/api/academic', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+    body: JSON.stringify(next),
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error('Não foi possível salvar o ambiente acadêmico.')
+  return response.json()
+}
+
 export function academicEventsFromState(state: AcademicState) {
   return state.activities
     .filter(activity => activity.dueDate && activity.status !== 'concluida')

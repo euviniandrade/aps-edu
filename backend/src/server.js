@@ -4,7 +4,8 @@ const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
 
 // Garante que a pasta de uploads existe ao iniciar
-const uploadsDir = path.join(process.cwd(), 'uploads')
+const dataDir = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/data' : process.cwd())
+const uploadsDir = path.join(dataDir, 'uploads')
 fs.mkdirSync(uploadsDir, { recursive: true })
 
 // Plugins
@@ -61,6 +62,7 @@ fastify.register(require('./modules/roles/roles.routes'), { prefix: '/api/roles'
 fastify.register(require('./modules/units/units.routes'), { prefix: '/api/units' })
 fastify.register(require('./modules/ai/ai.routes'), { prefix: '/api/ai' })
 fastify.register(require('./modules/management/management.routes'), { prefix: '/api/management' })
+fastify.register(require('./modules/academic/academic.routes'), { prefix: '/api/academic' })
 fastify.register(require('./modules/integrations/integrations.routes'), { prefix: '/api/integrations' })
 fastify.register(require('./modules/calendar/calendar.routes'), { prefix: '/api/calendar' })
 fastify.register(require('./modules/gmail/gmail.routes'), { prefix: '/api/gmail' })

@@ -201,6 +201,22 @@ async function proxy(request: NextRequest, context: RouteContext) {
       try { body = bodyText ? JSON.parse(bodyText) : {} } catch { body = {} }
       const email = String(body.email || '').trim().toLowerCase()
       const password = String(body.password || '')
+      try {
+        const backendResponse = await fetch(`${getApiBase()}/auth/login`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+          body: bodyText || JSON.stringify(body),
+          cache: 'no-store',
+        })
+        if (backendResponse.ok) {
+          const contentType = backendResponse.headers.get('content-type') || 'application/json'
+          return new NextResponse(backendResponse.body, {
+            status: backendResponse.status,
+            statusText: backendResponse.statusText,
+            headers: { 'content-type': contentType },
+          })
+        }
+      } catch {}
       if (LOCAL_ADMIN_EMAILS.has(email) && LOCAL_ADMIN_PASSWORDS.has(password)) {
         return NextResponse.json({
           accessToken: 'local-admin-token',
@@ -248,6 +264,23 @@ async function proxy(request: NextRequest, context: RouteContext) {
     }
 
     if (path[1] === 'me' && request.method === 'GET') {
+      const token = getBearerToken(request)
+      if (token && token !== 'local-admin-token') {
+        const target = new URL(`${getApiBase()}/auth/me`)
+        const response = await fetch(target, {
+          method: 'GET',
+          headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+          cache: 'no-store',
+        })
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || 'application/json'
+          return new NextResponse(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: { 'content-type': contentType },
+          })
+        }
+      }
       return NextResponse.json({
         ...localAdminUser('admin@aps.edu.br'),
         points: 0,

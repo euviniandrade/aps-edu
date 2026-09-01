@@ -5,7 +5,7 @@ const { authenticate } = require('../../shared/middleware/auth.middleware')
 const prisma = require('../../shared/config/prisma')
 const { createDriveFolder, uploadDriveFile } = require('../integrations/integrations.service')
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data'))
 const DATA_FILE = path.join(DATA_DIR, 'promoter-forms-state.json')
 const MANAGEMENT_FILE = path.join(DATA_DIR, 'management-state.json')
 
