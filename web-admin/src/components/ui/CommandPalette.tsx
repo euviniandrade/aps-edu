@@ -19,7 +19,7 @@ const NAV_COMMANDS = [
   { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: 'D', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
   { id: 'go-tasks',         label: 'Ir para Central de Tarefas', icon: 'T', path: '/tasks',     keywords: ['task', 'tarefa', 'projeto', 'kanban'] },
   { id: 'go-academico',     label: 'Ir para Acadêmico',     icon: 'A', path: '/academico',     keywords: ['faculdade', 'academico', 'acadêmico', 'semestre', 'materias', 'matérias', 'provas', 'atividades', 'portal do aluno'] },
-  { id: 'go-estoque',       label: 'Ir para Estoque',       icon: '??', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimonio', 'inventario', 'compras'] },
+  { id: 'go-estoque',       label: 'Ir para Estoque',       icon: 'E', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimônio', 'inventário', 'compras'] },
   { id: 'go-reports',       label: 'Ir para Relatórios',    icon: 'R', path: '/reports',       keywords: ['relatorio', 'grafico'] },
   { id: 'go-users',         label: 'Ir para Pessoas',       icon: 'P', path: '/pessoas',       keywords: ['usuario', 'pessoa', 'membro', 'equipe', 'relatorios', 'relatórios'] },
   { id: 'go-units',         label: 'Ir para Unidades',      icon: 'U', path: '/units',         keywords: ['colegio', 'unidade', 'rede', 'escola'] },
@@ -28,10 +28,10 @@ const NAV_COMMANDS = [
   { id: 'go-dashboard',     label: 'Dashboard antigo',      icon: 'D', path: '/dashboard',     keywords: ['home', 'inicio', 'dashboard antigo'] },
   { id: 'go-events',        label: 'Eventos',               icon: 'E', path: '/events',        keywords: ['evento', 'agenda', 'calendario'] },
   { id: 'go-announcements', label: 'Ir para Mural',         icon: 'M', path: '/announcements', keywords: ['mural', 'aviso', 'comunicado'] },
-  { id: 'go-notif',         label: 'Notificações',          icon: 'N', path: '/notificações',  keywords: ['notif', 'alerta'] },
+  { id: 'go-notif',         label: 'Notificações',          icon: 'N', path: '/notificacoes',  keywords: ['notif', 'alerta'] },
   { id: 'go-sofi',          label: 'Ferramentas pessoais',  icon: 'S', path: '/minha-area',    keywords: ['ia', 'ai', 'assistente', 'chat', 'cofre', 'notas', 'caderno'] },
-  { id: 'go-inovação',      label: 'IA da Educação',             icon: 'I', path: '/inovação',      keywords: ['inovação', 'ia', 'agentes', 'scanner', 'gpt', 'gemini', 'claude', 'grok', 'perplexity', 'dados'] },
-  { id: 'go-config',        label: 'Configurações',         icon: 'C', path: '/configurações', keywords: ['config', 'perfil', 'senha'] },
+  { id: 'go-inovação',      label: 'IA da Educação',             icon: 'I', path: '/inovacao',      keywords: ['inovação', 'ia', 'agentes', 'scanner', 'gpt', 'gemini', 'claude', 'grok', 'perplexity', 'dados'] },
+  { id: 'go-config',        label: 'Configurações',         icon: 'C', path: '/configuracoes', keywords: ['config', 'perfil', 'senha'] },
 ]
 
 interface CommandPaletteProps {

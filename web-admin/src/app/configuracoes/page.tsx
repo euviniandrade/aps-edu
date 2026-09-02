@@ -6,18 +6,17 @@ import api from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
 const darkField = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  color: 'white',
+  background: '#FFFFFF',
+  border: '1px solid #C9DBEA',
+  color: '#001B3F',
 } as React.CSSProperties
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div
-    className="rounded-2xl overflow-hidden mb-5"
-    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+    className="mb-5 overflow-hidden rounded-[24px] border border-[#D8E5F0] bg-white shadow-[0_18px_44px_rgba(0,63,117,0.07)]"
   >
-    <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <h2 className="text-sm font-bold text-white">{title}</h2>
+    <div className="border-b border-[#E3EEF7] px-5 py-4">
+      <h2 className="text-sm font-black text-[#001B3F]">{title}</h2>
     </div>
     <div className="p-5">{children}</div>
   </div>
@@ -87,7 +86,7 @@ export default function ConfiguraçõesPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl">
+      <div className="max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6 animate-fade-in">
           <div
@@ -97,18 +96,19 @@ export default function ConfiguraçõesPage() {
             {userInitial}
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-white">{user?.name || 'Carregando...'}</h1>
-            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#6B7F94]">Configurações</p>
+            <h1 className="mt-1 text-3xl font-black text-[#001B3F]">{user?.name || 'Carregando...'}</h1>
+            <p className="mt-1 text-sm font-semibold text-[#5D7085]">
               {roleName} · {user?.unit?.name || user?.unitName || 'Sem unidade'}
             </p>
           </div>
         </div>
 
         {/* Profile */}
-        <Section title="👤 Informações do Perfil">
+        <Section title="Informações do perfil">
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                 Nome completo
               </label>
               <input
@@ -119,17 +119,17 @@ export default function ConfiguraçõesPage() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                 E-mail (somente leitura)
               </label>
               <input
                 type="email" value={form.email} readOnly
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style={{ ...darkField, opacity: 0.5, cursor: 'not-allowed' }}
+                style={{ ...darkField, background: '#F7FBFF', color: '#5D7085', cursor: 'not-allowed' }}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                 Telefone
               </label>
               <input
@@ -150,16 +150,16 @@ export default function ConfiguraçõesPage() {
                 boxShadow: '0 4px 16px rgba(248,163,3,0.3)',
               }}
             >
-              {saving ? 'Salvando...' : '💾 Salvar Perfil'}
+              {saving ? 'Salvando...' : 'Salvar perfil'}
             </button>
           </div>
         </Section>
 
         {/* Password */}
-        <Section title="🔒 Alterar Senha">
+        <Section title="Alterar senha">
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                 Senha atual
               </label>
               <input
@@ -170,9 +170,9 @@ export default function ConfiguraçõesPage() {
                 style={darkField}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                   Nova senha
                 </label>
                 <input
@@ -184,7 +184,7 @@ export default function ConfiguraçõesPage() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                   Confirmar nova
                 </label>
                 <input
@@ -197,7 +197,7 @@ export default function ConfiguraçõesPage() {
               </div>
             </div>
             {pwForm.next && pwForm.confirm && pwForm.next !== pwForm.confirm && (
-              <p className="text-xs" style={{ color: '#FF4757' }}>⚠️ As senhas não conferem</p>
+              <p className="text-xs font-bold" style={{ color: '#FF4757' }}>As senhas não conferem.</p>
             )}
             <button
               onClick={savePassword}
@@ -209,13 +209,13 @@ export default function ConfiguraçõesPage() {
                 color: '#4A9EFF',
               }}
             >
-              {savingPw ? 'Alterando...' : '🔑 Alterar Senha'}
+              {savingPw ? 'Alterando...' : 'Alterar senha'}
             </button>
           </div>
         </Section>
 
         {/* Notifications */}
-        <Section title="🔔 Preferências de Notificação">
+        <Section title="Preferências de notificação">
           <div className="space-y-3">
             {[
               { key: 'emailTasks',        label: 'E-mail: novas tarefas atribuídas a mim',    sub: 'Receba por e-mail quando uma tarefa for atribuída a você' },
@@ -226,19 +226,19 @@ export default function ConfiguraçõesPage() {
               <div
                 key={item.key}
                 className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                style={{ background: '#F7FBFF', border: '1px solid #D8E5F0' }}
                 onClick={() => setNotifSettings(s => ({ ...s, [item.key]: !s[item.key as keyof typeof s] }))}
               >
                 <div>
-                  <p className="text-sm font-medium text-white">{item.label}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
+                  <p className="text-sm font-black text-[#001B3F]">{item.label}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[#6B7F94]">{item.sub}</p>
                 </div>
                 <div
                   className="w-11 h-6 rounded-full transition-all flex-shrink-0 relative"
                   style={{
                     background: notifSettings[item.key as keyof typeof notifSettings]
                       ? 'linear-gradient(135deg, #0ABD78, #0dd68c)'
-                      : 'rgba(255,255,255,0.1)',
+                      : '#D8E5F0',
                   }}
                 >
                   <div
@@ -251,15 +251,15 @@ export default function ConfiguraçõesPage() {
                 </div>
               </div>
             ))}
-            <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
-              * Preferências salvas localmente neste dispositivo
+            <p className="mt-2 text-xs font-semibold text-[#6B7F94]">
+              Preferências salvas localmente neste dispositivo.
             </p>
           </div>
         </Section>
 
         {/* Info */}
-        <Section title="ℹ️ Informações da Conta">
-          <div className="grid grid-cols-2 gap-3 text-sm">
+        <Section title="Informações da conta">
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
             {[
               { label: 'ID do usuário', value: user?.id || '—' },
               { label: 'Perfil de acesso', value: roleName },
@@ -269,12 +269,12 @@ export default function ConfiguraçõesPage() {
               <div
                 key={item.label}
                 className="rounded-xl p-3"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                style={{ background: '#F7FBFF', border: '1px solid #D8E5F0' }}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">
                   {item.label}
                 </p>
-                <p className="font-medium text-white text-xs">{item.value}</p>
+                <p className="text-xs font-black text-[#001B3F]">{item.value}</p>
               </div>
             ))}
           </div>

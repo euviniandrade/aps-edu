@@ -433,23 +433,23 @@ const fallbackState: ManagementState = {
     },
     {
       id: 'T-1027',
-      title: 'Atualizar politica de atendimento familiar',
-      owner: 'Direcao',
-      area: 'Governanca',
+      title: 'Atualizar política de atendimento familiar',
+      owner: 'Direção',
+      area: 'Governança',
       stage: 'Novo',
       priority: 'Media',
       due: 'Esta semana',
-      project: 'Experiencia da familia',
+      project: 'Experiência da família',
       description: 'Ajustar tom institucional, tempos de retorno e canais oficiais.',
       attachments: ['politica-atendimento.docx'],
       tags: ['comunicação'],
-      participants: ['Direcao', 'Secretaria escolar'],
+      participants: ['Direção', 'Secretaria escolar'],
     },
     {
       id: 'T-1028',
-      title: 'Concluir relatorio mensal de desempenho',
+      title: 'Concluir relatório mensal de desempenho',
       owner: 'Gestão',
-      area: 'Relatorios',
+      area: 'Relatórios',
       stage: 'Em revisão',
       priority: 'Alta',
       due: '18/06',
@@ -461,51 +461,51 @@ const fallbackState: ManagementState = {
     },
   ],
   admissions: [
-    { id: 'MAT-2041', family: 'Familia Silva', student: 'Pedro Silva - 6o ano', stage: 'Visita pedagogica', value: 1850, next: 'Confirmar presenca da familia' },
-    { id: 'MAT-2042', family: 'Familia Andrade', student: 'Livia Andrade - 1o ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentação' },
-    { id: 'MAT-2043', family: 'Familia Rocha', student: 'Emanuel Rocha - 4o ano', stage: 'Contato inicial', value: 1740, next: 'Agendar visita escolar' },
+    { id: 'MAT-2041', family: 'Família Silva', student: 'Pedro Silva - 6º ano', stage: 'Visita pedagógica', value: 1850, next: 'Confirmar presença da família' },
+    { id: 'MAT-2042', family: 'Família Andrade', student: 'Lívia Andrade - 1º ano', stage: 'Proposta enviada', value: 1620, next: 'Enviar documentação' },
+    { id: 'MAT-2043', family: 'Família Rocha', student: 'Emanuel Rocha - 4º ano', stage: 'Contato inicial', value: 1740, next: 'Agendar visita escolar' },
   ],
   people: [],
   finance: [
     { id: 'F-1', label: 'Matrículas previstas', type: 'Receita', amount: 3470, status: 'Previsto', due: 'Hoje' },
-    { id: 'F-2', label: 'Compra de materiais pedagogicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanhã' },
+    { id: 'F-2', label: 'Compra de materiais pedagógicos', type: 'Despesa', amount: 980, status: 'A aprovar', due: 'Amanhã' },
     { id: 'F-3', label: 'Repasse de eventos escolares', type: 'Receita', amount: 2200, status: 'Confirmado', due: '20/06' },
   ],
   assets: [
     { id: 'A-1', name: 'Kits de matrícula', category: 'Material de secretaria', location: 'Secretaria APS', qty: 42, min: 60, status: 'Repor', supplier: 'Gráfica parceira', unitCost: 18.9, lastMove: '11/06', owner: 'Secretaria', nextAction: 'Comprar 30 unidades para campanha 2026' },
     { id: 'A-2', name: 'Projetores multimídia', category: 'Tecnologia educacional', location: 'Sala de recursos', qty: 4, min: 5, status: 'Crítico', supplier: 'TI regional', unitCost: 2490, lastMove: '08/06', owner: 'Operação', nextAction: 'Abrir aprovação de compra de 2 unidades' },
-    { id: 'A-3', name: 'Chromebooks pedagogicos', category: 'Tecnologia educacional', location: 'Laboratorio movel', qty: 18, min: 16, status: 'Ok', supplier: 'Fornecedor homologado', unitCost: 1480, lastMove: '10/06', owner: 'Pedagogico', nextAction: 'Agendar conferencia patrimonial' },
+    { id: 'A-3', name: 'Chromebooks pedagógicos', category: 'Tecnologia educacional', location: 'Laboratório móvel', qty: 18, min: 16, status: 'Ok', supplier: 'Fornecedor homologado', unitCost: 1480, lastMove: '10/06', owner: 'Pedagógico', nextAction: 'Agendar conferência patrimonial' },
   ],
   knowledge: [
-    { id: 'D-1', title: 'Política de matrícula 2026', type: 'Documento', owner: 'Secretaria', status: 'Revisao' },
-    { id: 'D-2', title: 'Ata do comite executivo', type: 'Nota', owner: 'Direcao', status: 'Publicada' },
+    { id: 'D-1', title: 'Política de matrícula 2026', type: 'Documento', owner: 'Secretaria', status: 'Revisão' },
+    { id: 'D-2', title: 'Ata do comitê executivo', type: 'Nota', owner: 'Direção', status: 'Publicada' },
     { id: 'D-3', title: 'Checklist de abertura semanal', type: 'Checklist', owner: 'Operação', status: 'Ativo' },
   ],
   automations: [
-    { id: 'AU-1', trigger: 'Tarefa vence hoje', action: 'Notificar responsavel e resumir risco para a direcao', status: 'Ativa' },
-    { id: 'AU-2', trigger: 'Estoque abaixo do minimo', action: 'Criar solicitação de compra e pedir aprovação', status: 'Ativa' },
+    { id: 'AU-1', trigger: 'Tarefa vence hoje', action: 'Notificar responsável e resumir risco para a direção', status: 'Ativa' },
+    { id: 'AU-2', trigger: 'Estoque abaixo do mínimo', action: 'Criar solicitação de compra e pedir aprovação', status: 'Ativa' },
     { id: 'AU-3', trigger: 'Evento novo no Google', action: 'Sincronizar na agenda mestra da Central Operacional', status: 'Ativa' },
   ],
 }
 
 const calendarConnections: CalendarConnection[] = [
   { id: 'google', name: 'Google Calendar', source: 'Base principal', status: 'Conectado', sync: 'Agora', color: '#29ABE2' },
-  { id: 'microsoft', name: 'Outlook / Microsoft 365', source: 'Calendario externo', status: 'Pendente', sync: 'Aguardando OAuth', color: '#4A9EFF' },
-  { id: 'icloud', name: 'iCloud Calendar', source: 'Calendario externo', status: 'Pendente', sync: 'Aguardando app password', color: '#A78BFA' },
+  { id: 'microsoft', name: 'Outlook / Microsoft 365', source: 'Calendário externo', status: 'Pendente', sync: 'Aguardando OAuth', color: '#4A9EFF' },
+  { id: 'icloud', name: 'iCloud Calendar', source: 'Calendário externo', status: 'Pendente', sync: 'Aguardando app password', color: '#A78BFA' },
 ]
 
 const baseAgenda: AgendaEvent[] = [
   { id: 'EV-1', time: '08:30', title: 'Abertura operacional e prioridades do dia', area: 'Central', source: 'Google', color: '#F8A303' },
   { id: 'EV-2', time: '09:30', title: 'Visitas de famílias e pipeline de matrículas', area: 'Escola', source: 'Google', color: '#29ABE2' },
   { id: 'EV-3', time: '11:00', title: 'Despachos financeiros pendentes', area: 'Financeiro', source: 'Outlook', color: '#4A9EFF' },
-  { id: 'EV-4', time: '14:00', title: 'Compras, estoque e patrimonio', area: 'Operação', source: 'Google', color: '#E07B39' },
+  { id: 'EV-4', time: '14:00', title: 'Compras, estoque e patrimônio', area: 'Operação', source: 'Google', color: '#E07B39' },
   { id: 'EV-5', time: '16:00', title: 'Pessoas, treinamento e acompanhamento', area: 'Pessoas', source: 'iCloud', color: '#8B5CF6' },
 ]
 
 const weeklyPanoramaBase: WeeklyDay[] = [
-  { id: 'seg', weekday: 'Seg', label: 'Hoje', load: 92, count: 8, focus: 'Governanca e agenda' },
+  { id: 'seg', weekday: 'Seg', label: 'Hoje', load: 92, count: 8, focus: 'Governança e agenda' },
   { id: 'ter', weekday: 'Ter', label: 'Amanhã', load: 76, count: 6, focus: 'Matrículas e financeiro' },
-  { id: 'qua', weekday: 'Qua', label: '18/06', load: 64, count: 5, focus: 'Pessoas e reunioes' },
+  { id: 'qua', weekday: 'Qua', label: '18/06', load: 64, count: 5, focus: 'Pessoas e reuniões' },
   { id: 'qui', weekday: 'Qui', label: '19/06', load: 52, count: 4, focus: 'Backoffice escolar' },
   { id: 'sex', weekday: 'Sex', label: '20/06', load: 83, count: 7, focus: 'Fechamento semanal' },
 ]
@@ -799,7 +799,12 @@ export default function WorldClassOperations({
 }: {
   forcedView?: 'agenda' | 'kanban' | 'escolar' | 'pessoas' | 'sofi'
 } = {}) {
-  const activeView = forcedView || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') || 'agenda' : 'agenda')
+  const [queryView, setQueryView] = useState('agenda')
+  useEffect(() => {
+    if (forcedView || typeof window === 'undefined') return
+    setQueryView(new URLSearchParams(window.location.search).get('view') || 'agenda')
+  }, [forcedView])
+  const activeView = forcedView || queryView
   const [state, setState] = useState<ManagementState>(fallbackState)
   const [workflowColumns, setWorkflowColumns] = useState<WorkflowColumn[]>(defaultWorkflowColumns)
   const [source, setSource] = useState<'api' | 'local'>('local')
@@ -1026,7 +1031,7 @@ export default function WorldClassOperations({
           student: 'Aluno em qualificação',
           stage: 'Contato inicial',
           value: 1500,
-          next: 'Agendar visita pedagogica',
+          next: 'Agendar visita pedagógica',
         },
         ...prev.admissions,
       ],
@@ -1602,7 +1607,7 @@ function CentralOperationalWorkspace({
                       <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-black text-white/60">{workDraft.stage}</span>
                     </div>
                     <p className="mt-3 max-w-3xl text-sm text-white/52">
-                      Clique para editar responsavel, prazo, participantes, selos, arquivos e o contexto operacional da demanda.
+                      Clique para editar responsável, prazo, participantes, selos, arquivos e o contexto operacional da demanda.
                     </p>
                   </div>
 
@@ -1812,7 +1817,7 @@ function CentralOperationalWorkspace({
                         </button>
                         <button
                           type="button"
-                          onClick={() => openSofi(`IA da Educação, gere um resumo executivo desta demanda: ${workDraft.title}. Inclua responsavel, prazo, selos, participantes e proximos passos.`)}
+                          onClick={() => openSofi(`IA da Educação, gere um resumo executivo desta demanda: ${workDraft.title}. Inclua responsável, prazo, selos, participantes e próximos passos.`)}
                           className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-left text-sm font-semibold text-white transition hover:border-white/20"
                         >
                           Gerar resumo
@@ -2019,7 +2024,7 @@ function KanbanColumn({
 }
 
 function SofiOperationsPanel({ onAddKnowledge }: { onAddKnowledge: (type: string) => void }) {
-  const [prompt, setPrompt] = useState('Análise meu calendario unificado, reorganize tarefas, destaque riscos e prepare os proximos passos do dia.')
+  const [prompt, setPrompt] = useState('Analise meu calendário unificado, reorganize tarefas, destaque riscos e prepare os próximos passos do dia.')
 
   return (
     <Surface className="p-5">
@@ -2180,7 +2185,7 @@ function SchoolFinanceWorkspace({
       </div>
 
       <Surface className="overflow-hidden">
-        <SectionHeader eyebrow="Estoque e patrimonio" title="Controle operacional de itens criticos" />
+        <SectionHeader eyebrow="Estoque e patrimônio" title="Controle operacional de itens críticos" />
         <div className="grid gap-4 p-5 xl:grid-cols-3">
           {state.assets.map(item => <AssetCard key={item.id} item={item} onAdjustAsset={onAdjustAsset} />)}
         </div>
@@ -2665,7 +2670,7 @@ function PeopleWorkspacePremium({
                   { id: 'resumo', label: 'Resumo' },
                   { id: 'editar', label: 'Editar' },
                   { id: 'arquivos', label: 'Arquivos' },
-                  { id: 'relatorios', label: 'Relatorios' },
+                  { id: 'relatorios', label: 'Relatórios' },
                 ] as const).map(tab => (
                   <button
                     key={tab.id}
@@ -3931,7 +3936,7 @@ function PeopleWorkspaceExecutive({
                           onClick={() => selectPerson(person)}
                           className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                         >
-                          <div className="aspect-[4/5] overflow-hidden bg-black/30">
+                          <div className="aspect-[4/3] overflow-hidden bg-black/30">
                             {photo ? (
                               <img src={photo} alt={person.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                             ) : (
@@ -3986,12 +3991,15 @@ function PeopleWorkspaceExecutive({
                       onClick={() => selectPerson(person)}
                       className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                     >
-                      <div className="aspect-[4/5] overflow-hidden bg-black/30">
+                      <div className="aspect-[4/3] overflow-hidden bg-black/30">
                         {photo ? (
                           <img src={photo} alt={person.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
-                            <UserCircleIcon className="h-20 w-20 text-white/25" />
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#EAF4FF] to-white">
+                            <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[#005DAA] text-xl font-black text-white shadow-lg shadow-[#005DAA]/20">
+                              {getInitials(person.name)}
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#6B7F94]">Sem foto</span>
                           </div>
                         )}
                       </div>
@@ -4243,7 +4251,7 @@ function AssetCard({ item, onAdjustAsset }: { item: Asset; onAdjustAsset: (id: s
       <div className="mt-4 grid grid-cols-[48px_48px_1fr] gap-2">
         <button onClick={() => onAdjustAsset(item.id, -1)} className="h-10 rounded-xl bg-white/[0.06] font-black text-white">-</button>
         <button onClick={() => onAdjustAsset(item.id, 1)} className="h-10 rounded-xl bg-[#E07B39] font-black text-black">+</button>
-        <button onClick={() => openSofi(`IA da Educação, avalie o item ${item.name}, estoque atual ${item.qty}, minimo ${item.min}, e gere um plano de reposicao.`)} className="h-10 rounded-xl bg-[#F8A303] px-3 text-xs font-black text-black">Auditar com IA da Educação</button>
+        <button onClick={() => openSofi(`IA da Educação, avalie o item ${item.name}, estoque atual ${item.qty}, mínimo ${item.min}, e gere um plano de reposição.`)} className="h-10 rounded-xl bg-[#F8A303] px-3 text-xs font-black text-black">Auditar com IA da Educação</button>
       </div>
     </div>
   )

@@ -341,14 +341,14 @@ export const hubLinks: HubLink[] = [
   {
     title: 'Automações',
     description: 'Regras inteligentes para atrasos, riscos e rotinas repetitivas.',
-    href: '/automações',
+    href: '/automacoes',
     color: '#4A9EFF',
     group: 'inteligencia',
   },
   {
     title: 'Inovação IA',
     description: 'Agentes, experimentos e novas frentes digitais.',
-    href: '/inovação',
+    href: '/inovacao',
     color: '#0ABD78',
     group: 'inteligencia',
   },
@@ -364,7 +364,7 @@ export const personalTools: PersonalTool[] = [
   },
   {
     title: 'Caderno inteligente',
-    description: 'Ideias, reunioes, planos, frases e anotações com apoio da IA da Educação.',
+    description: 'Ideias, reuniões, planos, frases e anotações com apoio da IA da Educação.',
     href: '/minha-area',
     metric: 'Notas',
     color: '#A78BFA',

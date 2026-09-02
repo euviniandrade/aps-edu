@@ -29,6 +29,26 @@ function isPublicApi(pathname: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const decodedPathname = decodeURIComponent(pathname)
+
+  if (decodedPathname === '/inovação') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/inovacao'
+    return NextResponse.redirect(url)
+  }
+
+  if (decodedPathname === '/configurações') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/configuracoes'
+    return NextResponse.redirect(url)
+  }
+
+  if (decodedPathname === '/notificações') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/notificacoes'
+    return NextResponse.redirect(url)
+  }
+
   if (isPublicAsset(pathname) || isPublicPage(pathname) || isPublicApi(pathname)) {
     return NextResponse.next()
   }

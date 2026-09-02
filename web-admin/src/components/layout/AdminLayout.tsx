@@ -39,14 +39,14 @@ const navSections = [
   {
     label: 'Inteligência',
     items: [
-      { href: '/inovação',      label: 'IA da Educação',   icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
+      { href: '/inovacao',      label: 'IA da Educação',   icon: RocketLaunchIcon,           iconSolid: RocketLaunchIconSolid, color: '#0ABD78', roles: [] },
       { href: '/reports',       label: 'Relatórios',   icon: ChartBarIcon,               iconSolid: ChartIconSolid,     color: '#F9C234', roles: ['leader', 'admin'] },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { href: '/configurações', label: 'Configurações', icon: Cog6ToothIcon,             iconSolid: Cog6ToothIcon,      color: '#A78BFA', roles: [] },
+      { href: '/configuracoes', label: 'Configurações', icon: Cog6ToothIcon,             iconSolid: Cog6ToothIcon,      color: '#A78BFA', roles: [] },
     ],
   },
 ]
@@ -59,7 +59,7 @@ const hiddenNavItems = [
   { href: '/gamification',  label: 'Gamificação',  icon: TrophyIcon,                 iconSolid: TrophyIconSolid,    color: '#F9C234', roles: [] },
   { href: '/promotores',    label: 'Promotores',   icon: UserGroupIcon,              iconSolid: UserGroupIconSolid, color: '#29ABE2', roles: ['admin'] },
   { href: '/roles',         label: 'Cargos',       icon: KeyIcon,                    iconSolid: KeyIconSolid,       color: '#A78BFA', roles: ['admin'] },
-  { href: '/notificações',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
+  { href: '/notificacoes',  label: 'Notificações', icon: BellIcon,                   iconSolid: BellIcon,           color: '#FF4757', roles: [] },
   { href: '/minha-area',    label: 'Minha Central', icon: KeyIcon,                   iconSolid: KeyIconSolid,       color: '#FDC347', roles: [] },
 ]
 
@@ -166,7 +166,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // G + key navigation
     if (e.key === 'g' || e.key === 'G') { gPressedRef.current = true; setTimeout(() => { gPressedRef.current = false }, 1000); return }
     if (gPressedRef.current) {
-      const map: Record<string, string> = { d: '/dashboard', g: '/gestao', t: '/tasks', e: '/events', n: '/notificações', a: '/analytics', m: '/gestao' }
+      const map: Record<string, string> = { d: '/dashboard', g: '/gestao', t: '/tasks', e: '/events', n: '/notificacoes', a: '/analytics', m: '/gestao' }
       const dest = map[e.key.toLowerCase()]
       if (dest) { e.preventDefault(); router.push(dest); gPressedRef.current = false }
     }
@@ -215,7 +215,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const userRoleName = user?.role?.name ?? user?.role ?? 'Admin'
   const userRole = userRoleName
   const roleLevel = getRoleLevel(typeof userRoleName === 'string' ? userRoleName : 'member')
-  const currentGestãoView = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') || 'agenda' : 'agenda'
+  const [currentGestãoView, setCurrentGestãoView] = useState('agenda')
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setCurrentGestãoView(new URLSearchParams(window.location.search).get('view') || 'agenda')
+  }, [pathname])
   // Mantemos o menu contextual enxuto para evitar duplicidade na navegação da Gestão.
   const contextualGestãoItems = [
     { href: '/gestao?view=agenda', label: 'Agenda e Calendários', key: 'agenda' },
@@ -341,7 +345,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {item.label}
                           </span>
                           {/* Badge especial para Notificações */}
-                          {item.href === '/notificações' && !isActive && (
+                          {item.href === '/notificacoes' && !isActive && (
                             <span className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ background: '#FF4757' }} />
                           )}
@@ -621,7 +625,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/*  AI ASSISTANT FLOAT  */}
-      {!pathname?.startsWith('/inovação') && <AiAssistant />}
+      {!pathname?.startsWith('/inovacao') && <AiAssistant />}
 
       {/*  COMMAND PALETTE RK  */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

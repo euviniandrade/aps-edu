@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     return setupRedirect(request, config.provider, String(detail).slice(0, 80))
   }
 
-  const url = new URL('/inovação', getOrigin(request))
+  const url = new URL('/inovacao', getOrigin(request))
   url.searchParams.set('tab', 'sobre')
   url.searchParams.set('integration', config.provider)
   url.searchParams.set('connected', '1')
