@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { listPublicPromoterSubmissions, publicPromoterLink, savePublicPromoterSubmission } from '@/lib/promoter-public-store'
+import restoredPromoterSubmissions from '@/data/restored-promoter-submissions.json'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -25,6 +26,67 @@ const LOCAL_ADMIN_PASSWORDS = new Set([
 ])
 
 const LOCAL_RECOVERY_PASSWORD = 'Sofi@2026'
+
+const DEFAULT_ACADEMIC_STATE = {
+  updatedAt: '2026-09-01T00:00:00.000Z',
+  semesters: [
+    { id: 'sem-2026-1', name: '1º semestre', period: '2026.1', active: true },
+    { id: 'sem-2026-2', name: '2º semestre', period: '2026.2', active: false },
+  ],
+  modules: [
+    { id: 'mod-base', semesterId: 'sem-2026-1', name: 'Módulo base', focus: 'Fundamentos, leituras e rotina semanal.' },
+    { id: 'mod-provas', semesterId: 'sem-2026-1', name: 'Avaliações', focus: 'Provas, trabalhos e entregas valendo nota.' },
+    { id: 'mod-extensao', semesterId: 'sem-2026-2', name: 'Projetos e extensão', focus: 'Pesquisa, estágios e atividades complementares.' },
+  ],
+  subjects: [
+    { id: 'sub-metodologia', semesterId: 'sem-2026-1', moduleId: 'mod-base', name: 'Metodologia Científica', professor: 'A definir', room: 'Online', schedule: 'Terça, 19:00', color: '#005DAA', credits: 4 },
+    { id: 'sub-gestao', semesterId: 'sem-2026-1', moduleId: 'mod-base', name: 'Gestão Educacional', professor: 'A definir', room: 'Sala virtual', schedule: 'Quinta, 19:00', color: '#0ABD78', credits: 4 },
+    { id: 'sub-pesquisa', semesterId: 'sem-2026-1', moduleId: 'mod-provas', name: 'Pesquisa Aplicada', professor: 'A definir', room: 'Campus', schedule: 'Sábado, 09:00', color: '#F8A303', credits: 3 },
+  ],
+  activities: [
+    { id: 'act-leitura', subjectId: 'sub-metodologia', title: 'Ler plano de ensino e separar bibliografia', type: 'leitura', dueDate: '2026-08-03', time: '20:00', status: 'pendente', priority: 'media', notes: 'Registrar dúvidas para a primeira aula.' },
+    { id: 'act-fichamento', subjectId: 'sub-metodologia', title: 'Fichamento do artigo base', type: 'atividade', dueDate: '2026-08-10', time: '21:00', status: 'pendente', priority: 'alta', notes: 'Entregar resumo, citações e reflexão pessoal.', weight: 2 },
+    { id: 'act-prova', subjectId: 'sub-gestao', title: 'Prova do módulo de gestão', type: 'prova', dueDate: '2026-08-18', time: '19:30', status: 'pendente', priority: 'alta', notes: 'Revisar conceitos, modelos de gestão e estudo de caso.', weight: 4 },
+  ],
+}
+
+function restoredPeople() {
+  const submissions = Array.isArray(restoredPromoterSubmissions) ? restoredPromoterSubmissions as any[] : []
+  return submissions.map((item, index) => ({
+    id: item.id || item.linkId || `restored-${index + 1}`,
+    name: item.promoterName || item.name || 'Pessoa sem nome',
+    role: item.role || 'Promotor',
+    unit: item.unit || '',
+    email: item.email || '',
+    phone: item.phone || '',
+    birthDate: item.birthDate || '',
+    document: item.document || '',
+    cpf: item.cpf || '',
+    rg: item.rg || '',
+    documentStatus: item.documentStatus || 'Não localizado no Drive revisado',
+    status: item.status || 'restored',
+    notes: item.notes || '',
+    scores: item.computed || null,
+    files: {
+      photoUrl: item.photoUrl || '',
+      photoDriveFileId: item.photoDriveFileId || '',
+      driveFolder: item.driveFolder || '',
+      driveReport: item.driveReport || '',
+    },
+    source: 'restored-promoter-submissions',
+  }))
+}
+
+function localManagementState() {
+  const people = restoredPeople()
+  return {
+    people,
+    units: Array.from(new Set(people.map(person => person.unit).filter(Boolean))).map((name, index) => ({ id: `unit-${index + 1}`, name })),
+    roles: Array.from(new Set(people.map(person => person.role).filter(Boolean))).map((name, index) => ({ id: `role-${index + 1}`, name })),
+    restored: true,
+    updatedAt: new Date().toISOString(),
+  }
+}
 
 function cleanEnv(value?: string) {
   return String(value || '').replace(/^\uFEFF/, '').trim()
@@ -292,6 +354,20 @@ async function proxy(request: NextRequest, context: RouteContext) {
     }
   }
 
+  if (path[0] === 'academic') {
+    if (request.method === 'GET') return NextResponse.json(DEFAULT_ACADEMIC_STATE)
+    if (request.method === 'PUT' || request.method === 'POST') {
+      const bodyText = await request.text()
+      let body: any = {}
+      try { body = bodyText ? JSON.parse(bodyText) : {} } catch { body = DEFAULT_ACADEMIC_STATE }
+      return NextResponse.json({ ...DEFAULT_ACADEMIC_STATE, ...body, updatedAt: new Date().toISOString() })
+    }
+  }
+
+  if (path[0] === 'management' && request.method === 'GET' && getBearerToken(request) === 'local-admin-token') {
+    return NextResponse.json(localManagementState())
+  }
+
   if (path[0] === 'promoter-forms' && path[1] === 'links' && request.method === 'GET') {
     const link = publicPromoterLink('público')
     return NextResponse.json({ links: link ? [link] : [] })
@@ -356,6 +432,10 @@ async function proxy(request: NextRequest, context: RouteContext) {
     const responseHeaders = new Headers()
     const responseType = response.headers.get('content-type')
     if (responseType) responseHeaders.set('content-type', responseType)
+
+    if (!response.ok && path[0] === 'management' && getBearerToken(request) === 'local-admin-token') {
+      return NextResponse.json(localManagementState())
+    }
 
     return new NextResponse(response.body, {
       status: response.status,
