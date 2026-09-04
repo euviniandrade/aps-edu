@@ -99,7 +99,7 @@ function LiveClock() {
   }, [])
 
   return (
-    <div className="hidden items-center gap-2 rounded-full border border-[#D8E5F0] bg-white px-3 py-2 text-xs font-black text-[#003F75] shadow-[0_8px_24px_rgba(0,63,117,0.06)] md:flex">
+    <div className="hidden items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-3 py-2 text-xs font-black text-white/68 shadow-[0_12px_34px_rgba(0,0,0,0.22)] md:flex">
       <span className="h-2 w-2 rounded-full bg-[#0ABD78]" />
       {time}
     </div>
@@ -227,13 +227,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const sidebar = (
-    <aside className="flex h-full w-[280px] flex-col border-r border-white/12 bg-[#042F57] text-white shadow-[18px_0_50px_rgba(0,27,63,0.18)]">
+    <aside className="flex h-full w-[290px] flex-col border-r border-white/10 bg-[#061121]/92 text-white shadow-[24px_0_80px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
       <div className="px-5 pb-5 pt-6">
-        <Link href="/dashboard" className="block rounded-[24px] bg-white px-5 py-4 shadow-[0_18px_38px_rgba(0,27,63,0.18)]">
+        <Link href="/dashboard" className="block rounded-[26px] border border-white/10 bg-white/[0.08] px-5 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.26)] backdrop-blur-xl">
           <img src="/aps30-logo.png" alt="APS30" className="h-14 w-full object-contain" />
         </Link>
-        <div className="mt-4 rounded-[20px] border border-white/10 bg-white/[0.06] p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/40">Plataforma</p>
+        <div className="mt-4 rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.10),rgba(255,255,255,0.035))] p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#F6B221]">Live workspace</p>
           <p className="mt-1 text-sm font-black text-white">SOFI APS EDU</p>
           <p className="mt-1 text-xs font-semibold leading-5 text-white/52">Gestão escolar, pessoas e vida acadêmica em um só lugar.</p>
         </div>
@@ -300,7 +300,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 
   return (
-    <div className="min-h-screen bg-[#EFF6FC] text-[#0B1F36]">
+    <div className="min-h-screen bg-[#050914] text-[#0B1F36]">
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
 
       {mobileSidebarOpen && (
@@ -310,56 +310,58 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
 
-      <div className="flex min-h-screen min-w-0 flex-col lg:pl-[280px]">
-        <header className="sticky top-0 z-30 border-b border-[#D8E5F0]/80 bg-white/86 px-4 py-3 backdrop-blur-xl lg:px-7">
+      <div className="flex min-h-screen min-w-0 flex-col lg:pl-[290px]">
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111F]/82 px-4 py-3 backdrop-blur-2xl lg:px-7">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <button type="button" onClick={() => setMobileSidebarOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-[#D8E5F0] bg-white text-[#003F75] lg:hidden">
+              <button type="button" onClick={() => setMobileSidebarOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/12 bg-white/[0.08] text-white lg:hidden">
                 <Bars3Icon className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#7A8EA3]">
-                  <Link href="/dashboard" className="truncate hover:text-[#003F75]">SOFI APS EDU</Link>
+                <div className="flex items-center gap-2 text-xs font-bold text-white/42">
+                  <Link href="/dashboard" className="truncate hover:text-white">SOFI APS EDU</Link>
                   {currentPage && (
                     <>
-                      <ChevronRightIcon className="h-3 w-3 shrink-0 text-[#AAB8C7]" />
-                      <span className="truncate text-[#003F75]">{currentPage.label}</span>
+                      <ChevronRightIcon className="h-3 w-3 shrink-0 text-white/24" />
+                      <span className="truncate text-[#F6B221]">{currentPage.label}</span>
                     </>
                   )}
                 </div>
-                <p className="mt-1 truncate text-sm font-black text-[#001B3F] sm:text-base">
+                <p className="mt-1 truncate text-sm font-black text-white sm:text-base">
                   {currentPage?.label || 'Central da plataforma'}
                 </p>
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-10 items-center gap-2 rounded-full border border-[#D8E5F0] bg-[#F7FBFF] px-4 text-sm font-bold text-[#536579] shadow-[0_8px_24px_rgba(0,63,117,0.05)] sm:flex">
+              <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-10 items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-4 text-sm font-bold text-white/64 shadow-[0_12px_34px_rgba(0,0,0,0.22)] sm:flex">
                 <MagnifyingGlassIcon className="h-4 w-4" />
                 Buscar
-                <kbd className="rounded-md border border-[#D8E5F0] bg-white px-1.5 py-0.5 text-[10px] font-black text-[#7A8EA3]">Ctrl+K</kbd>
+                <kbd className="rounded-md border border-white/10 bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-white/46">Ctrl+K</kbd>
               </button>
-              <button type="button" onClick={() => setPaletteOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-[#D8E5F0] bg-white text-[#536579] sm:hidden">
+              <button type="button" onClick={() => setPaletteOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-white/64 sm:hidden">
                 <MagnifyingGlassIcon className="h-4 w-4" />
               </button>
               <LiveClock />
-              <Link href="/notificacoes" className="relative grid h-10 w-10 place-items-center rounded-full border border-[#D8E5F0] bg-white text-[#536579]">
+              <Link href="/notificacoes" className="relative grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-white/64">
                 <BellIcon className="h-5 w-5" />
                 <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#FF4757]" />
               </Link>
-              <button type="button" onClick={() => setShortcutsOpen(true)} className="hidden h-10 rounded-full border border-[#D8E5F0] bg-white px-3 text-xs font-black text-[#7A8EA3] lg:block">?</button>
-              <div className="hidden items-center gap-3 rounded-full border border-[#D8E5F0] bg-white py-1.5 pl-2 pr-4 shadow-[0_8px_24px_rgba(0,63,117,0.05)] md:flex">
+              <button type="button" onClick={() => setShortcutsOpen(true)} className="hidden h-10 rounded-full border border-white/12 bg-white/[0.07] px-3 text-xs font-black text-white/52 lg:block">?</button>
+              <div className="hidden items-center gap-3 rounded-full border border-white/12 bg-white/[0.07] py-1.5 pl-2 pr-4 shadow-[0_12px_34px_rgba(0,0,0,0.22)] md:flex">
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-[#F6B221] text-xs font-black text-[#001B3F]">{userInitial}</div>
                 <div>
-                  <p className="text-xs font-black leading-none text-[#001B3F]">{userName}</p>
-                  <p className="mt-1 text-[10px] font-semibold leading-none text-[#7A8EA3]">{userRoleName}</p>
+                  <p className="text-xs font-black leading-none text-white">{userName}</p>
+                  <p className="mt-1 text-[10px] font-semibold leading-none text-white/40">{userRoleName}</p>
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="sofi-content flex-1 overflow-x-hidden px-4 py-5 sm:px-5 lg:px-7 lg:py-7">
+        <main className="sofi-content relative flex-1 overflow-x-hidden px-4 py-5 sm:px-5 lg:px-7 lg:py-7">
+          <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:46px_46px]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[linear-gradient(120deg,rgba(0,169,224,0.16),rgba(246,178,33,0.12),rgba(10,189,120,0.11),transparent)]" />
           <div className="mx-auto w-full max-w-[1560px]">{children}</div>
         </main>
       </div>
@@ -370,3 +372,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   )
 }
+

@@ -12,7 +12,7 @@ import {
   CalendarDaysIcon,
   ChartBarIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon,
+  CpuChipIcon,
   SparklesIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
@@ -25,23 +25,11 @@ type Person = {
 }
 
 type DashboardData = {
-  tasks?: {
-    pending?: number
-    in_progress?: number
-    completed?: number
-    overdue?: number
-  }
-  events?: {
-    planned?: number
-    ongoing?: number
-    completed?: number
-  }
-  alerts?: {
-    overdueTasksCount?: number
-  }
+  tasks?: { pending?: number; in_progress?: number; completed?: number; overdue?: number }
+  events?: { planned?: number; ongoing?: number; completed?: number }
 }
 
-const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
+const dateFormatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
 
 function mapRestoredPeople(): Person[] {
   const seen = new Set<string>()
@@ -62,15 +50,6 @@ function mapRestoredPeople(): Person[] {
     })
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 export default function DashboardPage() {
   const restoredPeople = useMemo(mapRestoredPeople, [])
   const [data, setData] = useState<DashboardData | null>(null)
@@ -78,161 +57,148 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setAcademic(readAcademicState())
-    api.get('/reports/dashboard')
-      .then(response => setData(response.data))
-      .catch(() => setData(null))
+    api.get('/reports/dashboard').then(response => setData(response.data)).catch(() => setData(null))
   }, [])
 
+  const units = Array.from(new Set(restoredPeople.map(person => person.unit))).filter(Boolean)
+  const promoters = restoredPeople.filter(person => /promotor|promotora/i.test(person.role)).length
   const activeTasks = (data?.tasks?.pending || 0) + (data?.tasks?.in_progress || 0)
-  const overdueTasks = data?.tasks?.overdue || 0
   const activeEvents = (data?.events?.planned || 0) + (data?.events?.ongoing || 0)
   const academicEvents = academic ? academicEventsFromState(academic) : []
   const openActivities = academic?.activities.filter(activity => activity.status !== 'concluida').length || 0
   const completedActivities = academic?.activities.filter(activity => activity.status === 'concluida').length || 0
   const academicProgress = academic?.activities.length ? Math.round((completedActivities / academic.activities.length) * 100) : 0
-  const units = Array.from(new Set(restoredPeople.map(person => person.unit))).filter(Boolean)
   const nextAcademicEvents = academicEvents
     .filter(event => event.date >= new Date().toISOString().slice(0, 10))
-    .slice(0, 5)
+    .slice(0, 4)
 
-  const healthItems = [
-    {
-      label: 'Pessoas restauradas',
-      value: restoredPeople.length,
-      detail: `${units.length} unidade${units.length === 1 ? '' : 's'} conectada${units.length === 1 ? '' : 's'}`,
-      icon: UsersIcon,
-      color: '#005DAA',
-    },
-    {
-      label: 'Prazos acadêmicos',
-      value: openActivities,
-      detail: `${academicProgress}% do plano concluído`,
-      icon: AcademicCapIcon,
-      color: '#0ABD78',
-    },
-    {
-      label: 'Tarefas ativas',
-      value: activeTasks,
-      detail: overdueTasks ? `${overdueTasks} em atraso` : 'Sem atraso crítico informado',
-      icon: CheckCircleIcon,
-      color: overdueTasks ? '#FF4757' : '#F6B221',
-    },
-    {
-      label: 'Eventos próximos',
-      value: activeEvents + nextAcademicEvents.length,
-      detail: 'Operação e agenda acadêmica',
-      icon: CalendarDaysIcon,
-      color: '#8B5CF6',
-    },
+  const metrics = [
+    { label: 'Pessoas na base', value: restoredPeople.length, detail: `${promoters} promotores mapeados`, icon: UsersIcon, color: '#8B5CF6' },
+    { label: 'Unidades conectadas', value: units.length, detail: 'Dados vindos da restauração', icon: CpuChipIcon, color: '#00A9E0' },
+    { label: 'Prazos acadêmicos', value: openActivities, detail: `${academicProgress}% concluído`, icon: AcademicCapIcon, color: '#0ABD78' },
+    { label: 'Rotinas ativas', value: activeTasks + activeEvents, detail: 'Tarefas e eventos operacionais', icon: CheckCircleIcon, color: '#F6B221' },
   ]
 
-  const quickLinks = [
-    { href: '/pessoas', label: 'Revisar pessoas', text: 'Promotores, contatos, documentos e perfis.', icon: UsersIcon, color: '#8B5CF6' },
-    { href: '/academico', label: 'Organizar faculdade', text: 'Semestres, módulos, matérias e prazos.', icon: AcademicCapIcon, color: '#0ABD78' },
-    { href: '/gestao', label: 'Central operacional', text: 'Agenda, projetos, responsabilidades e rotinas.', icon: SparklesIcon, color: '#F6B221' },
-    { href: '/reports', label: 'Abrir relatórios', text: 'Ranking, desempenho e análise por pessoa.', icon: ChartBarIcon, color: '#005DAA' },
+  const modules = [
+    { href: '/pessoas', title: 'Pessoas', kicker: 'Base restaurada', text: 'Perfis, contatos, documentos e leitura por unidade.', icon: UsersIcon, color: '#8B5CF6' },
+    { href: '/academico', title: 'Acadêmico', kicker: 'Faculdade e agenda', text: 'Semestres, módulos, matérias e compromissos.', icon: AcademicCapIcon, color: '#0ABD78' },
+    { href: '/gestao', title: 'Operação', kicker: 'Rotina da rede', text: 'Agenda, tarefas, responsáveis e prioridades.', icon: SparklesIcon, color: '#F6B221' },
+    { href: '/reports', title: 'Relatórios', kicker: 'Inteligência', text: 'Ranking, desempenho e leitura executiva.', icon: ChartBarIcon, color: '#00A9E0' },
   ]
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <section className="overflow-hidden rounded-[32px] border border-white bg-white shadow-[0_24px_80px_rgba(0,63,117,0.10)]">
-          <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_420px]">
-            <div className="p-6 sm:p-8">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#EAF4FF] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#005DAA]">Central executiva</span>
-                <span className="rounded-full bg-[#FFF3D6] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#8A5B00]">Dados preservados</span>
+      <div className="relative z-10 space-y-6">
+        <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#071426] shadow-[0_34px_120px_rgba(0,0,0,0.34)]">
+          <div className="absolute inset-0 opacity-80 [background-image:linear-gradient(rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:58px_58px]" />
+          <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#F6B221,#00A9E0,#0ABD78,#8B5CF6)]" />
+          <div className="relative grid gap-0 xl:grid-cols-[minmax(0,1fr)_430px]">
+            <div className="p-6 sm:p-8 lg:p-10">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/62 backdrop-blur-xl">
+                <span className="h-2 w-2 rounded-full bg-[#0ABD78]" />
+                APS EDU command center
               </div>
-              <h1 className="mt-5 max-w-4xl text-4xl font-black tracking-tight text-[#001B3F] sm:text-5xl">
-                APS EDU organizada como uma central de comando.
+              <h1 className="mt-6 max-w-5xl text-5xl font-black leading-[0.96] tracking-tight text-[#F8FBFF] sm:text-6xl xl:text-7xl">
+                Uma plataforma escolar com ritmo, presença e inteligência.
               </h1>
-              <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#536579]">
-                Pessoas, rotina operacional, relatórios e vida acadêmica aparecem conectados na entrada da plataforma, sem depender de páginas vazias para você entender o estado do sistema.
+              <p className="mt-6 max-w-2xl text-base font-semibold leading-8 text-white/58">
+                A entrada agora funciona como um cockpit: mostra o estado real da rede, preserva as pessoas restauradas e conecta gestão, acadêmico e relatórios em um fluxo só.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link href="/pessoas" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#003F75] px-5 text-sm font-black text-white shadow-[0_14px_34px_rgba(0,63,117,0.22)]">
-                  Abrir Pessoas
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/pessoas" className="inline-flex h-[52px] items-center gap-2 rounded-full bg-[#F6B221] px-6 py-4 text-sm font-black text-[#001B3F] shadow-[0_20px_50px_rgba(246,178,33,0.28)] transition hover:-translate-y-0.5 hover:bg-[#FFD15C]">
+                  Revisar Pessoas
                   <ArrowRightIcon className="h-4 w-4" />
                 </Link>
-                <Link href="/academico" className="inline-flex h-12 items-center gap-2 rounded-full border border-[#D8E5F0] bg-white px-5 text-sm font-black text-[#003F75]">
-                  Ir para Acadêmico
+                <Link href="/academico" className="inline-flex h-[52px] items-center gap-2 rounded-full border border-white/14 bg-white/[0.07] px-6 py-4 text-sm font-black text-[#F8FBFF] transition hover:bg-white/[0.12]">
+                  Ambiente Acadêmico
                 </Link>
               </div>
             </div>
 
-            <div className="border-t border-[#E4EEF7] bg-[#F7FBFF] p-6 xl:border-l xl:border-t-0">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7A8EA3]">Hoje</p>
-              <p className="mt-2 text-2xl font-black capitalize text-[#001B3F]">{todayLabel()}</p>
-              <div className="mt-5 rounded-[24px] border border-[#D8E5F0] bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#FFF3D6] text-[#8A5B00]">
-                    <ExclamationTriangleIcon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-black text-[#001B3F]">Ponto de atenção</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-[#536579]">
-                      Os dados de Pessoas foram restaurados como base de segurança. A próxima etapa é ligar todos os módulos vazios à mesma fonte confiável.
-                    </p>
+            <div className="border-t border-white/10 bg-white/[0.045] p-6 backdrop-blur-xl xl:border-l xl:border-t-0">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">Status de reconstrução</p>
+              <div className="mt-5 space-y-3">
+                {[
+                  ['Base de pessoas', 'Restaurada e visível', '#0ABD78'],
+                  ['Acadêmico', 'Módulos e agenda ativos', '#00A9E0'],
+                  ['Relatórios', 'Conectados à base restaurada', '#F6B221'],
+                  ['Design system', 'Em nova direção premium', '#8B5CF6'],
+                ].map(([label, value, color]) => (
+                  <div key={label} className="rounded-[22px] border border-white/10 bg-[#061121]/72 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-[#F8FBFF]">{label}</p>
+                        <p className="mt-1 text-xs font-bold text-white/42">{value}</p>
+                      </div>
+                      <span className="h-3 w-3 rounded-full" style={{ background: color, boxShadow: `0 0 26px ${color}` }} />
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {healthItems.map(item => (
-            <MetricCard key={item.label} {...item} />
+          {metrics.map(metric => (
+            <MetricCard key={metric.label} {...metric} />
           ))}
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="rounded-[28px] border border-white bg-white p-5 shadow-[0_20px_60px_rgba(0,63,117,0.08)]">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="rounded-[34px] border border-white/10 bg-[#071426]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7A8EA3]">Jornada principal</p>
-                <h2 className="mt-1 text-2xl font-black text-[#001B3F]">O que precisa ficar redondo</h2>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#F6B221]">Mapa da experiência</p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-[#F8FBFF]">Quatro módulos que precisam parecer um produto só</h2>
               </div>
-              <p className="text-sm font-bold text-[#536579]">Design, dados e fluxo no mesmo padrão.</p>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {quickLinks.map(link => {
-                const Icon = link.icon
+              {modules.map(module => {
+                const Icon = module.icon
                 return (
-                  <Link key={link.href} href={link.href} className="group rounded-[24px] border border-[#D8E5F0] bg-[#F7FBFF] p-4 transition hover:-translate-y-0.5 hover:border-[#BFD3E7] hover:bg-white hover:shadow-[0_18px_45px_rgba(0,63,117,0.10)]">
+                  <Link key={module.href} href={module.href} className="group overflow-hidden rounded-[28px] border border-white/10 bg-[#0A1B31]/86 p-5 transition hover:-translate-y-1 hover:border-white/18 hover:bg-[#0E2745]">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="grid h-12 w-12 place-items-center rounded-[18px]" style={{ background: `${link.color}16`, color: link.color }}>
+                      <span className="grid h-[52px] w-[52px] place-items-center rounded-[22px]" style={{ background: `${module.color}20`, color: module.color }}>
                         <Icon className="h-6 w-6" />
                       </span>
-                      <ArrowRightIcon className="mt-2 h-4 w-4 text-[#9AAABC] transition group-hover:translate-x-1 group-hover:text-[#003F75]" />
+                      <ArrowRightIcon className="mt-2 h-5 w-5 text-white/24 transition group-hover:translate-x-1 group-hover:text-white" />
                     </div>
-                    <p className="mt-4 text-base font-black text-[#001B3F]">{link.label}</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-[#536579]">{link.text}</p>
+                    <p className="mt-5 text-xs font-black uppercase tracking-[0.16em]" style={{ color: module.color }}>{module.kicker}</p>
+                    <h3 className="mt-2 text-2xl font-black text-[#F8FBFF]">{module.title}</h3>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-white/46">{module.text}</p>
                   </Link>
                 )
               })}
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white bg-white p-5 shadow-[0_20px_60px_rgba(0,63,117,0.08)]">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7A8EA3]">Agenda unificada</p>
-            <h2 className="mt-1 text-2xl font-black text-[#001B3F]">Próximos compromissos</h2>
+          <div className="rounded-[34px] border border-white/10 bg-[#071426]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0ABD78]">Agenda viva</p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-[#F8FBFF]">Próximos movimentos</h2>
+              </div>
+              <CalendarDaysIcon className="h-8 w-8 text-[#0ABD78]" />
+            </div>
             <div className="mt-5 space-y-3">
               {nextAcademicEvents.map(event => (
-                <div key={event.id} className="rounded-[22px] border border-[#D8E5F0] bg-[#F7FBFF] p-4">
+                <div key={event.id} className="rounded-[24px] border border-white/10 bg-[#0A1B31]/86 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#001B3F]">{event.title}</p>
-                      <p className="mt-1 text-xs font-bold text-[#536579]">{event.source || 'Acadêmico'}</p>
+                      <p className="truncate text-sm font-black text-[#F8FBFF]">{event.title}</p>
+                      <p className="mt-1 text-xs font-bold text-white/42">{event.source || 'Acadêmico'}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#005DAA]">{formatter.format(new Date(`${event.date}T12:00:00`))}</span>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1 text-xs font-black text-[#F6B221]">
+                      {dateFormatter.format(new Date(`${event.date}T12:00:00`))}
+                    </span>
                   </div>
                 </div>
               ))}
               {!nextAcademicEvents.length && (
-                <div className="rounded-[22px] border border-dashed border-[#C9DBEA] bg-[#F7FBFF] p-5 text-center">
-                  <p className="text-sm font-black text-[#001B3F]">Nenhum compromisso acadêmico futuro.</p>
-                  <p className="mt-1 text-sm font-semibold text-[#536579]">Cadastre atividades no módulo Acadêmico para alimentar a agenda.</p>
+                <div className="rounded-[24px] border border-dashed border-white/14 bg-[#0A1B31]/70 p-6 text-center">
+                  <p className="text-sm font-black text-[#F8FBFF]">A agenda acadêmica ainda está livre.</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-white/42">Quando você cadastrar atividades no módulo Acadêmico, elas aparecem aqui automaticamente.</p>
                 </div>
               )}
             </div>
@@ -251,17 +217,21 @@ function MetricCard({ label, value, detail, icon: Icon, color }: {
   color: string
 }) {
   return (
-    <div className="rounded-[28px] border border-white bg-white p-5 shadow-[0_18px_50px_rgba(0,63,117,0.07)]">
+    <div className="group rounded-[30px] border border-white/10 bg-[#071426]/92 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-white/18">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7A8EA3]">{label}</p>
-          <p className="mt-3 text-4xl font-black tracking-tight text-[#001B3F]">{value.toLocaleString('pt-BR')}</p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/35">{label}</p>
+          <p className="mt-4 text-5xl font-black tracking-tight text-[#F8FBFF]">{value.toLocaleString('pt-BR')}</p>
         </div>
-        <span className="grid h-12 w-12 place-items-center rounded-[18px]" style={{ background: `${color}16`, color }}>
+        <span className="grid h-[52px] w-[52px] place-items-center rounded-[22px]" style={{ background: `${color}20`, color }}>
           <Icon className="h-6 w-6" />
         </span>
       </div>
-      <p className="mt-3 text-sm font-bold text-[#536579]">{detail}</p>
+      <p className="mt-4 text-sm font-bold text-white/46">{detail}</p>
+      <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full rounded-full" style={{ width: '68%', background: `linear-gradient(90deg, ${color}, transparent)` }} />
+      </div>
     </div>
   )
 }
+

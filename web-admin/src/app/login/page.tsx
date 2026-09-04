@@ -1,18 +1,20 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Cookies from 'js-cookie'
 import api from '@/lib/api'
 import {
-  EnvelopeIcon,
-  LockClosedIcon,
+  ArrowRightIcon,
+  BoltIcon,
   EyeIcon,
   EyeSlashIcon,
-  ArrowRightIcon,
   KeyIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
-import { ShieldCheckIcon } from '@heroicons/react/24/solid'
 
 function getPanelRole(slug: string, email: string) {
   const normalizedSlug = (slug || '').toLowerCase()
@@ -49,20 +51,19 @@ export default function LoginPage() {
     }
     Cookies.set('accessToken', data.accessToken, { expires: 7, sameSite: 'strict', secure: true })
     Cookies.set('refreshToken', data.refreshToken, { expires: 30, sameSite: 'strict', secure: true })
-    const userMinimal = {
-      id:    data.user.id,
-      name:  data.user.name,
+    Cookies.set('user', JSON.stringify({
+      id: data.user.id,
+      name: data.user.name,
       email: data.user.email,
-      role:  { slug: role, name: role === 'admin' ? 'Administrador' : data.user.role?.name },
-      unit:  data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
-    }
-    Cookies.set('user', JSON.stringify(userMinimal), { expires: 30, sameSite: 'strict', secure: true })
-    router.replace('/gestao')
+      role: { slug: role, name: role === 'admin' ? 'Administrador' : data.user.role?.name },
+      unit: data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
+    }), { expires: 30, sameSite: 'strict', secure: true })
+    router.replace('/dashboard')
     return true
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault()
     setLoading(true)
     setError('')
     setNotice('')
@@ -70,7 +71,6 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/login', { email, password })
       if (!data?.accessToken || !data?.user) {
         setError('E-mail ou senha incorretos.')
-        setLoading(false)
         return
       }
       saveSession(data, email)
@@ -85,8 +85,7 @@ export default function LoginPage() {
     const account = email.trim()
     setError('')
     setNotice('')
-    const query = account ? `?email=${encodeURIComponent(account)}` : ''
-    window.location.href = `/api/auth/google/start${query}`
+    window.location.href = `/api/auth/google/start${account ? `?email=${encodeURIComponent(account)}` : ''}`
   }
 
   const handleForgotPassword = async () => {
@@ -102,11 +101,7 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/forgot-password', { email: account })
       const temporaryPassword = data?.temporaryPassword || 'Sofi@2026'
       setPassword(temporaryPassword)
-      setNotice(
-        data?.mailDelivered
-          ? 'Enviamos as instruções para o seu e-mail.'
-          : `Senha temporária liberada para ${account}: ${temporaryPassword}`
-      )
+      setNotice(data?.mailDelivered ? 'Enviamos as instruções para o seu e-mail.' : `Senha temporária liberada para ${account}: ${temporaryPassword}`)
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Não foi possível recuperar a senha para este e-mail.')
     } finally {
@@ -115,436 +110,157 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex overflow-hidden" style={{ backgroundColor: '#06070F' }}>
+    <main className="relative min-h-screen overflow-hidden bg-[#050914] text-white">
+      <video autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover opacity-26">
+        <source src="/aps30-video.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(2,8,23,0.96)_0%,rgba(3,20,43,0.86)_46%,rgba(0,63,117,0.72)_100%)]" />
+      <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:54px_54px]" />
+      <div className="absolute left-1/2 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-white/16 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#050914] to-transparent" />
 
-      {/*  LEFT PANEL  Video Background  */}
-      <div className="hidden lg:flex lg:w-[58%] relative flex-col overflow-hidden">
-
-        {/* Video background */}
-        <video
-          autoPlay muted loop playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: 'brightness(0.2) saturate(1.4)' }}
-        >
-          <source src="/aps30-video.mp4" type="video/mp4" />
-        </video>
-
-        {/* Deep dark gradient overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(160deg, rgba(6,8,20,0.75) 0%, rgba(10,15,40,0.55) 50%, rgba(6,8,20,0.85) 100%)',
-          }}
-        />
-
-        {/* Dot-grid texture */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.035) 1.5px, transparent 1.5px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
-
-        {/* Ambient glow orbs */}
-        <div
-          className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.12) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -top-24 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(248,163,3,0.09) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(27,58,107,0.15) 0%, transparent 60%)' }}
-        />
-
-        {/* Top: APS30 logo + title */}
-        <div className={`relative z-10 p-10 ${mounted ? 'animate-fade-in-left' : 'opacity-0'}`}>
-          <div className="flex items-center gap-4">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-xl shadow-black/20">
-              <img
-                src="/aps30-logo.png"
-                alt="APS30"
-                className="h-10 w-10 object-contain flex-shrink-0"
-              />
+      <section className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1fr)_480px]">
+        <div className="flex min-h-[48vh] flex-col justify-between p-6 sm:p-10 lg:min-h-screen lg:p-12">
+          <div className={`flex items-center gap-4 ${mounted ? 'animate-fade-in-left' : 'opacity-0'}`}>
+            <div className="grid h-16 w-16 place-items-center rounded-[24px] border border-white/12 bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+              <img src="/aps30-logo.png" alt="APS30" className="h-11 w-11 object-contain" />
             </div>
             <div>
-              <p className="text-white font-extrabold text-xl leading-tight tracking-tight">
-                APS30
-              </p>
-              <p
-                className="text-[10px] font-semibold tracking-[0.2em] mt-0.5 uppercase"
-                style={{ color: 'rgba(248,163,3,0.7)' }}
-              >
-                Associação Paulista Sul
-              </p>
+              <p className="text-xl font-black tracking-tight">SOFI APS EDU</p>
+              <p className="mt-1 text-xs font-black uppercase tracking-[0.22em] text-[#F6B221]">Sistema vivo de gestão</p>
             </div>
           </div>
-        </div>
 
-        {/* Center hero content */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center px-10 pb-6">
-
-          {/* Live badge */}
-          <div
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-8 w-fit ${mounted ? 'animate-fade-in-up delay-200' : 'opacity-0'}`}
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              Painel Administrativo
-            </span>
-          </div>
-
-          {/* Headline */}
-          <h1
-            className={`text-white text-[3.2rem] font-extrabold leading-[1.05] mb-4 tracking-tight ${mounted ? 'animate-fade-in-up delay-300' : 'opacity-0'}`}
-          >
-            Formando
-            <br />
-            <span
-              className="text-gold-gradient"
-              style={{
-                background: 'linear-gradient(135deg, #F8A303, #FDC347)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              Caráter,
-            </span>
-            <br />
-            Transformando
-            <br />
-            Vidas
-          </h1>
-
-          <p
-            className={`text-sm leading-relaxed max-w-sm mt-2 ${mounted ? 'animate-fade-in-up delay-400' : 'opacity-0'}`}
-            style={{ color: 'rgba(255,255,255,0.38)' }}
-          >
-            Plataforma de gestão educacional da Associação Paulista Sul 
-            cuidando das escolas adventistas com dedicação e excelência.
-          </p>
-
-          {/* School level cards */}
-          <div className={`mt-10 flex gap-3 ${mounted ? 'animate-fade-in-up delay-500' : 'opacity-0'}`}>
-            {[
-              { emoji: 'x', label: 'Ensino Infantil', color: '#29ABE2' },
-              { emoji: 'xa', label: 'Fundamental', color: '#F8A303' },
-              { emoji: 'x}', label: 'Médio', color: '#8B5CF6' },
-            ].map((card) => (
-              <div
-                key={card.label}
-                className="flex-1 rounded-2xl px-4 py-5 flex flex-col gap-2 transition-all duration-300 hover:scale-[1.03]"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                <span className="text-2xl">{card.emoji}</span>
-                <span className="text-xs font-semibold text-white">{card.label}</span>
-                <div
-                  className="h-0.5 rounded-full w-8 mt-1"
-                  style={{ background: `linear-gradient(90deg, ${card.color}, transparent)` }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* APS stats row */}
-          <div className={`mt-8 flex gap-5 ${mounted ? 'animate-fade-in-up delay-600' : 'opacity-0'}`}>
-            {[
-              { value: '15', label: 'Unidades' },
-              { value: '142+', label: 'Colaboradores' },
-              { value: '30', label: 'Anos de história' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p
-                  className="text-2xl font-extrabold leading-none"
-                  style={{
-                    background: 'linear-gradient(135deg, #F8A303, #FDC347)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  {stat.value}
-                </p>
-                <p className="text-[10px] text-white/30 mt-0.5 uppercase tracking-wider">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom APS color band */}
-        <div className="relative z-10 flex h-1">
-          <div className="flex-1" style={{ backgroundColor: '#F9C234' }} />
-          <div className="flex-1" style={{ backgroundColor: '#29ABE2' }} />
-          <div className="flex-1" style={{ backgroundColor: '#E07B39' }} />
-          <div className="flex-1" style={{ backgroundColor: '#1B5FAD' }} />
-        </div>
-      </div>
-
-      {/*  RIGHT PANEL  Dark Glass Form  */}
-      <div
-        className="w-full lg:w-[42%] flex flex-col items-center justify-center px-8 py-14 relative"
-        style={{ backgroundColor: 'rgba(6,8,20,0.98)' }}
-      >
-        {/* Subtle ambient orb */}
-        <div
-          className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(248,163,3,0.05) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.06) 0%, transparent 70%)' }}
-        />
-
-        <div className={`w-full max-w-[360px] relative z-10 ${mounted ? 'animate-slide-in-right' : 'opacity-0'}`}>
-
-          {/* Mobile logo */}
-          <div className="lg:hidden flex flex-col items-center mb-10">
-            <img
-              src="/aps30-logo.png"
-              alt="APS30"
-              className="w-16 h-16 object-contain mb-3"
-              style={{ filter: 'drop-shadow(0 0 12px rgba(248,163,3,0.5))' }}
-            />
-            <p className="font-extrabold text-xl text-white">APS30</p>
-            <p className="text-xs font-medium tracking-widest mt-0.5 uppercase" style={{ color: 'rgba(248,163,3,0.6)' }}>
-              Associação Paulista Sul
+          <div className={`max-w-4xl py-12 ${mounted ? 'animate-fade-in-up delay-200' : 'opacity-0'}`}>
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/72 backdrop-blur-xl">
+              <span className="h-2 w-2 rounded-full bg-[#0ABD78]" />
+              Educação, pessoas e inteligência
+            </div>
+            <h1 className="max-w-4xl text-5xl font-black leading-[0.96] tracking-tight sm:text-7xl xl:text-8xl">
+              Gestão escolar com presença de produto global.
+            </h1>
+            <p className="mt-7 max-w-2xl text-base font-semibold leading-8 text-white/62 sm:text-lg">
+              Um ambiente para enxergar a rede, cuidar das pessoas, organizar compromissos acadêmicos e transformar dados em decisões rápidas.
             </p>
+
+            <div className="mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
+              {[
+                { label: 'Pessoas', value: '24+', icon: UserGroupIcon, color: '#8B5CF6' },
+                { label: 'Rotinas', value: '360°', icon: BoltIcon, color: '#F6B221' },
+                { label: 'IA aplicada', value: 'SOFI', icon: SparklesIcon, color: '#0ABD78' },
+              ].map(item => {
+                const Icon = item.icon
+                return (
+                  <div key={item.label} className="group rounded-[26px] border border-white/10 bg-white/[0.075] p-4 backdrop-blur-2xl transition hover:-translate-y-1 hover:bg-white/[0.11]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-3xl font-black tracking-tight">{item.value}</span>
+                      <span className="grid h-11 w-11 place-items-center rounded-2xl" style={{ background: `${item.color}24`, color: item.color }}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-white/42">{item.label}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Form card */}
-          <div
-            className="rounded-3xl p-8"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between mb-7">
-              <div>
-                <h2 className="text-2xl font-extrabold leading-tight text-white">
-                  Bem-vindo
-                  <br />
-                  de volta
-                </h2>
-                <p className="text-sm mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  Acesse com suas credenciais institucionais
-                </p>
-              </div>
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(248,163,3,0.2), rgba(248,163,3,0.08))',
-                  border: '1px solid rgba(248,163,3,0.2)',
-                }}
-              >
-                <ShieldCheckIcon className="w-5 h-5" style={{ color: '#F8A303' }} />
-              </div>
-            </div>
+          <div className="hidden items-center gap-3 text-xs font-bold text-white/38 lg:flex">
+            <span className="h-px w-16 bg-white/16" />
+            Inspirado em experiências digitais premium, adaptado para operação educacional real.
+          </div>
+        </div>
 
-            {/* Error */}
-            {error && (
-              <div
-                className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 text-sm animate-scale-in"
-                style={{
-                  background: 'rgba(255,71,87,0.12)',
-                  border: '1px solid rgba(255,71,87,0.25)',
-                  color: '#FF4757',
-                }}
-              >
-                <span className="font-bold text-base leading-none flex-shrink-0">!</span>
-                {error}
+        <div className="flex items-center justify-center border-t border-white/10 bg-[#061427]/78 p-5 backdrop-blur-2xl lg:border-l lg:border-t-0">
+          <div className={`w-full max-w-[410px] ${mounted ? 'animate-slide-in-right' : 'opacity-0'}`}>
+            <div className="rounded-[34px] border border-white/14 bg-white/[0.09] p-5 shadow-[0_34px_120px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:p-7">
+              <div className="mb-7 flex items-start justify-between gap-5">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#F6B221]">Acesso seguro</p>
+                  <h2 className="mt-2 text-3xl font-black tracking-tight">Entrar na plataforma</h2>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-white/52">Use suas credenciais institucionais para acessar a central.</p>
+                </div>
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-[#F6B221]/20 bg-[#F6B221]/12 text-[#F6B221]">
+                  <ShieldCheckIcon className="h-6 w-6" />
+                </span>
               </div>
-            )}
 
-            {notice && (
-              <div
-                className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 text-sm animate-scale-in"
-                style={{
-                  background: 'rgba(16,185,129,0.12)',
-                  border: '1px solid rgba(16,185,129,0.25)',
-                  color: '#8EF7C2',
-                }}
-              >
-                <KeyIcon className="w-4 h-4 flex-shrink-0" />
-                <span>{notice}</span>
-              </div>
-            )}
+              {error && (
+                <div className="mb-4 rounded-[18px] border border-[#FF4757]/25 bg-[#FF4757]/12 px-4 py-3 text-sm font-bold text-[#FF9AA3]">
+                  {error}
+                </div>
+              )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email */}
-              <div>
-                <label
-                  className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]"
-                  style={{ color: 'rgba(255,255,255,0.4)' }}
-                >
-                  E-mail institucional
-                </label>
-                <div className="relative">
-                  <EnvelopeIcon
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2"
-                    style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.25)' }}
-                  />
+              {notice && (
+                <div className="mb-4 flex gap-2 rounded-[18px] border border-[#0ABD78]/25 bg-[#0ABD78]/12 px-4 py-3 text-sm font-bold text-[#8EF7C2]">
+                  <KeyIcon className="h-5 w-5 shrink-0" />
+                  <span>{notice}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-white/42">E-mail</span>
                   <input
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={event => setEmail(event.target.value)}
                     placeholder="email@aps.edu.br"
                     autoComplete="email"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: 'white',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = 'rgba(248,163,3,0.5)'
-                      e.target.style.boxShadow = '0 0 0 3px rgba(248,163,3,0.1)'
-                      e.target.style.background = 'rgba(255,255,255,0.08)'
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.08)'
-                      e.target.style.boxShadow = 'none'
-                      e.target.style.background = 'rgba(255,255,255,0.06)'
-                    }}
+                    className="h-[52px] w-full rounded-[18px] border border-white/12 bg-white/[0.08] px-4 py-4 text-base font-bold text-white outline-none transition placeholder:text-white/26 focus:border-[#F6B221]/70 focus:bg-white/[0.12] focus:ring-4 focus:ring-[#F6B221]/12"
                   />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label
-                  className="block text-[10px] font-semibold mb-1.5 uppercase tracking-[0.12em]"
-                  style={{ color: 'rgba(255,255,255,0.4)' }}
-                >
-                  Senha
                 </label>
-                <div className="relative">
-                  <LockClosedIcon
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2"
-                    style={{ width: 17, height: 17, color: 'rgba(255,255,255,0.25)' }}
-                  />
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="⬢⬢⬢⬢⬢⬢⬢⬢"
-                    autoComplete="current-password"
-                    className="w-full pl-10 pr-11 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: 'white',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = 'rgba(248,163,3,0.5)'
-                      e.target.style.boxShadow = '0 0 0 3px rgba(248,163,3,0.1)'
-                      e.target.style.background = 'rgba(255,255,255,0.08)'
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.08)'
-                      e.target.style.boxShadow = 'none'
-                      e.target.style.background = 'rgba(255,255,255,0.06)'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ color: 'rgba(255,255,255,0.25)' }}
-                  >
-                    {showPass
-                      ? <EyeSlashIcon style={{ width: 17, height: 17 }} />
-                      : <EyeIcon style={{ width: 17, height: 17 }} />
-                    }
-                  </button>
-                </div>
-              </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-black transition-all mt-2 flex items-center justify-center gap-2 active:scale-[0.98]"
-                style={{
-                  background: loading
-                    ? 'rgba(255,255,255,0.12)'
-                    : 'linear-gradient(135deg, #F8A303, #FDC347)',
-                  color: loading ? 'rgba(255,255,255,0.4)' : '#000',
-                  boxShadow: loading ? 'none' : '0 8px 32px rgba(248,163,3,0.35)',
-                }}
-              >
-                {loading ? (
-                  <>
-                    <span
-                      className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
-                      style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'rgba(255,255,255,0.7)' }}
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-white/42">Senha</span>
+                  <div className="relative">
+                    <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/28" />
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={event => setPassword(event.target.value)}
+                      placeholder="Sua senha"
+                      autoComplete="current-password"
+                      className="h-[52px] w-full rounded-[18px] border border-white/12 bg-white/[0.08] py-4 pl-12 pr-12 text-base font-bold text-white outline-none transition placeholder:text-white/26 focus:border-[#F6B221]/70 focus:bg-white/[0.12] focus:ring-4 focus:ring-[#F6B221]/12"
                     />
-                    Entrando...
-                  </>
-                ) : (
-                  <>
-                    Entrar no sistema
-                    <ArrowRightIcon style={{ width: 16, height: 16 }} />
-                  </>
-                )}
-              </button>
+                    <button type="button" onClick={() => setShowPass(value => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/36 transition hover:text-white">
+                      {showPass ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </label>
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.86)',
-                }}
-              >
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-white text-xs font-extrabold text-black">G</span>
-                Entrar com conta Google
-              </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[18px] bg-[#F6B221] px-5 py-4 text-sm font-black text-[#001B3F] shadow-[0_18px_44px_rgba(246,178,33,0.34)] transition hover:-translate-y-0.5 hover:bg-[#FFD15C] disabled:translate-y-0 disabled:opacity-60"
+                >
+                  {loading ? 'Entrando...' : 'Acessar agora'}
+                  {!loading && <ArrowRightIcon className="h-4 w-4" />}
+                </button>
 
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={loading}
-                className="w-full text-center text-xs font-semibold transition-colors"
-                style={{ color: 'rgba(248,163,3,0.85)' }}
-              >
-                Esqueci minha senha
-              </button>
-            </form>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-[18px] border border-white/12 bg-white/[0.07] text-sm font-black text-white/82 transition hover:bg-white/[0.11]"
+                >
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-xs font-black text-[#001B3F]">G</span>
+                  Entrar com Google
+                </button>
+
+                <button type="button" onClick={handleForgotPassword} disabled={loading} className="w-full text-center text-xs font-black uppercase tracking-[0.12em] text-[#F6B221] transition hover:text-[#FFD15C]">
+                  Recuperar senha
+                </button>
+              </form>
+            </div>
+            <p className="mt-5 text-center text-xs font-semibold leading-6 text-white/30">
+              APS30 - Associação Paulista Sul<br />SOFI, sistema de gestão educacional.
+            </p>
           </div>
-
-          {/* Footer */}
-          <p
-            className="text-center text-[11px] mt-6 leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.2)' }}
-          >
-            © {new Date().getFullYear()} APS30 · Associação Paulista Sul
-            <br />
-            Todos os direitos reservados
-          </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }
-
