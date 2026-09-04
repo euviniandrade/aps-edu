@@ -53,7 +53,31 @@ function mapSubmission(item: any, index: number): Person {
   }
 }
 
-const fallbackPeople = (restoredPromoterSubmissions as any[]).map(mapSubmission)
+function normalizeKeyPart(value: string) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function personKey(person: Person) {
+  const email = normalizeKeyPart(person.email || '')
+  if (email) return `email:${email}`
+  return `person:${normalizeKeyPart(person.name)}|${normalizeKeyPart(person.unit)}|${normalizeKeyPart(person.role)}`
+}
+
+function uniquePeople(people: Person[]) {
+  const byKey = new Map<string, Person>()
+  for (const person of people) {
+    const key = personKey(person)
+    const current = byKey.get(key)
+    byKey.set(key, current ? { ...current, ...person } : person)
+  }
+  return Array.from(byKey.values())
+}
+
+const fallbackPeople = uniquePeople((restoredPromoterSubmissions as any[]).map(mapSubmission))
 
 function StatCard({ label, value, detail, color }: { label: string; value: string; detail: string; color: string }) {
   return (
@@ -107,10 +131,7 @@ export default function ReportsPage() {
             }))
           : []
         if (!active) return
-        const merged = [...managementPeople, ...fallbackPeople]
-        const byKey = new Map<string, Person>()
-        for (const person of merged) byKey.set(`${person.email || person.id}|${person.name}`.toLowerCase(), person)
-        setPeople(Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name)))
+        setPeople(uniquePeople([...managementPeople, ...fallbackPeople]).sort((a, b) => a.name.localeCompare(b.name)))
         setSource(managementPeople.length ? 'api' : 'fallback')
       } catch {
         if (active) {
