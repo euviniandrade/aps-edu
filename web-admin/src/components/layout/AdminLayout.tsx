@@ -200,16 +200,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     } catch {}
   }, [pathname, currentPage?.label])
 
-  let user: any = null
-  try {
-    const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
-    if (userCookie) user = JSON.parse(decodeURIComponent(userCookie))
-  } catch (_) {
+  const [user, setUser] = useState<any>(null)
+  useEffect(() => {
     try {
-      const userCookie = typeof window !== 'undefined' ? Cookies.get('user') : null
-      if (userCookie) user = JSON.parse(userCookie)
-    } catch (_2) { user = null }
-  }
+      const userCookie = Cookies.get('user')
+      if (userCookie) {
+        setUser(JSON.parse(decodeURIComponent(userCookie)))
+        return
+      }
+    } catch (_) {
+      try {
+        const userCookie = Cookies.get('user')
+        if (userCookie) setUser(JSON.parse(userCookie))
+      } catch (_2) {
+        setUser(null)
+      }
+    }
+  }, [])
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'A'
   const userName = user?.name ?? 'Administrador'
   const userRoleName = user?.role?.name ?? user?.role ?? 'Admin'
