@@ -36,10 +36,10 @@ function mapRestoredPeople(): Person[] {
   return (restoredPromoterSubmissions as any[])
     .map(item => {
       const raw = item.raw || {}
-      const name = String(raw.nome_completo || item.name || '').trim()
-      const email = String(raw.email || '').trim()
-      const unit = String(raw.colegio_unidade || item.unit || 'Unidade não informada').trim()
-      const role = String(raw.cargo_funcao || item.role || 'Função não informada').trim()
+      const name = String(item.promoterName || item.name || raw.nome_completo || raw.nome || '').trim()
+      const email = String(item.email || raw.email || '').trim()
+      const unit = String(item.unit || raw.colegio_unidade || raw.unidade || 'Unidade não informada').trim()
+      const role = String(item.role || raw.cargo_funcao || raw.cargo || 'Função não informada').trim()
       return { name, unit, role, email }
     })
     .filter(person => {
