@@ -104,7 +104,7 @@ export default function OperatingSystemCockpit() {
   function openSofi() {
     window.dispatchEvent(new CustomEvent('aps:open-sofi', {
       detail: {
-        prompt: `Atue como Sofi IA gestora da APS EDU. Organize o centro "${selected.title}" com prioridades, riscos, responsaveis, calendario, e-mails e proximas acoes.`,
+        prompt: `Atue como Sofi IA gestora da APS EDU. Organize o centro "${selected.title}" com prioridades, riscos, responsáveis, calendário, e-mails e próximas ações.`,
       },
     }))
   }
@@ -167,7 +167,7 @@ export default function OperatingSystemCockpit() {
             </div>
             <div>
               <h3 className="text-lg font-black text-white">Sofi IA</h3>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Chat inteligente para planejamento, risco e proximos passos.</p>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Chat inteligente para planejamento, risco e próximos passos.</p>
             </div>
           </div>
 

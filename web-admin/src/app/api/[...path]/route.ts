@@ -378,7 +378,7 @@ async function proxy(request: NextRequest, context: RouteContext) {
       const result = await listPublicPromoterSubmissions()
       return NextResponse.json(result.data, { status: result.status })
     } catch (error: any) {
-      return NextResponse.json({ submissions: [], driveErrors: [error?.message || 'Falha ao ler formularios do Drive.'] })
+      return NextResponse.json({ submissions: [], driveErrors: [error?.message || 'Falha ao ler formulários do Drive.'] })
     }
   }
 

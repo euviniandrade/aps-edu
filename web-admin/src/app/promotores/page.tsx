@@ -301,7 +301,7 @@ export default function PromotoresPage() {
     { id: 'painel',      label: 'x` Painel' },
     { id: 'promotores',  label: 'x Promotores' },
     { id: 'avaliações',  label: 'x9 Avaliações' },
-    { id: 'formulario',  label: 'x Formulário' },
+    { id: 'formulario',  label: 'Formulário' },
     { id: 'ia',          label: 'x IA Consultiva' },
   ]
 

@@ -528,7 +528,7 @@ export default function AiIntelligenceCenter() {
       }
       localStorage.setItem('aps_edu_ai_center_artifacts', JSON.stringify([artifact, ...current].slice(0, 32)))
       window.dispatchEvent(new CustomEvent('ai_artifacts_updated', { detail: { artifact } }))
-      return { message: `Artefato criado: ${artifact.title}`, route: '/inovação' }
+      return { message: `Artefato criado: ${artifact.title}`, route: '/inovacao' }
     }
 
     if (action.type === 'create_management_work') {
@@ -571,13 +571,13 @@ export default function AiIntelligenceCenter() {
 Responda em portugues do Brasil com clareza, objetividade e profundidade pratica.
 Mantenha continuidade da conversa, proponha ações aplicaveis e considere o contexto operacional.
 
-Quando o usuario pedir uma ação real, voce PODE devolver um JSON valido no formato:
+Quando o usuário pedir uma ação real, você PODE devolver um JSON válido no formato:
 {"content":"mensagem humana curta","action":{"type":"create_task|create_tasks|create_event|send_email|drive_create_folder|create_ai_artifact|create_management_work|create_note","data":{...}}}
 
 Regras:
 - Use create_task para 1 tarefa pessoal.
 - Use create_tasks para varias tarefas pessoais.
-- Use create_event para compromisso/calendario.
+- Use create_event para compromisso/calendário.
 - Use send_email para e-mails operacionais.
 - Use drive_create_folder para organizar pastas no Drive.
 - Use create_ai_artifact para documentos, atas, politicas, roteiros, comunicados ou checklists.
@@ -631,10 +631,10 @@ Regras:
       if (attachedFile.type.startsWith('image/')) {
         imageBase64 = await readFileBase64(attachedFile)
         imageMimeType = attachedFile.type
-        content = rawContent || 'Análise este anexo visual e proponha a melhor ação operacional.'
+        content = rawContent || 'Analise este anexo visual e proponha a melhor ação operacional.'
       } else {
         const extractedText = await transcribeFile(attachedFile)
-        content = `${extractedText}\n\nPedido do usuario: ${rawContent || (isAudioOrVideo(attachedFile) ? 'Transcreva e organize este audio.' : 'Análise este documento e estruture os proximos passos.')}`
+        content = `${extractedText}\n\nPedido do usuário: ${rawContent || (isAudioOrVideo(attachedFile) ? 'Transcreva e organize este áudio.' : 'Analise este documento e estruture os próximos passos.')}`
       }
     }
 
@@ -1375,12 +1375,12 @@ ${content}`
                                 },
                                 {
                                   label: 'Agendar',
-                                  prompt: `Com base na resposta abaixo, crie um compromisso no calendario com título, horario sugerido e lembrete.\n\n${message.content}`,
+                                  prompt: `Com base na resposta abaixo, crie um compromisso no calendário com título, horário sugerido e lembrete.\n\n${message.content}`,
                                   icon: CalendarDaysIcon,
                                 },
                                 {
                                   label: 'Delegar',
-                                  prompt: `Com base na resposta abaixo, delegue em tarefas objetivas com responsavel, prioridade e prazo.\n\n${message.content}`,
+                                  prompt: `Com base na resposta abaixo, delegue em tarefas objetivas com responsável, prioridade e prazo.\n\n${message.content}`,
                                   icon: UserPlusIcon,
                                 },
                                 {

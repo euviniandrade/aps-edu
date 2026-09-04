@@ -350,7 +350,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                               style={{ background: '#FF4757' }} />
                           )}
                           {/* Badge especial para Automações */}
-                          {item.href === '/automações' && !isActive && (
+                          {item.href === '/automacoes' && !isActive && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
                               style={{ background: 'rgba(74,158,255,0.15)', color: '#4A9EFF' }}>
                               IA

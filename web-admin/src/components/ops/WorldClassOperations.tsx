@@ -412,7 +412,7 @@ const fallbackState: ManagementState = {
       priority: 'Alta',
       due: 'Amanhã',
       project: 'Infraestrutura escolar',
-      description: 'Consolidar cotações, verba e justificativa para direcao.',
+      description: 'Consolidar cotações, verba e justificativa para direção.',
       attachments: ['cotação-ti.xlsx'],
       tags: ['aprovação', 'compras'],
       participants: ['Juliana Martins', 'Vinicius Evangelista'],
@@ -1574,7 +1574,7 @@ function CentralOperationalWorkspace({
                       type="button"
                       onClick={event => {
                         event.stopPropagation()
-                        openSofi(`IA da Educação, assuma esta tarefa e execute o proximo passo: ${item.title}`)
+                        openSofi(`IA da Educação, assuma esta tarefa e execute o próximo passo: ${item.title}`)
                       }}
                       className="h-10 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black"
                     >
@@ -2506,7 +2506,7 @@ function PeopleWorkspacePremium({
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => executivePerson && onCreateAction(executivePerson, `Relatorio geral - ${executivePerson.name}`)}
+                  onClick={() => executivePerson && onCreateAction(executivePerson, `Relatório geral - ${executivePerson.name}`)}
                   className="h-10 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black"
                 >
                   Abrir relatório
@@ -2535,7 +2535,7 @@ function PeopleWorkspacePremium({
               onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatório geral de liderança - ${selectedPerson.name}`)}
               className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white"
             >
-              Relatorio geral
+              Relatório geral
             </button>
           </div>
         </div>
@@ -2847,13 +2847,13 @@ function PeopleWorkspacePremium({
                 {panelTab === 'relatorios' && (
                   <div className="mx-auto grid max-w-5xl gap-4">
                     <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-5">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">Relatorio executivo</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-white/35">Relatório executivo</p>
                       <div className="mt-2 text-sm text-white/55">
                         Aqui reunimos liderança, temperamento e produtividade em uma única leitura central.
                       </div>
                       <div className="mt-4 grid gap-2 md:grid-cols-3">
-                        <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio completo - ${selectedPerson.name}`)} className="h-11 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Relatório completo</button>
-                        <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatorio segmentado - ${selectedPerson.name}`)} className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório segmentado</button>
+                        <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatório completo - ${selectedPerson.name}`)} className="h-11 rounded-2xl bg-[#0ABD78] px-4 text-xs font-black text-black">Relatório completo</button>
+                        <button onClick={() => selectedPerson && onCreateAction(selectedPerson, `Relatório segmentado - ${selectedPerson.name}`)} className="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white">Relatório segmentado</button>
                         <button onClick={() => selectedPerson && openSofi(`IA da Educação, gere um relatório executivo completo de ${selectedPerson.name}. Liderança: Nível ${selectedPerson.leadershipLevel || 3}, perfil ${selectedPerson.leadershipProfile || 'Executor'}, potencial ${selectedPerson.leadershipPotential || 'Alto'}, prontidão ${selectedPerson.leadershipReadiness || 'Potencial em desenvolvimento'}, desenvolve líderes ${selectedPerson.leaderDevelopment || 'Desenvolve regularmente'}. Temperamento: ${selectedPerson.temperamentPrimaryPercent || 70}% ${selectedPerson.temperamentPrimary || 'Fleumático'} e ${selectedPerson.temperamentSecondaryPercent || 30}% ${selectedPerson.temperamentSecondary || 'Sanguíneo'}. Produtividade: índice ${productivityIndex}%, diagnóstico ${productivityDiagnosis.label}. Inclua arquivos ${(selectedPerson.files || []).join(', ')} e um plano de desenvolvimento.`)} className="h-11 rounded-2xl bg-[#F8A303] px-4 text-xs font-black text-black">Gerar com IA da Educação</button>
                       </div>
                     </div>
@@ -3630,7 +3630,7 @@ function PeopleWorkspaceExecutive({
     if (download) {
       const link = document.createElement('a')
       link.href = url
-      link.download = `Relatorio APS30 - ${person.name || 'perfil'}.html`.replace(/[\\/:*?"<>|]+/g, '-')
+      link.download = `Relatório APS30 - ${person.name || 'perfil'}.html`.replace(/[\\/:*?"<>|]+/g, '-')
       document.body.appendChild(link)
       link.click()
       link.remove()

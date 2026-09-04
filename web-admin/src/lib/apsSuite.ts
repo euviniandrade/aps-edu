@@ -85,7 +85,7 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'educação',
     title: 'Gestão Escolar',
-    subtitle: 'Unidades, calendario, eventos, comunicados, rotinas e indicadores pedagogicos.',
+    subtitle: 'Unidades, calendário, eventos, comunicados, rotinas e indicadores pedagógicos.',
     benchmark: 'PowerSchool, Blackbaud, FACTS, Gradelink, OpenEduCat, Proesc',
     color: '#F8A303',
     maturity: 78,
@@ -94,11 +94,11 @@ export const suiteModules: SuiteModule[] = [
   {
     id: 'operação',
     title: 'Operação e Estoque',
-    subtitle: 'Almoxarifado, patrimonio, compras, ativos, reposicao e auditoria.',
+    subtitle: 'Almoxarifado, patrimônio, compras, ativos, reposição e auditoria.',
     benchmark: 'Odoo, Zoho Inventory, NetSuite, Cin7, Omie, GestãoClick',
     color: '#E07B39',
     maturity: 68,
-    signals: ['Estoque minimo', 'Compras sugeridas', 'Ativos por local', 'Auditoria'],
+    signals: ['Estoque mínimo', 'Compras sugeridas', 'Ativos por local', 'Auditoria'],
   },
   {
     id: 'inteligencia',
@@ -112,18 +112,18 @@ export const suiteModules: SuiteModule[] = [
 ]
 
 export const executiveMetrics: ExecutiveMetric[] = [
-  { label: 'Saude operacional', value: '91%', trend: '+8 pts no ciclo', color: '#0ABD78' },
-  { label: 'SLA critico', value: '4', trend: '2 em risco alto', color: '#FF4757' },
+  { label: 'Saúde operacional', value: '91%', trend: '+8 pts no ciclo', color: '#0ABD78' },
+  { label: 'SLA crítico', value: '4', trend: '2 em risco alto', color: '#FF4757' },
   { label: 'Unidades em foco', value: '7', trend: '3 com melhora', color: '#F8A303' },
-  { label: 'Reposicoes previstas', value: '18', trend: 'R$ 42 mil estimados', color: '#4A9EFF' },
+  { label: 'Reposições previstas', value: '18', trend: 'R$ 42 mil estimados', color: '#4A9EFF' },
 ]
 
 export const capabilityMatrix: Capability[] = [
   {
     domain: 'trabalho',
-    name: 'Central unica de trabalho',
+    name: 'Central única de trabalho',
     bestFrom: 'ClickUp + Asana',
-    apsImplementation: 'Lista, kanban, eventos e mural integrados por responsavel, unidade e prazo.',
+    apsImplementation: 'Lista, kanban, eventos e mural integrados por responsável, unidade e prazo.',
     impact: 'critico',
     status: 'ativo',
   },
@@ -139,7 +139,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'pessoas',
     name: 'Perfil 360 da equipe',
     bestFrom: 'Workday + BambooHR',
-    apsImplementation: 'Usuario, cargo, unidade, promotor, entregas, feedback e engajamento em uma ficha.',
+    apsImplementation: 'Usuário, cargo, unidade, promotor, entregas, feedback e engajamento em uma ficha.',
     impact: 'alto',
     status: 'prototipo',
   },
@@ -155,7 +155,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'educação',
     name: 'Rede escolar em tempo real',
     bestFrom: 'PowerSchool + Blackbaud + Proesc',
-    apsImplementation: 'Visao executiva por unidade, eventos, comunicados, calendario e rotina escolar.',
+    apsImplementation: 'Visão executiva por unidade, eventos, comunicados, calendário e rotina escolar.',
     impact: 'critico',
     status: 'ativo',
   },
@@ -163,7 +163,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'educação',
     name: 'Jornada da unidade',
     bestFrom: 'FACTS + Gradelink',
-    apsImplementation: 'Checklist de operação escolar, pendencias, campanhas, documentos e responsaveis.',
+    apsImplementation: 'Checklist de operação escolar, pendências, campanhas, documentos e responsáveis.',
     impact: 'alto',
     status: 'planejado',
   },
@@ -171,7 +171,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'operação',
     name: 'Estoque e ativos inteligentes',
     bestFrom: 'Zoho Inventory + Odoo + Cin7',
-    apsImplementation: 'Itens, locais, minimo, reposicao sugerida, compras e patrimonio por QR Code.',
+    apsImplementation: 'Itens, locais, mínimo, reposição sugerida, compras e patrimônio por QR Code.',
     impact: 'critico',
     status: 'ativo',
   },
@@ -187,7 +187,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'inteligencia',
     name: 'Copiloto executivo da IA da Educação',
     bestFrom: 'Notion AI + Salesforce Einstein',
-    apsImplementation: 'Resumo diario, recomendações, busca natural e análise de risco por area.',
+    apsImplementation: 'Resumo diário, recomendações, busca natural e análise de risco por área.',
     impact: 'critico',
     status: 'ativo',
   },
@@ -195,7 +195,7 @@ export const capabilityMatrix: Capability[] = [
     domain: 'inteligencia',
     name: 'Automações sem código',
     bestFrom: 'ServiceNow + Zapier + Monday',
-    apsImplementation: 'Regras por evento: atrasou, faltou estoque, mudou responsavel, abriu risco.',
+    apsImplementation: 'Regras por evento: atrasou, faltou estoque, mudou responsável, abriu risco.',
     impact: 'alto',
     status: 'prototipo',
   },
@@ -204,30 +204,30 @@ export const capabilityMatrix: Capability[] = [
 export const smartAutomations: SmartAutomation[] = [
   {
     title: 'Atraso com impacto em unidade',
-    trigger: 'Tarefa critica passa do prazo ou fica 48h sem movimento.',
-    action: 'Notifica responsavel, lider e cria plano de recuperação com IA da Educação.',
-    result: 'Menos gargalos invisiveis e melhor previsao de entrega.',
+    trigger: 'Tarefa crítica passa do prazo ou fica 48h sem movimento.',
+    action: 'Notifica responsável, líder e cria plano de recuperação com IA da Educação.',
+    result: 'Menos gargalos invisíveis e melhor previsão de entrega.',
     domain: 'trabalho',
   },
   {
-    title: 'Estoque abaixo do minimo',
-    trigger: 'Quantidade atual fica abaixo do ponto de reposicao.',
+    title: 'Estoque abaixo do mínimo',
+    trigger: 'Quantidade atual fica abaixo do ponto de reposição.',
     action: 'Gera sugestão de compra, prioridade, centro de custo e aprovador.',
-    result: 'Compras mais rapidas e menos ruptura operacional.',
+    result: 'Compras mais rápidas e menos ruptura operacional.',
     domain: 'operação',
   },
   {
     title: 'Unidade com queda de engajamento',
     trigger: 'Pontuação, feedback ou entregas caem por duas semanas.',
-    action: 'Abre alerta no cockpit e recomenda acompanhamento do lider.',
+    action: 'Abre alerta no cockpit e recomenda acompanhamento do líder.',
     result: 'Gestão de pessoas mais preventiva e menos reativa.',
     domain: 'pessoas',
   },
   {
-    title: 'Calendario escolar em conflito',
-    trigger: 'Evento ou campanha cruza datas de avaliação, feriado ou reuniao.',
+    title: 'Calendário escolar em conflito',
+    trigger: 'Evento ou campanha cruza datas de avaliação, feriado ou reunião.',
     action: 'Sinaliza conflito, sugere nova data e atualiza envolvidos.',
-    result: 'Menos retrabalho e melhor coordenação entre colegios.',
+    result: 'Menos retrabalho e melhor coordenação entre colégios.',
     domain: 'educação',
   },
 ]
@@ -236,16 +236,16 @@ export const priorityWorkflows: PriorityWorkflow[] = [
   {
     title: 'Rotina escolar 360',
     owner: 'Departamento de Educação',
-    steps: ['Definir ciclo', 'Distribuir tarefas', 'Acompanhar unidades', 'Resolver riscos', 'Fechar evidencias'],
+    steps: ['Definir ciclo', 'Distribuir tarefas', 'Acompanhar unidades', 'Resolver riscos', 'Fechar evidências'],
   },
   {
-    title: 'Compra e reposicao',
+    title: 'Compra e reposição',
     owner: 'Operação',
     steps: ['Detectar falta', 'Sugerir compra', 'Aprovar', 'Receber', 'Baixar ou transferir'],
   },
   {
     title: 'Desenvolvimento da equipe',
-    owner: 'Lideranca',
+    owner: 'Liderança',
     steps: ['Coletar sinais', 'Gerar feedback', 'Definir trilha', 'Acompanhar meta', 'Reconhecer entrega'],
   },
 ]
@@ -257,21 +257,21 @@ export const operatingRoadmap: RoadmapItem[] = [
     items: ['Centro de Gestão', 'Estoque e ativos', 'Busca por módulos', 'Matriz de capacidades'],
   },
   {
-    phase: 'Proximo',
+    phase: 'Próximo',
     title: 'Dados reais e workflows',
-    items: ['Banco por módulo', 'Permissoes por cargo', 'Aprovações', 'Histórico e auditoria'],
+    items: ['Banco por módulo', 'Permissões por cargo', 'Aprovações', 'Histórico e auditoria'],
   },
   {
     phase: 'Enterprise',
     title: 'Rede inteligente',
-    items: ['Automações no-code', 'Previsao de riscos', 'QR Code de patrimonio', 'Indicadores por colegio'],
+    items: ['Automações no-code', 'Previsão de riscos', 'QR Code de patrimônio', 'Indicadores por colégio'],
   },
 ]
 
 export const hubLinks: HubLink[] = [
   {
     title: 'Meu Dia',
-    description: 'Agenda, foco, tarefas do dia e proximos compromissos.',
+    description: 'Agenda, foco, tarefas do dia e próximos compromissos.',
     href: '/meu-dia',
     color: '#4A9EFF',
     group: 'central',
@@ -279,7 +279,7 @@ export const hubLinks: HubLink[] = [
   },
   {
     title: 'Tarefas',
-    description: 'Demandas, evidencias, responsaveis, prazos e status.',
+    description: 'Demandas, evidências, responsáveis, prazos e status.',
     href: '/tasks',
     color: '#0ABD78',
     group: 'trabalho',
@@ -287,7 +287,7 @@ export const hubLinks: HubLink[] = [
   },
   {
     title: 'Eventos',
-    description: 'Calendario operacional, eventos escolares e encontros da rede.',
+    description: 'Calendário operacional, eventos escolares e encontros da rede.',
     href: '/events',
     color: '#8B5CF6',
     group: 'trabalho',
@@ -301,7 +301,7 @@ export const hubLinks: HubLink[] = [
   },
   {
     title: 'Estoque e Ativos',
-    description: 'Materiais, patrimonio, locais, minimos e reposicao.',
+    description: 'Materiais, patrimônio, locais, mínimos e reposição.',
     href: '/estoque',
     color: '#E07B39',
     group: 'trabalho',
@@ -309,7 +309,7 @@ export const hubLinks: HubLink[] = [
   },
   {
     title: 'Pessoas',
-    description: 'Usuarios, cargos, promotores, feedback e reconhecimento.',
+    description: 'Usuários, cargos, promotores, feedback e reconhecimento.',
     href: '/users',
     color: '#4A9EFF',
     group: 'rede',
@@ -317,22 +317,22 @@ export const hubLinks: HubLink[] = [
   },
   {
     title: 'Unidades',
-    description: 'Colegio, responsaveis, liderancas e estrutura da rede.',
+    description: 'Colégio, responsáveis, lideranças e estrutura da rede.',
     href: '/units',
     color: '#34D399',
     group: 'rede',
     primary: true,
   },
   {
-    title: 'Relatorios',
-    description: 'Indicadores por usuario, unidade, período e desempenho.',
+    title: 'Relatórios',
+    description: 'Indicadores por usuário, unidade, período e desempenho.',
     href: '/reports',
     color: '#F8A303',
     group: 'rede',
   },
   {
     title: 'Analytics IA',
-    description: 'Tendencias, riscos, previsoes e análise executiva.',
+    description: 'Tendências, riscos, previsões e análise executiva.',
     href: '/analytics',
     color: '#F9C234',
     group: 'inteligencia',
