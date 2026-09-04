@@ -16,6 +16,7 @@ import {
   type AcademicModule,
   type AcademicState,
   type AcademicSubject,
+  academicSeed,
   academicEventsFromState,
   fetchAcademicState,
   readAcademicState,
@@ -48,7 +49,7 @@ function daysUntil(value: string) {
 }
 
 export default function AcademicoPage() {
-  const [state, setState] = useState<AcademicState>(() => readAcademicState())
+  const [state, setState] = useState<AcademicState>(academicSeed)
   const [semesterId, setSemesterId] = useState('')
   const [moduleId, setModuleId] = useState('todos')
   const [subjectName, setSubjectName] = useState('')
@@ -57,6 +58,7 @@ export default function AcademicoPage() {
   const [activityDate, setActivityDate] = useState(todayIso())
   const [syncMessage, setSyncMessage] = useState('')
   const [remoteLoaded, setRemoteLoaded] = useState(false)
+  const [localLoaded, setLocalLoaded] = useState(false)
 
   useEffect(() => {
     setSemesterId(current => current || state.semesters.find(semester => semester.active)?.id || state.semesters[0]?.id || '')
@@ -64,6 +66,8 @@ export default function AcademicoPage() {
 
   useEffect(() => {
     let active = true
+    setState(readAcademicState())
+    setLocalLoaded(true)
     fetchAcademicState()
       .then(remoteState => {
         if (!active) return
@@ -80,13 +84,14 @@ export default function AcademicoPage() {
   }, [])
 
   useEffect(() => {
+    if (!localLoaded) return
     writeAcademicState(state)
     if (!remoteLoaded) return
     const timer = window.setTimeout(() => {
       saveAcademicState(state).catch(() => {})
     }, 500)
     return () => window.clearTimeout(timer)
-  }, [state, remoteLoaded])
+  }, [state, remoteLoaded, localLoaded])
 
   const activeModules = useMemo(
     () => state.modules.filter(module => module.semesterId === semesterId),

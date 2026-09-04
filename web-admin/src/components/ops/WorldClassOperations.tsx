@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import api from '@/lib/api'
 import { PROMOTER_QUESTIONS, getPromoterFormQuestionSections } from '@/lib/promoter-form'
-import { academicEventsFromState, readAcademicState } from '@/lib/academic'
+import { academicEventsFromState, academicSeed, readAcademicState, type AcademicState } from '@/lib/academic'
 import restoredPromoterSubmissions from '@/data/restored-promoter-submissions.json'
 import {
   AcademicCapIcon,
@@ -806,6 +806,7 @@ export default function WorldClassOperations({
   }, [forcedView])
   const activeView = forcedView || queryView
   const [state, setState] = useState<ManagementState>(fallbackState)
+  const [academicState, setAcademicState] = useState<AcademicState>(academicSeed)
   const [workflowColumns, setWorkflowColumns] = useState<WorkflowColumn[]>(defaultWorkflowColumns)
   const [source, setSource] = useState<'api' | 'local'>('local')
   const [loading, setLoading] = useState(true)
@@ -824,7 +825,7 @@ export default function WorldClassOperations({
   }, [state])
 
   const agendaEvents = useMemo(() => {
-    const academic = academicEventsFromState(readAcademicState())
+    const academic = academicEventsFromState(academicState)
       .slice(0, 8)
       .map(event => ({
         id: event.id,
@@ -846,7 +847,17 @@ export default function WorldClassOperations({
         color: priorityColor(item.priority),
       }))
     return [...academic, ...baseAgenda, ...derived]
-  }, [state.work])
+  }, [academicState, state.work])
+
+  useEffect(() => {
+    setAcademicState(readAcademicState())
+    const handleAcademicUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<AcademicState>).detail
+      if (detail) setAcademicState(detail)
+    }
+    window.addEventListener('aps30:academic-updated', handleAcademicUpdate)
+    return () => window.removeEventListener('aps30:academic-updated', handleAcademicUpdate)
+  }, [])
 
   const weeklyPanorama = useMemo(() => {
     return weeklyPanoramaBase.map((day, index) => ({
@@ -3196,7 +3207,11 @@ function PeopleWorkspaceExecutive({
   const [lastSavedAt, setLastSavedAt] = useState('')
   const [creatingPerson, setCreatingPerson] = useState(false)
   const [formLinkCopied, setFormLinkCopied] = useState(false)
-  const [submittedPeople, setSubmittedPeople] = useState<Person[]>(() => mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople()))
+  const [submittedPeople, setSubmittedPeople] = useState<Person[]>(() => mergeSubmittedPeople(restoredSubmittedPeople))
+
+  useEffect(() => {
+    setSubmittedPeople(mergeSubmittedPeople(restoredSubmittedPeople, readCachedSubmittedPeople()))
+  }, [])
 
   const allPeople = useMemo(() => {
     const submitted = [...submittedPeople]

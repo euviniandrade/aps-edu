@@ -52,7 +52,7 @@ export const ACADEMIC_STORAGE_KEY = 'aps30_academic_workspace_v1'
 export const ACADEMIC_UPDATED_EVENT = 'aps30:academic-updated'
 
 export const academicSeed: AcademicState = {
-  updatedAt: new Date().toISOString(),
+  updatedAt: '2026-08-01T12:00:00.000Z',
   semesters: [
     { id: 'sem-2026-1', name: '1º semestre', period: '2026.1', active: true },
     { id: 'sem-2026-2', name: '2º semestre', period: '2026.2', active: false },
