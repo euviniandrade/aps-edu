@@ -99,7 +99,7 @@ function LiveClock() {
   }, [])
 
   return (
-    <div className="hidden items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-3 py-2 text-xs font-black text-white/68 shadow-[0_12px_34px_rgba(0,0,0,0.22)] md:flex">
+    <div className="hidden items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-3 py-2 text-xs font-black text-[#B9C0B3] shadow-[0_12px_34px_rgba(0,0,0,0.22)] md:flex">
       <span className="h-2 w-2 rounded-full bg-[#0ABD78]" />
       {time}
     </div>
@@ -269,7 +269,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <Icon className="h-4 w-4" style={{ color: active ? '#BCF572' : '#9DA695' }} />
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                        {active && <ChevronRightIcon className="h-4 w-4 text-white/45" />}
+                        {active && <ChevronRightIcon className="h-4 w-4 text-[#B9C0B3]" />}
                       </Link>
                     </li>
                   )
@@ -285,10 +285,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#F6B221] text-sm font-black text-[#001B3F]">{userInitial}</div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black text-white">{userName}</p>
-            <p className="truncate text-xs font-semibold text-white/42">{userRoleName}</p>
+            <p className="truncate text-xs font-semibold text-[#B9C0B3]">{userRoleName}</p>
           </div>
         </div>
-        <button type="button" onClick={handleLogout} className="mt-2 flex h-11 w-full items-center gap-3 rounded-[16px] px-3 text-sm font-bold text-white/46 transition hover:bg-white/[0.06] hover:text-white">
+        <button type="button" onClick={handleLogout} className="mt-2 flex h-11 w-full items-center gap-3 rounded-[16px] px-3 text-sm font-bold text-[#B9C0B3] transition hover:bg-white/[0.06] hover:text-white">
           <ArrowRightOnRectangleIcon className="h-5 w-5" />
           Sair
         </button>
@@ -315,11 +315,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Bars3Icon className="h-5 w-5" />
               </button>
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-xs font-bold text-white/42">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#B9C0B3]">
                   <Link href="/dashboard" className="truncate hover:text-white">SOFI APS EDU</Link>
                   {currentPage && (
                     <>
-                      <ChevronRightIcon className="h-3 w-3 shrink-0 text-white/24" />
+                      <ChevronRightIcon className="h-3 w-3 shrink-0 text-[#B9C0B3]" />
                       <span className="truncate text-[#F6B221]">{currentPage.label}</span>
                     </>
                   )}
@@ -331,24 +331,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-10 items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-4 text-sm font-bold text-white/64 shadow-[0_12px_34px_rgba(0,0,0,0.22)] sm:flex">
+              <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-10 items-center gap-2 rounded-full border border-white/12 bg-white/[0.07] px-4 text-sm font-bold text-[#B9C0B3] shadow-[0_12px_34px_rgba(0,0,0,0.22)] sm:flex">
                 <MagnifyingGlassIcon className="h-4 w-4" />
                 Buscar
-                <kbd className="rounded-md border border-white/10 bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-white/46">Ctrl+K</kbd>
+                <kbd className="rounded-md border border-white/10 bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-[#B9C0B3]">Ctrl+K</kbd>
               </button>
-              <button type="button" aria-label="Buscar" onClick={() => setPaletteOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-white/64 sm:hidden">
+              <button type="button" aria-label="Buscar" onClick={() => setPaletteOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-[#B9C0B3] sm:hidden">
                 <MagnifyingGlassIcon className="h-4 w-4" />
               </button>
               <LiveClock />
-              <Link href="/notificacoes" aria-label="Notificações" title="Notificações" className="relative grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-white/64">
+              <Link href="/notificacoes" aria-label="Notificações" title="Notificações" className="relative grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/[0.07] text-[#B9C0B3]">
                 <BellIcon className="h-5 w-5" />
               </Link>
-              <button type="button" onClick={() => setShortcutsOpen(true)} className="hidden h-10 rounded-full border border-white/12 bg-white/[0.07] px-3 text-xs font-black text-white/52 lg:block">?</button>
+              <button type="button" onClick={() => setShortcutsOpen(true)} className="hidden h-10 rounded-full border border-white/12 bg-white/[0.07] px-3 text-xs font-black text-[#B9C0B3] lg:block">?</button>
               <div className="hidden items-center gap-3 rounded-full border border-white/12 bg-white/[0.07] py-1.5 pl-2 pr-4 shadow-[0_12px_34px_rgba(0,0,0,0.22)] md:flex">
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-[#F6B221] text-xs font-black text-[#001B3F]">{userInitial}</div>
                 <div>
                   <p className="text-xs font-black leading-none text-white">{userName}</p>
-                  <p className="mt-1 text-[10px] font-semibold leading-none text-white/40">{userRoleName}</p>
+                  <p className="mt-1 text-[10px] font-semibold leading-none text-[#B9C0B3]">{userRoleName}</p>
                 </div>
               </div>
             </div>
