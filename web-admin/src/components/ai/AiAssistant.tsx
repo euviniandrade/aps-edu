@@ -637,7 +637,7 @@ export default function AiAssistant({ embedded = false }: AiAssistantProps = {})
       setAttachedFile(null)
     }
 
-    const display = sendFile ? `📎 } ${sendFile.name}${content ? '\n' + content : ''}` : content
+    const display = sendFile ? `Arquivo: ${sendFile.name}${content ? '\n' + content : ''}` : content
     const newMessages: Message[] = [...messages, { role: 'user', content: finalContent, display }]
     setMessages(newMessages)
     setInput('')
@@ -766,9 +766,9 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/*  PANEL  */}
       {open && (
         <div
-          className={`fixed z-50 flex overflow-hidden border border-white/10 bg-[#060814]/96 shadow-[0_28px_80px_rgba(0,0,0,0.68)] backdrop-blur-2xl ${embedded ? 'inset-0 rounded-none' : `inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[19rem]' : 'right-3 sm:right-6'} w-[min(1120px,calc(100vw-24px))]`}`}
+          className={`z-50 flex overflow-hidden border border-white/10 bg-[#060814]/96 shadow-[0_28px_80px_rgba(0,0,0,0.68)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : `fixed inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[19rem]' : 'right-3 sm:right-6'} w-[min(1120px,calc(100vw-24px))]`}`}
           style={{
-            height: embedded ? '100vh' : 'calc(100vh - 24px)',
+            height: embedded ? '100%' : 'calc(100vh - 24px)',
             boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
             animation: 'scaleIn 0.18s ease',
           }}
@@ -1007,7 +1007,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
             <div className="border-t border-white/10 px-4 pb-4 pt-4 sm:px-5">
               {attachedFile && (
                 <div className="mb-3 flex items-center gap-2 rounded-2xl border border-[#F8A303]/20 bg-[#F8A303]/10 px-3 py-2 text-xs text-[#FDC347]">
-                  <span>{isAudioOrVideo(attachedFile) ? '?udio pronto para transcri??o' : 'Arquivo anexado'} ? {attachedFile.name}</span>
+                  <span>{isAudioOrVideo(attachedFile) ? 'Áudio pronto para transcrição' : 'Arquivo anexado'} · {attachedFile.name}</span>
                   <button onClick={() => setAttachedFile(null)} className="ml-auto text-white/50 transition hover:text-white">×</button>
                 </div>
               )}
@@ -1022,7 +1022,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                   {isRecording ? (
                     <>
                       <span className="h-2 w-2 rounded-full bg-[#FF4757]" />
-                      <span>Gravando ?udio ? {formatSeconds(recordingSeconds)}</span>
+                      <span>Gravando áudio · {formatSeconds(recordingSeconds)}</span>
                     </>
                   ) : (
                     <span>{errorText}</span>
@@ -1050,7 +1050,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                     onClick={toggleRecording}
                     disabled={loading}
                     className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white/45 transition hover:bg-white/[0.06]"
-                    title={isRecording ? 'Parar e transcrever ?udio' : 'Gravar ?udio para transcrever'}
+                    title={isRecording ? 'Parar e transcrever áudio' : 'Gravar áudio para transcrever'}
                     style={{
                       color: isRecording ? '#FF4757' : 'rgba(255,255,255,0.45)',
                       boxShadow: isRecording ? '0 0 0 1px rgba(255,71,87,0.25)' : 'none',
@@ -1063,7 +1063,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKey}
-                    placeholder={isRecording ? 'Gravando ?udio para transcri??o...' : isListening ? '?? Ouvindo...' : 'Pergunte ? IA da Educação...'}
+                    placeholder={isRecording ? 'Gravando áudio para transcrição...' : isListening ? 'Ouvindo...' : 'Pergunte à IA da Educação...'}
                     disabled={loading || isRecording}
                     rows={1}
                     className="max-h-36 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-6 outline-none ring-0 placeholder:text-white/30 focus:outline-none focus:ring-0 focus-visible:outline-none"
