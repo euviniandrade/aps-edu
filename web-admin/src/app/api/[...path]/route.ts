@@ -148,7 +148,9 @@ function localSessionResponse(request: NextRequest, email: string) {
     role: { slug: 'admin', name: 'Administrador' },
     unit: user.unit ? { id: user.unit.id, name: user.unit.name } : null,
   }
-  const cookieOptions = { sameSite: 'strict' as const, secure: true, path: '/' }
+  // OAuth returns from accounts.google.com. Lax allows the first top-level
+  // redirect to carry the freshly issued session cookies into the app.
+  const cookieOptions = { sameSite: 'lax' as const, secure: true, path: '/' }
   response.cookies.set('accessToken', 'local-admin-token', { ...cookieOptions, maxAge: 60 * 60 * 24 * 7 })
   response.cookies.set('refreshToken', 'local-admin-refresh', { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 })
   response.cookies.set('user', JSON.stringify(userMinimal), { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 })
