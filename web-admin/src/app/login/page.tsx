@@ -65,18 +65,27 @@ export default function LoginPage() {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
-    setLoading(true)
     setError('')
     setNotice('')
+    const account = email.trim()
+    if (!account) {
+      setError('Digite seu e-mail para entrar.')
+      return
+    }
+    if (!password) {
+      setError('Digite sua senha ou use “Entrar com Google”.')
+      return
+    }
+    setLoading(true)
     try {
-      const { data } = await api.post('/auth/login', { email, password })
+      const { data } = await api.post('/auth/login', { email: account, password })
       if (!data?.accessToken || !data?.user) {
-        setError('E-mail ou senha incorretos.')
+        setError('Não foi possível validar o acesso. Confira a senha ou use “Recuperar senha”.')
         return
       }
-      saveSession(data, email)
+      saveSession(data, account)
     } catch {
-      setError('E-mail ou senha incorretos.')
+      setError('Senha incorreta. Use “Recuperar senha” ou entre com sua conta Google.')
     } finally {
       setLoading(false)
     }
