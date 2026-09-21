@@ -70,11 +70,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const current = groups.flatMap(group => group.items).find(item => active(item.href))
   const role = typeof user?.role === 'string' ? user.role : user?.role?.name
   function logout() { ['accessToken','refreshToken','user'].forEach(name => Cookies.remove(name)); localStorage.removeItem('token'); router.push('/login') }
-  const modern = ['/dashboard','/agenda','/integracoes','/estoque'].includes(pathname)
   return <div className={styles.shell}>
     {mobile && <button className={styles.scrim} onClick={() => setMobile(false)} aria-label="Fechar navegação" />}
     <aside className={`${styles.sidebar} ${mobile ? styles.open : ''}`}>
-      <Link href="/dashboard" className={styles.brand} aria-label="SOFI APS EDU"><span className={styles.brandIcon}><img src="/icon-ea.svg" alt="" /></span><div><strong>SOFI<span>.</span></strong><small>APS EDU · Gestão inteligente</small></div></Link>
+      <Link href="/dashboard" className={styles.brand} aria-label="SOFI APS EDU"><span className={styles.brandIcon}><img src="/icon-ea.svg" alt="" /></span><div><strong>SOFI<span>.</span></strong><small>APS EDU · Trabalho com clareza</small></div></Link>
       <button className={styles.workspaceSwitch} onClick={() => setPalette(true)}><span className={styles.workspaceMark}>A</span><span>Meu ambiente<small>Gestão e vida acadêmica</small></span><ChevronDownIcon /></button>
       <nav className={styles.navigation} aria-label="Navegação principal">{groups.map(group => <div key={group.name} className={styles.group}>
         <button className={styles.groupLabel} aria-expanded={!collapsed.includes(group.name)} onClick={() => setCollapsed(prev => prev.includes(group.name) ? prev.filter(name => name !== group.name) : [...prev, group.name])}>{group.name}<ChevronDownIcon style={{transform:collapsed.includes(group.name)?'rotate(-90deg)':undefined}} /></button>
@@ -85,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </aside>
     <div className={styles.body}>
       <header className={styles.topbar}><div className={styles.breadcrumb}><button className={styles.menuButton} aria-label="Abrir navegação" onClick={() => setMobile(true)}><Bars3Icon /></button><Squares2X2Icon /><span>Meu ambiente</span><ChevronRightIcon /><b>{current?.name || 'APS EDU'}</b></div><div className={styles.topActions}><button className={styles.search} onClick={() => setPalette(true)} aria-label="Buscar na plataforma"><MagnifyingGlassIcon /><span>Buscar em tudo</span><kbd>Ctrl K</kbd></button><Link href="/notificacoes" title="Notificações" aria-label="Notificações"><BellIcon /></Link><Link href="/configuracoes" className={styles.avatar} title="Minha conta">{user?.name?.[0] || 'A'}</Link></div></header>
-      <main className={`${styles.main} ${modern ? '' : 'sofi-content'}`}><div className={styles.inner}>{children}</div></main>
+      <main className={`${styles.main} sofi-content`}><div className={styles.inner}>{children}</div></main>
     </div>
     {!pathname.startsWith('/inovacao') && <AiAssistant />}
     <CommandPalette open={palette} onClose={() => setPalette(false)} />

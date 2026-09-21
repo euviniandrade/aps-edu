@@ -766,9 +766,10 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/*  PANEL  */}
       {open && (
         <div
-          className={`z-50 flex overflow-hidden border border-white/10 bg-[#060814]/96 shadow-[0_28px_80px_rgba(0,0,0,0.68)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : `fixed inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[19rem]' : 'right-3 sm:right-6'} w-[min(1120px,calc(100vw-24px))]`}`}
+          className={`sofi-dark-surface z-50 flex overflow-hidden border border-white/10 bg-[#060814]/96 shadow-[0_28px_80px_rgba(0,0,0,0.68)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : `fixed inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[19rem]' : 'right-3 sm:right-6'} w-[min(1120px,calc(100vw-24px))]`}`}
           style={{
             height: embedded ? '100%' : 'calc(100vh - 24px)',
+            background: 'rgba(6,8,20,0.98)',
             boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
             animation: 'scaleIn 0.18s ease',
           }}

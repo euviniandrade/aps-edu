@@ -521,11 +521,11 @@ function openSofi(prompt: string) {
 }
 
 function Surface({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-[1.35rem] border border-[#D8E5F0] bg-white shadow-[0_18px_48px_rgba(0,63,117,0.08)] ${className}`}>{children}</section>
+  return <section className={`sofi-ops-surface rounded-lg border border-[#E5D9E8] bg-white shadow-[0_14px_36px_rgba(44,19,56,0.08)] ${className}`}>{children}</section>
 }
 
 function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`h-11 w-full rounded-2xl border border-[#C9DBEA] bg-white px-3 text-sm font-semibold text-[#0B1F36] outline-none transition placeholder:text-[#6B7F94] focus:border-[#00A9E0] focus:ring-4 focus:ring-[#00A9E0]/15 ${props.className || ''}`} />
+  return <input {...props} className={`h-11 w-full rounded-lg border border-[#E5D9E8] bg-white px-3 text-sm font-semibold text-[#2C1338] outline-none transition placeholder:text-[#8A718F] focus:border-[#E57CD8] focus:ring-4 focus:ring-[#E57CD8]/15 ${props.className || ''}`} />
 }
 
 function clampNumber(value: number, min: number, max: number) {
@@ -3041,7 +3041,9 @@ function resolveSubmissionPhoto(submission: any) {
   const mimeType = String(submission?.photoMimeType || raw?.photoMimeType || backup?.photoMimeType || 'image/jpeg').trim()
   if (base64 && /^(\/9j\/|iVBORw0KGgo|R0lGOD)/.test(base64)) return `data:${mimeType};base64,${base64}`
 
-  return candidates.find(value => value.includes('drive.google.com/')) || ''
+  // Private Drive links render as broken images until an authenticated media
+  // proxy is available. Keep the record intact and use the initials fallback.
+  return ''
 }
 
 function mapSubmissionToPerson(submission: any): Person {
@@ -3954,7 +3956,7 @@ function PeopleWorkspaceExecutive({
                         >
                           <div className="aspect-[4/3] overflow-hidden bg-black/30">
                             {photo ? (
-                              <img src={photo} alt={person.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                              <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center" style={{ background: `${getCargoColor(cargo)}12` }}>
                                 <UserCircleIcon className="h-16 w-16" style={{ color: `${getCargoColor(cargo)}60` }} />
@@ -4009,7 +4011,7 @@ function PeopleWorkspaceExecutive({
                     >
                       <div className="aspect-[4/3] overflow-hidden bg-black/30">
                         {photo ? (
-                          <img src={photo} alt={person.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                          <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#EAF4FF] to-white">
                             <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[#005DAA] text-xl font-black text-white shadow-lg shadow-[#005DAA]/20">
@@ -4051,7 +4053,7 @@ function PeopleWorkspaceExecutive({
                   <div className="grid gap-5 pr-12 lg:grid-cols-[180px_1fr] lg:items-center">
                     <div className="relative h-40 w-40 overflow-hidden rounded-[2rem] border border-white/15 bg-black/30 shadow-2xl shadow-black/40 sm:h-44 sm:w-44">
                       {getPersonPhoto(selectedPerson) ? (
-                        <img src={getPersonPhoto(selectedPerson)} alt={selectedPerson.name} className="h-full w-full object-cover" />
+                        <img src={getPersonPhoto(selectedPerson)} alt={selectedPerson.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-8 object-contain' }} className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
                           <UserCircleIcon className="h-24 w-24 text-white/20" />
@@ -4150,7 +4152,7 @@ function PeopleWorkspaceExecutive({
                       <Input value={draft.phone || ''} onChange={event => syncDraftField('phone', event.target.value)} placeholder="Telefone" />
                       <div className="grid gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-3 sm:grid-cols-[96px_1fr]">
                         <div className="h-24 w-24 overflow-hidden rounded-2xl bg-black/30">
-                          {getPersonPhoto(draft) ? <img src={getPersonPhoto(draft)} alt={draft.name} className="h-full w-full object-cover" /> : <UserCircleIcon className="h-full w-full p-4 text-white/20" />}
+                          {getPersonPhoto(draft) ? <img src={getPersonPhoto(draft)} alt={draft.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-8 object-contain' }} className="h-full w-full object-cover" /> : <UserCircleIcon className="h-full w-full p-4 text-white/20" />}
                         </div>
                         <div className="flex flex-col justify-center gap-2">
                           <label className="flex h-11 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.035] text-xs font-black text-white/70">
