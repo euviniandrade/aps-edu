@@ -1,521 +1,332 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Cookies from 'js-cookie'
+import {
+  ArrowPathIcon,
+  CalendarDaysIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  FlagIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import AdminLayout from '@/components/layout/AdminLayout'
 import api from '@/lib/api'
-import Cookies from 'js-cookie'
-import { useToast } from '@/contexts/ToastContext'
 
-const LS_HABITS   = 'apsedu_habits'
-const LS_NOTES    = 'apsedu_quicknotes'
-const LS_FOCUS    = 'apsedu_focus'
-const LS_CHECKIN  = 'apsedu_checkin'
-
-function todayKey() { return new Date().toISOString().slice(0, 10) }
+const LS_HABITS = 'apsedu_habits'
+const LS_NOTES = 'apsedu_quicknotes'
+const LS_FOCUS = 'apsedu_focus'
+const LS_CHECKIN = 'apsedu_checkin'
 
 const MOODS = [
-  { label: 'Ótimo',    emoji: '😄', color: '#0ABD78' },
-  { label: 'Bem',      emoji: '🙂', color: '#4A9EFF' },
-  { label: 'Normal',   emoji: '😐', color: '#F8A303' },
-  { label: 'Cansado',  emoji: '😴', color: '#8B5CF6' },
-  { label: 'Estressado', emoji: '😤', color: '#FF4757' },
+  { label: 'Excelente', value: 5, mark: '5' },
+  { label: 'Bem', value: 4, mark: '4' },
+  { label: 'Regular', value: 3, mark: '3' },
+  { label: 'Cansado', value: 2, mark: '2' },
+  { label: 'Difícil', value: 1, mark: '1' },
 ]
 
 const DEFAULT_HABITS = [
-  { id: '1', label: 'Devocional / Oração', icon: '🙏' },
-  { id: '2', label: 'Exercício físico',    icon: '🏃' },
-  { id: '3', label: 'Leitura',             icon: '📚' },
-  { id: '4', label: 'Água 8 copos',        icon: '💧' },
-  { id: '5', label: 'Sono de qualidade',   icon: '😴' },
-  { id: '6', label: 'Sem redes sociais −1h', icon: '📵' },
+  { id: '1', label: 'Devocional ou oração' },
+  { id: '2', label: 'Exercício físico' },
+  { id: '3', label: 'Leitura' },
+  { id: '4', label: 'Água: 8 copos' },
+  { id: '5', label: 'Sono de qualidade' },
+  { id: '6', label: 'Uma hora sem redes sociais' },
 ]
 
+const PHRASES = [
+  'Tudo posso naquele que me fortalece. - Fp 4:13',
+  'O Senhor é meu pastor e nada me faltará. - Sl 23:1',
+  'Seja forte e corajoso. Não se apavore. - Js 1:9',
+  'Confie no Senhor de todo o seu coração. - Pv 3:5',
+  'Aquele que começou a boa obra em você a completará. - Fp 1:6',
+  'Porque sou eu que conheço os planos que tenho para você. - Jr 29:11',
+]
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function formatTime(value?: string) {
+  if (!value) return 'Dia todo'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? value.slice(0, 5)
+    : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function Panel({
+  title,
+  eyebrow,
+  icon: Icon,
+  action,
+  children,
+  className = '',
+}: {
+  title: string
+  eyebrow?: string
+  icon: React.ElementType
+  action?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <section className={`rounded-lg border border-slate-200 bg-white shadow-sm ${className}`}>
+      <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-teal-50 text-teal-700">
+            <Icon className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            {eyebrow && <p className="text-[11px] font-bold uppercase text-slate-400">{eyebrow}</p>}
+            <h2 className="truncate text-base font-bold text-slate-900">{title}</h2>
+          </div>
+        </div>
+        {action}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-24 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 text-center text-sm text-slate-500">
+      {children}
+    </div>
+  )
+}
+
 export default function MeuDiaPage() {
-  const { success, info } = useToast()
-  const [user, setUser]   = useState<any>(null)
+  const [userName, setUserName] = useState('Administrador')
   const [tasks, setTasks] = useState<any[]>([])
   const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Focus task
-  const [focus, setFocus]       = useState('')
+  const [calendarState, setCalendarState] = useState<'loading' | 'connected' | 'offline'>('loading')
+  const [focus, setFocus] = useState('')
   const [focusInput, setFocusInput] = useState('')
-  const [editingFocus, setEditingFocus] = useState(false)
+  const [note, setNote] = useState('')
+  const [habits, setHabits] = useState<Record<string, boolean>>({})
+  const [mood, setMood] = useState<number | null>(null)
 
-  // Quick notes
-  const [note, setNote]         = useState('')
+  const dateKey = todayKey()
+  const todayLabel = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
 
-  // Habits
-  const [habits, setHabits]     = useState<Record<string, boolean>>({})
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [tasksResult, calendarResult] = await Promise.allSettled([
+      api.get('/tasks'),
+      fetch(`/api/calendar?from=${encodeURIComponent(`${dateKey}T00:00:00-03:00`)}&to=${encodeURIComponent(`${dateKey}T23:59:59-03:00`)}`),
+    ])
 
-  // Mood check-in
-  const [mood, setMood]         = useState<number | null>(null)
+    if (tasksResult.status === 'fulfilled') {
+      const data = tasksResult.value.data
+      setTasks(Array.isArray(data) ? data : data?.items || data?.tasks || [])
+    }
 
-  // Priority tasks (my tasks)
-  const [myTasks, setMyTasks]   = useState<any[]>([])
-
-  // Phrase of the day
-  const PHRASES = [
-    'Tudo posso naquele que me fortalece. — Fp 4:13',
-    'O Senhor é meu pastor e nada me faltará. — Sl 23:1',
-    'Seja forte e corajoso. Não se apavore. — Js 1:9',
-    'Confie no SENHOR de todo o seu coração. — Pv 3:5',
-    'Aquele que começou a boa obra em você a completará. — Fp 1:6',
-    'Porque sou eu que conheço os planos que tenho para você. — Jr 29:11',
-  ]
-  const phrase = PHRASES[new Date().getDay() % PHRASES.length]
-
-  const today = new Date()
-  const todayStr = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+    if (calendarResult.status === 'fulfilled' && calendarResult.value.ok) {
+      const data = await calendarResult.value.json()
+      setEvents(Array.isArray(data) ? data : data?.events || data?.items || [])
+      setCalendarState('connected')
+    } else {
+      setCalendarState('offline')
+    }
+    setLoading(false)
+  }, [dateKey])
 
   useEffect(() => {
-    // Load user
     try {
       const raw = Cookies.get('user')
-      if (raw) setUser(JSON.parse(decodeURIComponent(raw)))
+      if (raw) {
+        const parsed = JSON.parse(decodeURIComponent(raw))
+        setUserName(parsed?.name?.split(' ')[0] || 'Administrador')
+      }
     } catch {}
 
-    // Load persisted data
-    const savedFocus  = localStorage.getItem(LS_FOCUS  + '_' + todayKey()) || ''
-    const savedNote   = localStorage.getItem(LS_NOTES  + '_' + todayKey()) || ''
-    const savedHabits = JSON.parse(localStorage.getItem(LS_HABITS + '_' + todayKey()) || '{}')
-    const savedMood   = localStorage.getItem(LS_CHECKIN + '_' + todayKey())
-    setFocus(savedFocus)
-    setFocusInput(savedFocus)
-    setNote(savedNote)
-    setHabits(savedHabits)
-    setMood(savedMood !== null ? Number(savedMood) : null)
+    setFocus(localStorage.getItem(`${LS_FOCUS}_${dateKey}`) || '')
+    setFocusInput(localStorage.getItem(`${LS_FOCUS}_${dateKey}`) || '')
+    setNote(localStorage.getItem(`${LS_NOTES}_${dateKey}`) || '')
+    try {
+      setHabits(JSON.parse(localStorage.getItem(`${LS_HABITS}_${dateKey}`) || '{}'))
+      const savedMood = JSON.parse(localStorage.getItem(`${LS_CHECKIN}_${dateKey}`) || 'null')
+      setMood(typeof savedMood === 'number' ? savedMood : savedMood?.value ?? null)
+    } catch {}
+    loadData()
+  }, [dateKey, loadData])
 
-    // Fetch tasks + events
-    Promise.all([
-      api.get('/tasks?limit=50&status=pending'),
-      api.get('/tasks?limit=50&status=in_progress'),
-      api.get('/events?limit=30'),
-    ]).then(([pending, inProgress, evRes]) => {
-      const allTasks = [...(pending.data.tasks || []), ...(inProgress.data.tasks || [])]
-      setMyTasks(allTasks)
-      setEvents(evRes.data.events || evRes.data || [])
-    }).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+  const openTasks = useMemo(
+    () => tasks.filter(task => !['done', 'completed', 'concluido'].includes(String(task.status).toLowerCase())),
+    [tasks],
+  )
+  const urgentTasks = useMemo(
+    () => openTasks.filter(task => ['high', 'alta', 'urgent'].includes(String(task.priority).toLowerCase())).slice(0, 4),
+    [openTasks],
+  )
+  const remainingTasks = openTasks.filter(task => !urgentTasks.some(urgent => urgent.id === task.id)).slice(0, 6)
+  const completedHabits = Object.values(habits).filter(Boolean).length
 
-  const saveFocus = () => {
-    localStorage.setItem(LS_FOCUS + '_' + todayKey(), focusInput)
-    setFocus(focusInput)
-    setEditingFocus(false)
-    success('Foco do dia definido!', focusInput)
+  function saveFocus() {
+    const clean = focusInput.trim()
+    setFocus(clean)
+    localStorage.setItem(`${LS_FOCUS}_${dateKey}`, clean)
   }
 
-  const saveNote = useCallback((val: string) => {
-    setNote(val)
-    localStorage.setItem(LS_NOTES + '_' + todayKey(), val)
-  }, [])
+  function saveNote(value: string) {
+    setNote(value)
+    localStorage.setItem(`${LS_NOTES}_${dateKey}`, value)
+  }
 
-  const toggleHabit = (id: string) => {
+  function toggleHabit(id: string) {
     const next = { ...habits, [id]: !habits[id] }
     setHabits(next)
-    localStorage.setItem(LS_HABITS + '_' + todayKey(), JSON.stringify(next))
+    localStorage.setItem(`${LS_HABITS}_${dateKey}`, JSON.stringify(next))
   }
 
-  const setMoodToday = (idx: number) => {
-    setMood(idx)
-    localStorage.setItem(LS_CHECKIN + '_' + todayKey(), String(idx))
-    success(`Check-in: ${MOODS[idx].label}!`, 'Seu humor de hoje foi registrado.')
+  function chooseMood(value: number) {
+    setMood(value)
+    localStorage.setItem(`${LS_CHECKIN}_${dateKey}`, JSON.stringify(value))
   }
-
-  // Today's events
-  const todayEvents = events.filter(ev => {
-    const start = new Date(ev.startDate || ev.startDateTime || ev.date || '')
-    return start.toDateString() === today.toDateString()
-  }).sort((a, b) => new Date(a.startDate || a.date || '').getTime() - new Date(b.startDate || b.date || '').getTime())
-
-  // Urgent tasks
-  const urgentTasks = myTasks.filter(t => t.priority === 'critical' || t.priority === 'high').slice(0, 5)
-  const pendingTasks = myTasks.filter(t => t.priority !== 'critical' && t.priority !== 'high').slice(0, 5)
-
-  const completedHabits = Object.values(habits).filter(Boolean).length
-  const habitPct = Math.round((completedHabits / DEFAULT_HABITS.length) * 100)
-
-  const firstName = (user?.name || 'Colaborador').split(' ')[0]
-  const hour = today.getHours()
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
   return (
     <AdminLayout>
-      {/* Header */}
-      <div className="mb-6 animate-fade-in">
-        <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="mx-auto max-w-[1500px] space-y-5 pb-10">
+        <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-2xl font-extrabold text-white">
-              {greeting}, {firstName}! 👋
-            </h1>
-            <p className="text-sm mt-0.5 capitalize" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              {todayStr}
-            </p>
+            <p className="mb-1 text-xs font-bold uppercase text-teal-700">Painel pessoal</p>
+            <h1 className="text-3xl font-bold text-slate-950">Bom dia, {userName}.</h1>
+            <p className="mt-1 text-sm capitalize text-slate-500">{todayLabel}</p>
           </div>
-          {mood !== null && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-              style={{ background: `${MOODS[mood].color}15`, border: `1px solid ${MOODS[mood].color}30`, color: MOODS[mood].color }}
-            >
-              <span>{MOODS[mood].emoji}</span>
-              <span className="font-semibold">{MOODS[mood].label}</span>
+          <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${calendarState === 'connected' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+            <span className={`h-2 w-2 rounded-full ${calendarState === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            {calendarState === 'loading' ? 'Verificando Google Agenda' : calendarState === 'connected' ? 'Google Agenda sincronizada' : 'Google Agenda desconectada'}
+          </div>
+        </header>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-950">
+          <SparklesIcon className="mr-2 inline h-4 w-4 text-amber-600" />
+          {PHRASES[new Date().getDay() % PHRASES.length]}
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.1fr_1fr_0.9fr]">
+          <Panel title="Foco principal" eyebrow="Prioridade do dia" icon={FlagIcon}>
+            <textarea
+              value={focusInput}
+              onChange={event => setFocusInput(event.target.value)}
+              placeholder="Qual resultado tornaria o seu dia produtivo?"
+              className="min-h-28 w-full resize-none rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white"
+            />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="truncate text-xs text-slate-500">{focus ? `Salvo: ${focus}` : 'Ainda não definido'}</span>
+              <button onClick={saveFocus} className="rounded-md bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800">Salvar foco</button>
             </div>
-          )}
-        </div>
+          </Panel>
 
-        {/* Verse */}
-        <div
-          className="mt-3 px-4 py-3 rounded-xl text-sm italic"
-          style={{
-            background: 'rgba(248,163,3,0.06)',
-            border: '1px solid rgba(248,163,3,0.15)',
-            color: 'rgba(255,255,255,0.5)',
-          }}
-        >
-          ✨ {phrase}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* ── COL 1: Focus + Mood + Habits ── */}
-        <div className="space-y-4">
-
-          {/* Focus do Dia */}
-          <div
-            className="rounded-2xl p-5 animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white">🎯 Foco Principal Hoje</h2>
-              {!editingFocus && (
+          <Panel title="Como você está?" eyebrow="Check-in" icon={SparklesIcon}>
+            <div className="grid grid-cols-5 gap-2">
+              {MOODS.map(item => (
                 <button
-                  onClick={() => setEditingFocus(true)}
-                  className="text-xs px-2 py-1 rounded-lg transition-all hover:opacity-80"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                  key={item.value}
+                  onClick={() => chooseMood(item.value)}
+                  className={`flex min-h-24 flex-col items-center justify-center rounded-md border p-2 transition ${mood === item.value ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                  title={item.label}
                 >
-                  {focus ? 'Editar' : 'Definir'}
+                  <span className="text-xl font-bold">{item.mark}</span>
+                  <span className="mt-1 text-[10px] font-semibold">{item.label}</span>
                 </button>
-              )}
+              ))}
             </div>
+          </Panel>
 
-            {editingFocus ? (
+          <Panel
+            title="Hábitos"
+            eyebrow={`${completedHabits} de ${DEFAULT_HABITS.length} concluídos`}
+            icon={CheckCircleIcon}
+          >
+            <div className="space-y-2">
+              {DEFAULT_HABITS.map(habit => (
+                <button key={habit.id} onClick={() => toggleHabit(habit.id)} className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-slate-50">
+                  <span className={`flex h-6 w-6 flex-none items-center justify-center rounded border ${habits[habit.id] ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-300 bg-white'}`}>
+                    {habits[habit.id] && <CheckIcon className="h-4 w-4" />}
+                  </span>
+                  <span className={`text-sm ${habits[habit.id] ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{habit.label}</span>
+                </button>
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.25fr_0.95fr]">
+          <Panel
+            title="Agenda de hoje"
+            eyebrow="Compromissos"
+            icon={CalendarDaysIcon}
+            action={<button onClick={loadData} className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" title="Atualizar"><ArrowPathIcon className="h-4 w-4" /></button>}
+          >
+            {loading ? <EmptyState>Carregando a agenda...</EmptyState> : events.length === 0 ? <EmptyState>Nenhum compromisso sincronizado para hoje.</EmptyState> : (
+              <div className="divide-y divide-slate-100">
+                {events.map(event => (
+                  <div key={event.id} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0">
+                    <span className="w-14 flex-none text-sm font-bold text-teal-700">{formatTime(event.start?.dateTime || event.start?.date || event.start)}</span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{event.summary || event.title || 'Compromisso sem título'}</p>
+                      <p className="truncate text-xs text-slate-500">{event.location || event.organizer?.displayName || event.calendar || 'Google Agenda'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="Notas rápidas" eyebrow="Salvas neste dispositivo" icon={DocumentTextIcon}>
+            <textarea
+              value={note}
+              onChange={event => saveNote(event.target.value)}
+              placeholder="Registre ideias, decisões e lembretes do dia..."
+              className="min-h-52 w-full resize-none rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white"
+            />
+            <p className="mt-2 text-right text-[11px] text-slate-400">Salvamento automático</p>
+          </Panel>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Panel title="Prioridades" eyebrow={`${urgentTasks.length} tarefas urgentes`} icon={ClockIcon}>
+            {urgentTasks.length === 0 ? <EmptyState>Nenhuma tarefa urgente. Ótimo sinal.</EmptyState> : (
               <div className="space-y-2">
-                <textarea
-                  value={focusInput}
-                  onChange={e => setFocusInput(e.target.value)}
-                  placeholder="Ex: Finalizar relatório de matrículas..."
-                  rows={3}
-                  className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={saveFocus}
-                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #F8A303, #FDC347)', color: '#000' }}
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    onClick={() => { setEditingFocus(false); setFocusInput(focus) }}
-                    className="px-3 py-2 rounded-xl text-sm transition-all hover:opacity-80"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
-                  >
-                    ✕
-                  </button>
-                </div>
+                {urgentTasks.map(task => <TaskRow key={task.id} task={task} accent="rose" />)}
               </div>
-            ) : focus ? (
-              <p
-                className="text-sm leading-relaxed font-medium"
-                style={{
-                  color: 'rgba(255,255,255,0.85)',
-                  background: 'rgba(248,163,3,0.08)',
-                  border: '1px solid rgba(248,163,3,0.2)',
-                  borderLeft: '3px solid #F8A303',
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                }}
-              >
-                {focus}
-              </p>
-            ) : (
-              <button
-                onClick={() => setEditingFocus(true)}
-                className="w-full rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors"
-                style={{ border: '2px dashed rgba(248,163,3,0.2)', color: 'rgba(255,255,255,0.2)' }}
-              >
-                <span className="text-2xl">🎯</span>
-                <p className="text-xs">Clique para definir seu foco de hoje</p>
-              </button>
             )}
-          </div>
-
-          {/* Mood Check-in */}
-          <div
-            className="rounded-2xl p-5 animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <h2 className="text-sm font-bold text-white mb-3">💭 Como você está hoje?</h2>
-            <div className="flex gap-2 flex-wrap">
-              {MOODS.map((m, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setMoodToday(idx)}
-                  className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:scale-110"
-                  style={{
-                    background: mood === idx ? `${m.color}18` : 'rgba(255,255,255,0.04)',
-                    border: mood === idx ? `1.5px solid ${m.color}40` : '1px solid rgba(255,255,255,0.07)',
-                    flex: '1 1 0',
-                  }}
-                >
-                  <span className="text-xl">{m.emoji}</span>
-                  <span className="text-[9px] font-medium" style={{ color: mood === idx ? m.color : 'rgba(255,255,255,0.3)' }}>
-                    {m.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Habits */}
-          <div
-            className="rounded-2xl p-5 animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-white">⚡ Hábitos do Dia</h2>
-              <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: habitPct === 100 ? 'rgba(10,189,120,0.15)' : 'rgba(255,255,255,0.06)',
-                  color: habitPct === 100 ? '#0ABD78' : 'rgba(255,255,255,0.4)',
-                }}
-              >
-                {completedHabits}/{DEFAULT_HABITS.length}
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            <div className="h-1.5 rounded-full mb-3" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${habitPct}%`,
-                  background: habitPct === 100
-                    ? 'linear-gradient(90deg, #0ABD78, #4ade80)'
-                    : 'linear-gradient(90deg, #F8A303, #FDC347)',
-                }}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              {DEFAULT_HABITS.map(h => (
-                <button
-                  key={h.id}
-                  onClick={() => toggleHabit(h.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left"
-                  style={{
-                    background: habits[h.id] ? 'rgba(10,189,120,0.08)' : 'rgba(255,255,255,0.03)',
-                    border: habits[h.id] ? '1px solid rgba(10,189,120,0.2)' : '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all flex-shrink-0"
-                    style={{
-                      background: habits[h.id] ? '#0ABD78' : 'rgba(255,255,255,0.08)',
-                      border: habits[h.id] ? 'none' : '1.5px solid rgba(255,255,255,0.15)',
-                    }}
-                  >
-                    {habits[h.id] && <span className="text-white text-[10px]">✓</span>}
-                  </div>
-                  <span className="text-base leading-none">{h.icon}</span>
-                  <span style={{ color: habits[h.id] ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.75)', textDecoration: habits[h.id] ? 'line-through' : 'none' }}>
-                    {h.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {habitPct === 100 && (
-              <p className="text-center text-sm mt-3" style={{ color: '#0ABD78' }}>
-                🎉 Todos os hábitos do dia concluídos!
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* ── COL 2: Agenda Hoje + Tarefas Urgentes ── */}
-        <div className="space-y-4">
-
-          {/* Agenda hoje */}
-          <div
-            className="rounded-2xl overflow-hidden animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <h2 className="text-sm font-bold text-white">📅 Agenda de Hoje</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                {todayEvents.length} evento{todayEvents.length !== 1 ? 's' : ''} hoje
-              </p>
-            </div>
-            <div className="p-3">
-              {loading ? (
-                <div className="py-8 flex justify-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-2" style={{ borderColor: 'rgba(248,163,3,0.2)', borderTopColor: '#F8A303' }} />
-                </div>
-              ) : todayEvents.length === 0 ? (
-                <div className="text-center py-8" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  <p className="text-3xl mb-2">📭</p>
-                  <p className="text-sm">Nenhum evento hoje</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {todayEvents.map((ev: any) => {
-                    const start = new Date(ev.startDate || ev.date || '')
-                    const time  = isNaN(start.getTime()) ? '' : start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                    return (
-                      <div
-                        key={ev.id}
-                        className="flex items-start gap-3 p-3 rounded-xl"
-                        style={{
-                          background: 'rgba(248,163,3,0.06)',
-                          border: '1px solid rgba(248,163,3,0.15)',
-                          borderLeft: '3px solid #F8A303',
-                        }}
-                      >
-                        <div className="text-center flex-shrink-0 w-12">
-                          <p className="text-sm font-bold" style={{ color: '#F8A303' }}>{time || '—'}</p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">{ev.title}</p>
-                          {ev.location && (
-                            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                              📍 {ev.location}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tarefas Urgentes */}
-          <div
-            className="rounded-2xl overflow-hidden animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <h2 className="text-sm font-bold text-white">🚨 Tarefas Urgentes</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                Alta prioridade e críticas
-              </p>
-            </div>
-            <div className="p-3">
-              {urgentTasks.length === 0 ? (
-                <div className="text-center py-6" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  <p className="text-2xl mb-1">✅</p>
-                  <p className="text-sm">Sem urgências!</p>
-                </div>
-              ) : urgentTasks.map((t: any) => (
-                <div
-                  key={t.id}
-                  className="flex items-start gap-3 p-3 mb-2 rounded-xl"
-                  style={{
-                    background: t.priority === 'critical' ? 'rgba(255,71,87,0.06)' : 'rgba(224,123,57,0.06)',
-                    border: `1px solid ${t.priority === 'critical' ? 'rgba(255,71,87,0.18)' : 'rgba(224,123,57,0.18)'}`,
-                    borderLeft: `3px solid ${t.priority === 'critical' ? '#FF4757' : '#E07B39'}`,
-                  }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{t.title}</p>
-                    {t.dueDate && (
-                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,71,87,0.7)' }}>
-                        ⏰ Vence: {new Date(t.dueDate).toLocaleDateString('pt-BR')}
-                      </p>
-                    )}
-                  </div>
-                  <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                    style={{
-                      background: t.priority === 'critical' ? 'rgba(255,71,87,0.15)' : 'rgba(224,123,57,0.15)',
-                      color: t.priority === 'critical' ? '#FF4757' : '#E07B39',
-                    }}
-                  >
-                    {t.priority === 'critical' ? 'Crítica' : 'Alta'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── COL 3: Notas Rápidas + Outras tarefas ── */}
-        <div className="space-y-4">
-
-          {/* Notas Rápidas */}
-          <div
-            className="rounded-2xl overflow-hidden animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-white">📝 Notas Rápidas</h2>
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Auto-salva</span>
+          </Panel>
+          <Panel title="Demais tarefas" eyebrow={`${openTasks.length} em aberto`} icon={CheckCircleIcon}>
+            {remainingTasks.length === 0 ? <EmptyState>Nenhuma outra tarefa em aberto.</EmptyState> : (
+              <div className="space-y-2">
+                {remainingTasks.map(task => <TaskRow key={task.id} task={task} accent="teal" />)}
               </div>
-            </div>
-            <div className="p-3">
-              <textarea
-                value={note}
-                onChange={e => saveNote(e.target.value)}
-                placeholder="Anotações rápidas do dia, ideias, lembretes pessoais..."
-                rows={9}
-                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none leading-relaxed"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.75)',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Demais tarefas */}
-          <div
-            className="rounded-2xl overflow-hidden animate-fade-in-up"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <h2 className="text-sm font-bold text-white">📋 Demais Tarefas</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                {pendingTasks.length + urgentTasks.length} pendente{pendingTasks.length + urgentTasks.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <div className="p-3">
-              {pendingTasks.length === 0 ? (
-                <div className="text-center py-6" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                  <p className="text-sm">Tudo em dia!</p>
-                </div>
-              ) : pendingTasks.map((t: any) => (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-3 p-2.5 mb-1.5 rounded-xl"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <div
-                    className="w-4 h-4 rounded flex-shrink-0"
-                    style={{ border: '1.5px solid rgba(255,255,255,0.15)' }}
-                  />
-                  <p className="text-sm text-white flex-1 truncate">{t.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+            )}
+          </Panel>
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+function TaskRow({ task, accent }: { task: any; accent: 'rose' | 'teal' }) {
+  const due = task.dueDate || task.due_date || task.deadline
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-slate-900">{task.title || task.name}</p>
+        <p className="truncate text-xs text-slate-500">{task.project?.name || task.category || 'Tarefa geral'}</p>
+      </div>
+      <span className={`flex-none rounded px-2 py-1 text-[10px] font-bold ${accent === 'rose' ? 'bg-rose-50 text-rose-700' : 'bg-teal-50 text-teal-700'}`}>
+        {due ? new Date(`${String(due).slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'}
+      </span>
+    </div>
   )
 }

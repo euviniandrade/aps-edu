@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getBackendApiBase, getOAuthConfig, getOrigin, getRedirectUri, hasOAuthCredentials, setupRedirect } from '../../_lib'
+import { writeGoogleSession } from '../../_session'
 
 export const runtime = 'nodejs'
 
@@ -61,7 +62,23 @@ export async function GET(request: NextRequest) {
     } catch {}
   }
 
-  if (!stored) {
+  let googleAccount = ''
+  if (config.provider === 'google' && tokenData.access_token) {
+    try {
+      const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+        headers: { authorization: `Bearer ${tokenData.access_token}` },
+        cache: 'no-store',
+      })
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json()
+        googleAccount = String(profile.email || '')
+      }
+    } catch {}
+  }
+
+  const storedLocally = config.provider === 'google' && Boolean(tokenData.access_token)
+
+  if (!stored && !storedLocally) {
     url.searchParams.set('setup', accessToken ? 'token_store_failed' : 'login_required')
   } else {
     url.searchParams.set('connected', '1')
@@ -69,7 +86,7 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(url)
   response.cookies.delete(`aps_${config.provider}_oauth_state`)
-  if (stored) {
+  if (stored || storedLocally) {
     response.cookies.set(`aps_${config.provider}_token_ready`, tokenData.refresh_token ? 'refresh_token_received' : 'access_token_only', {
       httpOnly: true,
       sameSite: 'lax',
@@ -77,6 +94,15 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 30,
       path: '/',
     })
+    if (storedLocally) {
+      writeGoogleSession(response, {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresAt: Date.now() + Number(tokenData.expires_in || 3600) * 1000,
+        scope: tokenData.scope,
+        account: googleAccount,
+      })
+    }
   } else {
     response.cookies.delete(`aps_${config.provider}_token_ready`)
   }

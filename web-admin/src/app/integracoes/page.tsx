@@ -108,7 +108,7 @@ export default function IntegracoesPage() {
   useEffect(() => {
     void refresh()
     const params = new URLSearchParams(window.location.search)
-    if (params.get('connected') === '1') setMessage('Integração conectada e salva no backend.')
+    if (params.get('connected') === '1') setMessage('Google Workspace conectado com autorização protegida e renovação automática.')
     if (params.get('setup')) setMessage(`A conexão precisa de ajuste: ${params.get('setup')}`)
   }, [])
 
@@ -143,7 +143,7 @@ export default function IntegracoesPage() {
     'Conectar Google Workspace para Drive, Gmail e Google Agenda.',
     'Usar a Agenda central como painel diário da operação e da faculdade.',
     'Exportar .ics para Apple Calendar quando quiser replicar no iPhone/Mac.',
-    'Manter tokens no backend, nunca no navegador.',
+    'Manter a autorização criptografada, protegida por HttpOnly e nunca no localStorage.',
   ], [])
 
   return (
@@ -180,7 +180,7 @@ export default function IntegracoesPage() {
               </div>
             </div>
             <p className="mt-3 text-sm font-semibold leading-6 text-[#64748b]">
-              A interface só marca como conectado quando o backend confirma armazenamento criptografado. Exportação para Apple fica separada de sincronização real.
+              A interface só marca como conectado quando existe uma autorização criptografada válida. Exportação para Apple fica separada da sincronização real.
             </p>
             {message && <p className="mt-4 rounded-lg border border-[#dbe6ef] bg-white px-4 py-3 text-xs font-bold text-[#475569]">{message}</p>}
           </aside>

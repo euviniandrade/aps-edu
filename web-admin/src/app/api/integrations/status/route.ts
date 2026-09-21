@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getBackendApiBase, getOAuthConfig, hasOAuthCredentials } from '../_lib'
+import { readGoogleSession } from '../_session'
 
 export const runtime = 'nodejs'
 
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
 
   const google = getOAuthConfig('google')!
   const microsoft = getOAuthConfig('microsoft')!
+  const googleSession = readGoogleSession(request)
 
   return NextResponse.json({
     providers: [
@@ -28,12 +30,16 @@ export async function GET(request: NextRequest) {
         name: 'Google Workspace',
         services: ['Gmail', 'Google Drive', 'Google Agenda', 'Google Docs', 'Google Sheets'],
         envReady: hasOAuthCredentials(google),
-        connected: false,
-        verified: false,
+        connected: Boolean(googleSession),
+        verified: Boolean(googleSession),
+        operational: Boolean(googleSession),
+        account: googleSession?.account || null,
         scopes: google.scopes,
         setup: google.envNames,
         connectUrl: '/api/integrations/oauth/start?provider=google',
-        note: 'Entre na plataforma para validar a conexão no backend criptografado.',
+        note: googleSession
+          ? 'Conexão protegida neste navegador e pronta para Agenda, Gmail e Drive.'
+          : 'Conecte sua conta para ativar Agenda, Gmail e Drive.',
       },
       {
         id: 'microsoft',
@@ -61,8 +67,10 @@ export async function GET(request: NextRequest) {
       },
     ],
     tokenVault: {
-      ready: Boolean(process.env.INTEGRATION_TOKEN_VAULT_URL || process.env.DATABASE_URL),
-      detail: 'Para autonomia permanente da IA da Educação, tokens de refresh devem ficar em banco/secret vault criptografado, nao em localStorage.',
+      ready: Boolean(googleSession || process.env.INTEGRATION_TOKEN_VAULT_URL || process.env.DATABASE_URL),
+      detail: googleSession
+        ? 'A autorização do Google está criptografada em cookie HttpOnly e é renovada automaticamente.'
+        : 'Conecte o Google Workspace para criar uma sessão criptografada; nenhum token é salvo no localStorage.',
     },
   })
 }

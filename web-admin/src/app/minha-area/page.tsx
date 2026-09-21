@@ -67,9 +67,9 @@ interface WorkDay {
 //  HELPERS 
 function getGreeting(name: string): { text: string; emoji: string } {
   const h = new Date().getHours()
-  if (h < 12) return { text: `Bom dia, ${name}!`, emoji: 'xR&' }
-  if (h < 18) return { text: `Boa tarde, ${name}!`, emoji: 'ܬ️' }
-  return { text: `Boa noite, ${name}!`, emoji: 'xR"' }
+  if (h < 12) return { text: `Bom dia, ${name}!`, emoji: '' }
+  if (h < 18) return { text: `Boa tarde, ${name}!`, emoji: '' }
+  return { text: `Boa noite, ${name}!`, emoji: '' }
 }
 
 function fmtTime(totalMin: number): string {
@@ -439,8 +439,8 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
         {[
           { label: 'Início', value: `${String(wd.startHour).padStart(2,'0')}:${String(wd.startMin).padStart(2,'0')}`, color: '#4A9EFF' },
           { label: 'Término', value: `${String(wd.endHour).padStart(2,'0')}:${String(wd.endMin).padStart(2,'0')}`, color: '#8B5CF6' },
-          { label: remaining > 0 ? '⏳ Restam' : 'S& Encerrado', value: remaining > 0 ? fmtTime(remaining) : '--', color: remaining < 60 && remaining > 0 ? '#FF4757' : '#0ABD78' },
-          { label: 'x} Cabem agora', value: `${fitsCount} tarefa${fitsCount !== 1 ? 's' : ''}`, color: '#F8A303' },
+          { label: remaining > 0 ? 'Tempo restante' : 'Expediente encerrado', value: remaining > 0 ? fmtTime(remaining) : '--', color: remaining < 60 && remaining > 0 ? '#FF4757' : '#0ABD78' },
+          { label: 'Cabem agora', value: `${fitsCount} tarefa${fitsCount !== 1 ? 's' : ''}`, color: '#F8A303' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-3 text-center"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -454,7 +454,6 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
         <div className="mt-3 p-3 rounded-xl space-y-1 text-xs"
           style={{ background: remaining < pendingMin ? 'rgba(255,71,87,0.06)' : 'rgba(248,163,3,0.07)', border: `1px solid ${remaining < pendingMin ? 'rgba(255,71,87,0.2)' : 'rgba(248,163,3,0.15)'}` }}>
           <div className="flex items-center gap-2">
-            <span>x9</span>
             <span style={{ color: remaining < pendingMin ? 'rgba(255,150,150,0.9)' : 'rgba(255,200,80,0.9)' }}>
               <strong>{pendingTasks.length} tarefas</strong> · <strong>{fmtTime(pendingMin)}</strong> de trabalho pendente
               {remaining > 0 && remaining < pendingMin && <span style={{ color: '#FF4757' }}>  não dá pra tudo hoje! Priorize.</span>}
@@ -462,7 +461,6 @@ function WorkDayTimer({ tasks, workDay: extWd, onWorkDayUpdated }: {
           </div>
           {pendingMin > 0 && remaining > 0 && (
             <div className="flex items-center gap-2">
-              <span>x</span>
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>
                 Se começar agora, termina por volta das{' '}
                 <strong style={{ color: 'rgba(255,255,255,0.75)' }}>
@@ -3188,11 +3186,12 @@ export default function MinhaAreaPage() {
 
   return (
     <AdminLayout>
+      <div className="-m-4 min-h-[calc(100vh-96px)] rounded-lg bg-[#141817] p-5 text-white sm:-m-6 sm:p-6">
       {/*  HEADER  */}
       <div className="flex items-start justify-between mb-5 animate-fade-in">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-3xl">{greeting.emoji}</span>
+            {greeting.emoji && <span className="text-3xl">{greeting.emoji}</span>}
             <h1 className="text-2xl font-extrabold text-white">{greeting.text}</h1>
           </div>
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -3291,7 +3290,7 @@ export default function MinhaAreaPage() {
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
               style={{ background: 'rgba(66,133,244,0.15)', border: '1px solid rgba(66,133,244,0.25)' }}>
-              x&
+              <CalendarDaysIcon className="h-4 w-4 text-[#4A9EFF]" />
             </div>
             <div>
               <h2 className="text-sm font-extrabold text-white leading-none">Calendário Google</h2>
@@ -3317,7 +3316,7 @@ export default function MinhaAreaPage() {
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
               style={{ background: 'linear-gradient(135deg,#F8A303,#FDC347)', boxShadow: '0 0 10px rgba(248,163,3,0.3)' }}>
-              x
+                <BoltIcon className="h-4 w-4 text-black" />
             </div>
             <div>
               <p className="text-sm font-extrabold text-white leading-none">IA da Educação</p>
@@ -3343,7 +3342,7 @@ export default function MinhaAreaPage() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
                 style={{ background: 'rgba(248,163,3,0.12)', border: '1px solid rgba(248,163,3,0.2)' }}>
-                x9
+                <CheckCircleIcon className="h-4 w-4 text-[#F8A303]" />
               </div>
               <div>
                 <p className="text-sm font-extrabold text-white leading-none">
@@ -3476,7 +3475,7 @@ export default function MinhaAreaPage() {
         <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
             style={{ background: 'rgba(10,189,120,0.12)', border: '1px solid rgba(10,189,120,0.2)' }}>
-            x
+            <GlobeAltIcon className="h-4 w-4 text-[#0ABD78]" />
           </div>
           <div>
             <h2 className="text-sm font-extrabold text-white leading-none">Google Workspace</h2>
@@ -3494,7 +3493,7 @@ export default function MinhaAreaPage() {
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
               style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}>
-              x 
+              <TrophyIcon className="h-4 w-4 text-[#8B5CF6]" />
             </div>
             <h2 className="text-sm font-extrabold text-white">Conquistas & XP</h2>
           </div>
@@ -3502,7 +3501,7 @@ export default function MinhaAreaPage() {
         </section>
 
       </div>
-
+      </div>
     </AdminLayout>
   )
 }
