@@ -7,6 +7,7 @@ const PUBLIC_PAGE_PREFIXES = [
 
 const PUBLIC_API_PREFIXES = [
   '/api/auth',
+  '/api/integrations',
   '/api/promoter-forms/public',
 ]
 

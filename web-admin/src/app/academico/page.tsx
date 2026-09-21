@@ -66,13 +66,19 @@ export default function AcademicoPage() {
 
   useEffect(() => {
     let active = true
-    setState(readAcademicState())
+    const localState = readAcademicState()
+    setState(localState)
     setLocalLoaded(true)
     fetchAcademicState()
       .then(remoteState => {
         if (!active) return
-        writeAcademicState(remoteState)
-        setState(remoteState)
+        const localCount = localState.subjects.length + localState.activities.length + localState.modules.length
+        const remoteCount = remoteState.subjects.length + remoteState.activities.length + remoteState.modules.length
+        const localIsNewer = new Date(localState.updatedAt || 0).getTime() > new Date(remoteState.updatedAt || 0).getTime()
+        if (remoteCount >= localCount && !localIsNewer) {
+          writeAcademicState(remoteState)
+          setState(remoteState)
+        }
       })
       .catch(() => {})
       .finally(() => {

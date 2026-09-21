@@ -39,15 +39,14 @@ export async function GET(request: NextRequest) {
     return setupRedirect(request, config.provider, String(detail).slice(0, 80))
   }
 
-  const url = new URL('/inovacao', getOrigin(request))
-  url.searchParams.set('tab', 'sobre')
+  const url = new URL('/integracoes', getOrigin(request))
   url.searchParams.set('integration', config.provider)
-  url.searchParams.set('connected', '1')
 
   const accessToken = request.cookies.get('accessToken')?.value
+  let stored = false
   if (accessToken) {
     try {
-      await fetch(`${getBackendApiBase()}/integrations/oauth/store`, {
+      const storeResponse = await fetch(`${getBackendApiBase()}/integrations/oauth/store`, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${accessToken}`,
@@ -58,25 +57,29 @@ export async function GET(request: NextRequest) {
           tokenData,
         }),
       })
+      stored = storeResponse.ok
     } catch {}
+  }
+
+  if (!stored) {
+    url.searchParams.set('setup', accessToken ? 'token_store_failed' : 'login_required')
+  } else {
+    url.searchParams.set('connected', '1')
   }
 
   const response = NextResponse.redirect(url)
   response.cookies.delete(`aps_${config.provider}_oauth_state`)
-  response.cookies.set(`aps_${config.provider}_connected`, '1', {
-    httpOnly: false,
-    sameSite: 'lax',
-    secure: true,
-    maxAge: 60 * 60 * 24 * 30,
-    path: '/',
-  })
-  response.cookies.set(`aps_${config.provider}_token_ready`, tokenData.refresh_token ? 'refresh_token_received' : 'access_token_only', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: true,
-    maxAge: 60 * 60 * 24 * 30,
-    path: '/',
-  })
+  if (stored) {
+    response.cookies.set(`aps_${config.provider}_token_ready`, tokenData.refresh_token ? 'refresh_token_received' : 'access_token_only', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+    })
+  } else {
+    response.cookies.delete(`aps_${config.provider}_token_ready`)
+  }
 
   return response
 }

@@ -93,8 +93,7 @@ export function hasOAuthCredentials(config: OAuthConfig) {
 }
 
 export function setupRedirect(request: NextRequest, provider: string, reason = 'missing_credentials') {
-  const url = new URL('/inovacao', getOrigin(request))
-  url.searchParams.set('tab', 'sobre')
+  const url = new URL('/integracoes', getOrigin(request))
   url.searchParams.set('integration', provider)
   url.searchParams.set('setup', reason)
   return NextResponse.redirect(url)

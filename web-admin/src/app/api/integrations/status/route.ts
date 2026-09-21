@@ -3,10 +3,6 @@ import { getBackendApiBase, getOAuthConfig, hasOAuthCredentials } from '../_lib'
 
 export const runtime = 'nodejs'
 
-function cookieConnected(request: NextRequest, provider: string) {
-  return request.cookies.get(`aps_${provider}_connected`)?.value === '1'
-}
-
 export async function GET(request: NextRequest) {
   const accessToken = request.cookies.get('accessToken')?.value
   if (accessToken) {
@@ -14,6 +10,7 @@ export async function GET(request: NextRequest) {
       const response = await fetch(`${getBackendApiBase()}/integrations/status`, {
         headers: { authorization: `Bearer ${accessToken}` },
         cache: 'no-store',
+        signal: AbortSignal.timeout(4000),
       })
       if (response.ok) {
         return NextResponse.json(await response.json())
@@ -31,27 +28,32 @@ export async function GET(request: NextRequest) {
         name: 'Google Workspace',
         services: ['Gmail', 'Google Drive', 'Google Agenda', 'Google Docs', 'Google Sheets'],
         envReady: hasOAuthCredentials(google),
-        connected: cookieConnected(request, 'google'),
+        connected: false,
+        verified: false,
         scopes: google.scopes,
         setup: google.envNames,
         connectUrl: '/api/integrations/oauth/start?provider=google',
+        note: 'Entre na plataforma para validar a conexão no backend criptografado.',
       },
       {
         id: 'microsoft',
         name: 'Microsoft 365',
         services: ['Outlook', 'OneDrive', 'Calendario Microsoft', 'SharePoint', 'Planner'],
         envReady: hasOAuthCredentials(microsoft),
-        connected: cookieConnected(request, 'microsoft'),
+        connected: false,
+        verified: false,
         scopes: microsoft.scopes,
         setup: microsoft.envNames,
         connectUrl: '/api/integrations/oauth/start?provider=microsoft',
+        note: 'Entre na plataforma para validar a conexão no backend criptografado.',
       },
       {
         id: 'icloud',
         name: 'Apple iCloud',
         services: ['Calendario iCloud', 'Contatos iCloud', 'Lembretes via CalDAV/CardDAV'],
-        envReady: false,
-        connected: request.cookies.get('aps_icloud_configured')?.value === '1',
+        envReady: true,
+        connected: false,
+        verified: false,
         scopes: [],
         setup: ['APPLE_ID', 'ICLOUD_APP_SPECIFIC_PASSWORD', 'CalDAV/CardDAV token vault'],
         connectUrl: null,

@@ -49,15 +49,16 @@ export default function LoginPage() {
       setError('Acesso restrito ao painel administrativo.')
       return false
     }
-    Cookies.set('accessToken', data.accessToken, { expires: 7, sameSite: 'strict', secure: true })
-    Cookies.set('refreshToken', data.refreshToken, { expires: 30, sameSite: 'strict', secure: true })
+    const secureCookie = typeof window !== 'undefined' && window.location.protocol === 'https:'
+    Cookies.set('accessToken', data.accessToken, { expires: 7, sameSite: 'strict', secure: secureCookie })
+    Cookies.set('refreshToken', data.refreshToken, { expires: 30, sameSite: 'strict', secure: secureCookie })
     Cookies.set('user', JSON.stringify({
       id: data.user.id,
       name: data.user.name,
       email: data.user.email,
       role: { slug: role, name: role === 'admin' ? 'Administrador' : data.user.role?.name },
       unit: data.user.unit ? { id: data.user.unit.id, name: data.user.unit.name } : null,
-    }), { expires: 30, sameSite: 'strict', secure: true })
+    }), { expires: 30, sameSite: 'strict', secure: secureCookie })
     router.replace('/dashboard')
     return true
   }

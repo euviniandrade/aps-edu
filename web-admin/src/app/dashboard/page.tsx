@@ -13,8 +13,10 @@ type Summary = { tasks?: { pending?: number; in_progress?: number }; events?: { 
 const modules = [
   { href: '/pessoas', name: 'Pessoas', detail: 'Contatos e perfis', icon: UsersIcon, color: '#bcf572' },
   { href: '/academico', name: 'Acadêmico', detail: 'Disciplinas e entregas', icon: AcademicCapIcon, color: '#72d9ef' },
-  { href: '/gestao', name: 'Operação', detail: 'Tarefas e projetos', icon: Squares2X2Icon, color: '#f1bb7a' },
+  { href: '/agenda', name: 'Agenda central', detail: 'Google, iOS e prazos', icon: CalendarDaysIcon, color: '#00A9A4' },
+  { href: '/kanban', name: 'Kanban', detail: 'Tarefas e projetos', icon: Squares2X2Icon, color: '#f1bb7a' },
   { href: '/reports', name: 'Relatórios', detail: 'Análise e resultados', icon: ChartBarIcon, color: '#e7a0bf' },
+  { href: '/integracoes', name: 'Integrações', detail: 'Google Workspace e Apple', icon: ArrowPathIcon, color: '#8B5CF6' },
 ]
 
 export default function DashboardPage() {

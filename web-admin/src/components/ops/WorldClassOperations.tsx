@@ -891,6 +891,7 @@ export default function WorldClassOperations({
   function saveLocalState(next: ManagementState) {
     try {
       localStorage.setItem(MANAGEMENT_CACHE_KEY, JSON.stringify(next))
+      window.dispatchEvent(new CustomEvent('management_state_updated', { detail: next }))
     } catch {}
   }
 
@@ -1601,9 +1602,9 @@ function CentralOperationalWorkspace({
 
       {selectedWorkId && workDraft && typeof document !== 'undefined'
         ? createPortal(
-            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm" onClick={closeWorkDetails}>
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-3 py-4 backdrop-blur-sm" onClick={closeWorkDetails}>
               <div
-                className="max-h-[92vh] w-full max-w-[1160px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0A0D14] shadow-[0_30px_120px_rgba(0,0,0,0.65)]"
+                className="sofi-content max-h-[92vh] w-full max-w-[1160px] overflow-y-auto rounded-lg border border-[#dbe6ef] bg-white shadow-[0_30px_100px_rgba(15,23,42,0.25)]"
                 onClick={event => event.stopPropagation()}
               >
                 <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-start lg:justify-between">
