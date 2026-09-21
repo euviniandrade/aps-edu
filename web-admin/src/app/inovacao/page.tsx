@@ -30,7 +30,7 @@ export default function InovacaoPage() {
         <Info icon={CpuChipIcon} label="Roteamento" value="Fallback automático" />
         <Info icon={ShieldCheckIcon} label="Contexto" value="Memória persistente" />
       </div>
-      <div className="h-[calc(100vh-16.5rem)] min-h-[620px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"><AiAssistant embedded /></div>
+      <div className="h-[calc(100vh-16.5rem)] min-h-[620px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,42,74,0.10)]"><AiAssistant embedded /></div>
     </div>
   </AdminLayout>
 }

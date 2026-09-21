@@ -120,33 +120,31 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fffaf4] text-[#2c1338]">
+    <main className="min-h-screen overflow-hidden bg-[#f4f6fa] text-[#17233b]">
       <section className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_500px]">
-        <div className="relative flex min-h-[48vh] flex-col justify-between overflow-hidden bg-[#2c1338] p-6 text-white sm:p-10 lg:min-h-screen lg:p-12">
+        <div className="relative flex min-h-[48vh] flex-col justify-between overflow-hidden bg-[#003b71] p-6 text-white sm:p-10 lg:min-h-screen lg:p-12">
           <video autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover opacity-[0.16] mix-blend-luminosity">
             <source src="/aps30-video.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-[#2c1338]/75" />
+          <div className="absolute inset-0 bg-[#002d56]/80" />
           <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
-          <div className="absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-[#e57cd8]" />
-          <div className="absolute bottom-24 right-48 h-24 w-24 rotate-12 bg-[#d1f960]" />
           <div className={`flex items-center gap-4 ${mounted ? 'animate-fade-in-left' : 'opacity-0'}`}>
             <div className="relative z-10 grid h-14 w-14 place-items-center rounded-lg bg-white shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
-              <img src="/aps30-logo.png" alt="APS30" className="h-11 w-11 object-contain" />
+              <img src="/icon-ea.svg" alt="Educação Adventista" className="h-10 w-10 object-contain" />
             </div>
             <div className="relative z-10">
-              <p className="text-xl font-black">SOFI<span className="text-[#e57cd8]">.</span> APS EDU</p>
-              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#d1f960]">Trabalho com clareza</p>
+              <p className="text-xl font-black">SOFI · Educação Adventista</p>
+              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#7cc9f5]">Gestão conectada</p>
             </div>
           </div>
 
           <div className={`relative z-10 max-w-4xl py-12 ${mounted ? 'animate-fade-in-up delay-200' : 'opacity-0'}`}>
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white/80">
-              <span className="h-2 w-2 rounded-full bg-[#d1f960]" />
+              <span className="h-2 w-2 rounded-full bg-[#64c2f3]" />
               Educação, pessoas e inteligência
             </div>
             <h1 className="max-w-4xl text-5xl font-black leading-[0.98] sm:text-7xl xl:text-8xl">
-              Organize tudo.<br /><span className="text-[#e57cd8]">Faça acontecer.</span>
+              Organize tudo.<br /><span className="text-[#78ccf6]">Faça acontecer.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-base font-semibold leading-8 text-white/70 sm:text-lg">
               Pessoas, tarefas, agenda, vida acadêmica e inteligência em um espaço rápido, simples e conectado.
@@ -154,9 +152,9 @@ export default function LoginPage() {
 
             <div className="mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
               {[
-                { label: 'Pessoas', value: '24+', icon: UserGroupIcon, color: '#e57cd8' },
-                { label: 'Rotinas', value: '360°', icon: BoltIcon, color: '#ff6b6b' },
-                { label: 'IA aplicada', value: 'SOFI', icon: SparklesIcon, color: '#d1f960' },
+                { label: 'Pessoas', value: '24+', icon: UserGroupIcon, color: '#78CCF6' },
+                { label: 'Rotinas', value: '360°', icon: BoltIcon, color: '#F6B221' },
+                { label: 'IA aplicada', value: 'SOFI', icon: SparklesIcon, color: '#78D6B1' },
               ].map(item => {
                 const Icon = item.icon
                 return (
@@ -180,17 +178,16 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative flex items-center justify-center border-t border-[#e8dfea] bg-[#fffaf4] p-5 lg:border-l lg:border-t-0">
-          <div className="absolute right-10 top-10 h-14 w-14 rounded-full bg-[#ff6b6b]" />
+        <div className="relative flex items-center justify-center border-t border-[#e2e8f0] bg-[#f4f6fa] p-5 lg:border-l lg:border-t-0">
           <div className={`w-full max-w-[410px] ${mounted ? 'animate-slide-in-right' : 'opacity-0'}`}>
-            <div className="rounded-lg border border-[#dfd0e3] bg-white p-6 shadow-[0_24px_70px_rgba(44,19,56,0.12)] sm:p-8">
+            <div className="rounded-lg border border-[#dce5ef] bg-white p-6 shadow-[0_24px_70px_rgba(15,42,74,0.12)] sm:p-8">
               <div className="mb-7 flex items-start justify-between gap-5">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9b4d91]">Acesso seguro</p>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0877c9]">Acesso seguro</p>
                   <h2 className="mt-2 text-3xl font-black">Que bom ter você aqui</h2>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-[#765f7d]">Entre com suas credenciais institucionais.</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-[#64748b]">Entre com suas credenciais institucionais.</p>
                 </div>
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#f4e7f3] text-[#9b4d91]">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#eaf3fb] text-[#0877c9]">
                   <ShieldCheckIcon className="h-6 w-6" />
                 </span>
               </div>
@@ -210,7 +207,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#765f7d]">E-mail</span>
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">E-mail</span>
                   <input
                     type="email"
                     required
@@ -218,12 +215,12 @@ export default function LoginPage() {
                     onChange={event => setEmail(event.target.value)}
                     placeholder="email@aps.edu.br"
                     autoComplete="email"
-                    className="h-[52px] w-full rounded-lg border border-[#dfd0e3] bg-[#fffafc] px-4 py-4 text-base font-bold text-[#2c1338] outline-none transition placeholder:text-[#aa97af] focus:border-[#e57cd8] focus:ring-4 focus:ring-[#e57cd8]/15"
+                    className="h-[52px] w-full rounded-lg border border-[#dce5ef] bg-[#fbfcfe] px-4 py-4 text-base font-bold text-[#17233b] outline-none transition placeholder:text-[#94a3b8] focus:border-[#0877c9] focus:ring-4 focus:ring-[#0877c9]/10"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#765f7d]">Senha</span>
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">Senha</span>
                   <div className="relative">
                     <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9b879f]" />
                     <input
@@ -233,9 +230,9 @@ export default function LoginPage() {
                       onChange={event => setPassword(event.target.value)}
                       placeholder="Sua senha"
                       autoComplete="current-password"
-                      className="h-[52px] w-full rounded-lg border border-[#dfd0e3] bg-[#fffafc] py-4 pl-12 pr-12 text-base font-bold text-[#2c1338] outline-none transition placeholder:text-[#aa97af] focus:border-[#e57cd8] focus:ring-4 focus:ring-[#e57cd8]/15"
+                      className="h-[52px] w-full rounded-lg border border-[#dce5ef] bg-[#fbfcfe] py-4 pl-12 pr-12 text-base font-bold text-[#17233b] outline-none transition placeholder:text-[#94a3b8] focus:border-[#0877c9] focus:ring-4 focus:ring-[#0877c9]/10"
                     />
-                    <button type="button" onClick={() => setShowPass(value => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a718f] transition hover:text-[#2c1338]">
+                    <button type="button" onClick={() => setShowPass(value => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7a899d] transition hover:text-[#17233b]">
                       {showPass ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                     </button>
                   </div>
@@ -244,7 +241,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-[#ff6b6b] px-5 py-4 text-sm font-black text-[#2c1338] shadow-[0_14px_34px_rgba(255,107,107,0.25)] transition hover:-translate-y-0.5 hover:bg-[#ff837d] disabled:translate-y-0 disabled:opacity-60"
+                  className="flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-[#0877c9] px-5 py-4 text-sm font-black text-white shadow-[0_14px_34px_rgba(8,119,201,0.22)] transition hover:-translate-y-0.5 hover:bg-[#0067b2] disabled:translate-y-0 disabled:opacity-60"
                 >
                   {loading ? 'Entrando...' : 'Acessar agora'}
                   {!loading && <ArrowRightIcon className="h-4 w-4" />}
@@ -254,18 +251,18 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-[#dfd0e3] bg-white text-sm font-black text-[#2c1338] transition hover:bg-[#f8f0f8]"
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-[#dce5ef] bg-white text-sm font-black text-[#17233b] transition hover:bg-[#f4f7fa]"
                 >
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-[#f2ebf3] text-xs font-black text-[#2c1338]">G</span>
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-[#eef3f8] text-xs font-black text-[#17233b]">G</span>
                   Entrar com Google
                 </button>
 
-                <button type="button" onClick={handleForgotPassword} disabled={loading} className="w-full text-center text-xs font-black uppercase tracking-[0.1em] text-[#9b4d91] transition hover:text-[#2c1338]">
+                <button type="button" onClick={handleForgotPassword} disabled={loading} className="w-full text-center text-xs font-black uppercase tracking-[0.1em] text-[#0877c9] transition hover:text-[#003b71]">
                   Recuperar senha
                 </button>
               </form>
             </div>
-            <p className="mt-5 text-center text-xs font-semibold leading-6 text-[#8a718f]">
+            <p className="mt-5 text-center text-xs font-semibold leading-6 text-[#7a899d]">
               APS30 - Associação Paulista Sul<br />SOFI, sistema de gestão educacional.
             </p>
           </div>

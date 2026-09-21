@@ -81,7 +81,7 @@ function isAudioOrVideo(file: File) {
 function renderRichText(text: string) {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>
+      return <strong key={i} className="font-bold text-inherit">{part.slice(2, -2)}</strong>
     }
     return <React.Fragment key={i}>{part}</React.Fragment>
   })
@@ -100,7 +100,7 @@ function TypingDots() {
     <div className="flex items-center gap-1 py-0.5">
       {[0, 0.18, 0.36].map((d, i) => (
         <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce"
-          style={{ background: 'rgba(248,163,3,0.7)', animationDelay: `${d}s` }} />
+          style={{ background: 'rgba(8,119,201,0.7)', animationDelay: `${d}s` }} />
       ))}
     </div>
   )
@@ -175,6 +175,7 @@ export default function AiAssistant({ embedded = false }: AiAssistantProps = {})
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const [dragPos, setDragPos] = useState<{x: number; y: number} | null>(null)
   const isDraggingRef = useRef(false)
+  const didDragRef = useRef(false)
   const dragOffsetRef = useRef({x: 0, y: 0})
   const btnRef = useRef<HTMLButtonElement>(null)
   const pathname = usePathname()
@@ -226,41 +227,60 @@ export default function AiAssistant({ embedded = false }: AiAssistantProps = {})
   useEffect(() => {
     try {
       const pos = localStorage.getItem(SOFI_DRAG_POS_KEY)
-      if (pos) setDragPos(JSON.parse(pos))
+      if (pos) {
+        const saved = JSON.parse(pos)
+        setDragPos({
+          x: Math.max(8, Math.min(window.innerWidth - 64, Number(saved.x) || 8)),
+          y: Math.max(8, Math.min(window.innerHeight - 64, Number(saved.y) || 8)),
+        })
+      }
       const convs = localStorage.getItem(SOFI_CONVERSATIONS_KEY)
       if (convs) setConversations(JSON.parse(convs))
     } catch {}
   }, [])
 
+  useEffect(() => {
+    const keepButtonVisible = () => {
+      setDragPos(current => current ? {
+        x: Math.max(8, Math.min(window.innerWidth - 64, current.x)),
+        y: Math.max(8, Math.min(window.innerHeight - 64, current.y)),
+      } : current)
+    }
+    window.addEventListener('resize', keepButtonVisible)
+    return () => window.removeEventListener('resize', keepButtonVisible)
+  }, [])
+
   // Drag handlers for floating button
-  const startDrag = useCallback((e: React.MouseEvent) => {
+  const startDrag = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     if (!btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
     dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
     isDraggingRef.current = true
+    didDragRef.current = false
     e.preventDefault()
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       if (!isDraggingRef.current) return
       const x = ev.clientX - dragOffsetRef.current.x
       const y = ev.clientY - dragOffsetRef.current.y
-      const clampedX = Math.max(0, Math.min(window.innerWidth - 56, x))
-      const clampedY = Math.max(0, Math.min(window.innerHeight - 56, y))
+      didDragRef.current = true
+      const clampedX = Math.max(8, Math.min(window.innerWidth - 64, x))
+      const clampedY = Math.max(8, Math.min(window.innerHeight - 64, y))
       setDragPos({ x: clampedX, y: clampedY })
     }
-    const onUp = (ev: MouseEvent) => {
+    const onUp = (ev: PointerEvent) => {
       if (!isDraggingRef.current) return
       isDraggingRef.current = false
       const x = ev.clientX - dragOffsetRef.current.x
       const y = ev.clientY - dragOffsetRef.current.y
-      const final = { x: Math.max(0, Math.min(window.innerWidth - 56, x)), y: Math.max(0, Math.min(window.innerHeight - 56, y)) }
+      const final = { x: Math.max(8, Math.min(window.innerWidth - 64, x)), y: Math.max(8, Math.min(window.innerHeight - 64, y)) }
       setDragPos(final)
       try { localStorage.setItem(SOFI_DRAG_POS_KEY, JSON.stringify(final)) } catch {}
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }, [])
 
   // Save conversation helper
@@ -743,17 +763,28 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/*  FLOATING BUTTON  */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          className={`fixed z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[#0A0C14]/95 shadow-[0_12px_30px_rgba(0,0,0,0.36)] transition-all duration-300 hover:scale-105 active:scale-95 group ${dockButtonClass}`}
+          ref={btnRef}
+          onPointerDown={startDrag}
+          onClick={() => {
+            if (didDragRef.current) {
+              didDragRef.current = false
+              return
+            }
+            setOpen(true)
+          }}
+          className={`group fixed z-50 flex h-14 w-14 touch-none cursor-grab items-center justify-center rounded-2xl border border-[#CFE0ED] bg-white shadow-[0_12px_30px_rgba(15,42,74,0.18)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,42,74,0.22)] active:cursor-grabbing ${dragPos ? '' : dockButtonClass}`}
           style={{
-            background: 'linear-gradient(180deg, rgba(14,17,27,0.98), rgba(8,10,18,0.98))',
-            boxShadow: '0 10px 28px rgba(0,0,0,0.34), 0 0 0 1px rgba(255,255,255,0.09)',
+            ...(dragPos ? { left: dragPos.x, top: dragPos.y, right: 'auto', bottom: 'auto' } : {}),
+            background: '#ffffff',
+            color: '#0877C9',
             animation: pulse ? 'sofiBounce 0.8s ease' : undefined,
           }}
-          title="Conversar com IA da Educação"
+          title="Arraste para mover ou clique para abrir a SOFI"
+          aria-label="Abrir SOFI, assistente de IA"
         >
           <div className="relative flex h-full w-full items-center justify-center">
-            <SparklesIcon size={20} />
+            <span className="absolute left-1 top-1/2 flex -translate-y-1/2 flex-col gap-0.5 opacity-35" aria-hidden="true"><i className="h-0.5 w-0.5 rounded-full bg-current"/><i className="h-0.5 w-0.5 rounded-full bg-current"/><i className="h-0.5 w-0.5 rounded-full bg-current"/></span>
+            <SparklesIcon size={22} />
             {unread > 0 && (
               <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF4757] text-[10px] font-bold text-white">
                 {unread}
@@ -766,11 +797,11 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/*  PANEL  */}
       {open && (
         <div
-          className={`sofi-dark-surface z-50 flex overflow-hidden border border-white/10 bg-[#060814]/96 shadow-[0_28px_80px_rgba(0,0,0,0.68)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : `fixed inset-y-3 rounded-[28px] ${dockLeft ? 'left-3 md:left-[19rem]' : 'right-3 sm:right-6'} w-[min(1120px,calc(100vw-24px))]`}`}
+          className={`sofi-ai-panel z-50 flex overflow-hidden border border-[#DCE5EF] bg-[#F8FAFC]/96 shadow-[0_28px_80px_rgba(15,42,74,0.22)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : 'fixed inset-y-3 left-3 right-3 rounded-2xl lg:left-[18rem] lg:right-6'}`}
           style={{
             height: embedded ? '100%' : 'calc(100vh - 24px)',
-            background: 'rgba(6,8,20,0.98)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.82), 0 0 0 1px rgba(248,163,3,0.08)',
+            background: 'rgba(248,250,252,0.98)',
+            boxShadow: '0 32px 80px rgba(15,42,74,0.22), 0 0 0 1px rgba(255,255,255,0.9)',
             animation: 'scaleIn 0.18s ease',
           }}
         >
@@ -959,7 +990,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       {msg.role === 'assistant' && (
-                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
+                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#E6F2FB] text-[#0877C9]">
                           <SparklesIcon size={13} />
                         </div>
                       )}
@@ -968,15 +999,15 @@ Entregue uma resposta clara, acionável e de alto nível.`
                         style={
                           msg.role === 'user'
                             ? {
-                                background: 'linear-gradient(135deg,rgba(248,163,3,0.18),rgba(253,195,71,0.08))',
-                                border: '1px solid rgba(248,163,3,0.22)',
-                                color: 'rgba(255,255,255,0.92)',
+                                background: '#EAF3FB',
+                                border: '1px solid #CFE0ED',
+                                color: '#17324D',
                                 borderBottomRightRadius: 8,
                               }
                             : {
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.07)',
-                                color: 'rgba(255,255,255,0.88)',
+                                background: '#FFFFFF',
+                                border: '1px solid #E0E7EF',
+                                color: '#27364A',
                                 borderBottomLeftRadius: 8,
                               }
                         }
@@ -994,7 +1025,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
 
               {loading && (
                 <div className="mt-4 flex items-center gap-2">
-                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#F8A303] to-[#FDC347] text-black">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#E6F2FB] text-[#0877C9]">
                     <SparklesIcon size={13} />
                   </div>
                   <div className="rounded-2xl border border-white/7 bg-white/[0.05] px-4 py-3 text-sm text-white/75">
@@ -1031,7 +1062,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                 </div>
               )}
 
-              <div className="mx-auto max-w-[920px] rounded-[28px] border border-white/10 bg-white/[0.04] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
+              <div className="mx-auto max-w-[920px] rounded-2xl border border-white/10 bg-white/[0.04] p-3 shadow-[0_14px_40px_rgba(15,42,74,0.12)]">
                 <div className="flex items-end gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1097,7 +1128,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                 </div>
               </div>
 
-              <div className="mx-auto mt-3 flex max-w-[920px] flex-wrap gap-2">
+              {messages.length > 1 && <div className="mx-auto mt-3 flex max-w-[920px] flex-wrap gap-2">
                 {SOFI_QUICK_ACTIONS.map(item => (
                   <button
                     key={item.label}
@@ -1107,7 +1138,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
                     {item.label}
                   </button>
                 ))}
-              </div>
+              </div>}
             </div>
           </div>
         </div>

@@ -73,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return <div className={styles.shell}>
     {mobile && <button className={styles.scrim} onClick={() => setMobile(false)} aria-label="Fechar navegação" />}
     <aside className={`${styles.sidebar} ${mobile ? styles.open : ''}`}>
-      <Link href="/dashboard" className={styles.brand} aria-label="SOFI APS EDU"><span className={styles.brandIcon}><img src="/icon-ea.svg" alt="" /></span><div><strong>SOFI<span>.</span></strong><small>APS EDU · Trabalho com clareza</small></div></Link>
+      <Link href="/dashboard" className={styles.brand} aria-label="SOFI Educação Adventista"><span className={styles.brandIcon}><img src="/icon-ea.svg" alt="" /></span><div><strong>SOFI</strong><small>Educação Adventista · APS</small></div></Link>
       <button className={styles.workspaceSwitch} onClick={() => setPalette(true)}><span className={styles.workspaceMark}>A</span><span>Meu ambiente<small>Gestão e vida acadêmica</small></span><ChevronDownIcon /></button>
       <nav className={styles.navigation} aria-label="Navegação principal">{groups.map(group => <div key={group.name} className={styles.group}>
         <button className={styles.groupLabel} aria-expanded={!collapsed.includes(group.name)} onClick={() => setCollapsed(prev => prev.includes(group.name) ? prev.filter(name => name !== group.name) : [...prev, group.name])}>{group.name}<ChevronDownIcon style={{transform:collapsed.includes(group.name)?'rotate(-90deg)':undefined}} /></button>

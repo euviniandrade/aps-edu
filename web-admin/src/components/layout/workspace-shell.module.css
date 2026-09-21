@@ -1,7 +1,7 @@
 .shell {
   min-height: 100vh;
-  background: #f7f3f8;
-  color: #2c1338;
+  background: #f4f6fa;
+  color: #17233b;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0;
 }
@@ -11,7 +11,7 @@
   inset: 0;
   z-index: 50;
   border: 0;
-  background: rgba(44, 19, 56, 0.46);
+  background: rgba(13, 35, 65, 0.38);
 }
 
 .sidebar {
@@ -21,9 +21,9 @@
   display: flex;
   width: 264px;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  background: #2c1338;
-  box-shadow: 18px 0 50px rgba(44, 19, 56, 0.12);
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 10px 0 34px rgba(15, 42, 74, 0.04);
 }
 
 .brand {
@@ -32,41 +32,37 @@
   gap: 11px;
   margin: 14px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #ffffff;
+  background: transparent;
+  color: #10213a;
   text-decoration: none;
   box-shadow: none;
 }
 
 .brandIcon {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex: none;
   place-items: center;
-  border-radius: 7px;
-  background: #ffffff;
-  box-shadow: inset 0 -3px 0 #ff6b6b;
+  border-radius: 8px;
+  background: #edf5fb;
+  box-shadow: inset 0 0 0 1px #d6e5f1;
 }
 
 .brandIcon img {
-  width: 21px;
-  height: 21px;
+  width: 27px;
+  height: 27px;
   object-fit: contain;
   filter: none;
 }
 
 .brand strong {
   display: block;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 900;
   letter-spacing: 0;
-}
-
-.brand strong span {
-  color: #e57cd8;
 }
 
 .brand small,
@@ -75,7 +71,7 @@
 .profile small {
   display: block;
   margin-top: 2px;
-  color: rgba(255, 255, 255, 0.55);
+  color: #718096;
   font-size: 11px;
   line-height: 1.2;
 }
@@ -87,10 +83,10 @@
   gap: 10px;
   margin: 0 14px 14px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid #dce5ef;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #ffffff;
+  background: #f8fafc;
+  color: #17233b;
   text-align: left;
   font-size: 13px;
   font-weight: 850;
@@ -112,8 +108,8 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #e57cd8;
-  color: #2c1338;
+  background: #e8f2fb;
+  color: #005da8;
   font-weight: 900;
 }
 
@@ -135,7 +131,7 @@
   justify-content: space-between;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.44);
+  color: #8a98aa;
   padding: 8px 9px;
   font-size: 10px;
   font-weight: 900;
@@ -153,7 +149,7 @@
   gap: 10px;
   padding: 9px 10px;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #53647a;
   font-size: 13px;
   font-weight: 760;
   line-height: 1.15;
@@ -161,13 +157,14 @@
 }
 
 .navigation a:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: #ffffff;
+  background: #f3f6fa;
+  color: #17233b;
 }
 
 .navigation a[aria-current="page"] {
-  background: #ffffff;
-  color: #2c1338;
+  background: #eaf3fb;
+  color: #004f8f;
+  box-shadow: inset 3px 0 0 #0877c9;
 }
 
 .navigation a svg {
@@ -182,7 +179,7 @@
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: #ff6b6b;
+  background: #0877c9;
 }
 
 .integrationLink {
@@ -192,10 +189,10 @@
   gap: 10px;
   margin: 0 14px 12px;
   padding: 12px;
-  border: 1px solid rgba(229, 124, 216, 0.35);
+  border: 1px solid #cfe1ef;
   border-radius: 8px;
-  background: rgba(229, 124, 216, 0.13);
-  color: #ffffff;
+  background: #f2f8fc;
+  color: #07578f;
   text-decoration: none;
   font-size: 12px;
   font-weight: 900;
@@ -213,15 +210,15 @@
   gap: 10px;
   margin: 0 14px 16px;
   padding: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid #dce5ef;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
+  background: #f8fafc;
 }
 
 .profile b {
   display: block;
   overflow: hidden;
-  color: #ffffff;
+  color: #17233b;
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -232,10 +229,10 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid #dce5ef;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
+  color: #63748a;
   cursor: pointer;
 }
 
@@ -258,8 +255,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  border-bottom: 1px solid #e8dfea;
-  background: rgba(255, 253, 250, 0.9);
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.92);
   padding: 0 30px;
   backdrop-filter: blur(16px);
 }
@@ -269,7 +266,7 @@
   min-width: 0;
   align-items: center;
   gap: 9px;
-  color: #8c7695;
+  color: #7a899d;
   font-size: 12px;
   font-weight: 800;
 }
@@ -281,7 +278,7 @@
 }
 
 .breadcrumb b {
-  color: #2c1338;
+  color: #17233b;
 }
 
 .menuButton {
@@ -289,10 +286,10 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid #e2d5e6;
+  border: 1px solid #dce5ef;
   border-radius: 8px;
   background: #ffffff;
-  color: #2c1338;
+  color: #17233b;
   cursor: pointer;
 }
 
@@ -309,12 +306,12 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 1px solid #e2d5e6;
+  border: 1px solid #dce5ef;
   border-radius: 8px;
   background: #ffffff;
-  color: #59405f;
+  color: #53647a;
   text-decoration: none;
-  box-shadow: 0 6px 20px rgba(44, 19, 56, 0.05);
+  box-shadow: 0 5px 16px rgba(15, 42, 74, 0.04);
 }
 
 .topActions > a:not(.avatar) {
@@ -336,9 +333,9 @@
 
 .search kbd {
   border-radius: 6px;
-  background: #f3ebf4;
+  background: #eef3f8;
   padding: 3px 7px;
-  color: #806b88;
+  color: #718096;
   font-size: 10px;
   font-weight: 900;
 }
@@ -346,7 +343,7 @@
 .main {
   min-height: calc(100vh - 68px);
   padding: 30px;
-  background-image: radial-gradient(#dbcce0 0.7px, transparent 0.7px);
+  background-image: radial-gradient(#d7e0ea 0.7px, transparent 0.7px);
   background-size: 22px 22px;
 }
 
