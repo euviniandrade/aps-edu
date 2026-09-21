@@ -3186,7 +3186,7 @@ export default function MinhaAreaPage() {
 
   return (
     <AdminLayout>
-      <div className="-m-4 min-h-[calc(100vh-96px)] rounded-lg bg-[#141817] p-5 text-white sm:-m-6 sm:p-6">
+      <div className="sofi-dark-surface -m-4 min-h-[calc(100vh-96px)] rounded-lg bg-[#141817] p-5 text-white sm:-m-6 sm:p-6">
       {/*  HEADER  */}
       <div className="flex items-start justify-between mb-5 animate-fade-in">
         <div>
