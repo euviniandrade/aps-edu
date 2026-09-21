@@ -195,7 +195,7 @@ body {
 .sofi-content .sofi-dark-surface .text-white\/32,
 .sofi-content .sofi-dark-surface .text-white\/30,
 .sofi-content .sofi-dark-surface .text-white\/28 {
-  color: rgba(255,255,255,0.58) !important;
+  color: rgba(255,255,255,0.68) !important;
 }
 
 .sofi-content .sofi-dark-surface [class*="border-white/"] {

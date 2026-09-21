@@ -1794,7 +1794,7 @@ function GamificationPanel({ tasks }: { tasks: PersonalTask[] }) {
       {/* Achievements */}
       <div className="rounded-2xl p-5"
         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-        <p className="text-sm font-bold text-white mb-4">x  Conquistas</p>
+        <p className="text-sm font-bold text-white mb-4">Conquistas</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {achievements.map(a => (
             <div key={a.label}
@@ -1972,8 +1972,8 @@ function AiAssistantPanel({ tasks, workDay, userName, onTaskCreated, onEventCrea
     const p = period.charAt(0).toUpperCase() + period.slice(1)
     const pending = tasks.filter(t => t.status !== 'done')
     if (pending.length > 0)
-      return `${p}, ${userName}! x9 Tenho ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''} para você. Até que horas vai trabalhar hoje?`
-    return `${p}, ${userName}! x9 Sou a IA da Educação. Sua lista está vazia  boa hora para planejar. Até que horas vai trabalhar hoje?`
+      return `${p}, ${userName}! Tenho ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''} para você. Até que horas vai trabalhar hoje?`
+    return `${p}, ${userName}! Sou a IA da Educação. Sua lista está vazia, uma boa hora para planejar. Até que horas vai trabalhar hoje?`
   }
 
   // Salva mensagens no localStorage sempre que mudam
@@ -2599,12 +2599,12 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         </div>
         <div className="flex items-center gap-2">
           {loadingCal && (
-            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>x Sincronizando...</span>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.55)' }}>Sincronizando...</span>
           )}
           <button onClick={fetchEvents}
             className="text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
             style={{ background: 'rgba(66,133,244,0.08)', color: '#4285F4', border: '1px solid rgba(66,133,244,0.2)' }}>
-            x Atualizar
+            Atualizar
           </button>
         </div>
       </div>
@@ -2642,7 +2642,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
         return (
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#F8A303' }}>x& Hoje</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#F8A303' }}>Hoje</span>
               <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 {today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
@@ -2673,7 +2673,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                         <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: color + '60' }} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{e.title}</p>
-                          {e.location && <p className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>x {e.location}</p>}
+                          {e.location && <p className="text-[10px] truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>Local: {e.location}</p>}
                           {e.calendarName && <p className="text-[10px]" style={{ color: color + 'AA' }}>{e.calendarName}</p>}
                         </div>
                         <span className="text-[10px] flex-shrink-0" style={{ color: color + '99' }}> </span>
@@ -2691,7 +2691,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                         <div className="w-px h-6 flex-shrink-0 rounded" style={{ background: cat.color + '60' }} />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-semibold truncate ${t.status === 'done' ? 'line-through opacity-40' : ''}`} style={{ color: 'rgba(255,255,255,0.9)' }}>
-                            x9 {t.title}
+                            {t.title}
                           </p>
                         </div>
                       </div>
@@ -2706,7 +2706,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
 
       {/*  THIS WEEK SECTION  */}
       <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>x  Esta Semana</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.68)' }}>Esta semana</span>
         <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
           {weekDates[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}  {weekDates[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
         </span>
@@ -2758,7 +2758,7 @@ function CalendarView({ tasks }: { tasks: PersonalTask[] }) {
                       className={`text-[9px] px-1.5 py-1 rounded-md truncate leading-snug ${t.status === 'done' ? 'opacity-40 line-through' : ''}`}
                       style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.color}33` }}
                       title={t.title}>
-                      x9 {t.title}
+                      {t.title}
                     </div>
                   )
                 })}
@@ -3101,7 +3101,7 @@ export default function MinhaAreaPage() {
       const pending = tasks.filter(t => t.status !== 'done')
       if (pending.length > 0) {
         sendNotif(
-          `x9 ${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}`,
+          `${pending.length} tarefa${pending.length > 1 ? 's' : ''} pendente${pending.length > 1 ? 's' : ''}`,
           pending.slice(0, 3).map(t => `⬢ ${t.title}`).join('\n')
         )
       }
@@ -3149,7 +3149,7 @@ export default function MinhaAreaPage() {
 
   if (!mounted) return null
 
-  const greeting = user ? getGreeting(user.name?.split(' ')[0] || 'Vinicius') : { text: 'Olá!', emoji: 'x9' }
+  const greeting = user ? getGreeting(user.name?.split(' ')[0] || 'Vinicius') : { text: 'Olá!', emoji: '' }
 
   const filteredTasks = tasks
     .filter(t => filterCat === 'all' || t.category === filterCat)
