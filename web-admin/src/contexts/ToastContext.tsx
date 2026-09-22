@@ -72,10 +72,10 @@ function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: st
             key={t.id}
             className="pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-2xl min-w-[280px] max-w-sm animate-slide-up"
             style={{
-              background: 'rgba(10,12,28,0.97)',
-              border: `1px solid rgba(255,255,255,0.1)`,
+              background: '#FFFFFF',
+              border: `1px solid #E0E7EF`,
               borderLeft: `3px solid ${s.border}`,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              boxShadow: '0 12px 32px rgba(15,42,74,0.16)',
               backdropFilter: 'blur(16px)',
             }}
           >
@@ -86,9 +86,9 @@ function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: st
               {s.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white leading-tight">{t.title}</p>
+              <p className="text-sm font-semibold text-[#17233B] leading-tight">{t.title}</p>
               {t.message && (
-                <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#64748B' }}>
                   {t.message}
                 </p>
               )}
@@ -96,7 +96,7 @@ function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: st
             <button
               onClick={() => dismiss(t.id)}
               className="text-xs leading-none flex-shrink-0 mt-0.5 transition-opacity hover:opacity-70"
-              style={{ color: 'rgba(255,255,255,0.25)' }}
+              style={{ color: '#94A3B8' }}
             >
               ✕
             </button>

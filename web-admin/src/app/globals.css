@@ -111,6 +111,17 @@ body {
   color: var(--text-primary);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* One visual language across legacy Tailwind screens. */
 .sofi-content [class*="border-[#dbe6ef]"],
 .sofi-content [class*="border-[#e2e8f0]"] { border-color: #e2e8f0 !important; }
@@ -139,8 +150,8 @@ body {
 .sofi-content .bg-teal-50 { background-color: #edf6fc !important; }
 .sofi-content .border-teal-200,
 .sofi-content .border-teal-300 { border-color: #b9d9ef !important; }
-.sofi-content .bg-slate-900,
-.sofi-content .bg-slate-950 { background-color: #0f2742 !important; }
+.sofi-content .bg-slate-900 { background-color: #0877c9 !important; }
+.sofi-content .bg-slate-950 { background-color: #ffffff !important; color: #17233b !important; }
 .sofi-content .bg-slate-900.text-white,
 .sofi-content .bg-slate-950.text-white,
 .sofi-content .bg-slate-950 .text-white { color: #ffffff !important; }
@@ -303,6 +314,61 @@ body {
 .sofi-kanban-shell .sofi-kanban-column,
 .sofi-kanban-shell .sofi-kanban-card { color: #17233b; }
 .sofi-kanban-shell .sofi-kanban-card:active { cursor: grabbing; }
+
+/* Analytics was one of the last legacy dark workspaces. */
+.analytics-light .text-white { color: #17233b !important; }
+.analytics-light [style*="rgba(255,255,255"],
+.analytics-light [style*="rgba(255, 255, 255"] {
+  color: #64748b !important;
+  border-color: #e0e7ef !important;
+}
+.analytics-light div[style*="background: rgba(255,255,255"],
+.analytics-light div[style*="background: rgba(255, 255, 255"] {
+  background: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(15,42,74,0.06);
+}
+.analytics-light [style*="borderBottom: '1px solid rgba(255"] { border-color: #e8edf3 !important; }
+.analytics-light > div[style],
+.analytics-light > section[style] { border-radius: 8px !important; }
+
+/* Record drawers and reports use the same clear product language. */
+.sofi-light-modal {
+  background: #ffffff !important;
+  color: #17233b !important;
+  border-color: #dce5ef !important;
+  box-shadow: 0 28px 80px rgba(15,42,74,0.22) !important;
+}
+.sofi-light-modal .text-white,
+.sofi-light-modal .text-white\/90,
+.sofi-light-modal .text-white\/80,
+.sofi-light-modal .text-white\/75,
+.sofi-light-modal .text-white\/70,
+.sofi-light-modal .text-white\/68,
+.sofi-light-modal .text-white\/65,
+.sofi-light-modal .text-white\/60 { color: #17233b !important; }
+.sofi-light-modal .text-white\/55,
+.sofi-light-modal .text-white\/50,
+.sofi-light-modal .text-white\/45,
+.sofi-light-modal .text-white\/40,
+.sofi-light-modal .text-white\/38,
+.sofi-light-modal .text-white\/35,
+.sofi-light-modal .text-white\/32,
+.sofi-light-modal .text-white\/30,
+.sofi-light-modal .text-white\/28,
+.sofi-light-modal .text-white\/25,
+.sofi-light-modal .text-white\/20 { color: #718096 !important; }
+.sofi-light-modal [class*="border-white/"] { border-color: #e0e7ef !important; }
+.sofi-light-modal [class*="bg-white/"] { background-color: #f8fafc !important; }
+.sofi-light-modal [class*="bg-black/"] { background-color: #eef3f8 !important; }
+.sofi-light-modal [class*="bg-[#090B12]"] { background: #ffffff !important; }
+.sofi-light-modal input,
+.sofi-light-modal textarea,
+.sofi-light-modal select {
+  border-color: #dce5ef !important;
+  background: #ffffff !important;
+  color: #17233b !important;
+}
+.sofi-light-modal select option { background: #ffffff !important; color: #17233b !important; }
 
 .sofi-content input::placeholder,
 .sofi-content textarea::placeholder {

@@ -7,12 +7,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 
-const DarkTooltip = ({ active, payload, label }: any) => {
+const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl p-3 text-sm"
-      style={{ background: 'rgba(8,10,24,0.97)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-      <p className="font-semibold text-white mb-1">{label}</p>
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-xl">
+      <p className="mb-1 font-semibold text-slate-900">{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} className="text-xs" style={{ color: p.color || p.fill }}>
           {p.name}: <strong>{p.value}</strong>
@@ -24,12 +23,12 @@ const DarkTooltip = ({ active, payload, label }: any) => {
 
 function StatCard({ label, value, sub, color, trend, icon }: any) {
   return (
-    <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-3xl font-extrabold" style={{ color }}>{value}</p>
-          <p className="text-sm mt-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.55)' }}>{label}</p>
-          {sub && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>{sub}</p>}
+          <p className="mt-1.5 text-sm font-medium text-slate-600">{label}</p>
+          {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
         </div>
         <div className="flex flex-col items-end gap-2">
           <span className="text-2xl">{icon}</span>
@@ -155,33 +154,34 @@ Seja direto, use dados, máximo 4 linhas no total.`
 
   return (
     <AdminLayout>
+      <div className="analytics-light">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 animate-fade-in">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-white">Analytics Preditivo</h1>
+            <h1 className="text-3xl font-extrabold text-slate-950">Analytics preditivo</h1>
             <span className="text-xs font-bold px-2.5 py-1 rounded-full"
               style={{ background: 'rgba(248,163,3,0.12)', color: '#F8A303', border: '1px solid rgba(248,163,3,0.2)' }}>
-              S Powered by IA
+              Inteligência aplicada
             </span>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Insights preditivos e análise avançada da rede  Associação Paulista Sul
+          <p className="mt-1 text-sm text-slate-500">
+            Insights preditivos e análise avançada da rede · Associação Paulista Sul
           </p>
         </div>
         <button onClick={loadPrediction} disabled={aiLoading}
           className="px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 hover:opacity-80"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
-          {aiLoading ? '⏳ Analisando...' : 'x Atualizar Previsão'}
+          {aiLoading ? 'Analisando...' : 'Atualizar previsão'}
         </button>
       </div>
 
       {/* Health Score */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <StatCard label="Score de Saúde da Rede" value={`${healthScore}`} sub="de 100 pontos" color={healthScore > 70 ? '#0ABD78' : healthScore > 40 ? '#F8A303' : '#FF4757'} trend={healthScore > 60 ? 8 : -3} icon="xa" />
-        <StatCard label="Taxa de Conclusão" value={`${completionPct}%`} sub="tarefas concluídas" color="#4A9EFF" trend={completionPct > 60 ? 5 : -2} icon="S&" />
-        <StatCard label="Usuários Ativos" value={data?.totalActiveUsers || 0} sub="colaboradores" color="#F8A303" trend={4} icon="x" />
-        <StatCard label="Tarefas em Risco" value={data?.tasks?.overdue || 0} sub="precisam de atenção" color="#FF4757" trend={-(data?.tasks?.overdue || 0) > 0 ? 10 : 0} icon="a️" />
+        <StatCard label="Score de saúde da rede" value={`${healthScore}`} sub="de 100 pontos" color={healthScore > 70 ? '#0ABD78' : healthScore > 40 ? '#F8A303' : '#FF4757'} trend={healthScore > 60 ? 8 : -3} icon="01" />
+        <StatCard label="Taxa de conclusão" value={`${completionPct}%`} sub="tarefas concluídas" color="#0877C9" trend={completionPct > 60 ? 5 : -2} icon="02" />
+        <StatCard label="Usuários ativos" value={data?.totalActiveUsers || 0} sub="colaboradores" color="#6157D8" trend={4} icon="03" />
+        <StatCard label="Tarefas em risco" value={data?.tasks?.overdue || 0} sub="precisam de atenção" color="#E5484D" trend={-(data?.tasks?.overdue || 0) > 0 ? 10 : 0} icon="04" />
       </div>
 
       {/* AI Prediction box */}
@@ -190,7 +190,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
         <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, rgba(248,163,3,0.2), rgba(253,195,71,0.1))', border: '1px solid rgba(248,163,3,0.3)' }}>
-            x
+            IA
           </div>
           <div>
             <p className="text-sm font-bold text-white">Previsões e Recomendações</p>
@@ -238,7 +238,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
 
         {/* Engagement trend */}
         <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 className="text-sm font-bold text-white mb-0.5">x Tendência de Engajamento</h2>
+          <h2 className="mb-0.5 text-sm font-bold text-slate-900">Tendência de engajamento</h2>
           <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Real vs. previsto (6 semanas)</p>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={engagementData}>
@@ -252,10 +252,10 @@ Seja direto, use dados, máximo 4 linhas no total.`
                   <stop offset="95%" stopColor="#4A9EFF" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="week" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<DarkTooltip />} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" />
+              <XAxis dataKey="week" tick={{ fill: '#718096', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#718096', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="real"    name="Real"    stroke="#F8A303" fill="url(#gradReal)" strokeWidth={2} />
               <Area type="monotone" dataKey="previsto" name="Previsto" stroke="#4A9EFF" fill="url(#gradPrev)" strokeWidth={2} strokeDasharray="5 3" />
             </AreaChart>
@@ -264,14 +264,14 @@ Seja direto, use dados, máximo 4 linhas no total.`
 
         {/* Task trend */}
         <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 className="text-sm font-bold text-white mb-0.5">x9 Fluxo Semanal de Tarefas</h2>
+          <h2 className="mb-0.5 text-sm font-bold text-slate-900">Fluxo semanal de tarefas</h2>
           <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Concluídas, pendentes e atrasadas</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={taskTrendData} barSize={14}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<DarkTooltip />} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" />
+              <XAxis dataKey="day" tick={{ fill: '#718096', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#718096', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="concluidas" name="Concluídas" fill="#0ABD78" radius={[4,4,0,0]} />
               <Bar dataKey="pendentes"  name="Pendentes"  fill="#F8A303" radius={[4,4,0,0]} />
               <Bar dataKey="atrasadas"  name="Atrasadas"  fill="#FF4757" radius={[4,4,0,0]} />
@@ -285,15 +285,15 @@ Seja direto, use dados, máximo 4 linhas no total.`
 
         {/* Unit ranking bar */}
         <div className="lg:col-span-2 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 className="text-sm font-bold text-white mb-0.5">x  Ranking de Pontuação por Unidade</h2>
+          <h2 className="mb-0.5 text-sm font-bold text-slate-900">Pontuação por unidade</h2>
           <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Média de pontos por colaborador</p>
           {unitBarData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={unitBarData} layout="vertical" barSize={16}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
-                <Tooltip content={<DarkTooltip />} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8EDF3" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#718096', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: '#53647A', fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="pontos" name="Média (pts)" radius={[0,6,6,0]}>
                   {unitBarData.map((_: any, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -311,7 +311,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
         {/* Risk units */}
         <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="px-4 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <h2 className="text-sm font-bold text-white">xa Unidades em Risco</h2>
+            <h2 className="text-sm font-bold text-slate-900">Unidades em risco</h2>
             <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Baixo engajamento detectado</p>
           </div>
           <div className="p-3">
@@ -324,7 +324,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
             ) : riskUnits.map((u: any) => (
               <div key={u.id} className="flex items-center gap-3 p-3 mb-2 rounded-xl"
                 style={{ background: 'rgba(255,71,87,0.06)', border: '1px solid rgba(255,71,87,0.15)' }}>
-                <span className="text-lg">x0</span>
+                <span className="text-lg font-black text-rose-500">!</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-white truncate">
                     {u.name.replace('Colégio Adventista de ', '').replace('Colégio Adventista do ', '')}
@@ -342,12 +342,12 @@ Seja direto, use dados, máximo 4 linhas no total.`
       {/* Top 10 ranking table */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <h2 className="text-sm font-bold text-white">x& Top 10 Colaboradores</h2>
+          <h2 className="text-sm font-bold text-slate-900">Top 10 colaboradores</h2>
           <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>Maior pontuação na rede</p>
         </div>
         <div>
           {ranking.slice(0, 10).map((item: any, i: number) => {
-            const medals = ['x!','x','x0']
+            const medals = ['1','2','3']
             const pct = ranking[0]?.points > 0 ? Math.round((item.points / ranking[0].points) * 100) : 0
             return (
               <div key={i} className="flex items-center gap-4 px-5 py-3.5 transition-all"
@@ -380,6 +380,7 @@ Seja direto, use dados, máximo 4 linhas no total.`
             </div>
           )}
         </div>
+      </div>
       </div>
     </AdminLayout>
   )

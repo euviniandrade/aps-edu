@@ -15,7 +15,7 @@ export default function GlobalError({
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-6 px-6"
-      style={{ backgroundColor: '#06070F', color: 'white' }}
+      style={{ backgroundColor: '#F4F6FA', color: '#17233B' }}
     >
       <div
         className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
@@ -25,7 +25,7 @@ export default function GlobalError({
       </div>
       <div className="text-center max-w-sm">
         <h1 className="text-xl font-bold mb-2">Algo deu errado</h1>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        <p className="text-sm" style={{ color: '#64748B' }}>
           {error?.message || 'Erro inesperado na aplicação.'}
         </p>
       </div>
@@ -34,8 +34,8 @@ export default function GlobalError({
           onClick={reset}
           className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
           style={{
-            background: 'linear-gradient(135deg, #F8A303, #FDC347)',
-            color: '#000',
+            background: '#0877C9',
+            color: '#FFFFFF',
           }}
         >
           Tentar novamente
@@ -44,9 +44,9 @@ export default function GlobalError({
           href="/login"
           className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
           style={{
-            background: 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.7)',
+            background: '#FFFFFF',
+            border: '1px solid #DCE5EF',
+            color: '#53647A',
           }}
         >
           Ir para o login

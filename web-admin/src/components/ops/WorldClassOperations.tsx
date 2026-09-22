@@ -2637,14 +2637,14 @@ function PeopleWorkspacePremium({
       </Surface>
 
       {drawerOpen && selectedPerson && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 lg:left-[262px]">
           <button
             type="button"
             aria-label="Fechar ficha"
             onClick={() => void closeDrawer()}
             className="absolute inset-0 bg-black/65 backdrop-blur-sm"
           />
-          <aside className="absolute left-1/2 top-1/2 h-[calc(100vh-24px)] w-[min(1200px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2rem] border border-white/10 bg-[#090B12] shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:h-[calc(100vh-48px)] md:w-[min(1200px,calc(100vw-48px))]">
+          <aside className="sofi-light-modal absolute left-1/2 top-1/2 h-[calc(100vh-24px)] w-[min(1200px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_30px_80px_rgba(15,42,74,0.24)] md:h-[calc(100vh-48px)] md:w-[min(1200px,calc(100vw-48px))]">
             <div className="flex h-full flex-col">
               <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
                 <div className="min-w-0">
@@ -3939,7 +3939,7 @@ function PeopleWorkspaceExecutive({
                     </span>
                     <div className="h-px flex-1 rounded-full" style={{ background: `${getCargoColor(cargo)}20` }} />
                   </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
                     {persons.map(person => {
                       const active = selectedPerson?.id === person.id
                       const photo = getPersonPhoto(person)
@@ -3950,7 +3950,7 @@ function PeopleWorkspaceExecutive({
                           onClick={() => selectPerson(person)}
                           className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                         >
-                          <div className="aspect-[4/3] overflow-hidden bg-black/30">
+                          <div className="aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
                             {photo ? (
                               <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                             ) : (
@@ -3986,7 +3986,7 @@ function PeopleWorkspaceExecutive({
         <div className={`grid gap-4 p-4 ${viewMode === 'por-cargo' ? 'hidden' : ''}`}>
           <div className="min-w-0">
             <div className="pr-1">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {lineupPeople.map(person => {
                   const active = selectedPerson?.id === person.id
                   const photo = getPersonPhoto(person)
@@ -4005,7 +4005,7 @@ function PeopleWorkspaceExecutive({
                       onClick={() => selectPerson(person)}
                       className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                     >
-                      <div className="aspect-[4/3] overflow-hidden bg-black/30">
+                      <div className="aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
                         {photo ? (
                           <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (
@@ -4040,8 +4040,8 @@ function PeopleWorkspaceExecutive({
           </div>
 
           {drawerOpen && selectedPerson && (
-            <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 backdrop-blur-md" onClick={() => setDrawerOpen(false)}>
-              <aside className="mx-auto my-6 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/12 bg-[#090B12]/98 shadow-2xl shadow-black/60" onClick={event => event.stopPropagation()}>
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-5 lg:left-[262px]" onClick={() => setDrawerOpen(false)}>
+              <aside className="sofi-light-modal mx-auto my-6 w-full max-w-6xl overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_28px_80px_rgba(15,42,74,0.24)]" onClick={event => event.stopPropagation()}>
                 <div className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 sm:p-7">
                   <button onClick={() => setDrawerOpen(false)} className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur">
                     <XMarkIcon className="h-5 w-5" />
