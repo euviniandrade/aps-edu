@@ -85,6 +85,29 @@ body {
   background: var(--bg-base);
 }
 
+/* Sofi workbench: a focused, readable canvas alongside the persistent project rail. */
+.sofi-workspace > div { background: #f3f7f8 !important; }
+.sofi-workspace > div > div:first-child { display: none; }
+.sofi-workspace aside { background: #102f3d !important; }
+.sofi-workspace aside > div { background: #102f3d !important; }
+.sofi-workspace section { background: #f3f7f8 !important; color: #18303b; }
+.sofi-workspace section > div:first-child { display: none; }
+.sofi-workspace section header { background: #fff; border-color: #dce7ea; }
+.sofi-workspace section [class*="text-white"] { color: #263d47 !important; }
+.sofi-workspace section [class*="text-white/3"],
+.sofi-workspace section [class*="text-white/4"],
+.sofi-workspace section [class*="text-white/5"] { color: #647782 !important; }
+.sofi-workspace section [class*="bg-white/"] { background: #fff !important; }
+.sofi-workspace section [class*="bg-black/"] { background: #eaf0f2 !important; }
+.sofi-workspace section [class*="bg-[linear-gradient"] { background: #fff !important; }
+.sofi-workspace section [class*="border-white/"] { border-color: #dce7ea !important; }
+.sofi-workspace section textarea { color: #18303b !important; }
+.sofi-workspace section textarea::placeholder { color: #758993 !important; }
+.sofi-workspace section button[class*="bg-white"] { background: #14616a !important; color: #fff !important; }
+.sofi-workspace section button[class*="bg-white"] svg { color: #fff !important; }
+.sofi-workspace section button[class*="bg-white"]:disabled { background: #d3e0e3 !important; color: #60747e !important; }
+.sofi-workspace section .pointer-events-none { background: linear-gradient(180deg, transparent, #f3f7f8 72%) !important; }
+
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

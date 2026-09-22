@@ -155,6 +155,8 @@ function parseAction(response: string): { content: string; action: any | null } 
 export default function AiAssistant({ embedded = false }: AiAssistantProps = {}) {
   const [open, setOpen]           = useState(embedded)
   const [messages, setMessages]   = useState<Message[]>([])
+  const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null)
+  const [actionRunning, setActionRunning] = useState(false)
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [isListening, setIsListening] = useState(false)
@@ -606,7 +608,9 @@ export default function AiAssistant({ embedded = false }: AiAssistantProps = {})
         const url = res.data?.url
         if (url) addMsg('assistant', `📋 ATA gerada! [Abrir documento](${url})`)
       }
-    } catch (_) {}
+    } catch (error: any) {
+      addMsg('assistant', `Não foi possível executar a ação: ${error?.response?.data?.error || error?.message || 'erro desconhecido'}`)
+    }
   }
 
   const addMsg = (role: 'user' | 'assistant', content: string) => {
@@ -747,7 +751,7 @@ Entregue uma resposta clara, acionável e de alto nível.`
       addMsg('assistant', finalMsg || 'Pode reformular?')
       speak(finalMsg)
 
-      if (rawAction) await executeAction(rawAction)
+      if (rawAction?.type && rawAction?.data) setPendingAction(rawAction)
     } catch {
       addMsg('assistant', '❌ Não consegui me conectar agora. Tente em instantes.')
     }
@@ -1031,6 +1035,16 @@ Entregue uma resposta clara, acionável e de alto nível.`
                   </div>
                   <div className="rounded-2xl border border-white/7 bg-white/[0.05] px-4 py-3 text-sm text-white/75">
                     <TypingDots />
+                  </div>
+                </div>
+              )}
+              {pendingAction && (
+                <div className="mx-auto mt-4 max-w-[920px] rounded-lg border border-amber-200 bg-amber-50 p-4 text-slate-900">
+                  <p className="text-sm font-semibold">Ação proposta: {pendingAction.type}</p>
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-white p-2 text-xs text-slate-700">{JSON.stringify(pendingAction.data, null, 2)}</pre>
+                  <div className="mt-3 flex gap-2">
+                    <button disabled={actionRunning} onClick={async () => { const action = pendingAction; setActionRunning(true); try { await executeAction(action); setPendingAction(null) } finally { setActionRunning(false) } }} className="rounded-md bg-[#123846] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{actionRunning ? 'Executando...' : 'Aprovar e executar'}</button>
+                    <button disabled={actionRunning} onClick={() => setPendingAction(null)} className="rounded-md border border-slate-300 px-3 py-2 text-xs">Descartar</button>
                   </div>
                 </div>
               )}

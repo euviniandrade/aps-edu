@@ -9,7 +9,6 @@ import {
   BoltIcon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
-  CheckCircleIcon,
   ClipboardDocumentIcon,
   DocumentDuplicateIcon,
   EllipsisHorizontalIcon,
@@ -61,7 +60,7 @@ type SofiMessage = {
   provider?: string
   createdAt: string
   action?: SofiAction | null
-  actionStatus?: 'done' | 'error'
+  actionStatus?: 'pending' | 'running' | 'done' | 'error' | 'cancelled'
   actionSummary?: string
   actionRoute?: string
 }
@@ -145,6 +144,16 @@ function formatDateTime(value: string) {
 }
 
 function renderStructuredContent(text: string) {
+  if (text.length > 1600 && /"(?:tarefas|pessoas|matriculas|financeiro)"\s*:/.test(text)) {
+    const contextAt = text.search(/Contexto:\s*\{/i)
+    return <div>
+      {contextAt > 0 ? <p className="whitespace-pre-wrap">{text.slice(0, contextAt).trim()}</p> : null}
+      <details className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+        <summary className="cursor-pointer font-semibold">Contexto estruturado enviado · mostrar dados</summary>
+        <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words">{contextAt > 0 ? text.slice(contextAt) : text}</pre>
+      </details>
+    </div>
+  }
   const lines = text.split('\n').filter(Boolean)
 
   if (lines.length <= 1) {
@@ -280,6 +289,7 @@ export default function AiIntelligenceCenter() {
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([])
   const [folders, setFolders] = useState<SofiFolder[]>(defaultFolders)
   const [threads, setThreads] = useState<SofiThread[]>([defaultThread])
+  const [hydrated, setHydrated] = useState(false)
   const [activeThreadId, setActiveThreadId] = useState(defaultThread.id)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -292,6 +302,9 @@ export default function AiIntelligenceCenter() {
   const [providerMode, setProviderMode] = useState('auto')
   const [providerMenuOpen, setProviderMenuOpen] = useState(false)
   const [workspaceNote, setWorkspaceNote] = useState('')
+  const [contextOpen, setContextOpen] = useState(false)
+  const [includeCalendar, setIncludeCalendar] = useState(false)
+  const [storageError, setStorageError] = useState('')
   const [threadMenuId, setThreadMenuId] = useState<string | null>(null)
   const [platformContext, setPlatformContext] = useState<PlatformContext | null>(null)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
@@ -323,11 +336,33 @@ export default function AiIntelligenceCenter() {
 
       if (Array.isArray(savedFolders) && savedFolders.length) setFolders(savedFolders)
       if (Array.isArray(savedThreads) && savedThreads.length) setThreads(savedThreads)
+      else {
+        const legacy = JSON.parse(localStorage.getItem('aps_edu_sofi_conversations_v1') || '[]')
+        if (Array.isArray(legacy) && legacy.length) {
+          const migrated: SofiThread[] = legacy.filter(item => Array.isArray(item.messages) && item.messages.length).map(item => ({
+            id: makeId('legacy'),
+            title: String(item.title || 'Conversa anterior'),
+            folderId: 'geral',
+            providerMode: 'auto',
+            createdAt: new Date(item.updatedAt || Date.now()).toISOString(),
+            updatedAt: new Date(item.updatedAt || Date.now()).toISOString(),
+            messages: item.messages.map((message: any) => ({
+              id: makeId('msg'),
+              role: message.role === 'user' ? 'user' : 'assistant',
+              content: String(message.content || ''),
+              display: typeof message.display === 'string' ? message.display : undefined,
+              createdAt: new Date(item.updatedAt || Date.now()).toISOString(),
+            })),
+          }))
+          setThreads([defaultThread, ...migrated])
+        }
+      }
       if (savedActive) setActiveThreadId(savedActive)
       if (savedNote) setWorkspaceNote(savedNote)
       if (savedContext?.path) setPlatformContext(savedContext)
       setSidebarCompact(savedCompact)
     } catch {}
+    setHydrated(true)
 
     const syncContext = () => {
       try {
@@ -362,14 +397,17 @@ export default function AiIntelligenceCenter() {
   }, [])
 
   useEffect(() => {
+    if (!hydrated) return
     try {
       localStorage.setItem(SOFI_CHAT_FOLDERS_KEY, JSON.stringify(folders))
       localStorage.setItem(SOFI_CHAT_THREADS_KEY, JSON.stringify(threads))
       localStorage.setItem(SOFI_CHAT_ACTIVE_THREAD_KEY, activeThreadId)
       localStorage.setItem(SOFI_WORKSPACE_NOTE_KEY, workspaceNote)
       localStorage.setItem(SOFI_SIDEBAR_COMPACT_KEY, sidebarCompact ? '1' : '0')
-    } catch {}
-  }, [folders, threads, activeThreadId, workspaceNote, sidebarCompact])
+    } catch {
+      setStorageError('Não foi possível salvar o histórico neste navegador. Exporte as conversas para preservá-las.')
+    }
+  }, [folders, threads, activeThreadId, workspaceNote, sidebarCompact, hydrated])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -566,12 +604,40 @@ export default function AiIntelligenceCenter() {
     throw new Error('Ação ainda nao suportada nesta tela.')
   }
 
+  function exportThread() {
+    if (!activeThread) return
+    const content = activeThread.messages.map(message =>
+      `${message.role === 'user' ? 'Você' : 'Sofi'} - ${new Date(message.createdAt).toLocaleString('pt-BR')}\n${message.display || message.content}`
+    ).join('\n\n---\n\n')
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `sofi-${activeThread.id}.txt`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  async function approveAction(threadId: string, message: SofiMessage) {
+    if (!message.action || message.actionStatus !== 'pending') return
+    updateThreadMessage(threadId, message.id, current => ({ ...current, actionStatus: 'running', actionSummary: 'Executando ação aprovada...' }))
+    try {
+      const result = await executeAction(message.action)
+      updateThreadMessage(threadId, message.id, current => ({
+        ...current, actionStatus: 'done', actionSummary: result.message, actionRoute: result.route,
+      }))
+    } catch (error: any) {
+      updateThreadMessage(threadId, message.id, current => ({
+        ...current, actionStatus: 'error', actionSummary: error?.message || 'Não foi possível executar a ação.',
+      }))
+    }
+  }
+
   function systemInstruction() {
     return `Voce e a IA da Educação, assistente executiva da APS EDU.
 Responda em portugues do Brasil com clareza, objetividade e profundidade pratica.
 Mantenha continuidade da conversa, proponha ações aplicaveis e considere o contexto operacional.
 
-Quando o usuário pedir uma ação real, você PODE devolver um JSON válido no formato:
+Quando o usuário pedir uma ação real, você PODE propor um JSON válido no formato:
 {"content":"mensagem humana curta","action":{"type":"create_task|create_tasks|create_event|send_email|drive_create_folder|create_ai_artifact|create_management_work|create_note","data":{...}}}
 
 Regras:
@@ -583,7 +649,10 @@ Regras:
 - Use create_ai_artifact para documentos, atas, politicas, roteiros, comunicados ou checklists.
 - Use create_management_work para itens do centro operacional/kanban de gestão.
 - Use create_note para notas curtas e memoria executiva.
+- Para enviar e-mail ou criar pasta no Drive, só proponha a ação se a integração correspondente estiver conectada; mostre destinatários, assunto ou nome da pasta para revisão.
 - Se nao for executar nada, responda normalmente sem JSON.
+- Nunca diga que executou uma ação antes de receber confirmação do usuário. A interface apresentará a proposta para revisão.
+- Não alegue ter pesquisado na web, acessado Drive ou lido dados externos sem realmente ter feito isso.
 - Sempre mantenha "content" claro e profissional.`
   }
 
@@ -627,21 +696,27 @@ Regras:
     let display = rawContent
 
     if (attachedFile) {
-      display = `${attachedFile.type.startsWith('image/') ? 'Imagem' : isAudioOrVideo(attachedFile) ? 'Audio' : 'Arquivo'}: ${attachedFile.name}${rawContent ? `\n${rawContent}` : ''}`
-      if (attachedFile.type.startsWith('image/')) {
-        imageBase64 = await readFileBase64(attachedFile)
-        imageMimeType = attachedFile.type
-        content = rawContent || 'Analise este anexo visual e proponha a melhor ação operacional.'
-      } else {
-        const extractedText = await transcribeFile(attachedFile)
-        content = `${extractedText}\n\nPedido do usuário: ${rawContent || (isAudioOrVideo(attachedFile) ? 'Transcreva e organize este áudio.' : 'Analise este documento e estruture os próximos passos.')}`
+      try {
+        if (attachedFile.size > 12 * 1024 * 1024) throw new Error('O anexo excede o limite de 12 MB.')
+        display = `${attachedFile.type.startsWith('image/') ? 'Imagem' : isAudioOrVideo(attachedFile) ? 'Áudio' : 'Arquivo'}: ${attachedFile.name}${rawContent ? `\n${rawContent}` : ''}`
+        if (attachedFile.type.startsWith('image/')) {
+          imageBase64 = await readFileBase64(attachedFile)
+          imageMimeType = attachedFile.type
+          content = rawContent || 'Analise este anexo visual e proponha a melhor ação operacional.'
+        } else {
+          const extractedText = await transcribeFile(attachedFile)
+          content = `${extractedText}\n\nPedido do usuário: ${rawContent || (isAudioOrVideo(attachedFile) ? 'Transcreva e organize este áudio.' : 'Analise este documento e estruture os próximos passos.')}`
+        }
+      } catch (error: any) {
+        setStorageError(error?.message || 'Não foi possível processar o anexo.')
+        return
       }
     }
 
     const userMessage: SofiMessage = {
       id: makeId('msg'),
       role: 'user',
-      content,
+      content: attachedFile ? (rawContent || `Analise o anexo ${attachedFile.name}`) : content,
       display,
       createdAt: new Date().toISOString(),
     }
@@ -676,8 +751,24 @@ Regras:
         .map(message => `${message.role === 'user' ? 'Usuario' : 'IA da Educação'}: ${message.content}`)
         .join('\n\n')
 
+      let calendarContext = ''
+      if (includeCalendar) {
+        try {
+          const from = new Date()
+          const to = new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000)
+          const result = await api.get('/calendar', { params: { from: from.toISOString(), to: to.toISOString() } })
+          const events = Array.isArray(result.data?.events) ? result.data.events.slice(0, 30) : []
+          calendarContext = events.length
+            ? `Agenda consultada agora: ${events.map((event: any) => `${event.title || 'Evento'} (${event.start || event.date || 'sem data'})`).join('; ')}`
+            : 'Agenda consultada agora: nenhum evento nos próximos 14 dias.'
+        } catch {
+          calendarContext = 'Agenda: consulta falhou; não presuma que não existem eventos.'
+        }
+      }
+
       const contextParts = [
         `Pasta atual: ${activeFolder?.name || 'Geral'}`,
+        calendarContext,
         platformContext?.label ? `Tela recente da plataforma: ${platformContext.label}` : '',
         platformContext?.path ? `Rota recente: ${platformContext.path}` : '',
         workspaceNote ? `Memoria ativa da gestora: ${workspaceNote}` : '',
@@ -787,22 +878,10 @@ ${content}`
         action: parsed.action,
       }))
 
-      const assistantMessage: Partial<SofiMessage> = {}
-      if (parsed.action) {
-        try {
-          const actionResult = await executeAction(parsed.action)
-          assistantMessage.actionStatus = 'done'
-          assistantMessage.actionSummary = actionResult.message
-          assistantMessage.actionRoute = actionResult.route
-        } catch (error: any) {
-          assistantMessage.actionStatus = 'error'
-          assistantMessage.actionSummary = error?.message || 'Nao foi possivel executar a ação.'
-        }
-      }
-
-      updateThreadMessage(currentThread.id, assistantMessageId, message => ({
+      if (parsed.action) updateThreadMessage(currentThread.id, assistantMessageId, message => ({
         ...message,
-        ...assistantMessage,
+        actionStatus: 'pending',
+        actionSummary: 'Revise os dados antes de autorizar esta ação.',
       }))
     } catch (error: any) {
       const messageText = error?.message || 'Nao consegui me conectar agora. Tente novamente em instantes.'
@@ -869,6 +948,14 @@ ${content}`
         { label: 'Início', value: action.data.start ? formatDateTime(action.data.start) : '' },
         { label: 'Fim', value: action.data.end ? formatDateTime(action.data.end) : '' },
       ],
+      send_email: [
+        { label: 'Destinatário', value: action.data.to },
+        { label: 'Assunto', value: action.data.subject },
+        { label: 'Mensagem', value: action.data.body },
+      ],
+      drive_create_folder: [
+        { label: 'Pasta', value: action.data.name },
+      ],
       create_ai_artifact: [
         { label: 'Tipo', value: action.data.type },
         { label: 'Título', value: action.data.title },
@@ -920,7 +1007,7 @@ ${content}`
   const sidebarWidth = railWidth + sidebarPanelWidth
 
   return (
-    <div className="relative -m-5 h-[calc(100vh-5.75rem)] overflow-hidden bg-black lg:-m-6">
+    <div className="relative h-full overflow-hidden bg-[#f3f7f8]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_18%),radial-gradient(circle_at_78%_12%,rgba(248,163,3,0.08),transparent_12%),radial-gradient(circle_at_48%_100%,rgba(59,130,246,0.05),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.012),transparent_16%,transparent_84%,rgba(255,255,255,0.012))]" />
 
       {!isDesktop && sidebarOpen ? (
@@ -1101,13 +1188,8 @@ ${content}`
 
                 <div className="border-t border-white/[0.08] px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1bb75f] text-sm font-semibold text-white">
-                      EU
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-[14px] font-medium text-white">euviniandrade</p>
-                      <p className="text-[12px] text-white/42">Plus</p>
-                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#14616a] text-sm font-semibold text-white">S</div>
+                    <div className="min-w-0"><p className="truncate text-[14px] font-medium text-white">Sofi</p><p className="text-[12px] text-white/42">Espaço de trabalho</p></div>
                   </div>
                 </div>
               </div>
@@ -1228,6 +1310,8 @@ ${content}`
             </div>
 
             <div className="flex items-center gap-2.5">
+              <button onClick={() => setContextOpen(value => !value)} title="Memória e fontes de contexto" className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.05]">Contexto</button>
+              <button onClick={exportThread} title="Exportar conversa" className="hidden rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.05] md:block">Exportar</button>
               <div className="relative shrink-0" ref={providerMenuRef}>
               <button
                 onClick={() => setProviderMenuOpen(value => !value)}
@@ -1284,6 +1368,15 @@ ${content}`
             </div>
           </header>
 
+          {storageError ? <div role="alert" className="relative z-10 border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-900">{storageError}</div> : null}
+          {contextOpen ? <div className="relative z-20 flex flex-wrap items-start gap-4 border-b border-slate-200 bg-white px-5 py-4 text-sm text-slate-800">
+            <label className="min-w-[240px] flex-1 text-xs font-semibold">Memória deste espaço
+              <textarea value={workspaceNote} onChange={event => setWorkspaceNote(event.target.value.slice(0, 2000))} rows={3} placeholder="Preferências, contexto de trabalho e instruções recorrentes" className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-white p-2 text-sm font-normal text-slate-800 outline-none focus:border-teal-600" />
+            </label>
+            <label className="flex items-center gap-2 pt-5 text-xs"><input type="checkbox" checked={includeCalendar} onChange={event => setIncludeCalendar(event.target.checked)} />Consultar agenda dos próximos 14 dias ao enviar</label>
+            <button onClick={() => setContextOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs">Fechar</button>
+          </div> : null}
+
           <div className="relative h-[calc(100%-76px)] min-h-0 overflow-hidden">
             <div className="h-full overflow-y-auto px-4 pb-44 pt-1 md:px-6 md:pt-2">
               {activeThread?.messages.length ? (
@@ -1330,7 +1423,7 @@ ${content}`
                             <div className={`rounded-[1.35rem] border px-4 py-3 ${
                               message.actionStatus === 'done'
                                 ? 'border-emerald-400/16 bg-emerald-400/7'
-                                : 'border-rose-400/16 bg-rose-400/7'
+                                : message.actionStatus === 'error' ? 'border-rose-400/16 bg-rose-400/7' : 'border-amber-400/20 bg-amber-400/5'
                             }`}>
                               <div className="flex items-center justify-between gap-3">
                                 <div>
@@ -1346,11 +1439,18 @@ ${content}`
                                     ? 'bg-emerald-400/12 text-emerald-300'
                                     : 'bg-rose-400/12 text-rose-300'
                                 }`}>
-                                  {message.actionStatus === 'done' ? 'Concluida' : 'Falhou'}
+                                  {message.actionStatus === 'done' ? 'Concluída' : message.actionStatus === 'error' ? 'Falhou' : message.actionStatus === 'running' ? 'Executando' : message.actionStatus === 'cancelled' ? 'Descartada' : 'Aguardando aprovação'}
                                 </span>
                               </div>
 
                               {renderActionDetails(message.action)}
+
+                              {message.actionStatus === 'pending' ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <button onClick={() => approveAction(activeThread.id, message)} className="rounded-lg bg-[#F8A303] px-3 py-2 text-xs font-semibold text-black transition hover:bg-[#ffc251]">Aprovar e executar</button>
+                                  <button onClick={() => updateThreadMessage(activeThread.id, message.id, current => ({ ...current, actionStatus: 'cancelled', actionSummary: 'Ação descartada.' }))} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-medium text-white/70">Descartar</button>
+                                </div>
+                              ) : null}
 
                               {message.actionRoute ? (
                                 <div className="mt-3">
@@ -1368,11 +1468,6 @@ ${content}`
                           {message.role === 'assistant' && message.content ? (
                             <div className="flex flex-wrap items-center gap-2">
                               {[
-                                {
-                                  label: 'Aprovar',
-                                  prompt: `A partir da resposta abaixo, registre uma aprovação executiva curta e objetiva.\n\n${message.content}`,
-                                  icon: CheckCircleIcon,
-                                },
                                 {
                                   label: 'Agendar',
                                   prompt: `Com base na resposta abaixo, crie um compromisso no calendário com título, horário sugerido e lembrete.\n\n${message.content}`,
@@ -1423,9 +1518,7 @@ ${content}`
                 <div className="flex min-h-full items-center justify-center px-2 md:px-4">
                   <div className="w-full max-w-[780px] pb-14 md:pb-16">
                     <div className="text-center">
-                      <h1 className="text-[1.4rem] font-normal leading-[1.08] tracking-tight text-white sm:text-[1.65rem] md:text-[2.2rem]">
-                        Por onde começamos?
-                      </h1>
+                      <h1 className="text-[1.4rem] font-semibold leading-[1.08] text-white sm:text-[1.65rem] md:text-[2.2rem]">O que vamos resolver hoje?</h1>
                     </div>
 
                     <div className="mx-auto mt-7 max-w-[780px] md:mt-8">
@@ -1471,7 +1564,7 @@ ${content}`
                           />
 
                           <div className="flex items-center gap-2">
-                            <span className="hidden text-[14px] text-white/58 lg:inline">{'Instantâneo'}</span>
+                            <span className="hidden text-xs text-white/58 lg:inline">Ações sob aprovação</span>
                             <button
                               onClick={() => sendMessage()}
                               disabled={(!input.trim() && !attachedFile) || loading}
@@ -1485,11 +1578,11 @@ ${content}`
 
                       <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:mt-7">
                         <button
-                          onClick={() => sendMessage('Crie uma imagem institucional para uma campanha escolar.')}
+                          onClick={() => sendMessage('Planeje uma campanha escolar com conceito, mensagem e entregáveis para revisão.')}
                           className="inline-flex items-center justify-center gap-3 rounded-full border border-white/12 bg-white/[0.015] px-5 py-2.5 text-[14px] text-white/82 transition duration-300 hover:-translate-y-[1px] hover:bg-white/[0.05] hover:text-white md:px-5 md:py-2.5"
                         >
                           <PhotoIcon className="h-5 w-5" />
-                          Crie uma imagem
+                          Planeje uma campanha
                         </button>
                         <button
                           onClick={() => sendMessage('Escreva ou edite um documento operacional com linguagem profissional.')}
@@ -1499,11 +1592,11 @@ ${content}`
                           Escreva ou edite
                         </button>
                         <button
-                          onClick={() => sendMessage('Faça uma pesquisa e traga um parecer objetivo com contexto e fontes.')}
+                          onClick={() => sendMessage('Ajude-me a estruturar um parecer objetivo com base nas informações que vou fornecer.')}
                           className="inline-flex items-center justify-center gap-3 rounded-full border border-white/12 bg-white/[0.015] px-5 py-2.5 text-[14px] text-white/82 transition duration-300 hover:-translate-y-[1px] hover:bg-white/[0.05] hover:text-white md:px-5 md:py-2.5"
                         >
                           <MagnifyingGlassIcon className="h-5 w-5" />
-                          Consulte algo
+                          Estruture um parecer
                         </button>
                       </div>
                     </div>
@@ -1546,7 +1639,7 @@ ${content}`
                         />
 
                         <div className="flex items-center gap-2">
-                            <span className="hidden text-[14px] text-white/58 lg:inline">{'Instantâneo'}</span>
+                            <span className="hidden text-xs text-white/58 lg:inline">Ações sob aprovação</span>
                           <button
                             onClick={() => sendMessage()}
                             disabled={(!input.trim() && !attachedFile) || loading}
