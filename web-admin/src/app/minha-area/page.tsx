@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
   BoltIcon,
   CheckIcon,
   ClipboardDocumentIcon,
@@ -15,6 +16,7 @@ import {
   LockClosedIcon,
   MagnifyingGlassIcon,
   PaperClipIcon,
+  PencilSquareIcon,
   PlusIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -60,6 +62,7 @@ type Credential = {
   notes?: string
   category: string
   createdAt: string
+  updatedAt?: string
 }
 
 const noteTypes: { id: NoteType; label: string }[] = [
@@ -176,6 +179,7 @@ export default function MinhaAreaPage() {
   const [files, setFiles] = useState<StoredFile[]>([])
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'vault') setTab('vault')
     try {
       const loaded = JSON.parse(localStorage.getItem(NOTEBOOK_KEY) || '[]') as Note[]
       const initial = loaded.length ? loaded : [newNote('livre')]
@@ -361,12 +365,44 @@ function VaultWorkspace() {
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [items, setItems] = useState<Credential[]>([])
   const [show, setShow] = useState<Record<string, boolean>>({})
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState('')
+  const [query, setQuery] = useState('')
+  const [showFormPassword, setShowFormPassword] = useState(false)
   const [form, setForm] = useState({ service: '', url: '', email: '', password: '', notes: '', category: 'Geral' })
+  const backupInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setHasVault(Boolean(localStorage.getItem(VAULT_PIN_KEY))) }, [])
+  useEffect(() => {
+    if (!unlocked) return
+    const timer = window.setTimeout(() => lockVault(), 10 * 60 * 1000)
+    return () => window.clearTimeout(timer)
+  }, [unlocked])
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    if (!term) return items
+    return items.filter(item => `${item.service} ${item.email} ${item.category} ${item.notes || ''}`.toLowerCase().includes(term))
+  }, [items, query])
+
+  function resetForm() {
+    setForm({ service: '', url: '', email: '', password: '', notes: '', category: 'Geral' })
+    setEditingId('')
+    setAdding(false)
+    setShowFormPassword(false)
+  }
+
+  function lockVault() {
+    setUnlocked(false)
+    setPin('')
+    setItems([])
+    setShow({})
+    setQuery('')
+    resetForm()
+  }
 
   async function unlock() {
     setError('')
@@ -376,6 +412,7 @@ function VaultWorkspace() {
       await saveVault([], pin)
       setHasVault(true)
       setUnlocked(true)
+      setNotice('Cofre criado com criptografia AES-256.')
       return
     }
     if (!(await verifyVaultPin(pin))) { setError('PIN incorreto. Seus dados continuam protegidos.'); return }
@@ -383,6 +420,7 @@ function VaultWorkspace() {
     if (!restored) { setError('Não foi possível abrir o cofre antigo com este PIN.'); return }
     setItems(restored)
     setUnlocked(true)
+    setNotice(restored.length ? `${restored.length} acessos recuperados.` : 'Cofre aberto com segurança.')
   }
 
   async function persist(next: Credential[]) {
@@ -390,18 +428,85 @@ function VaultWorkspace() {
     await saveVault(next, pin)
   }
 
-  async function addCredential() {
+  async function saveCredential() {
     if (!form.service.trim() || !form.email.trim() || !form.password) { setError('Serviço, login e senha são obrigatórios.'); return }
-    const item: Credential = { ...form, id: makeId(), createdAt: new Date().toISOString() }
-    await persist([item, ...items])
-    setForm({ service: '', url: '', email: '', password: '', notes: '', category: 'Geral' })
-    setAdding(false)
+    const now = new Date().toISOString()
+    if (editingId) {
+      await persist(items.map(item => item.id === editingId ? { ...item, ...form, updatedAt: now } : item))
+      setNotice('Acesso atualizado no cofre.')
+    } else {
+      const item: Credential = { ...form, id: makeId(), createdAt: now }
+      await persist([item, ...items])
+      setNotice('Novo acesso salvo no cofre.')
+    }
+    resetForm()
     setError('')
   }
 
-  if (!unlocked) return <section className="grid min-h-[560px] place-items-center rounded-lg border border-slate-200 bg-white p-6 shadow-sm"><div className="w-full max-w-md text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-lg bg-slate-900 text-white"><LockClosedIcon className="h-7 w-7" /></span><h2 className="mt-5 text-2xl font-bold text-slate-950">{hasVault ? 'Seu cofre foi encontrado' : 'Criar cofre de acessos'}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{hasVault ? 'Digite o mesmo PIN usado anteriormente para restaurar os logins e senhas já salvos.' : 'As credenciais serão criptografadas no navegador com AES-256 e protegidas por um PIN.'}</p><div className="mt-6 space-y-3"><input type="password" value={pin} onChange={event => setPin(event.target.value)} placeholder="PIN do cofre" className="h-11 w-full rounded-md border border-slate-200 px-3 text-center text-sm outline-none focus:border-teal-500" />{!hasVault && <input type="password" value={confirmPin} onChange={event => setConfirmPin(event.target.value)} placeholder="Confirmar PIN" className="h-11 w-full rounded-md border border-slate-200 px-3 text-center text-sm outline-none focus:border-teal-500" />}<button onClick={unlock} className="h-11 w-full rounded-md bg-teal-700 text-sm font-bold text-white hover:bg-teal-800">{hasVault ? 'Desbloquear e restaurar' : 'Criar cofre protegido'}</button>{error && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}</div></div></section>
+  function editCredential(item: Credential) {
+    setForm({ service: item.service, url: item.url || '', email: item.email, password: item.password, notes: item.notes || '', category: item.category || 'Geral' })
+    setEditingId(item.id)
+    setAdding(true)
+    setShowFormPassword(false)
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
-  return <section className="rounded-lg border border-slate-200 bg-white shadow-sm"><header className="flex flex-col justify-between gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2"><ShieldCheckIcon className="h-5 w-5 text-emerald-600" /><h2 className="text-lg font-bold text-slate-950">Cofre desbloqueado</h2></div><p className="mt-1 text-sm text-slate-500">{items.length} credenciais recuperadas e protegidas neste dispositivo.</p></div><div className="flex gap-2"><button onClick={() => { setUnlocked(false); setPin(''); setItems([]) }} className="h-10 rounded-md border border-slate-200 px-4 text-xs font-bold text-slate-600">Bloquear</button><button onClick={() => setAdding(value => !value)} className="inline-flex h-10 items-center gap-2 rounded-md bg-teal-700 px-4 text-xs font-bold text-white"><PlusIcon className="h-4 w-4" />Novo acesso</button></div></header>{adding && <div className="grid gap-3 border-b border-slate-100 bg-slate-50 p-5 md:grid-cols-2"><input value={form.service} onChange={event => setForm({ ...form, service: event.target.value })} placeholder="Serviço ou sistema" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><input value={form.url} onChange={event => setForm({ ...form, url: event.target.value })} placeholder="Link de acesso" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><input value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="E-mail ou usuário" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><input type="password" value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="Senha" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><input value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} placeholder="Observações" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><button onClick={addCredential} className="h-10 rounded-md bg-slate-900 text-sm font-bold text-white">Salvar no cofre</button>{error && <p className="md:col-span-2 text-sm text-rose-700">{error}</p>}</div>}<div className="grid gap-3 p-5 lg:grid-cols-2">{items.map(item => <article key={item.id} className="rounded-lg border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-950">{item.service}</p>{item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-teal-700 hover:underline">Abrir sistema</a> : <p className="text-xs text-slate-400">{item.category}</p>}</div><button onClick={() => persist(items.filter(credential => credential.id !== item.id))} className="text-rose-500" title="Remover"><TrashIcon className="h-4 w-4" /></button></div><div className="mt-4 space-y-2"><CopyRow value={item.email} /><div className="flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2"><span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700">{show[item.id] ? item.password : '••••••••••••'}</span><button onClick={() => setShow({ ...show, [item.id]: !show[item.id] })} title="Mostrar ou ocultar senha">{show[item.id] ? <EyeSlashIcon className="h-4 w-4 text-slate-400" /> : <EyeIcon className="h-4 w-4 text-slate-400" />}</button><button onClick={() => navigator.clipboard.writeText(item.password)} title="Copiar senha"><ClipboardDocumentIcon className="h-4 w-4 text-slate-400" /></button></div></div>{item.notes && <p className="mt-3 text-xs leading-5 text-slate-500">{item.notes}</p>}</article>)}{!items.length && <div className="col-span-full grid min-h-56 place-items-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">O cofre está vazio. Adicione o primeiro acesso.</div>}</div></section>
+  function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*+-_'
+    const random = crypto.getRandomValues(new Uint32Array(20))
+    setForm({ ...form, password: Array.from(random, value => alphabet[value % alphabet.length]).join('') })
+    setShowFormPassword(true)
+  }
+
+  function exportBackup() {
+    const vault = localStorage.getItem(VAULT_KEY)
+    const verifier = localStorage.getItem(VAULT_PIN_KEY)
+    if (!vault || !verifier) return
+    const blob = new Blob([JSON.stringify({ product: 'SOFI OS', type: 'encrypted-vault-backup', version: 1, exportedAt: new Date().toISOString(), vault, verifier }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `sofi-cofre-${new Date().toISOString().slice(0, 10)}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    setNotice('Backup criptografado exportado. Guarde o arquivo e o PIN separadamente.')
+  }
+
+  async function importBackup(file?: File) {
+    if (!file) return
+    try {
+      const backup = JSON.parse(await file.text())
+      if (backup?.type !== 'encrypted-vault-backup' || !backup.vault || !backup.verifier) throw new Error('Arquivo incompatível.')
+      if (!window.confirm('Importar este backup substituirá o cofre deste navegador. Continuar?')) return
+      localStorage.setItem(VAULT_KEY, backup.vault)
+      localStorage.setItem(VAULT_PIN_KEY, backup.verifier)
+      setHasVault(true)
+      lockVault()
+      setNotice('Backup importado. Digite o PIN original para desbloquear.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível importar o backup.')
+    }
+  }
+
+  async function removeCredential(id: string) {
+    if (!window.confirm('Remover este acesso do cofre?')) return
+    await persist(items.filter(item => item.id !== id))
+    setNotice('Acesso removido do cofre.')
+  }
+
+  if (!unlocked) return <section className="grid min-h-[560px] place-items-center overflow-hidden rounded-lg border border-slate-200 bg-white p-6 shadow-sm"><div className="w-full max-w-md text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-lg bg-slate-900 text-white shadow-xl"><LockClosedIcon className="h-7 w-7" /></span><p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-teal-700">SOFI Secure Vault</p><h2 className="mt-2 text-2xl font-bold text-slate-950">{hasVault ? 'Seu cofre foi encontrado' : 'Criar cofre de acessos'}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{hasVault ? 'Digite o PIN original para recuperar todos os logins já armazenados neste navegador.' : 'Crie um espaço privado para guardar sistemas, usuários e senhas com criptografia AES-256.'}</p><div className="mt-6 space-y-3"><input type="password" inputMode="numeric" value={pin} onChange={event => setPin(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') unlock() }} placeholder="PIN do cofre" className="h-11 w-full rounded-md border border-slate-200 px-3 text-center text-sm outline-none focus:border-teal-500" />{!hasVault && <input type="password" inputMode="numeric" value={confirmPin} onChange={event => setConfirmPin(event.target.value)} placeholder="Confirmar PIN" className="h-11 w-full rounded-md border border-slate-200 px-3 text-center text-sm outline-none focus:border-teal-500" />}<button onClick={unlock} className="h-11 w-full rounded-md bg-teal-700 text-sm font-bold text-white hover:bg-teal-800">{hasVault ? 'Desbloquear e restaurar' : 'Criar cofre protegido'}</button><button onClick={() => backupInput.current?.click()} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-200 text-xs font-bold text-slate-600"><ArrowUpTrayIcon className="h-4 w-4" />Importar backup criptografado</button><input ref={backupInput} type="file" accept="application/json,.json" className="hidden" onChange={event => { importBackup(event.target.files?.[0]); event.currentTarget.value = '' }} />{notice && <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}{error && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}</div><p className="mt-5 text-xs leading-5 text-slate-400">O PIN não é enviado ao servidor. Sem ele, o conteúdo criptografado não pode ser recuperado.</p></div></section>
+
+  return <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <header className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center"><div><div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-md bg-emerald-50 text-emerald-700"><ShieldCheckIcon className="h-5 w-5" /></span><div><h2 className="text-lg font-bold text-slate-950">Cofre desbloqueado</h2><p className="text-sm text-slate-500">{items.length} {items.length === 1 ? 'acesso protegido' : 'acessos protegidos'} neste navegador.</p></div></div></div><div className="flex flex-wrap gap-2"><button onClick={exportBackup} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-xs font-bold text-slate-600"><ArrowDownTrayIcon className="h-4 w-4" />Backup</button><button onClick={lockVault} className="h-10 rounded-md border border-slate-200 px-4 text-xs font-bold text-slate-600">Bloquear</button><button onClick={() => { if (adding) resetForm(); else setAdding(true) }} className="inline-flex h-10 items-center gap-2 rounded-md bg-teal-700 px-4 text-xs font-bold text-white"><PlusIcon className="h-4 w-4" />Novo acesso</button></div></header>
+
+    {notice && <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700">{notice}</div>}
+    {adding && <div className="border-b border-slate-100 bg-slate-50 p-5"><div className="mb-4 flex items-center justify-between"><div><h3 className="text-sm font-bold text-slate-950">{editingId ? 'Editar acesso' : 'Cadastrar novo acesso'}</h3><p className="text-xs text-slate-500">Os dados serão criptografados antes de serem armazenados.</p></div><button onClick={resetForm} className="text-xs font-bold text-slate-500">Cancelar</button></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"><input value={form.service} onChange={event => setForm({ ...form, service: event.target.value })} placeholder="Serviço ou sistema" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><input value={form.url} onChange={event => setForm({ ...form, url: event.target.value })} placeholder="https://endereco.com" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><select value={form.category} onChange={event => setForm({ ...form, category: event.target.value })} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"><option>Geral</option><option>Trabalho</option><option>Acadêmico</option><option>Google</option><option>Financeiro</option><option>Redes sociais</option></select><input value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} placeholder="E-mail ou usuário" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm" /><div className="flex h-10 overflow-hidden rounded-md border border-slate-200 bg-white"><input type={showFormPassword ? 'text' : 'password'} value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} placeholder="Senha" className="min-w-0 flex-1 px-3 text-sm outline-none" /><button onClick={() => setShowFormPassword(value => !value)} className="px-3 text-slate-400" title="Mostrar ou ocultar senha">{showFormPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}</button></div><button onClick={generatePassword} className="h-10 rounded-md border border-sky-200 bg-sky-50 text-xs font-bold text-sky-700">Gerar senha forte</button><input value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} placeholder="Observações e instruções" className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm md:col-span-2" /><button onClick={saveCredential} className="h-10 rounded-md bg-slate-900 text-sm font-bold text-white">{editingId ? 'Salvar alterações' : 'Salvar no cofre'}</button>{error && <p className="text-sm text-rose-700 md:col-span-2 xl:col-span-3">{error}</p>}</div></div>}
+
+    <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between"><label className="relative block w-full max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar sistema, login ou categoria..." className="h-10 w-full rounded-md border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-teal-500" /></label><p className="text-xs font-semibold text-slate-400">Bloqueio automático em 10 minutos</p></div>
+
+    <div className="grid gap-3 p-5 lg:grid-cols-2 xl:grid-cols-3">{filtered.map(item => <article key={item.id} className="group rounded-lg border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-lg"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-black uppercase text-sky-700">{item.category || 'Geral'}</span><p className="mt-2 truncate text-base font-bold text-slate-950">{item.service}</p>{item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-teal-700 hover:underline">Abrir sistema</a> : <p className="text-xs text-slate-400">Sem link cadastrado</p>}</div><div className="flex gap-1"><button onClick={() => editCredential(item)} className="grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Editar"><PencilSquareIcon className="h-4 w-4" /></button><button onClick={() => removeCredential(item.id)} className="grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Remover"><TrashIcon className="h-4 w-4" /></button></div></div><div className="mt-4 space-y-2"><CopyRow value={item.email} /><div className="flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2"><span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700">{show[item.id] ? item.password : '••••••••••••'}</span><button onClick={() => setShow({ ...show, [item.id]: !show[item.id] })} title="Mostrar ou ocultar senha">{show[item.id] ? <EyeSlashIcon className="h-4 w-4 text-slate-400" /> : <EyeIcon className="h-4 w-4 text-slate-400" />}</button><button onClick={() => navigator.clipboard.writeText(item.password)} title="Copiar senha"><ClipboardDocumentIcon className="h-4 w-4 text-slate-400" /></button></div></div>{item.notes && <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">{item.notes}</p>}</article>)}{!filtered.length && <div className="col-span-full grid min-h-56 place-items-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-center"><div><KeyIcon className="mx-auto h-9 w-9 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-700">{query ? 'Nenhum acesso encontrado' : 'O cofre está vazio'}</p><p className="mt-1 text-xs text-slate-500">{query ? 'Tente outro termo de pesquisa.' : 'Cadastre o primeiro login para começar.'}</p></div></div>}</div>
+  </section>
 }
 
 function CopyRow({ value }: { value: string }) {

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import CommandPalette from '@/components/ui/CommandPalette'
 import AiAssistant from '@/components/ai/AiAssistant'
-import { AcademicCapIcon, ArchiveBoxIcon, ArrowRightOnRectangleIcon, Bars3Icon, BellIcon, BuildingLibraryIcon, CalendarDaysIcon, ChartBarIcon, ChevronDownIcon, ChevronRightIcon, Cog6ToothIcon, DocumentTextIcon, HomeIcon, MagnifyingGlassIcon, PuzzlePieceIcon, RectangleGroupIcon, SparklesIcon, Squares2X2Icon, UsersIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, BoltIcon } from '@heroicons/react/24/outline'
+import { AcademicCapIcon, ArchiveBoxIcon, ArrowRightOnRectangleIcon, Bars3Icon, BellIcon, BuildingLibraryIcon, CalendarDaysIcon, ChartBarIcon, ChevronDownIcon, ChevronRightIcon, Cog6ToothIcon, DocumentTextIcon, HomeIcon, KeyIcon, MagnifyingGlassIcon, PuzzlePieceIcon, RectangleGroupIcon, SparklesIcon, Squares2X2Icon, UsersIcon, ClipboardDocumentListIcon, ChatBubbleLeftRightIcon, BoltIcon } from '@heroicons/react/24/outline'
 import styles from './workspace-shell.module.css'
 
 const groups = [
@@ -16,6 +16,7 @@ const groups = [
     { href: '/agenda', name: 'Calendário', icon: CalendarDaysIcon },
     { href: '/academico', name: 'Acadêmico', icon: AcademicCapIcon },
     { href: '/minha-area', name: 'Notas e arquivos', icon: DocumentTextIcon },
+    { href: '/minha-area?tab=vault', name: 'Cofre de acessos', icon: KeyIcon },
   ] },
   { name: 'Gestão da rede', items: [
     { href: '/pessoas', name: 'Pessoas', icon: UsersIcon },
@@ -66,7 +67,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.addEventListener('keydown', keydown)
     return () => { window.removeEventListener('keydown', keydown); clearTimeout(timer) }
   }, [router])
-  function active(href: string) { return href.includes('?') ? pathname === href.split('?')[0] && query.includes('view=kanban') : pathname === href }
+  function active(href: string) {
+    if (href.includes('?')) {
+      const [path, search] = href.split('?')
+      const expected = new URLSearchParams(search)
+      const current = new URLSearchParams(query)
+      return pathname === path && [...expected].every(([key, value]) => current.get(key) === value)
+    }
+    return pathname === href && !(href === '/minha-area' && new URLSearchParams(query).has('tab'))
+  }
   const current = groups.flatMap(group => group.items).find(item => active(item.href))
   const role = typeof user?.role === 'string' ? user.role : user?.role?.name
   function logout() { ['accessToken','refreshToken','user'].forEach(name => Cookies.remove(name)); localStorage.removeItem('token'); router.push('/login') }
