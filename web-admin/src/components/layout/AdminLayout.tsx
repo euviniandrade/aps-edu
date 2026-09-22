@@ -13,6 +13,7 @@ const groups = [
     { href: '/dashboard', name: 'Visão geral', icon: HomeIcon },
     { href: '/meu-dia', name: 'Meu dia', icon: SparklesIcon },
     { href: '/kanban', name: 'Tarefas e Kanban', icon: RectangleGroupIcon },
+    { href: '/quadros', name: 'Quadros e fluxogramas', icon: Squares2X2Icon },
     { href: '/agenda', name: 'Calendário', icon: CalendarDaysIcon },
     { href: '/academico', name: 'Acadêmico', icon: AcademicCapIcon },
     { href: '/minha-area', name: 'Notas e arquivos', icon: DocumentTextIcon },

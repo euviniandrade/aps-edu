@@ -18,6 +18,7 @@ const NAV_COMMANDS = [
   { id: 'go-suite-tools',   label: 'Ferramentas do Centro', icon: 'F', path: '/gestao',        keywords: ['crm', 'matrícula', 'financeiro', 'aprovação', 'aprovações', 'formulário', 'okr', 'meta', 'documento', 'patrimônio', 'qr code', 'contrato', 'lead', 'funil', 'tarefas', 'projetos'] },
   { id: 'go-meu-dia',       label: 'Ir para Meu Dia',       icon: 'D', path: '/meu-dia',       keywords: ['hoje', 'foco', 'habitos'] },
   { id: 'go-tasks',         label: 'Ir para Central de Tarefas', icon: 'T', path: '/tasks',     keywords: ['task', 'tarefa', 'projeto', 'kanban'] },
+  { id: 'go-quadros',       label: 'Quadros e Fluxogramas', icon: 'Q', path: '/quadros',        keywords: ['quadro', 'miro', 'fluxograma', 'mapa mental', 'brainstorm', 'canvas', 'diagrama'] },
   { id: 'go-academico',     label: 'Ir para Acadêmico',     icon: 'A', path: '/academico',     keywords: ['faculdade', 'academico', 'acadêmico', 'semestre', 'materias', 'matérias', 'provas', 'atividades', 'portal do aluno'] },
   { id: 'go-estoque',       label: 'Ir para Estoque',       icon: 'E', path: '/estoque',       keywords: ['estoque', 'almoxarifado', 'patrimônio', 'inventário', 'compras'] },
   { id: 'go-reports',       label: 'Ir para Relatórios',    icon: 'R', path: '/reports',       keywords: ['relatório', 'gráfico'] },
