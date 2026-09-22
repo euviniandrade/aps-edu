@@ -133,8 +133,8 @@ export default function LoginPage() {
               <img src="/icon-ea.svg" alt="Educação Adventista" className="h-10 w-10 object-contain" />
             </div>
             <div className="relative z-10">
-              <p className="text-xl font-black">SOFI · Educação Adventista</p>
-              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#7cc9f5]">Gestão conectada</p>
+              <p className="text-xl font-black">SOFI OS</p>
+              <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#7cc9f5]">Education Intelligence System</p>
             </div>
           </div>
 

@@ -3948,9 +3948,9 @@ function PeopleWorkspaceExecutive({
                         <button
                           key={person.id}
                           onClick={() => selectPerson(person)}
-                          className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
+                          className={`sofi-person-card group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                         >
-                          <div className="aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
+                          <div className="sofi-person-photo aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
                             {photo ? (
                               <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                             ) : (
@@ -4003,9 +4003,9 @@ function PeopleWorkspaceExecutive({
                     <button
                       key={person.id}
                       onClick={() => selectPerson(person)}
-                      className={`group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
+                      className={`sofi-person-card group overflow-hidden rounded-[1.35rem] border bg-white/[0.035] text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06] ${active ? 'border-[#F8A303]/60 shadow-[0_0_0_1px_rgba(248,163,3,0.18)]' : 'border-white/10'}`}
                     >
-                      <div className="aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
+                      <div className="sofi-person-photo aspect-[16/7] overflow-hidden bg-black/30 min-[480px]:aspect-[4/3]">
                         {photo ? (
                           <img src={photo} alt={person.name} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/aps30-logo.png'; event.currentTarget.className = 'h-full w-full bg-[#F4EAF5] p-12 object-contain' }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                         ) : (

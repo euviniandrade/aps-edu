@@ -421,6 +421,57 @@ body {
 }
 .sofi-light-modal select option { background: #ffffff !important; color: #17233b !important; }
 
+/* People directory behaves like an intelligence grid, not a gallery. */
+.sofi-content .sofi-person-card {
+  position: relative;
+  border-color: rgba(9,72,125,0.14) !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,0.8) !important;
+  box-shadow: 0 14px 36px rgba(12,42,73,0.09), inset 0 1px 0 rgba(255,255,255,0.94) !important;
+}
+
+.sofi-content .sofi-person-card::after {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #00a9e0, #725cff, #baff29);
+  content: "";
+  opacity: 0.72;
+}
+
+.sofi-content .sofi-person-card:hover {
+  border-color: rgba(0,169,224,0.36) !important;
+  box-shadow: 0 22px 48px rgba(12,42,73,0.15), 0 0 0 3px rgba(0,169,224,0.055) !important;
+  transform: translateY(-3px);
+}
+
+.sofi-content .sofi-ops-surface .sofi-person-photo,
+.sofi-content .sofi-person-photo {
+  aspect-ratio: 16 / 8.25 !important;
+  background-color: #0a294d !important;
+  background-image:
+    linear-gradient(rgba(118,232,255,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(118,232,255,0.07) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+.sofi-content .sofi-ops-surface .sofi-person-photo > div,
+.sofi-content .sofi-person-photo > div {
+  background: transparent !important;
+}
+
+.sofi-content .sofi-ops-surface .sofi-person-photo > div > span:first-child,
+.sofi-content .sofi-person-photo > div > span:first-child {
+  background: rgba(118,232,255,0.12) !important;
+  color: #dffaff !important;
+  box-shadow: inset 0 0 0 1px rgba(118,232,255,0.24), 0 14px 28px rgba(0,0,0,0.16) !important;
+}
+
+.sofi-content .sofi-ops-surface .sofi-person-photo > div > span:last-child,
+.sofi-content .sofi-person-photo > div > span:last-child {
+  color: rgba(223,250,255,0.52) !important;
+}
+
 .sofi-content input::placeholder,
 .sofi-content textarea::placeholder {
   color: rgba(11,31,54,0.44) !important;

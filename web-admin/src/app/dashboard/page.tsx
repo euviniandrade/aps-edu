@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AcademicCapIcon, ArrowUpRightIcon, ArrowPathIcon, CalendarDaysIcon, ChartBarIcon, UsersIcon, Squares2X2Icon } from '@heroicons/react/24/outline'
+import { AcademicCapIcon, ArrowUpRightIcon, ArrowPathIcon, CalendarDaysIcon, ChartBarIcon, UsersIcon, Squares2X2Icon, SparklesIcon } from '@heroicons/react/24/outline'
 import AdminLayout from '@/components/layout/AdminLayout'
 import submissions from '@/data/restored-promoter-submissions.json'
 import { readAcademicState, ACADEMIC_UPDATED_EVENT, type AcademicState } from '@/lib/academic'
@@ -63,6 +63,7 @@ export default function DashboardPage() {
     .sort((a, b) => `${a.dueDate}${a.time}`.localeCompare(`${b.dueDate}${b.time}`))
   const completed = activities.length - pending.length
   const progress = activities.length ? Math.round(completed / activities.length * 100) : 0
+  const nextActivity = [...pending].sort((a, b) => `${a.dueDate || '9999'}${a.time || ''}`.localeCompare(`${b.dueDate || '9999'}${b.time || ''}`))[0]
   const units = useMemo(() => {
     const counts = new Map<string, number>()
     people.forEach(person => counts.set(person.unit || 'Sem unidade', (counts.get(person.unit || 'Sem unidade') || 0) + 1))
@@ -75,6 +76,13 @@ export default function DashboardPage() {
         <div><p className={styles.eyebrow}>APS EDU / SEU ESPAÇO DE TRABALHO</p><h1>Visão geral<span>.</span></h1><p className={styles.muted}>{dateLabel || 'Carregando data…'}</p></div>
         <div className={styles.actions}><button onClick={refresh} disabled={loading} title="Atualizar indicadores" aria-label="Atualizar indicadores"><ArrowPathIcon className={loading ? styles.spin : ''} /></button><Link className={styles.primary} href="/gestao"><Squares2X2Icon />Abrir operação<ArrowUpRightIcon /></Link></div>
       </div>
+
+      <section className={styles.commandRibbon} aria-label="Estado da operação">
+        <div className={styles.live}><i /><span>SOFI LIVE</span><b>Operação conectada</b></div>
+        <div><span>Próxima entrega</span><b>{nextActivity?.title || 'Nenhuma entrega pendente'}</b><small>{nextActivity?.dueDate ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(`${nextActivity.dueDate}T12:00:00`)) : 'Agenda livre'}</small></div>
+        <div><span>Rede APS30</span><b>{people.length} pessoas conectadas</b><small>{units.length} unidades identificadas</small></div>
+        <Link href="/inovacao"><SparklesIcon />Consultar inteligência<ArrowUpRightIcon /></Link>
+      </section>
 
       <div className={styles.metrics}>
         <Link href="/pessoas"><span>Pessoas na base restaurada</span><strong>{people.length}</strong><small>{units.length} unidades identificadas <ArrowUpRightIcon /></small></Link>
