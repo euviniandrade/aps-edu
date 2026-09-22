@@ -3,28 +3,28 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════
-   SOFI APS EDU - Institutional Product Design System
-   Clear, calm and operational for everyday education work.
+   SOFI APS EDU - Luminous Intelligence Design System
+   Precise, expressive and operational for everyday education work.
    ═══════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Dark Base ─────────────────────────────── */
-  --bg-base:       #F4F6FA;
-  --bg-elevated:   #FFFFFF;
-  --bg-sidebar:    #FFFFFF;
-  --bg-topbar:     rgba(255, 255, 255, 0.92);
-  --bg-card:       #FFFFFF;
-  --bg-card-hover: #F8FAFC;
-  --bg-card-active:#EAF3FB;
+  --bg-base:       #EAF0F6;
+  --bg-elevated:   rgba(255,255,255,0.82);
+  --bg-sidebar:    rgba(247,251,255,0.90);
+  --bg-topbar:     rgba(246,250,254,0.78);
+  --bg-card:       rgba(255,255,255,0.76);
+  --bg-card-hover: rgba(255,255,255,0.94);
+  --bg-card-active:rgba(228,243,255,0.90);
 
   /* ── Brand ─────────────────────────────────── */
-  --gold:           #0877C9;
-  --gold-light:     #46A4E6;
-  --gold-dim:       rgba(8,119,201,0.10);
-  --gold-glow:      rgba(8,119,201,0.20);
+  --gold:           #00A9E0;
+  --gold-light:     #76E8FF;
+  --gold-dim:       rgba(0,169,224,0.11);
+  --gold-glow:      rgba(0,169,224,0.24);
   --electric:       #00A9E0;
   --electric-dim:   rgba(0,169,224,0.10);
-  --navy:           #003B71;
+  --navy:           #0B315F;
   --aps-yellow:     #F6B221;
   --aps-cyan:       #00A9E0;
   --aps-orange:     #F28C28;
@@ -41,19 +41,19 @@
   --warning-dim:    rgba(248,163,3,0.12);
   --danger:         #E5484D;
   --danger-dim:     rgba(255,71,87,0.12);
-  --purple:         #6157D8;
+  --purple:         #725CFF;
   --purple-dim:     rgba(139,92,246,0.12);
 
   /* ── Text ──────────────────────────────────── */
-  --text-primary:   #17233B;
-  --text-secondary: #53647A;
-  --text-muted:     #7A899D;
-  --text-ghost:     rgba(23,35,59,0.14);
+  --text-primary:   #101B33;
+  --text-secondary: #50647A;
+  --text-muted:     #708399;
+  --text-ghost:     rgba(16,27,51,0.14);
 
   /* ── Borders ───────────────────────────────── */
-  --border:         #E2E8F0;
-  --border-bright:  #CAD5E2;
-  --border-gold:    rgba(8,119,201,0.34);
+  --border:         rgba(9,72,125,0.13);
+  --border-bright:  rgba(0,169,224,0.28);
+  --border-gold:    rgba(0,169,224,0.38);
 
   /* ── Radius ────────────────────────────────── */
   --r-sm:   8px;
@@ -64,7 +64,7 @@
   --r-pill: 9999px;
 
   /* ── Shadows ───────────────────────────────── */
-  --shadow-card:     0 10px 28px rgba(15,42,74,0.07);
+  --shadow-card:     0 16px 42px rgba(12,42,73,0.09);
   --shadow-gold:     0 0 24px rgba(246,178,33,0.28);
   --shadow-electric: 0 0 20px rgba(0,169,224,0.22);
   --shadow-up:       0 -4px 32px rgba(0,63,117,0.12);
@@ -94,7 +94,7 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(248,163,3,0.5); }
 
-::selection { background: rgba(8,119,201,0.22); color: #17233b; }
+::selection { background: rgba(0,169,224,0.24); color: #101b33; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* Institutional admin skin */
@@ -109,6 +109,28 @@ body {
 
 .sofi-content {
   color: var(--text-primary);
+}
+
+.sofi-content .bg-white {
+  background-color: rgba(255,255,255,0.78) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.sofi-content .border-slate-200,
+.sofi-content .border-gray-200 {
+  border-color: rgba(9,72,125,0.13) !important;
+}
+
+.sofi-content :is(section, article, [class*="shadow-"]):not(.sofi-dark-surface) {
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.sofi-content :is(button, a):not([aria-disabled="true"]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sofi-content :is(button, a):active:not([aria-disabled="true"]) {
+  transform: translateY(0) scale(0.985);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -176,12 +198,18 @@ body {
 .sofi-content .sofi-ops-surface button.text-white,
 .sofi-content .sofi-ops-surface a.text-white { color: #ffffff !important; }
 .sofi-content .sofi-ops-surface [class*="border-white/"] { border-color: #e2e8f0 !important; }
-.sofi-content .sofi-ops-surface [class*="bg-white/"] { background-color: #f8fafc !important; }
+.sofi-content .sofi-ops-surface [class*="bg-white/"] { background-color: rgba(255,255,255,0.74) !important; }
 .sofi-content .sofi-ops-surface [class*="bg-black/30"] { background-color: #eef3f8 !important; }
+.sofi-content .sofi-ops-surface {
+  border-color: rgba(9,72,125,0.13) !important;
+  background: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 18px 46px rgba(12,42,73,0.09), inset 0 1px 0 rgba(255,255,255,0.94) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+}
 .sofi-content button,
 .sofi-content a { letter-spacing: 0; }
 .sofi-content section,
-.sofi-content article { border-radius: 8px; }
+.sofi-content article { border-radius: 14px; }
 
 .sofi-content [class*="border-white/"] {
   border-color: rgba(255,255,255,0.16) !important;
@@ -194,10 +222,16 @@ body {
 .sofi-content input,
 .sofi-content textarea,
 .sofi-content select {
-  background: #FFFFFF !important;
-  border: 1px solid rgba(0,63,117,0.18) !important;
-  color: #17233B !important;
-  box-shadow: 0 10px 28px rgba(0,63,117,0.06);
+  background: rgba(255,255,255,0.78) !important;
+  border: 1px solid rgba(9,72,125,0.16) !important;
+  color: #101B33 !important;
+  box-shadow: 0 9px 28px rgba(12,42,73,0.06), inset 0 1px 0 rgba(255,255,255,0.88);
+  backdrop-filter: blur(14px);
+}
+
+.sofi-content :is(input, textarea, select):focus {
+  border-color: rgba(0,169,224,0.5) !important;
+  box-shadow: 0 0 0 4px rgba(0,169,224,0.09), 0 12px 30px rgba(12,42,73,0.08) !important;
 }
 
 /* Dark workbenches opt out of the light institutional compatibility layer. */
@@ -308,11 +342,26 @@ body {
 
 /* Kanban keeps color semantic: status and priority only. */
 .sofi-kanban-board {
-  background: #f7f9fb;
+  background: rgba(237,243,248,0.72);
   scrollbar-color: #c4cfdb transparent;
 }
 .sofi-kanban-shell .sofi-kanban-column,
 .sofi-kanban-shell .sofi-kanban-card { color: #17233b; }
+.sofi-kanban-shell .sofi-kanban-column {
+  border-color: rgba(9,72,125,0.13) !important;
+  background: rgba(236,243,249,0.8) !important;
+  box-shadow: 0 16px 38px rgba(12,42,73,0.07), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+  backdrop-filter: blur(16px);
+}
+.sofi-kanban-shell .sofi-kanban-card {
+  border-color: rgba(9,72,125,0.13) !important;
+  background: rgba(255,255,255,0.86) !important;
+  box-shadow: 0 8px 22px rgba(12,42,73,0.07), inset 0 1px 0 rgba(255,255,255,0.95) !important;
+}
+.sofi-kanban-shell .sofi-kanban-card:hover {
+  border-color: rgba(0,169,224,0.34) !important;
+  box-shadow: 0 16px 34px rgba(12,42,73,0.12), 0 0 0 3px rgba(0,169,224,0.055) !important;
+}
 .sofi-kanban-shell .sofi-kanban-card:active { cursor: grabbing; }
 
 /* Analytics was one of the last legacy dark workspaces. */
@@ -324,8 +373,9 @@ body {
 }
 .analytics-light div[style*="background: rgba(255,255,255"],
 .analytics-light div[style*="background: rgba(255, 255, 255"] {
-  background: #ffffff !important;
-  box-shadow: 0 8px 24px rgba(15,42,74,0.06);
+  background: rgba(255,255,255,0.76) !important;
+  box-shadow: 0 16px 38px rgba(12,42,73,0.08), inset 0 1px 0 rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px) saturate(130%);
 }
 .analytics-light [style*="borderBottom: '1px solid rgba(255"] { border-color: #e8edf3 !important; }
 .analytics-light > div[style],
@@ -333,10 +383,11 @@ body {
 
 /* Record drawers and reports use the same clear product language. */
 .sofi-light-modal {
-  background: #ffffff !important;
+  background: rgba(249,252,255,0.94) !important;
   color: #17233b !important;
   border-color: #dce5ef !important;
-  box-shadow: 0 28px 80px rgba(15,42,74,0.22) !important;
+  box-shadow: 0 32px 90px rgba(10,34,64,0.25), inset 0 1px 0 rgba(255,255,255,0.96) !important;
+  backdrop-filter: blur(28px) saturate(140%);
 }
 .sofi-light-modal .text-white,
 .sofi-light-modal .text-white\/90,

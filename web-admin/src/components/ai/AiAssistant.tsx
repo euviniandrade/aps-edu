@@ -772,11 +772,12 @@ Entregue uma resposta clara, acionável e de alto nível.`
             }
             setOpen(true)
           }}
-          className={`group fixed z-50 flex h-14 w-14 touch-none cursor-grab items-center justify-center rounded-2xl border border-[#CFE0ED] bg-white shadow-[0_12px_30px_rgba(15,42,74,0.18)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,42,74,0.22)] active:cursor-grabbing ${dragPos ? '' : dockButtonClass}`}
+          className={`group fixed z-50 flex h-14 w-14 touch-none cursor-grab items-center justify-center rounded-2xl border border-[#76E8FF]/45 shadow-[0_14px_36px_rgba(11,49,95,0.28)] transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(0,169,224,0.3)] active:cursor-grabbing ${dragPos ? '' : dockButtonClass}`}
           style={{
             ...(dragPos ? { left: dragPos.x, top: dragPos.y, right: 'auto', bottom: 'auto' } : {}),
-            background: '#ffffff',
-            color: '#0877C9',
+            background: 'linear-gradient(145deg, #0B315F, #124779)',
+            color: '#76E8FF',
+            boxShadow: '0 16px 38px rgba(11,49,95,0.28), inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 24px rgba(0,169,224,0.16)',
             animation: pulse ? 'sofiBounce 0.8s ease' : undefined,
           }}
           title="Arraste para mover ou clique para abrir a SOFI"
@@ -797,11 +798,11 @@ Entregue uma resposta clara, acionável e de alto nível.`
       {/*  PANEL  */}
       {open && (
         <div
-          className={`sofi-ai-panel z-50 flex overflow-hidden border border-[#DCE5EF] bg-[#F8FAFC]/96 shadow-[0_28px_80px_rgba(15,42,74,0.22)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : 'fixed inset-y-3 left-3 right-3 rounded-2xl lg:left-[18rem] lg:right-6'}`}
+          className={`sofi-ai-panel z-50 flex overflow-hidden border border-[#76E8FF]/30 bg-[#F8FAFC]/90 shadow-[0_32px_90px_rgba(10,34,64,0.25)] backdrop-blur-2xl ${embedded ? 'relative h-full w-full rounded-none' : 'fixed inset-y-3 left-3 right-3 rounded-2xl lg:left-[18rem] lg:right-6'}`}
           style={{
             height: embedded ? '100%' : 'calc(100vh - 24px)',
-            background: 'rgba(248,250,252,0.98)',
-            boxShadow: '0 32px 80px rgba(15,42,74,0.22), 0 0 0 1px rgba(255,255,255,0.9)',
+            background: 'rgba(244,249,253,0.94)',
+            boxShadow: '0 34px 94px rgba(10,34,64,0.26), 0 0 0 1px rgba(118,232,255,0.22)',
             animation: 'scaleIn 0.18s ease',
           }}
         >
