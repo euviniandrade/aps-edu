@@ -1210,7 +1210,7 @@ export default function WorldClassOperations({
           <Input value={quickOwner} onChange={event => setQuickOwner(event.target.value)} placeholder="Responsável" />
           <Input value={quickProject} onChange={event => setQuickProject(event.target.value)} placeholder="Projeto / pasta" />
           <Input value={quickAttachment} onChange={event => setQuickAttachment(event.target.value)} placeholder="Arquivo ou link" />
-          <button className="flex h-11 items-center justify-center rounded-lg bg-[#0877C9] text-white shadow-[0_8px_18px_rgba(8,119,201,0.2)] transition hover:bg-[#0067B2]" title="Adicionar tarefa" aria-label="Adicionar tarefa">
+          <button className="flex h-11 items-center justify-center rounded-lg bg-[#23744A] text-white transition hover:bg-[#195D3A]" title="Adicionar tarefa" aria-label="Adicionar tarefa">
             <PlusIcon className="h-5 w-5" />
           </button>
         </form>
@@ -1533,13 +1533,13 @@ function CentralOperationalWorkspace({
                       key={item.id}
                       onClick={() => setBoardView(item.id)}
                       className="h-9 rounded-md px-3 text-xs font-black transition"
-                      style={{ background: boardView === item.id ? '#FFFFFF' : 'transparent', color: boardView === item.id ? '#075A98' : '#64748B', boxShadow: boardView === item.id ? '0 2px 8px rgba(15,42,74,0.08)' : 'none' }}
+                      style={{ background: boardView === item.id ? '#FFFFFF' : 'transparent', color: boardView === item.id ? '#23744A' : '#64748B', boxShadow: boardView === item.id ? '0 2px 8px rgba(15,42,74,0.08)' : 'none' }}
                     >
                       {item.label}
                     </button>
                   ))}
                 </div>
-                <button onClick={onAddWorkflowColumn} className="h-10 rounded-lg border border-[#CFE0ED] bg-white px-4 text-xs font-black text-[#075A98] transition hover:bg-[#F1F7FC]">Nova etapa</button>
+                <button onClick={onAddWorkflowColumn} className="h-10 rounded-lg border border-[#D4DDD4] bg-white px-4 text-xs font-black text-[#23744A] transition hover:bg-[#EDF5ED]">Nova etapa</button>
               </div>
             }
           />

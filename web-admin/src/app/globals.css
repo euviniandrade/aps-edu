@@ -2,29 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════════════════
-   SOFI APS EDU - Luminous Intelligence Design System
-   Precise, expressive and operational for everyday education work.
-   ═══════════════════════════════════════════════════════════ */
+/* SOFI workspace tokens shared across the operational modules. */
 
 :root {
   /* ── Dark Base ─────────────────────────────── */
-  --bg-base:       #EAF0F6;
-  --bg-elevated:   rgba(255,255,255,0.82);
-  --bg-sidebar:    rgba(247,251,255,0.90);
-  --bg-topbar:     rgba(246,250,254,0.78);
-  --bg-card:       rgba(255,255,255,0.76);
-  --bg-card-hover: rgba(255,255,255,0.94);
-  --bg-card-active:rgba(228,243,255,0.90);
+  --bg-base:       #f3f5f3;
+  --bg-elevated:   #ffffff;
+  --bg-sidebar:    #1b2420;
+  --bg-topbar:     #fcfdfb;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-card-active:#eaf3ec;
 
   /* ── Brand ─────────────────────────────────── */
-  --gold:           #00A9E0;
-  --gold-light:     #76E8FF;
-  --gold-dim:       rgba(0,169,224,0.11);
-  --gold-glow:      rgba(0,169,224,0.24);
-  --electric:       #00A9E0;
-  --electric-dim:   rgba(0,169,224,0.10);
-  --navy:           #0B315F;
+  --gold:           #23744a;
+  --gold-light:     #9bd5ac;
+  --gold-dim:       rgba(35,116,74,0.1);
+  --gold-glow:      rgba(35,116,74,0.16);
+  --electric:       #315fc7;
+  --electric-dim:   rgba(49,95,199,0.1);
+  --navy:           #1b2420;
   --aps-yellow:     #F6B221;
   --aps-cyan:       #00A9E0;
   --aps-orange:     #F28C28;
@@ -45,29 +42,29 @@
   --purple-dim:     rgba(139,92,246,0.12);
 
   /* ── Text ──────────────────────────────────── */
-  --text-primary:   #101B33;
-  --text-secondary: #50647A;
-  --text-muted:     #708399;
-  --text-ghost:     rgba(16,27,51,0.14);
+  --text-primary:   #202824;
+  --text-secondary: #516158;
+  --text-muted:     #718076;
+  --text-ghost:     rgba(32,40,36,0.14);
 
   /* ── Borders ───────────────────────────────── */
-  --border:         rgba(9,72,125,0.13);
-  --border-bright:  rgba(0,169,224,0.28);
-  --border-gold:    rgba(0,169,224,0.38);
+  --border:         #dce3dc;
+  --border-bright:  #8dc59e;
+  --border-gold:    #8dc59e;
 
   /* ── Radius ────────────────────────────────── */
-  --r-sm:   8px;
-  --r-md:   12px;
-  --r-lg:   16px;
-  --r-xl:   20px;
-  --r-2xl:  24px;
+  --r-sm:   6px;
+  --r-md:   8px;
+  --r-lg:   8px;
+  --r-xl:   8px;
+  --r-2xl:  8px;
   --r-pill: 9999px;
 
   /* ── Shadows ───────────────────────────────── */
-  --shadow-card:     0 16px 42px rgba(12,42,73,0.09);
-  --shadow-gold:     0 0 24px rgba(246,178,33,0.28);
-  --shadow-electric: 0 0 20px rgba(0,169,224,0.22);
-  --shadow-up:       0 -4px 32px rgba(0,63,117,0.12);
+  --shadow-card:     0 6px 20px rgba(26,49,35,0.04);
+  --shadow-gold:     0 0 0 3px rgba(35,116,74,0.1);
+  --shadow-electric: 0 0 0 3px rgba(49,95,199,0.1);
+  --shadow-up:       0 -4px 20px rgba(26,49,35,0.07);
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -84,29 +81,6 @@ body {
   font-feature-settings: "cv02","cv03","cv04","cv11";
   background: var(--bg-base);
 }
-
-/* Sofi workbench: a focused, readable canvas alongside the persistent project rail. */
-.sofi-workspace > div { background: #f3f7f8 !important; }
-.sofi-workspace > div > div:first-child { display: none; }
-.sofi-workspace aside { background: #102f3d !important; }
-.sofi-workspace aside > div { background: #102f3d !important; }
-.sofi-workspace section { background: #f3f7f8 !important; color: #18303b; }
-.sofi-workspace section > div:first-child { display: none; }
-.sofi-workspace section header { background: #fff; border-color: #dce7ea; }
-.sofi-workspace section [class*="text-white"] { color: #263d47 !important; }
-.sofi-workspace section [class*="text-white/3"],
-.sofi-workspace section [class*="text-white/4"],
-.sofi-workspace section [class*="text-white/5"] { color: #647782 !important; }
-.sofi-workspace section [class*="bg-white/"] { background: #fff !important; }
-.sofi-workspace section [class*="bg-black/"] { background: #eaf0f2 !important; }
-.sofi-workspace section [class*="bg-[linear-gradient"] { background: #fff !important; }
-.sofi-workspace section [class*="border-white/"] { border-color: #dce7ea !important; }
-.sofi-workspace section textarea { color: #18303b !important; }
-.sofi-workspace section textarea::placeholder { color: #758993 !important; }
-.sofi-workspace section button[class*="bg-white"] { background: #14616a !important; color: #fff !important; }
-.sofi-workspace section button[class*="bg-white"] svg { color: #fff !important; }
-.sofi-workspace section button[class*="bg-white"]:disabled { background: #d3e0e3 !important; color: #60747e !important; }
-.sofi-workspace section .pointer-events-none { background: linear-gradient(180deg, transparent, #f3f7f8 72%) !important; }
 
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -135,17 +109,17 @@ body {
 }
 
 .sofi-content .bg-white {
-  background-color: rgba(255,255,255,0.78) !important;
-  backdrop-filter: blur(18px) saturate(130%);
+  background-color: #ffffff !important;
+  backdrop-filter: none;
 }
 
 .sofi-content .border-slate-200,
 .sofi-content .border-gray-200 {
-  border-color: rgba(9,72,125,0.13) !important;
+  border-color: #dce3dc !important;
 }
 
 .sofi-content :is(section, article, [class*="shadow-"]):not(.sofi-dark-surface) {
-  backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: none;
 }
 
 .sofi-content :is(button, a):not([aria-disabled="true"]) {
@@ -180,22 +154,22 @@ body {
 .sofi-content [class*="text-[#718096]"],
 .sofi-content [class*="text-[#738196]"] { color: #64748b !important; }
 .sofi-content [class*="bg-[#006b7a]"],
-.sofi-content [class*="bg-[#00a9a4]"] { background-color: #0877c9 !important; color: #ffffff !important; }
+.sofi-content [class*="bg-[#00a9a4]"] { background-color: #23744a !important; color: #ffffff !important; }
 .sofi-content [class*="text-[#006b7a]"],
 .sofi-content [class*="text-[#007f91]"],
-.sofi-content [class*="text-[#00a9a4]"] { color: #0877c9 !important; }
-.sofi-content [class*="shadow-"] { --tw-shadow-color: rgba(44,19,56,0.08) !important; }
+.sofi-content [class*="text-[#00a9a4]"] { color: #23744a !important; }
+.sofi-content [class*="shadow-"] { --tw-shadow-color: rgba(23,48,30,0.06) !important; }
 .sofi-content .bg-teal-700,
 .sofi-content .hover\:bg-teal-800:hover {
-  background-color: #0877c9 !important;
+  background-color: #23744a !important;
   color: #ffffff !important;
 }
 .sofi-content .text-teal-700,
-.sofi-content .text-teal-800 { color: #0877c9 !important; }
-.sofi-content .bg-teal-50 { background-color: #edf6fc !important; }
+.sofi-content .text-teal-800 { color: #23744a !important; }
+.sofi-content .bg-teal-50 { background-color: #ecf6ed !important; }
 .sofi-content .border-teal-200,
-.sofi-content .border-teal-300 { border-color: #b9d9ef !important; }
-.sofi-content .bg-slate-900 { background-color: #0877c9 !important; }
+.sofi-content .border-teal-300 { border-color: #a9d0b3 !important; }
+.sofi-content .bg-slate-900 { background-color: #26352b !important; }
 .sofi-content .bg-slate-950 { background-color: #ffffff !important; color: #17233b !important; }
 .sofi-content .bg-slate-900.text-white,
 .sofi-content .bg-slate-950.text-white,
@@ -203,7 +177,7 @@ body {
 .sofi-content .bg-violet-50 { background-color: #eef2ff !important; }
 .sofi-content .text-violet-700,
 .sofi-content .text-violet-800,
-.sofi-content .text-violet-900 { color: #564acb !important; }
+.sofi-content .text-violet-900 { color: #5c66a5 !important; }
 .sofi-content .sofi-ops-surface .text-white,
 .sofi-content .sofi-ops-surface .text-white\/90,
 .sofi-content .sofi-ops-surface .text-white\/80,
@@ -232,7 +206,7 @@ body {
 .sofi-content button,
 .sofi-content a { letter-spacing: 0; }
 .sofi-content section,
-.sofi-content article { border-radius: 14px; }
+.sofi-content article { border-radius: 8px; }
 
 .sofi-content [class*="border-white/"] {
   border-color: rgba(255,255,255,0.16) !important;
@@ -447,35 +421,27 @@ body {
 /* People directory behaves like an intelligence grid, not a gallery. */
 .sofi-content .sofi-person-card {
   position: relative;
-  border-color: rgba(9,72,125,0.14) !important;
-  border-radius: 14px !important;
-  background: rgba(255,255,255,0.8) !important;
-  box-shadow: 0 14px 36px rgba(12,42,73,0.09), inset 0 1px 0 rgba(255,255,255,0.94) !important;
+  border-color: #dce3dc !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 5px 16px rgba(24, 47, 32, 0.05) !important;
 }
 
 .sofi-content .sofi-person-card::after {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, #00a9e0, #725cff, #baff29);
-  content: "";
-  opacity: 0.72;
+  content: none;
 }
 
 .sofi-content .sofi-person-card:hover {
-  border-color: rgba(0,169,224,0.36) !important;
-  box-shadow: 0 22px 48px rgba(12,42,73,0.15), 0 0 0 3px rgba(0,169,224,0.055) !important;
-  transform: translateY(-3px);
+  border-color: #75ad84 !important;
+  box-shadow: 0 10px 24px rgba(24, 47, 32, 0.09) !important;
+  transform: translateY(-2px);
 }
 
 .sofi-content .sofi-ops-surface .sofi-person-photo,
 .sofi-content .sofi-person-photo {
-  aspect-ratio: 16 / 8.25 !important;
-  background-color: #0a294d !important;
-  background-image:
-    linear-gradient(rgba(118,232,255,0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(118,232,255,0.07) 1px, transparent 1px) !important;
-  background-size: 20px 20px !important;
+  aspect-ratio: 16 / 6.8 !important;
+  background-color: #e9f1e9 !important;
+  background-image: none !important;
 }
 
 .sofi-content .sofi-ops-surface .sofi-person-photo > div,
@@ -485,14 +451,14 @@ body {
 
 .sofi-content .sofi-ops-surface .sofi-person-photo > div > span:first-child,
 .sofi-content .sofi-person-photo > div > span:first-child {
-  background: rgba(118,232,255,0.12) !important;
-  color: #dffaff !important;
-  box-shadow: inset 0 0 0 1px rgba(118,232,255,0.24), 0 14px 28px rgba(0,0,0,0.16) !important;
+  background: #d4e6d5 !important;
+  color: #1d6240 !important;
+  box-shadow: none !important;
 }
 
 .sofi-content .sofi-ops-surface .sofi-person-photo > div > span:last-child,
 .sofi-content .sofi-person-photo > div > span:last-child {
-  color: rgba(223,250,255,0.52) !important;
+  color: #607b68 !important;
 }
 
 .sofi-content input::placeholder,
@@ -549,6 +515,73 @@ body {
    ════════════════════════════════════════════════════════ */
 @keyframes fadeIn {
   from { opacity: 0; } to { opacity: 1; }
+}
+
+/* Unified workspace finish for legacy Tailwind modules. */
+.sofi-content { color: #202824; }
+.sofi-content :is(h1, h2, h3) { letter-spacing: 0; }
+.sofi-content :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  border-color: #d4ddd4;
+  color: #26352b;
+}
+.sofi-content :is(input, textarea)::placeholder { color: #78887e; }
+.sofi-content :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #23744a;
+  outline-offset: 2px;
+}
+.sofi-content :is(table, [role="table"]) { font-variant-numeric: tabular-nums; }
+.sofi-content :is(th, [role="columnheader"]) {
+  color: #64756a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* Sofi has its own two-pane layout; avoid inheriting the old dark/chat skin. */
+.sofi-workspace > div { background: #f9faf8 !important; }
+.sofi-workspace > div > div:first-child { display: none; }
+.sofi-workspace :is(button, input, textarea, select, [class*="rounded-"]) { border-radius: 8px !important; }
+.sofi-workspace aside,
+.sofi-workspace aside > div { background: #eef1ec !important; border-color: #dce3dc !important; }
+.sofi-workspace aside [class*="text-white"] { color: #324238 !important; }
+.sofi-workspace aside [class*="text-white/3"],
+.sofi-workspace aside [class*="text-white/4"] { color: #647469 !important; }
+.sofi-workspace aside [class*="border-white/"] { border-color: #d6ded5 !important; }
+.sofi-workspace aside [class*="bg-white/"] { background: transparent !important; }
+.sofi-workspace aside button:hover { background: #e1e9df !important; }
+.sofi-workspace aside button[class*="bg-white/[0.09]"],
+.sofi-workspace aside button[class*="bg-white/[0.10]"] {
+  background: #d8e9d9 !important;
+  color: #173922 !important;
+}
+.sofi-workspace aside input { background: #ffffff !important; color: #24342a !important; }
+.sofi-workspace aside input::placeholder { color: #728074 !important; }
+.sofi-workspace aside [class*="bg-[linear-gradient"] { background: #eef1ec !important; }
+.sofi-workspace aside [class*="bg-[#0C1019]"] { background: #ffffff !important; }
+.sofi-workspace section { background: #f9faf8 !important; color: #202824; }
+.sofi-workspace section > div:first-child { display: none; }
+.sofi-workspace section header { background: #ffffff; border-color: #dce3dc; }
+.sofi-workspace section [class*="text-white"] { color: #26352b !important; }
+.sofi-workspace section [class*="text-white/3"],
+.sofi-workspace section [class*="text-white/4"],
+.sofi-workspace section [class*="text-white/5"] { color: #697a6e !important; }
+.sofi-workspace section [class*="bg-white/"] { background: #ffffff !important; }
+.sofi-workspace section [class*="bg-black/"] { background: #edf2ec !important; }
+.sofi-workspace section [class*="bg-[linear-gradient"] { background: #ffffff !important; }
+.sofi-workspace section [class*="border-white/"] { border-color: #dce3dc !important; }
+.sofi-workspace section textarea { color: #202824 !important; }
+.sofi-workspace section textarea::placeholder { color: #728074 !important; }
+.sofi-workspace section button[class*="bg-white"] {
+  background: #23744a !important;
+  color: #ffffff !important;
+}
+.sofi-workspace section button[class*="bg-white"] svg { color: #ffffff !important; }
+.sofi-workspace section button[class*="bg-white"]:disabled {
+  background: #dce5dc !important;
+  color: #718076 !important;
+}
+.sofi-workspace section .pointer-events-none {
+  background: linear-gradient(180deg, transparent, #f9faf8 72%) !important;
 }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(28px); }

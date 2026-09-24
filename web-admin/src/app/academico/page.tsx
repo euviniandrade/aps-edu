@@ -221,8 +221,8 @@ export default function AcademicoPage() {
   return (
     <AdminLayout>
       <div className="space-y-5">
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="rounded-[28px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_70px_rgba(0,63,117,0.10)]">
+        <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0 rounded-[28px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_70px_rgba(0,63,117,0.10)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#6B7F94]">Ambiente acadêmico</p>
@@ -249,7 +249,7 @@ export default function AcademicoPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-[#D8E5F0] bg-[#F7FBFF] p-5">
+          <div className="min-w-0 rounded-[28px] border border-[#D8E5F0] bg-[#F7FBFF] p-5">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#6B7F94]">Agenda geral</p>
             <h2 className="mt-1 text-2xl font-black text-[#001B3F]">Próximos prazos</h2>
             <div className="mt-4 space-y-2">
@@ -299,8 +299,8 @@ export default function AcademicoPage() {
           </div>
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="space-y-4">
+        <section className="grid min-w-0 gap-5 2xl:grid-cols-2">
+          <div className="min-w-0 space-y-4">
             <div className="rounded-[28px] border border-white/80 bg-white/90 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -322,7 +322,7 @@ export default function AcademicoPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/80 bg-white/90 p-4">
+          <div className="min-w-0 rounded-[28px] border border-white/80 bg-white/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#6B7F94]">Atividades e datas</p>
@@ -330,13 +330,13 @@ export default function AcademicoPage() {
               </div>
               <ClipboardDocumentListIcon className="h-8 w-8 text-[#0ABD78]" />
             </div>
-            <div className="mt-4 grid gap-2 lg:grid-cols-[1fr_170px_150px_auto]">
-              <input value={activityTitle} onChange={event => setActivityTitle(event.target.value)} placeholder="Nova atividade, prova ou leitura" className="h-11 rounded-2xl border border-[#C9DBEA] bg-white px-4 text-sm font-bold text-[#001B3F] outline-none" />
-              <select value={activitySubjectId} onChange={event => setActivitySubjectId(event.target.value)} className="h-11 rounded-2xl border border-[#C9DBEA] bg-white px-3 text-sm font-bold text-[#001B3F] outline-none">
+            <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_160px] xl:grid-cols-[minmax(0,1fr)_170px_150px_auto]">
+              <input value={activityTitle} onChange={event => setActivityTitle(event.target.value)} placeholder="Nova atividade, prova ou leitura" className="min-w-0 h-11 rounded-2xl border border-[#C9DBEA] bg-white px-4 text-sm font-bold text-[#001B3F] outline-none" />
+              <select value={activitySubjectId} onChange={event => setActivitySubjectId(event.target.value)} className="min-w-0 h-11 rounded-2xl border border-[#C9DBEA] bg-white px-3 text-sm font-bold text-[#001B3F] outline-none">
                 <option value="">Matéria</option>
                 {visibleSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
               </select>
-              <input type="date" value={activityDate} onChange={event => setActivityDate(event.target.value)} className="h-11 rounded-2xl border border-[#C9DBEA] bg-white px-3 text-sm font-bold text-[#001B3F] outline-none" />
+              <input type="date" value={activityDate} onChange={event => setActivityDate(event.target.value)} className="min-w-0 h-11 rounded-2xl border border-[#C9DBEA] bg-white px-3 text-sm font-bold text-[#001B3F] outline-none" />
               <button type="button" onClick={addActivity} className="h-11 rounded-2xl bg-[#0ABD78] px-4 text-sm font-black text-white">Criar</button>
             </div>
             <div className="mt-4 grid gap-3">

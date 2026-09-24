@@ -11,12 +11,12 @@ import styles from './workspace.module.css'
 
 type Summary = { tasks?: { pending?: number; in_progress?: number }; events?: { planned?: number; ongoing?: number } }
 const modules = [
-  { href: '/pessoas', name: 'Pessoas', detail: 'Contatos e perfis', icon: UsersIcon, color: '#0877C9' },
-  { href: '/academico', name: 'Acadêmico', detail: 'Disciplinas e entregas', icon: AcademicCapIcon, color: '#00A9E0' },
-  { href: '/agenda', name: 'Agenda central', detail: 'Google, iOS e prazos', icon: CalendarDaysIcon, color: '#2A9D6F' },
-  { href: '/kanban', name: 'Kanban', detail: 'Tarefas e projetos', icon: Squares2X2Icon, color: '#F0A62B' },
-  { href: '/reports', name: 'Relatórios', detail: 'Análise e resultados', icon: ChartBarIcon, color: '#6157D8' },
-  { href: '/integracoes', name: 'Integrações', detail: 'Google Workspace e Apple', icon: ArrowPathIcon, color: '#53647A' },
+  { href: '/pessoas', name: 'Pessoas', detail: 'Contatos e perfis', icon: UsersIcon, color: '#23744A' },
+  { href: '/academico', name: 'Acadêmico', detail: 'Disciplinas e entregas', icon: AcademicCapIcon, color: '#315FC7' },
+  { href: '/agenda', name: 'Agenda central', detail: 'Google, iOS e prazos', icon: CalendarDaysIcon, color: '#D19232' },
+  { href: '/kanban', name: 'Kanban', detail: 'Tarefas e projetos', icon: Squares2X2Icon, color: '#D06156' },
+  { href: '/reports', name: 'Relatórios', detail: 'Análise e resultados', icon: ChartBarIcon, color: '#5C66A5' },
+  { href: '/integracoes', name: 'Integrações', detail: 'Google Workspace e Apple', icon: ArrowPathIcon, color: '#516158' },
 ]
 
 export default function DashboardPage() {

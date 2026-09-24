@@ -1002,8 +1002,8 @@ ${content}`
 
   const effectiveSidebarCompact = isDesktop && sidebarCompact && !sidebarPeek
   const sidebarPanelVisible = !isDesktop || !effectiveSidebarCompact
-  const railWidth = isDesktop ? 64 : 0
-  const sidebarPanelWidth = sidebarPanelVisible ? 288 : 0
+  const railWidth = isDesktop ? 52 : 0
+  const sidebarPanelWidth = sidebarPanelVisible ? 244 : 0
   const sidebarWidth = railWidth + sidebarPanelWidth
 
   return (
@@ -1023,20 +1023,20 @@ ${content}`
             <div
               onMouseEnter={() => sidebarCompact && setSidebarPeek(true)}
               onMouseLeave={() => setSidebarPeek(false)}
-              className="flex w-[64px] flex-col items-center justify-between border-r border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.012),rgba(255,255,255,0))] py-4 transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)]"
+              className="flex w-[52px] flex-col items-center justify-between border-r border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.012),rgba(255,255,255,0))] py-4 transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)]"
             >
               <div className="flex w-full flex-col items-center gap-4">
                 <button
                   onClick={() => setSidebarCompact(false)}
-                  className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] text-[#F8A303] shadow-[0_12px_32px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-[1px] hover:border-white/22 hover:bg-white/[0.05]"
+                  title="Sofi"
+                  className="flex h-10 w-10 items-center justify-center rounded-[1.25rem] border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] text-[#23744a] transition duration-300 hover:border-white/22 hover:bg-white/[0.05]"
                 >
                   <SparklesIcon className="h-5 w-5" />
                 </button>
 
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/78">IA da Educação</p>
-
                 <button
                   onClick={() => createThread(activeFolder?.id || 'geral')}
+                  title="Nova conversa"
                   className="flex h-11 w-11 items-center justify-center rounded-[1.05rem] border border-white/10 text-white/72 transition duration-300 hover:-translate-y-[1px] hover:border-white/18 hover:bg-white/[0.05] hover:text-white"
                 >
                   <PencilSquareIcon className="h-[18px] w-[18px]" />
@@ -1044,6 +1044,7 @@ ${content}`
 
                 <button
                   onClick={() => setSidebarCompact(value => !value)}
+                  title="Recolher conversas"
                   className="flex h-11 w-11 items-center justify-center rounded-[1.05rem] border border-white/10 text-white/62 transition duration-300 hover:-translate-y-[1px] hover:border-white/18 hover:bg-white/[0.05] hover:text-white"
                 >
                   <Bars3Icon className="h-[18px] w-[18px]" />
@@ -1051,6 +1052,7 @@ ${content}`
 
                 <button
                   onClick={() => setSidebarCompact(false)}
+                  title="Abrir conversas"
                   className="flex h-11 w-11 items-center justify-center rounded-[1.05rem] border border-white/10 text-white/62 transition duration-300 hover:-translate-y-[1px] hover:border-white/18 hover:bg-white/[0.05] hover:text-white"
                 >
                   <MagnifyingGlassIcon className="h-[18px] w-[18px]" />
@@ -1061,11 +1063,11 @@ ${content}`
             </div>
 
             {sidebarPanelVisible ? (
-              <div className="flex min-h-0 w-[288px] flex-col bg-[linear-gradient(180deg,rgba(6,8,12,0.985),rgba(6,8,12,0.95))] transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)]">
+              <div className="flex min-h-0 w-[244px] flex-col bg-[linear-gradient(180deg,rgba(6,8,12,0.985),rgba(6,8,12,0.95))] transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)]">
                 <div className="flex items-center justify-between px-5 pb-4 pt-5">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-3 py-1.5">
                     <SparklesIcon className="h-4 w-4 text-[#F8A303]" />
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">IA da Educação</span>
+                    <span className="text-[11px] font-semibold uppercase text-white/72">Projetos da Sofi</span>
                   </div>
                   <button
                     onClick={() => setSidebarCompact(true)}
@@ -1078,13 +1080,13 @@ ${content}`
                 <div className="px-4">
                   <button
                     onClick={() => createThread(activeFolder?.id || 'geral')}
-                    className="flex h-[56px] w-full items-center gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.07))] px-5 text-[15px] font-medium text-white shadow-[0_18px_40px_rgba(0,0,0,0.2)] ring-1 ring-white/[0.03] transition duration-300 hover:-translate-y-[1px] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.15),rgba(255,255,255,0.09))]"
+                    className="flex h-[44px] w-full items-center gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.07))] px-4 text-[14px] font-medium text-white ring-1 ring-white/[0.03] transition duration-300 hover:bg-white/[0.08]"
                   >
                     <PencilSquareIcon className="h-5 w-5" />
                     Novo chat
                   </button>
 
-                  <div className="mt-4 flex h-[52px] items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.015] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                  <div className="mt-3 flex h-[42px] items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.015] px-3">
                     <MagnifyingGlassIcon className="h-5 w-5 text-white/42" />
                     <input
                       value={search}
@@ -1288,8 +1290,8 @@ ${content}`
         <section className="relative min-h-0 bg-black">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.01),transparent_18%,transparent_82%,rgba(255,255,255,0.01))]" />
 
-          <header className="relative z-10 flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 pb-3 pt-4 md:px-6 md:pb-4 md:pt-5">
-            <div className="flex min-w-0 items-center gap-3">
+          <header className="relative z-10 flex items-center justify-between gap-2 border-b border-white/[0.06] px-3 pb-3 pt-4 md:gap-3 md:px-6 md:pb-4 md:pt-5">
+            <div className="flex min-w-0 items-center gap-2 md:gap-3">
               {!isDesktop ? (
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -1299,7 +1301,7 @@ ${content}`
                 </button>
               ) : null}
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.015] text-white/78 shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
+              <div className="hidden h-10 w-10 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.015] text-white/78 shadow-[0_10px_24px_rgba(0,0,0,0.12)] md:flex">
                 <ChatBubbleLeftRightIcon className="h-[18px] w-[18px]" />
               </div>
 
@@ -1309,13 +1311,13 @@ ${content}`
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <button onClick={() => setContextOpen(value => !value)} title="Memória e fontes de contexto" className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.05]">Contexto</button>
+            <div className="flex shrink-0 items-center gap-2 md:gap-2.5">
+              <button onClick={() => setContextOpen(value => !value)} title="Memória e fontes de contexto" aria-label="Memória e fontes de contexto" className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 text-xs font-semibold text-white/70 hover:bg-white/[0.05] md:h-auto md:w-auto md:px-3 md:py-2"><Squares2X2Icon className="h-4 w-4 md:hidden" /><span className="hidden md:inline">Contexto</span></button>
               <button onClick={exportThread} title="Exportar conversa" className="hidden rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.05] md:block">Exportar</button>
               <div className="relative shrink-0" ref={providerMenuRef}>
               <button
                 onClick={() => setProviderMenuOpen(value => !value)}
-                className="flex h-11 min-w-[132px] items-center justify-between rounded-[1.1rem] border border-white/10 bg-white/[0.02] px-3.5 text-[15px] font-semibold text-white transition duration-300 hover:border-white/16 hover:bg-white/[0.05] md:h-12 md:min-w-[176px] md:px-4 md:text-[17px]"
+                className="flex h-10 min-w-[74px] items-center justify-between rounded-[1.1rem] border border-white/10 bg-white/[0.02] px-2.5 text-[13px] font-semibold text-white transition duration-300 hover:border-white/16 hover:bg-white/[0.05] md:h-12 md:min-w-[176px] md:px-4 md:text-[17px]"
               >
                 <span className="truncate">{providerLabel}</span>
                 <span className={`text-sm text-white/50 transition ${providerMenuOpen ? 'rotate-180' : ''}`}></span>
@@ -1515,14 +1517,16 @@ ${content}`
                   <div ref={bottomRef} />
                 </div>
               ) : (
-                <div className="flex min-h-full items-center justify-center px-2 md:px-4">
-                  <div className="w-full max-w-[780px] pb-14 md:pb-16">
-                    <div className="text-center">
-                      <h1 className="text-[1.4rem] font-semibold leading-[1.08] text-white sm:text-[1.65rem] md:text-[2.2rem]">O que vamos resolver hoje?</h1>
+                <div className="flex min-h-full items-start justify-center px-2 pt-10 md:px-4 md:pt-16">
+                  <div className="w-full max-w-[740px] pb-14 md:pb-16">
+                    <div>
+                      <p className="mb-3 text-xs font-semibold uppercase text-emerald-700">Sofi / seu espaço de trabalho</p>
+                      <h1 className="text-[1.65rem] font-semibold leading-[1.15] text-white md:text-[2.1rem]">O que vamos resolver hoje?</h1>
+                      <p className="mt-3 max-w-xl text-sm leading-6 text-white/58">Planeje, analise e transforme ideias em ações. Você revisa tudo antes de executar.</p>
                     </div>
 
-                    <div className="mx-auto mt-7 max-w-[780px] md:mt-8">
-                      <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(33,33,33,0.96),rgba(23,23,23,0.96))] px-4 py-3.5 shadow-[0_32px_100px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.03] transition duration-300 hover:border-white/14 md:rounded-[2rem] md:px-5 md:py-4">
+                    <div className="mt-7 max-w-[740px]">
+                      <div className="rounded-lg border border-white/10 bg-[linear-gradient(180deg,rgba(33,33,33,0.96),rgba(23,23,23,0.96))] px-4 py-3.5 shadow-[0_10px_28px_rgba(30,50,35,0.07)] transition duration-300 hover:border-white/14 md:px-5 md:py-4">
                         {attachedFile ? (
                           <div className="mb-3 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/74">
                             {attachedFile.type.startsWith('image/') ? <PhotoIcon className="h-4 w-4" /> : <PaperClipIcon className="h-4 w-4" />}
@@ -1576,24 +1580,25 @@ ${content}`
                         </div>
                       </div>
 
-                      <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:mt-7">
+                      <p className="mt-8 text-xs font-semibold uppercase text-white/50">Comece com um objetivo</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
                         <button
                           onClick={() => sendMessage('Planeje uma campanha escolar com conceito, mensagem e entregáveis para revisão.')}
-                          className="inline-flex items-center justify-center gap-3 rounded-full border border-white/12 bg-white/[0.015] px-5 py-2.5 text-[14px] text-white/82 transition duration-300 hover:-translate-y-[1px] hover:bg-white/[0.05] hover:text-white md:px-5 md:py-2.5"
+                          className="inline-flex min-h-[64px] items-center gap-3 rounded-lg border border-white/12 bg-white/[0.015] px-4 py-3 text-left text-[13px] font-medium text-white/82 transition hover:border-emerald-300 hover:bg-white/[0.05]"
                         >
                           <PhotoIcon className="h-5 w-5" />
                           Planeje uma campanha
                         </button>
                         <button
                           onClick={() => sendMessage('Escreva ou edite um documento operacional com linguagem profissional.')}
-                          className="inline-flex items-center justify-center gap-3 rounded-full border border-white/12 bg-white/[0.015] px-5 py-2.5 text-[14px] text-white/82 transition duration-300 hover:-translate-y-[1px] hover:bg-white/[0.05] hover:text-white md:px-5 md:py-2.5"
+                          className="inline-flex min-h-[64px] items-center gap-3 rounded-lg border border-white/12 bg-white/[0.015] px-4 py-3 text-left text-[13px] font-medium text-white/82 transition hover:border-emerald-300 hover:bg-white/[0.05]"
                         >
                           <PencilSquareIcon className="h-5 w-5" />
                           Escreva ou edite
                         </button>
                         <button
                           onClick={() => sendMessage('Ajude-me a estruturar um parecer objetivo com base nas informações que vou fornecer.')}
-                          className="inline-flex items-center justify-center gap-3 rounded-full border border-white/12 bg-white/[0.015] px-5 py-2.5 text-[14px] text-white/82 transition duration-300 hover:-translate-y-[1px] hover:bg-white/[0.05] hover:text-white md:px-5 md:py-2.5"
+                          className="inline-flex min-h-[64px] items-center gap-3 rounded-lg border border-white/12 bg-white/[0.015] px-4 py-3 text-left text-[13px] font-medium text-white/82 transition hover:border-emerald-300 hover:bg-white/[0.05]"
                         >
                           <MagnifyingGlassIcon className="h-5 w-5" />
                           Estruture um parecer

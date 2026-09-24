@@ -145,7 +145,7 @@ export default function AutomacoesPage() {
 
   return <AdminLayout>
     <div className="mx-auto max-w-[1500px] space-y-5 pb-10">
-      <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase text-sky-700">Orquestração</p><h1 className="mt-1 text-3xl font-bold text-slate-950">Automações</h1><p className="mt-2 text-sm text-slate-500">Regras claras, execução verificável e histórico de cada ação.</p></div><button onClick={() => openBuilder()} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#0877C9] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(8,119,201,0.18)]"><PlusIcon className="h-4 w-4" />Nova automação</button></header>
+      <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase text-emerald-700">Orquestração</p><h1 className="mt-1 text-3xl font-bold text-slate-950">Automações</h1><p className="mt-2 text-sm text-slate-500">Regras claras, execução verificável e histórico de cada ação.</p></div><button onClick={() => openBuilder()} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#23744A] px-5 text-sm font-bold text-white hover:bg-[#195D3A]"><PlusIcon className="h-4 w-4" />Nova automação</button></header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric icon={BoltIcon} label="Ativas" value={active} detail={`${rules.length} regras configuradas`} tone="emerald" />
