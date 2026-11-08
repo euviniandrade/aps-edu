@@ -301,7 +301,7 @@ function pagamentoLocal(texto, store, hoje) {
   return { acoes: [{ tipo: 'pagar', contaId: conta.id, valor, data: /ontem/.test(s) ? addDias(hoje, -1) : hoje }], resposta: `Marquei ${conta.nome} como paga.` };
 }
 
-const NOMES = { despesa: 'Gasto', receita: 'Entrada', conta: 'Conta a pagar', pagar: 'Pagamento' };
+const NOMES = { despesa: 'Gasto', receita: 'Entrada', conta: 'Conta a pagar', pagar: 'Marcada como paga:' };
 function linhaAcao(a) {
   const quando = a.tipo === 'conta' ? `vence ${fmtD(a.vencimento)}` : fmtD(a.data);
   const extra = [a.categoria, a.metodo, quando, a.parcelaTotal ? `${a.parcelaAtual || 1}/${a.parcelaTotal}` : '', a.recorrencia === 'mensal' && !a.parcelaTotal ? 'todo mês' : ''].filter(Boolean).join(', ');

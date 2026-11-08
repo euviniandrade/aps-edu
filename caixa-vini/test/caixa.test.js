@@ -70,7 +70,7 @@ test('WhatsApp: comandos resumo e desfazer', async () => {
   const r3 = await f.processarMensagem({ store: s, ia: semIA, texto: 'resumo', canal: 'whatsapp', hoje: HOJE });
   assert.match(r3.resposta, /Falta pagar: \*R\$ 94,20\*/);
   const r4 = await f.processarMensagem({ store: s, ia: semIA, texto: 'Paguei a Claro', canal: 'whatsapp', hoje: HOJE });
-  assert.match(r4.resposta, /Pagamento R\$ 94,20 — Claro/);
+  assert.match(r4.resposta, /Marcada como paga: R\$ 94,20 — Claro/);
   assert.equal(s.get('contas', 'claro').status, 'paga');
 });
 

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-tema="menta">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Caixa Vini</title>
 <meta name="description" content="Suas contas, gastos e metas sob controle, com assistente de IA e WhatsApp.">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#f2fbf6">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Caixa Vini">
 <meta property="og:title" content="Caixa Vini">
@@ -250,6 +250,13 @@ label.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px
   --saldo-bg:radial-gradient(120% 140% at 100% 0%,#0e7490 0%,#0d1d30 60%); --saldo-ink:#ffffff; --saldo-muted:#9cc3d6; --saldo-pad:22px 20px;
   --toast-bg:#22d3ee; --toast-ink:#06121f;
 }
+.mesbar{display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;border:0;background:none;padding:2px 0;cursor:pointer;color:var(--ink);font-size:13.5px;text-align:left}
+.mesbar .mn{text-transform:capitalize;color:var(--muted);font-weight:600}
+.mesbar .track{height:10px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.mesbar .track i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.mesbar b{font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
+.row.s-prevista{opacity:.85}
+.row.s-prevista .stripe::after{background:transparent;box-shadow:inset 0 0 0 2px var(--accent)}
 :root[data-tema="claro"] .brand .logo,:root[data-tema="menta"] .brand .logo{color:#fff}
 :root[data-tema="claro"] .saldo .sub b.pos,:root[data-tema="menta"] .saldo .sub b.pos{color:#fff}
 :root[data-tema="claro"] .saldo .lnk,:root[data-tema="menta"] .saldo .lnk,:root[data-tema="oceano"] .saldo .lnk{color:#fff;text-decoration:underline}
@@ -293,7 +300,7 @@ label.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px
 const $ = (s, el=document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const BRL = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-(function(){ try{ const q=new URLSearchParams(location.search).get("tema"); const t=q||localStorage.getItem("cv-tema"); if(t && t!=="roxo") document.documentElement.setAttribute("data-tema",t); }catch(e){} })();
+(function(){ try{ const q=new URLSearchParams(location.search).get("tema"); const t=q||localStorage.getItem("cv-tema")||"menta"; if(t==="roxo") document.documentElement.removeAttribute("data-tema"); else document.documentElement.setAttribute("data-tema",t); }catch(e){} })();
 const brl = v => (typeof ui!=="undefined" && ui.ocultar) ? "R$ ••••" : BRL.format(Number(v)||0);
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
 const pad = n => String(n).padStart(2,"0");
@@ -435,14 +442,14 @@ async function pagarConta(c, valorPago, dataPag, silencioso){
       await salvar("contas", prox);
     }
   }
-  if(!silencioso) toast("Conta paga e lançada no extrato");
+  if(!silencioso) toast("Marcada como paga");
   return ret;
 }
 async function desfazerPagamento(c){
   await salvar("contas", {...c, status:"aberta", pagoEm:null, valorPago:null});
   const l = S.lancamentos.find(x=>x.contaId===c.id);
   if(l) await remover("lancamentos", l.id);
-  toast("Pagamento desfeito");
+  toast("Voltou para em aberto");
 }
 
 /* ===================== roteamento ===================== */
@@ -519,11 +526,11 @@ function vTopo(){
   const atalhos = [
     ["act","novaDespesa","gasto","Registrar gasto"],
     ["act","novaReceita","entrada","Registrar entrada"],
-    ["go","contas","pagar","Pagar contas"],
+    ["go","contas:futuro","agenda","Próximos meses"],
     ["go","planejar:metas","metas","Metas"],
     ["go","mais:cartoes","cartao","Cartões"],
     ["go","planejar:dividas","dividas","Dívidas"],
-    ["go","mais:calendario","agenda","Calendário"],
+    ["go","mais:calendario","pagar","Calendário"],
     ["go","mais:whatsapp","zap","WhatsApp"],
   ];
   return `
@@ -549,7 +556,7 @@ function vInicio(){
   const totalMes = round2(r.aPagar + r.pagoContas);
   const pctPago = totalMes>0 ? Math.round(r.pagoContas/totalMes*100) : 0;
   let alerts = "";
-  if(venc.length) alerts += `<div class="banner bad"><span><b>${venc.length} conta${venc.length>1?"s":""} vencida${venc.length>1?"s":""}</b> somando ${brl(soma(venc))}. Pague primeiro para parar os juros.</span></div>`;
+  if(venc.length) alerts += `<div class="banner bad"><span><b>${venc.length} conta${venc.length>1?"s":""} vencida${venc.length>1?"s":""}</b> somando ${brl(soma(venc))}. Resolva primeiro para parar os juros.</span></div>`;
   if(cartoesNeg.length) alerts += `<div class="banner warn"><span>${cartoesNeg.map(c=>esc(c.nome)).join(" e ")}: limite estourado. Evite compras nesse cartão.</span></div>`;
   const lista = [...venc.sort((a,b)=>a.vencimento.localeCompare(b.vencimento)), ...prox].slice(0,6);
   const nomeMes = monthName(mesRef).split(" ")[0];
@@ -562,6 +569,7 @@ function vInicio(){
     <div class="kv muted" style="font-size:13px"><span>${pctPago}% pago · ${brl(r.pagoContas)}</span><span>${r.abertasMes.length + (isAtual?r.atrasadasAnteriores.length:0)} em aberto</span></div>
     <div class="list">${lista.map(rowConta).join("") || `<p class="empty">Nada vencendo nos próximos 10 dias.</p>`}</div>
   </section>
+  ${cardFuturoInicio()}
   <div class="grid2">
     <section class="card">
       <div class="card-h"><span class="eyebrow">Para onde vai o dinheiro</span><span class="muted" style="font-size:12.5px;text-transform:capitalize">${monthName(mesRef)}</span></div>
@@ -592,6 +600,7 @@ function ir(dest){
   const [rota, aba] = dest.split(":");
   if(rota==="planejar" && aba) ui.planTab = aba;
   if(rota==="mais" && aba) ui.maisTab = aba;
+  if(rota==="contas" && aba) ui.contasFiltro = aba;
   if(location.hash === "#"+rota) render(); else location.hash = rota;
   window.scrollTo(0,0);
 }
@@ -599,7 +608,7 @@ function ir(dest){
 /* ===================== IA (via servidor) ===================== */
 const AI = { log:[], busy:false };
 const SUGESTOES = ["Gastei 45 no mercado no pix","Uber 18 agora","Recebi 2.500 de salário","Paguei a Claro","Luz 120 vence dia 20","Quanto posso gastar até o fim do mês?"];
-const NOME_ACAO = {despesa:"Gasto",receita:"Entrada",conta:"Conta a pagar",pagar:"Pagamento"};
+const NOME_ACAO = {despesa:"Gasto",receita:"Entrada",conta:"Conta a pagar",pagar:"Marcada como paga"};
 
 function renderAIShell(){
   const el=$("#aiDock"); if(!el) return;
@@ -667,12 +676,14 @@ function rowConta(c){
     <div style="min-width:0"><div class="t">${esc(c.nome)}</div>
       <div class="meta"><span class="pill ${st.cls}">${st.label}</span><span>${fmtD(c.vencimento)}</span><span>· ${esc(c.categoria||"")}</span>${parc}${rec}${auto}</div></div>
     <div class="r"><span class="amt">${brl(c.status==="paga"?(c.valorPago??c.valor):c.valor)}</span>
-      <div style="display:flex;gap:2px;align-items:center">${c.status==="paga" ? "" : `<button class="btn sm okb" data-act="pagar" data-id="${c.id}">Pagar</button>`}<button class="btn sm ghost" data-act="editConta" data-id="${c.id}" aria-label="Editar ${esc(c.nome)}">⋯</button></div></div>
+      <div style="display:flex;gap:2px;align-items:center">${c.status==="paga" ? "" : `<button class="btn sm okb" data-act="pagar" data-id="${c.id}" aria-label="Marcar ${esc(c.nome)} como paga">✓ Paga</button>`}<button class="btn sm ghost" data-act="editConta" data-id="${c.id}" aria-label="Editar ${esc(c.nome)}">⋯</button></div></div>
   </div>`;
 }
 
 function vContas(){
   const f=ui.contasFiltro; const k=mesRef; const isAtual = k===iso(today()).slice(0,7);
+  const chipsHtml = [["futuro","Próximos meses"],["abertas","Em aberto"],["vencidas","Vencidas"],["pagas","Pagas"],["mes","Todas do mês"],["todas_abertas","Todas em aberto"]].map(([v,l])=>`<button class="chip" data-filtro="${v}" aria-pressed="${f===v}">${l}</button>`).join("");
+  if(f==="futuro") return `<section class="card"><div class="card-h"><h1>Contas</h1><button class="btn pri sm" data-act="novaConta">+ Nova conta</button></div><div class="chips" role="group" aria-label="Filtro">${chipsHtml}</div></section>` + vFuturo();
   let lista;
   if(f==="abertas") lista = S.contas.filter(c=>c.status!=="paga" && (ym(c.vencimento)===k || (isAtual && ym(c.vencimento)<k)));
   else if(f==="pagas") lista = contasDoMes(k).filter(c=>c.status==="paga");
@@ -685,12 +696,80 @@ function vContas(){
   lista.forEach(c=>{ const g=ym(c.vencimento); (grupos[g]=grupos[g]||[]).push(c); });
   return `
   <section class="card">
-    <div class="card-h"><h1>Contas a pagar</h1><button class="btn pri sm" data-act="novaConta">+ Nova conta</button></div>
+    <div class="card-h"><h1>Contas</h1><button class="btn pri sm" data-act="novaConta">+ Nova conta</button></div>
     <div class="chips" role="group" aria-label="Filtro">
-      ${[["abertas","Em aberto"],["vencidas","Vencidas"],["pagas","Pagas"],["mes","Todas do mês"],["todas_abertas","Todas em aberto"]].map(([v,l])=>`<button class="chip" data-filtro="${v}" aria-pressed="${f===v}">${l}</button>`).join("")}
+      ${chipsHtml}
     </div>
     <div class="kv"><span class="muted">${lista.length} conta(s)</span><b>${brl(total)}</b></div>
     ${Object.keys(grupos).sort().map(g=>`<div><h3 style="margin:6px 0 2px;text-transform:capitalize">${monthName(g)} <span class="muted num" style="font-weight:500">· ${brl(soma(grupos[g].map(c=>({valor:c.status==="paga"?(c.valorPago??c.valor):c.valor}))))}</span></h3><div class="list">${grupos[g].map(rowConta).join("")}</div></div>`).join("") || `<p class="empty">Nenhuma conta neste filtro.</p>`}
+  </section>`;
+}
+
+/* ===================== próximos meses ===================== */
+// Todas as contas de hoje até N meses à frente: as cadastradas e as previstas
+// (contas mensais e parcelas que ainda não foram criadas).
+function projetarContas(meses){
+  const ini = iso(today()).slice(0,7);
+  const fimD = parseD(ini+"-01"); fimD.setMonth(fimD.getMonth()+meses-1); const fim = iso(fimD).slice(0,7);
+  const itens = S.contas.filter(c=>{ const k=ym(c.vencimento); return k>=ini && k<=fim; }).map(c=>({...c, prevista:false}));
+  // atrasadas de meses anteriores entram no mês atual
+  S.contas.filter(c=>c.status!=="paga" && ym(c.vencimento)<ini).forEach(c=>itens.push({...c, prevista:false, atrasada:true}));
+  const series = {};
+  S.contas.filter(c=>c.recorrencia==="mensal").forEach(c=>{ const k=c.serie||c.id; if(!series[k] || c.vencimento>series[k].vencimento) series[k]=c; });
+  Object.values(series).forEach(ult=>{
+    let venc = ult.vencimento, parcela = Number(ult.parcelaAtual)||0;
+    for(let i=0;i<meses+1;i++){
+      venc = addMonths(venc,1); if(parcela) parcela++;
+      if(ult.parcelaTotal && parcela > Number(ult.parcelaTotal)) break;
+      if(ym(venc) > fim) break;
+      if(ym(venc) < ini) continue;
+      itens.push({...ult, id:"prev-"+(ult.serie||ult.id)+"-"+venc, vencimento:venc, parcelaAtual:parcela||null, status:"aberta", prevista:true});
+    }
+  });
+  const porMes = {};
+  for(let i=0;i<meses;i++){ const d=parseD(ini+"-01"); d.setMonth(d.getMonth()+i); porMes[iso(d).slice(0,7)]=[]; }
+  itens.forEach(c=>{ const k = c.atrasada ? ini : ym(c.vencimento); if(porMes[k]) porMes[k].push(c); });
+  Object.values(porMes).forEach(l=>l.sort((a,b)=>a.vencimento.localeCompare(b.vencimento)));
+  return porMes;
+}
+const valorConta = c => c.status==="paga" ? (c.valorPago??c.valor) : c.valor;
+
+function rowFutura(c){
+  if(!c.prevista) return rowConta(c);
+  const parc = c.parcelaTotal ? `<span class="pill">${c.parcelaAtual}/${c.parcelaTotal}</span>` : `<span class="pill">Mensal</span>`;
+  return `<div class="row s-prevista"><span class="stripe"></span>
+    <div style="min-width:0"><div class="t">${esc(c.nome)}</div><div class="meta"><span class="pill acc">Prevista</span><span>${fmtD(c.vencimento)}</span><span>· ${esc(c.categoria||"")}</span>${parc}</div></div>
+    <div class="r"><span class="amt">${brl(c.valor)}</span></div></div>`;
+}
+
+function vFuturo(){
+  const porMes = projetarContas(ui.futuroMeses||6);
+  const meses = Object.keys(porMes);
+  const totais = meses.map(k=>soma(porMes[k].map(c=>({valor:valorConta(c)}))));
+  const max = Math.max(1,...totais);
+  const geral = round2(totais.reduce((a,b)=>a+b,0));
+  return `
+  <section class="card">
+    <div class="card-h"><h1>Próximos meses</h1><div class="seg">${[3,6,12].map(n=>`<button data-fm="${n}" aria-pressed="${(ui.futuroMeses||6)===n}">${n} meses</button>`).join("")}</div></div>
+    <p class="muted" style="margin:0;font-size:13.5px">Todas as contas com data de vencimento. As marcadas como <b style="color:var(--accent)">Prevista</b> são contas mensais e parcelas que ainda vão chegar.</p>
+    <div class="kv"><span class="muted">Total no período</span><b>${brl(geral)}</b></div>
+    <div style="display:grid;gap:8px">
+      ${meses.map((k,i)=>`<button class="mesbar" data-mesir="${k}"><span class="mn">${monthName(k)}</span><span class="track"><i style="width:${Math.round(totais[i]/max*100)}%"></i></span><b>${brl(totais[i])}</b></button>`).join("")}
+    </div>
+  </section>
+  ${meses.map((k,i)=>`<section class="card" id="mes-${k}">
+    <div class="card-h"><h2 style="text-transform:capitalize">${monthName(k)}</h2><span class="pill acc">${porMes[k].length} conta${porMes[k].length===1?"":"s"} · ${brl(totais[i])}</span></div>
+    <div class="list">${porMes[k].map(rowFutura).join("") || `<p class="empty">Nenhuma conta neste mês.</p>`}</div>
+  </section>`).join("")}`;
+}
+
+function cardFuturoInicio(){
+  const porMes = projetarContas(6); const meses = Object.keys(porMes);
+  const totais = meses.map(k=>soma(porMes[k].map(c=>({valor:valorConta(c)}))));
+  const max = Math.max(1,...totais);
+  return `<section class="card">
+    <div class="card-h"><span class="eyebrow">Gastos fixos dos próximos meses</span><button class="lnk" data-go="contas:futuro">Ver tudo</button></div>
+    <div style="display:grid;gap:8px">${meses.map((k,i)=>`<button class="mesbar" data-go="contas:futuro"><span class="mn">${monthName(k)}</span><span class="track"><i style="width:${Math.round(totais[i]/max*100)}%"></i></span><b>${brl(totais[i])}</b></button>`).join("")}</div>
   </section>`;
 }
 
@@ -968,6 +1047,8 @@ function drawCharts(r){
 function bind(r){
   drawCharts(r);
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>ir(b.dataset.go));
+  document.querySelectorAll("[data-fm]").forEach(b=>b.onclick=()=>{ ui.futuroMeses=Number(b.dataset.fm); render(); });
+  document.querySelectorAll("[data-mesir]").forEach(b=>b.onclick=()=>document.getElementById("mes-"+b.dataset.mesir)?.scrollIntoView({behavior:"smooth",block:"start"}));
   document.querySelectorAll("[data-filtro]").forEach(b=>b.onclick=()=>{ui.contasFiltro=b.dataset.filtro;render();});
   document.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{ui.lancFiltro=b.dataset.lf;render();});
   document.querySelectorAll("[data-pt]").forEach(b=>b.onclick=e=>{e.preventDefault();ui.planTab=b.dataset.pt;render();});
@@ -1033,11 +1114,11 @@ function confirmar(msg, fn){
 }
 
 function dlgPagar(c){
-  abrir(`<form class="form"><h2 class="full">Pagar ${esc(c.nome)}</h2>
-    <label class="f"><span>Valor pago</span><input name="valor" type="number" step="0.01" inputmode="decimal" required value="${c.valor}"></label>
-    <label class="f"><span>Data do pagamento</span><input name="data" type="date" required value="${iso(today())}"></label>
+  abrir(`<form class="form"><h2 class="full">Marcar como paga: ${esc(c.nome)}</h2>
+    <label class="f"><span>Valor</span><input name="valor" type="number" step="0.01" inputmode="decimal" required value="${c.valor}"></label>
+    <label class="f"><span>Pago em</span><input name="data" type="date" required value="${iso(today())}"></label>
     ${c.recorrencia==="mensal"&&(!c.parcelaTotal||c.parcelaAtual<c.parcelaTotal)?`<p class="full muted" style="margin:0;font-size:13px">A próxima ${c.parcelaTotal?`parcela (${Number(c.parcelaAtual)+1}/${c.parcelaTotal})`:"conta"} será criada para ${fmtDfull(addMonths(c.vencimento,1))}.</p>`:""}
-    <div class="dlg-actions full"><button type="button" class="btn" data-close>Cancelar</button><button class="btn pri" type="submit">Confirmar pagamento</button></div></form>`,
+    <div class="dlg-actions full"><button type="button" class="btn" data-close>Cancelar</button><button class="btn pri" type="submit">Marcar como paga</button></div></form>`,
     async fd=>pagarConta(c, num(fd.valor), fd.data));
 }
 function dlgConta(c){
@@ -1054,7 +1135,7 @@ function dlgConta(c){
     <label class="f"><span>Total de parcelas</span><input name="parcelaTotal" type="number" min="1" value="${c.parcelaTotal||""}" placeholder="Ex.: 6"></label>
     <label class="chk full"><input type="checkbox" name="debitoAuto" ${c.debitoAuto?"checked":""}> Débito automático (deixe saldo na conta)</label>
     <label class="f full"><span>Observação</span><textarea name="obs" rows="2">${esc(c.obs||"")}</textarea></label>
-    <div class="dlg-actions full">${n?"":delBtn()}${!n&&c.status==="paga"?`<button type="button" class="btn" id="btnUndo">Desfazer pagamento</button>`:""}<button type="button" class="btn" data-close>Cancelar</button><button class="btn pri" type="submit">Salvar</button></div></form>`,
+    <div class="dlg-actions full">${n?"":delBtn()}${!n&&c.status==="paga"?`<button type="button" class="btn" id="btnUndo">Marcar como não paga</button>`:""}<button type="button" class="btn" data-close>Cancelar</button><button class="btn pri" type="submit">Salvar</button></div></form>`,
     async fd=>{ const o={...c, id:c.id||uid(), nome:fd.nome.trim(), valor:num(fd.valor), vencimento:fd.vencimento, categoria:fd.categoria, metodo:fd.metodo, recorrencia:fd.recorrencia, cartaoId:fd.cartaoId||"", parcelaAtual:fd.parcelaAtual?Number(fd.parcelaAtual):null, parcelaTotal:fd.parcelaTotal?Number(fd.parcelaTotal):null, debitoAuto:!!fd.debitoAuto, obs:fd.obs, status:c.status||"aberta"};
       if(o.parcelaTotal && o.recorrencia!=="mensal") o.recorrencia="mensal";
       await salvar("contas", o); toast("Conta salva"); });
