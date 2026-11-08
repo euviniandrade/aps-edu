@@ -143,7 +143,6 @@ test('webhook do WhatsApp: verificação, assinatura e só o dono é atendido', 
   await app.inject({ method: 'POST', url: '/webhook/whatsapp', headers: { 'content-type': 'application/json', 'x-hub-signature-256': assinar(b1) }, payload: b1 });
   const b2 = corpo('5521999999999', 'wamid.2', 'gastei 999 no mercado');
   await app.inject({ method: 'POST', url: '/webhook/whatsapp', headers: { 'content-type': 'application/json', 'x-hub-signature-256': assinar(b2) }, payload: b2 });
-  await new Promise((r) => setTimeout(r, 50));
 
   assert.equal(store.all('lancamentos').length, 1);
   assert.equal(store.all('lancamentos')[0].valor, 30);
@@ -153,4 +152,32 @@ test('webhook do WhatsApp: verificação, assinatura e só o dono é atendido', 
   assert.match(enviados[0].body.text.body, /Registrado/);
   assert.ok(assinaturaValida('abc', 'sha256=' + crypto.createHmac('sha256', 'k').update('abc').digest('hex'), 'k'));
   await app.close();
+});
+
+test('armazenamento no Vercel Blob: grava só quando muda e repete em conflito', async () => {
+  const { backendBlob } = require('../src/backend');
+  class BlobPreconditionFailedError extends Error { constructor() { super('412'); this.name = 'BlobPreconditionFailedError'; } }
+  let arquivo = null; let versao = 0; let gravacoes = 0; let conflitoUmaVez = true;
+  const fake = {
+    BlobPreconditionFailedError,
+    async get() { return arquivo === null ? null : { statusCode: 200, stream: new Response(arquivo).body, blob: { etag: `v${versao}` } }; },
+    async put(caminho, corpo, opts) {
+      assert.equal(opts.access, 'private');
+      if (conflitoUmaVez && arquivo !== null) { conflitoUmaVez = false; versao++; throw new BlobPreconditionFailedError(); }
+      if (arquivo !== null && opts.ifMatch !== `v${versao}`) throw new BlobPreconditionFailedError();
+      arquivo = corpo; versao++; gravacoes++;
+    },
+  };
+  const b = backendBlob('token-falso', fake);
+  await b.usar((s) => s.put('metas', { id: 'm1', nome: 'Reserva' }));
+  assert.equal(gravacoes, 1);
+  const lido = await b.usar((s) => s.estado());
+  assert.equal(lido.metas[0].nome, 'Reserva');
+  assert.equal(gravacoes, 1, 'leitura não grava');
+  await b.usar((s) => s.put('metas', { id: 'm2', nome: 'Viagem' }));
+  assert.equal(gravacoes, 2, 'repetiu depois do conflito');
+  assert.equal((await b.usar((s) => s.all('metas'))).length, 2);
+  const r = await b.usar(async (s) => f.processarMensagem({ store: s, ia: semIA, texto: 'gastei 9 no café', hoje: HOJE }));
+  assert.equal(r.acoes[0].valor, 9);
+  assert.equal((await b.usar((s) => s.all('lancamentos'))).length, 1);
 });

@@ -1,6 +1,7 @@
 'use strict';
 // Robô do WhatsApp via API oficial da Meta (WhatsApp Cloud API).
-// A Meta chama POST /webhook/whatsapp a cada mensagem; respondemos 200 na hora e processamos em seguida.
+// A Meta chama POST /webhook/whatsapp a cada mensagem. Processamos e só então respondemos 200,
+// porque em funções serverless (Vercel) nada roda depois da resposta.
 const crypto = require('crypto');
 const { processarMensagem } = require('./financas');
 
@@ -28,7 +29,7 @@ function whatsappConfigurado(env) {
 }
 
 function whatsappPlugin(fastify, opts, done) {
-  const { env, store, ia, fetchImpl = globalThis.fetch } = opts;
+  const { env, usar, ia, fetchImpl = globalThis.fetch } = opts;
   const versao = env.WA_GRAPH_VERSION || 'v21.0';
   const graph = `https://graph.facebook.com/${versao}`;
   const configurado = whatsappConfigurado(env);
@@ -61,7 +62,7 @@ function whatsappPlugin(fastify, opts, done) {
   }
 
   async function tratar(msg) {
-    if (!msg?.id || store.jaVisto(msg.id)) return;
+    if (!msg?.id) return;
     if (!mesmoNumero(msg.from, env.WA_NUMERO_DONO)) { log.warn({ de: msg.from }, 'WhatsApp: mensagem de número não autorizado ignorada'); return; }
     let texto = '';
     let prefixo = '';
@@ -84,8 +85,12 @@ function whatsappPlugin(fastify, opts, done) {
       return;
     }
     if (!texto.trim()) return;
-    const r = await processarMensagem({ store, ia, texto, canal: 'whatsapp', log });
-    await enviar(msg.from, prefixo + r.resposta);
+    // Marca a mensagem como vista e processa na mesma gravação (a Meta reenvia se demorarmos).
+    const r = await usar(async (store) => {
+      if (store.jaVisto(msg.id)) return null;
+      return processarMensagem({ store, ia, texto, canal: 'whatsapp', log });
+    });
+    if (r) await enviar(msg.from, prefixo + r.resposta);
   }
 
   // Verificação do webhook (feita uma vez pela Meta ao configurar).
@@ -104,14 +109,10 @@ function whatsappPlugin(fastify, opts, done) {
     }
     const mensagens = [];
     for (const e of req.body?.entry || []) for (const c of e.changes || []) for (const m of c.value?.messages || []) mensagens.push(m);
-    reply.code(200).send({ ok: true });
-    // Processa depois de responder, para a Meta não reenviar por demora.
-    setImmediate(async () => {
-      for (const m of mensagens) {
-        try { await tratar(m); } catch (e) { log.error({ err: e.message }, 'WhatsApp: erro ao processar mensagem'); }
-      }
-    });
-    return reply;
+    for (const m of mensagens) {
+      try { await tratar(m); } catch (e) { log.error({ err: e.message }, 'WhatsApp: erro ao processar mensagem'); }
+    }
+    return { ok: true };
   });
 
   done();

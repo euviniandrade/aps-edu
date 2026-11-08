@@ -1,12 +1,13 @@
 'use strict';
 // Armazenamento em SQLite: cada registro é um documento JSON em (coleção, id).
 // Mesmo modelo de dados da versão anterior do app, para a migração ser só importar o backup.
-const Database = require('better-sqlite3');
 
 const COLECOES = ['contas', 'lancamentos', 'cartoes', 'metas', 'dividas'];
 const CONFIG_PADRAO = { rendaMensal: 0, orcamentos: {}, reserva: 0 };
 
 function abrirBanco(arquivo) {
+  // Carregado só quando o SQLite é usado (na Vercel os dados ficam no Blob).
+  const Database = require('better-sqlite3');
   const db = new Database(arquivo);
   db.pragma('journal_mode = WAL');
   db.exec(`

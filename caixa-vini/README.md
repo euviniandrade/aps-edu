@@ -37,7 +37,20 @@ npm run dev               # http://localhost:3000
 npm test                  # testes (node:test)
 ```
 
-## Publicar no Fly.io (uma vez)
+## Onde está publicado: Vercel
+
+O app roda na Vercel (projeto `caixa-vini`, região São Paulo), ligado a este repositório com a pasta raiz `caixa-vini/`:
+
+- `public/` é servido como site estático e `api/index.js` é a função que roda o servidor (`/api/*`, `/webhook/*`, `/saude`).
+- Os dados ficam num **arquivo privado no Vercel Blob** (`BLOB_READ_WRITE_TOKEN`, criado ao conectar o Blob ao projeto). Cada requisição lê, altera e grava o estado com controle de versão (`ifMatch`).
+- Variáveis no projeto: `APP_SENHA`, `SESSION_SECRET`, `NODEJS_HELPERS=0` e, opcionalmente, `GEMINI_API_KEY` ou `ANTHROPIC_API_KEY` e as `WA_*` do WhatsApp.
+- Cada push na `main` publica em produção. Branches geram prévias.
+
+Para trocar a senha: Vercel › caixa-vini › Settings › Environment Variables › `APP_SENHA`, depois faça um Redeploy.
+
+No WhatsApp (passo 6 abaixo), use a URL de callback `https://<seu-domínio-vercel>/webhook/whatsapp`. Os comandos `fly secrets set` dos passos abaixo viram variáveis de ambiente na Vercel.
+
+## Alternativa: publicar no Fly.io
 
 ```bash
 cd caixa-vini
