@@ -181,3 +181,14 @@ test('armazenamento no Vercel Blob: grava só quando muda e repete em conflito',
   assert.equal(r.acoes[0].valor, 9);
   assert.equal((await b.usar((s) => s.all('lancamentos'))).length, 1);
 });
+
+test('saldo em conta: valor informado + lançamentos feitos depois', () => {
+  const s = novoStore();
+  s.setConfig({ saldoConta: 1000, saldoEm: '2026-11-07T12:00:00.000Z' });
+  s.put('lancamentos', { id: 'antigo', tipo: 'despesa', valor: 50, data: '2026-11-07', criadoEm: '2026-11-07T10:00:00.000Z' });
+  s.put('lancamentos', { id: 'g', tipo: 'despesa', valor: 120.5, data: '2026-11-07', criadoEm: '2026-11-07T15:00:00.000Z' });
+  s.put('lancamentos', { id: 'r', tipo: 'receita', valor: 300, data: '2026-11-08', criadoEm: '2026-11-08T09:00:00.000Z' });
+  s.put('lancamentos', { id: 'semData', tipo: 'despesa', valor: 10, data: '2026-11-09' });
+  assert.equal(f.saldoAtual(s.estado()), 1169.5);
+  assert.equal(f.saldoAtual(novoStore().estado()), null);
+});
