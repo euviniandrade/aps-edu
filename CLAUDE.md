@@ -21,6 +21,7 @@ Ele centraliza tarefas, pessoas, eventos, comunicados, gamificação, WhatsApp C
 ├── mobile/           → App iOS/Android (Flutter + Riverpod)
 ├── desktop/          → Wrapper desktop (Electron)
 ├── apps-script/      → Backend legado/alternativo em Google Sheets (não é o principal)
+├── caixa-vini/       → App pessoal de finanças + robô de WhatsApp (separado do SOFI; ver caixa-vini/README.md)
 ├── docs/             → Benchmark e documentação estratégica
 └── docker-compose.yml → PostgreSQL + Redis + Adminer para dev local
 ```
@@ -175,6 +176,7 @@ Wrapper Electron que carrega o web-admin como webview. Modificações de UI deve
 |---|---|---|
 | Backend | Fly.io | Push em `main` com mudanças em `backend/**` |
 | Web Admin | Vercel | Push em `main` com mudanças em `web-admin/**` |
+| Caixa Vini (pessoal) | Fly.io (app `caixa-vini`) | Push em `main` com mudanças em `caixa-vini/**` |
 
 - CI definido em `.github/workflows/deploy-backend.yml` e `deploy-web-admin.yml`
 - Variáveis de ambiente de produção configuradas no Fly.io e Vercel — nunca commitar `.env` real
