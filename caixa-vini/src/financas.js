@@ -42,6 +42,7 @@ function pagarConta(store, conta, valorPago, dataPag) {
     id: ret.lancId, tipo: 'despesa',
     descricao: conta.nome + (conta.parcelaTotal ? ` (${conta.parcelaAtual}/${conta.parcelaTotal})` : ''),
     valor: round2(valorPago), data: dataPag, categoria: conta.categoria, metodo: conta.metodo || '', contaId: conta.id,
+    criadoEm: new Date().toISOString(),
   });
   const temParcela = Number(conta.parcelaTotal) > 0;
   if (conta.recorrencia === 'mensal' && (!temParcela || Number(conta.parcelaAtual) < Number(conta.parcelaTotal))) {
@@ -56,6 +57,20 @@ function pagarConta(store, conta, valorPago, dataPag) {
     }
   }
   return ret;
+}
+
+/* ---------- saldo em conta ---------- */
+// Valor informado pelo usuário (config.saldoConta em config.saldoEm) + entradas − saídas lançadas depois.
+function saldoAtual(estado) {
+  const em = estado.config?.saldoEm; const base = Number(estado.config?.saldoConta);
+  if (!em || !Number.isFinite(base)) return null;
+  const dia = String(em).slice(0, 10);
+  let v = base;
+  for (const l of estado.lancamentos) {
+    const depois = l.criadoEm ? l.criadoEm > em : l.data > dia;
+    if (depois) v += (l.tipo === 'receita' ? 1 : -1) * (Number(l.valor) || 0);
+  }
+  return round2(v);
 }
 
 /* ---------- resumo ---------- */
@@ -79,7 +94,8 @@ function textoResumo(estado, hoje) {
   const r = resumoMes(estado, hoje);
   const mes = MESES[Number(hoje.slice(5, 7)) - 1];
   const prox = r.abertas.filter((c) => diasEntre(hoje, c.vencimento) >= 0 && diasEntre(hoje, c.vencimento) <= 10).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
-  const l = [`📊 *Resumo de ${mes}*`, `Falta pagar: *${brl(r.aPagar)}*`, `Já pago: ${brl(r.pago)} · Gastos lançados: ${brl(r.despesas)}`];
+  const saldo = saldoAtual(estado);
+  const l = [`📊 *Resumo de ${mes}*`, saldo === null ? 'Saldo em conta: informe no app' : `💰 Saldo em conta: *${brl(saldo)}*`, `Falta pagar: *${brl(r.aPagar)}*`, `Já pago: ${brl(r.pago)} · Gastos lançados: ${brl(r.despesas)}`];
   l.push(r.temRenda ? `Livre para gastar: *${brl(r.livre)}*` : 'Livre para gastar: informe sua renda no app');
   if (r.atrasadas.length) l.push('', `⚠️ *Vencidas* (${brl(soma(r.atrasadas))})`, ...r.atrasadas.map((c) => `• ${fmtD(c.vencimento)} ${c.nome} — ${brl(c.valor)}`));
   if (prox.length) l.push('', '📅 *Próximos 10 dias*', ...prox.map((c) => `• ${fmtD(c.vencimento)} ${c.nome} — ${brl(c.valor)}${c.debitoAuto ? ' (débito auto)' : ''}`));
@@ -149,6 +165,7 @@ function contexto(estado, hoje) {
   const orc = estado.config.orcamentos || {};
   return [
     `Hoje: ${DIAS[parseD(hoje).getUTCDay()]}, ${hoje}.`,
+    `Saldo em conta agora: ${saldoAtual(estado) ?? 'não informado'}.`,
     `Renda mensal informada: ${estado.config.rendaMensal || 0}. Entradas lançadas no mês: ${r.receitas}. Reserva de emergência: ${estado.config.reserva || 0}.`,
     `Mês ${r.k}: falta pagar ${r.aPagar}; já pago em contas ${r.pago}; gastos lançados ${r.despesas}; livre para gastar ${r.livre} (renda − gastos − contas em aberto − metas).`,
     'Contas em aberto: ' + (r.abertas.sort((a, b) => a.vencimento.localeCompare(b.vencimento)).map((c) => `${c.nome} ${c.valor} vence ${c.vencimento}${c.debitoAuto ? ' (débito automático)' : ''}`).join('; ') || 'nenhuma'),
@@ -201,7 +218,7 @@ function executarAcoes(store, acoes, origem) {
     for (const a of acoes) {
       if (a.tipo === 'despesa' || a.tipo === 'receita') {
         const id = uid();
-        store.put('lancamentos', { id, tipo: a.tipo, descricao: a.descricao, valor: a.valor, data: a.data, categoria: a.categoria, metodo: a.metodo || '', obs: `via ${origem}` });
+        store.put('lancamentos', { id, tipo: a.tipo, descricao: a.descricao, valor: a.valor, data: a.data, categoria: a.categoria, metodo: a.metodo || '', obs: `via ${origem}`, criadoEm: new Date().toISOString() });
         feitos.push({ col: 'lancamentos', id });
       } else if (a.tipo === 'conta') {
         const id = uid();
@@ -284,7 +301,7 @@ function pagamentoLocal(texto, store, hoje) {
   return { acoes: [{ tipo: 'pagar', contaId: conta.id, valor, data: /ontem/.test(s) ? addDias(hoje, -1) : hoje }], resposta: `Marquei ${conta.nome} como paga.` };
 }
 
-const NOMES = { despesa: 'Gasto', receita: 'Entrada', conta: 'Conta a pagar', pagar: 'Pagamento' };
+const NOMES = { despesa: 'Gasto', receita: 'Entrada', conta: 'Conta a pagar', pagar: 'Marcada como paga:' };
 function linhaAcao(a) {
   const quando = a.tipo === 'conta' ? `vence ${fmtD(a.vencimento)}` : fmtD(a.data);
   const extra = [a.categoria, a.metodo, quando, a.parcelaTotal ? `${a.parcelaAtual || 1}/${a.parcelaTotal}` : '', a.recorrencia === 'mensal' && !a.parcelaTotal ? 'todo mês' : ''].filter(Boolean).join(', ');
@@ -323,7 +340,7 @@ async function processarMensagem({ store, ia, texto, canal = 'app', log = consol
     if (canal === 'whatsapp') store.put('sistema', { id: 'ultimoWhatsapp', feitos, em: new Date().toISOString() });
     const r = resumoMes(estado(), hoje);
     const resposta = canal === 'whatsapp'
-      ? ['✅ *Registrado:*', ...acoes.map(linhaAcao), '', r.temRenda ? `Livre para gastar no mês: *${brl(r.livre)}*` : `Falta pagar no mês: *${brl(r.aPagar)}*`, 'Errei? Responda *desfazer*.'].join('\n')
+      ? ['✅ *Registrado:*', ...acoes.map(linhaAcao), '', ...(saldoAtual(estado()) !== null ? [`Saldo em conta: *${brl(saldoAtual(estado()))}*`] : []), r.temRenda ? `Livre para gastar no mês: *${brl(r.livre)}*` : `Falta pagar no mês: *${brl(r.aPagar)}*`, 'Errei? Responda *desfazer*.'].join('\n')
       : String(res.resposta || 'Pronto, registrei:').slice(0, 300);
     return { resposta, acoes, feitos };
   }
@@ -342,7 +359,7 @@ async function processarMensagem({ store, ia, texto, canal = 'app', log = consol
 
 module.exports = {
   CATEGORIAS, CAT_REC, METODOS, AJUDA,
-  hojeISO, addMeses, brl, round2,
+  hojeISO, addMeses, brl, round2, saldoAtual,
   pagarConta, resumoMes, textoResumo, textoContas,
   promptAcoes, promptPergunta, normalizarAcoes, executarAcoes, desfazer, parseLocal, processarMensagem,
 };

@@ -70,7 +70,7 @@ test('WhatsApp: comandos resumo e desfazer', async () => {
   const r3 = await f.processarMensagem({ store: s, ia: semIA, texto: 'resumo', canal: 'whatsapp', hoje: HOJE });
   assert.match(r3.resposta, /Falta pagar: \*R\$ 94,20\*/);
   const r4 = await f.processarMensagem({ store: s, ia: semIA, texto: 'Paguei a Claro', canal: 'whatsapp', hoje: HOJE });
-  assert.match(r4.resposta, /Pagamento R\$ 94,20 — Claro/);
+  assert.match(r4.resposta, /Marcada como paga: R\$ 94,20 — Claro/);
   assert.equal(s.get('contas', 'claro').status, 'paga');
 });
 
@@ -180,4 +180,15 @@ test('armazenamento no Vercel Blob: grava só quando muda e repete em conflito',
   const r = await b.usar(async (s) => f.processarMensagem({ store: s, ia: semIA, texto: 'gastei 9 no café', hoje: HOJE }));
   assert.equal(r.acoes[0].valor, 9);
   assert.equal((await b.usar((s) => s.all('lancamentos'))).length, 1);
+});
+
+test('saldo em conta: valor informado + lançamentos feitos depois', () => {
+  const s = novoStore();
+  s.setConfig({ saldoConta: 1000, saldoEm: '2026-11-07T12:00:00.000Z' });
+  s.put('lancamentos', { id: 'antigo', tipo: 'despesa', valor: 50, data: '2026-11-07', criadoEm: '2026-11-07T10:00:00.000Z' });
+  s.put('lancamentos', { id: 'g', tipo: 'despesa', valor: 120.5, data: '2026-11-07', criadoEm: '2026-11-07T15:00:00.000Z' });
+  s.put('lancamentos', { id: 'r', tipo: 'receita', valor: 300, data: '2026-11-08', criadoEm: '2026-11-08T09:00:00.000Z' });
+  s.put('lancamentos', { id: 'semData', tipo: 'despesa', valor: 10, data: '2026-11-09' });
+  assert.equal(f.saldoAtual(s.estado()), 1169.5);
+  assert.equal(f.saldoAtual(novoStore().estado()), null);
 });
