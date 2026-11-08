@@ -1,0 +1,22 @@
+{
+  "name": "caixa-vini",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Caixa Vini - gestão financeira pessoal com assistente de IA e robô de WhatsApp (API oficial da Meta)",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch --env-file=.env src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^9.4.0",
+    "@fastify/static": "^7.0.4",
+    "@vercel/blob": "^2.8.2",
+    "better-sqlite3": "^11.10.0",
+    "fastify": "^4.29.1"
+  }
+}
