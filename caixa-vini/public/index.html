@@ -39,7 +39,7 @@
   --r:20px;
   --on-ink:#000000; --header-bg:rgba(0,0,0,.85); --nav-bg:rgba(18,18,18,.92);
   --bad-ink:#fecaca; --warn-ink:#fde68a; --info-ink:#e9d5ff; --strong-ink:#ffffff;
-  --saldo-bg:transparent; --saldo-ink:var(--ink); --saldo-muted:var(--muted); --saldo-pad:10px 0 4px; --toast-bg:#ffffff; --toast-ink:#000000;
+  --saldo-bg:transparent; --saldo-ink:var(--ink); --saldo-muted:var(--muted); --saldo-line:var(--line); --saldo-chip:var(--surface-2); --saldo-pad:10px 0 4px; --toast-bg:#ffffff; --toast-ink:#000000;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -82,6 +82,21 @@ nav.bottom a[aria-current="page"] svg{color:var(--accent)}
 .saldo .sub{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--saldo-muted)}
 .saldo .sub b{color:var(--saldo-ink);font-variant-numeric:tabular-nums}
 .saldo .sub b.pos{color:var(--ok)} .saldo .sub b.neg{color:var(--bad)}
+.saldo .big.vazio{font-size:26px;line-height:1.2;letter-spacing:-.02em}
+.saldo .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid var(--saldo-line);padding-top:14px;margin-top:8px}
+.saldo .stats span{display:block;font-size:12.5px;color:var(--saldo-muted);font-weight:600;margin-bottom:2px}
+.saldo .stats b{font-size:18px;font-weight:800;color:var(--saldo-ink);font-variant-numeric:tabular-nums}
+.btn.branco{background:#fff;color:var(--accent-strong);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.btn.branco:hover{background:#fff;filter:brightness(.97)}
+.mini{border:0;background:var(--saldo-chip);color:var(--saldo-ink);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}
+.passos{display:grid;gap:0}
+.passo{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.passo:first-child{border-top:0}
+.passo .ck{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:14px;font-weight:800;color:#fff}
+.passo.ok .ck{background:var(--ok);border-color:var(--ok)}
+.passo.ok .t{color:var(--muted);text-decoration:line-through}
+.passo .t{font-weight:700}
+.passo .d{font-size:12.5px;color:var(--muted)}
 .saldo-vazio{background:var(--accent-soft);border-radius:16px;padding:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 
 /* ---- atalhos redondos ---- */
@@ -257,6 +272,8 @@ label.chk{display:flex;gap:8px;align-items:center;font-weight:600;font-size:14px
 .mesbar b{font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
 .row.s-prevista{opacity:.85}
 .row.s-prevista .stripe::after{background:transparent;box-shadow:inset 0 0 0 2px var(--accent)}
+:root[data-tema="claro"],:root[data-tema="menta"],:root[data-tema="oceano"]{--saldo-line:rgba(255,255,255,.28); --saldo-chip:rgba(255,255,255,.22)}
+:root[data-tema="dourado"]{--saldo-line:#3a3320; --saldo-chip:#2e2814}
 :root[data-tema="claro"] .brand .logo,:root[data-tema="menta"] .brand .logo{color:#fff}
 :root[data-tema="claro"] .saldo .sub b.pos,:root[data-tema="menta"] .saldo .sub b.pos{color:#fff}
 :root[data-tema="claro"] .saldo .lnk,:root[data-tema="menta"] .saldo .lnk,:root[data-tema="oceano"] .saldo .lnk{color:#fff;text-decoration:underline}
@@ -516,6 +533,19 @@ function saldoAtual(){
   return round2(v);
 }
 
+function vPassos(){
+  const passos = [
+    {ok:S.contas.length>0, t:"Trazer seus dados", d:"Cole o backup da versão antiga", act:"colarBackup", b:"Colar"},
+    {ok:saldoAtual()!==null, t:"Informar o saldo da conta", d:"Quanto tem no banco hoje", act:"ajustarSaldo", b:"Informar"},
+    {ok:Number(S.config.rendaMensal)>0, t:"Informar sua renda", d:"Para calcular quanto sobra no mês", act:"renda", b:"Informar"},
+  ];
+  const faltam = passos.filter(p=>!p.ok).length;
+  const comeco = faltam ? `<section class="card" aria-label="Primeiros passos">
+    <div class="card-h"><span class="eyebrow">Primeiros passos</span><span class="pill acc">${3-faltam} de 3</span></div>
+    <div class="passos">${passos.map(p=>`<div class="passo ${p.ok?"ok":""}"><span class="ck">${p.ok?"✓":""}</span><div><div class="t">${p.t}</div><div class="d">${p.d}</div></div>${p.ok?"":`<button class="btn sm pri" data-act="${p.act}">${p.b}</button>`}</div>`).join("")}</div>
+  </section>` : "";
+  return comeco;
+}
 function vTopo(){
   const r=resumoMes(mesRef); const saldo=saldoAtual();
   const semRenda = !(Number(S.config.rendaMensal)>0) && r.receitas===0;
@@ -536,16 +566,18 @@ function vTopo(){
   return `
   <section class="saldo" aria-label="Saldo em conta">
     <button class="lbl" data-act="ajustarSaldo">Saldo em conta ${ICO.seta}</button>
-    <div class="big">${big}</div>
-    ${saldo===null && !ui.ocultar ? `<div class="saldo-vazio"><span>Informe quanto tem na sua conta hoje. Depois, cada gasto e entrada atualiza o saldo sozinho.</span><button class="btn pri sm" data-act="ajustarSaldo">Informar saldo</button></div>` : ""}
-    <div class="sub">
-      <span>Livre p/ gastar ${semRenda?`<button class="lnk" data-act="renda">informar renda</button>`:`<b class="${r.livre<0?"neg":"pos"}">${brl(r.livre)}</b>`}</span>
-      <span>A pagar no mês <b>${brl(r.aPagar)}</b></span>
+    ${saldo===null && !ui.ocultar
+      ? `<div class="big vazio">Quanto você tem<br>na conta hoje?</div><div><button class="btn branco" data-act="ajustarSaldo">Informar saldo</button></div>`
+      : `<div class="big">${big}</div>`}
+    <div class="stats">
+      <div><span>Livre p/ gastar</span>${semRenda?`<button class="mini" data-act="renda">Informar renda</button>`:`<b>${brl(r.livre)}</b>`}</div>
+      <div><span>A pagar no mês</span><b>${brl(r.aPagar)}</b></div>
     </div>
   </section>
   <nav class="atalhos" aria-label="Atalhos">
     ${atalhos.map(([t,v,ic,l])=>`<button class="atalho" ${t==="act"?`data-act="${v}"`:`data-go="${v}"`}><i>${ICO[ic]}</i>${l}</button>`).join("")}
-  </nav>`;
+  </nav>
+  ${vPassos()}`;
 }
 
 function vInicio(){
